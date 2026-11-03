@@ -39,7 +39,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
       nil ->
         {:ok,
          socket
-         |> put_flash(:error, "No full text available for this paper.")
+         |> put_flash(:error, gettext("No full text available for this paper."))
          |> push_navigate(to: ~p"/nutritionist/research/#{condition.id}")}
 
       data ->
@@ -94,7 +94,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
 
   def handle_event("delete_note", %{"id" => id}, socket) do
     {:ok, _} = ResearchNotes.delete_note(socket.assigns.current_user.id, String.to_integer(id))
-    {:noreply, socket |> refresh_notes() |> put_flash(:info, "Note removed.")}
+    {:noreply, socket |> refresh_notes() |> put_flash(:info, gettext("Note removed."))}
   end
 
   # Enter "mark a passage" mode: the article gets a selection cursor and the next
@@ -128,7 +128,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
 
     cond do
       title == "" ->
-        {:noreply, put_flash(socket, :error, "Give your note a title first.")}
+        {:noreply, put_flash(socket, :error, gettext("Give your note a title first."))}
 
       true ->
         {:ok, _} =
@@ -146,7 +146,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
          |> assign(:note_mode, false)
          |> assign(:selection, nil)
          |> refresh_notes()
-         |> put_flash(:info, "Note saved to your notes.")}
+         |> put_flash(:info, gettext("Note saved to your notes."))}
     end
   end
 
@@ -188,7 +188,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
             rel="noopener"
             class="px-2 py-0.5 rounded-full bg-ink text-basil hover:underline"
           >
-            View on PubMed
+            {gettext("View on PubMed")}
           </a>
         </div>
       </header>
@@ -247,7 +247,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
           phx-click="toggle_panel"
           class="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-full bg-ink-panel2 border border-ink-panel2 text-sm text-parchment shadow-lg hover:border-basil/40"
         >
-          <.icon name="hero-bookmark" class="w-4 h-4" /> Notes
+          <.icon name="hero-bookmark" class="w-4 h-4" /> {gettext("Notes")}
           <span :if={@claims != []} class="text-xs text-parchment-dim">({length(@claims)})</span>
         </button>
 
@@ -256,12 +256,12 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
           class="rounded-xl bg-ink-panel border border-ink-panel2 shadow-xl overflow-hidden flex flex-col max-h-[70vh]"
         >
           <div class="flex items-center justify-between px-3 py-2 border-b border-ink-panel2">
-            <span class="text-xs font-semibold uppercase tracking-wide text-parchment-dim">Notes</span>
+            <span class="text-xs font-semibold uppercase tracking-wide text-parchment-dim">{gettext("Notes")}</span>
             <div class="flex items-center gap-2.5">
               <.link
                 navigate={~p"/nutritionist/research/notes"}
                 class="text-parchment-dim hover:text-parchment"
-                title="My notes"
+                title={gettext("My notes")}
               >
                 <.icon name="hero-bookmark" class="w-4 h-4" />
               </.link>
@@ -269,7 +269,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
                 type="button"
                 phx-click="toggle_panel"
                 class="text-parchment-dim hover:text-parchment"
-                aria-label="Collapse notes"
+                aria-label={gettext("Collapse notes")}
               >
                 <.icon name="hero-chevron-down" class="w-4 h-4" />
               </button>
@@ -284,13 +284,13 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
               phx-click="start_note"
               class="inline-flex items-center gap-1 text-xs text-basil hover:underline"
             >
-              <.icon name="hero-pencil-square" class="w-3.5 h-3.5" /> Write your own note
+              <.icon name="hero-pencil-square" class="w-3.5 h-3.5" /> {gettext("Write your own note")}
             </button>
 
             <div :if={@note_mode} class="rounded-lg border border-basil/40 bg-ink p-2.5">
               <p :if={is_nil(@selection)} class="text-xs text-parchment-dim flex items-start gap-1">
                 <.icon name="hero-cursor-arrow-rays" class="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                Select a passage in the text to quote it, then add a title.
+                {gettext("Select a passage in the text to quote it, then add a title.")}
               </p>
               <p
                 :if={@selection}
@@ -304,7 +304,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
                   type="text"
                   name="title"
                   autocomplete="off"
-                  placeholder="Note title…"
+                  placeholder={gettext("Note title…")}
                   class="w-full rounded-md border border-ink-panel2 bg-ink-panel text-parchment text-xs px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-basil/50"
                 />
                 <div class="flex items-center gap-2 mt-1.5">
@@ -312,14 +312,14 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
                     type="submit"
                     class="px-2.5 py-1 rounded-md bg-basil/15 text-basil text-xs hover:bg-basil/25"
                   >
-                    Save note
+                    {gettext("Save note")}
                   </button>
                   <button
                     type="button"
                     phx-click="cancel_note"
                     class="text-xs text-parchment-dim hover:text-parchment"
                   >
-                    Cancel
+                    {gettext("Cancel")}
                   </button>
                 </div>
               </form>
@@ -328,7 +328,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
             <%!-- The nutritionist's existing notes for this paper. --%>
             <div :if={@my_notes != []} class="border-t border-ink-panel2 pt-3">
               <p class="text-xs font-medium text-parchment-dim mb-2">
-                Your notes ({length(@my_notes)})
+                {gettext("Your notes (%{count})", count: length(@my_notes))}
               </p>
               <ul class="space-y-2.5">
                 <li
@@ -352,9 +352,9 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
                     type="button"
                     phx-click="delete_note"
                     phx-value-id={note.id}
-                    data-confirm="Remove this note?"
+                    data-confirm={gettext("Remove this note?")}
                     class="shrink-0 text-parchment-dim hover:text-paprika"
-                    aria-label="Remove note"
+                    aria-label={gettext("Remove note")}
                   >
                     <.icon name="hero-trash" class="w-3.5 h-3.5" />
                   </button>
@@ -369,7 +369,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
                   name="hero-chevron-right"
                   class="w-3 h-3 transition-transform group-open/suggested:rotate-90"
                 />
-                Suggested notes ({length(@claims)})
+                {gettext("Suggested notes (%{count})", count: length(@claims))}
               </summary>
               <ul class="space-y-2.5 mt-2">
                 <li :for={claim <- @claims} class="text-xs">
@@ -398,7 +398,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
                       name={if saved, do: "hero-bookmark-solid", else: "hero-bookmark"}
                       class="w-3 h-3"
                     />
-                    {if saved, do: "Saved", else: "Save"}
+                    {if saved, do: gettext("Saved"), else: gettext("Save")}
                   </button>
                 </li>
               </ul>
@@ -562,10 +562,10 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
   # indented and set quieter, with the number emphasized as a spine.
 
   defp raw_section_title(%{"title" => t, "index" => i}) when t in [nil, ""],
-    do: "Section #{(i || 0) + 1}"
+    do: gettext("Section %{number}", number: (i || 0) + 1)
 
   defp raw_section_title(%{"title" => t}) when is_binary(t) and t != "", do: t
-  defp raw_section_title(_), do: "Section"
+  defp raw_section_title(_), do: gettext("Section")
 
   # {number_string | nil, label} parsed off the heading text.
   defp section_parts(section) do
@@ -589,7 +589,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
   defp subsection_indent(section), do: if(subsection?(section), do: "ml-4 md:ml-6", else: "")
 
   defp title(%{title: t}) when is_binary(t) and t != "", do: t
-  defp title(_), do: "Untitled"
+  defp title(_), do: gettext("Untitled")
 
   defp pubmed_url(%{pmid: pmid}) when is_integer(pmid),
     do: "https://pubmed.ncbi.nlm.nih.gov/#{pmid}/"

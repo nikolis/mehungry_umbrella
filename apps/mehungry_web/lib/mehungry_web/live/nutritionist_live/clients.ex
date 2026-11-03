@@ -18,7 +18,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
 
     socket =
       socket
-      |> assign(:page_title, "My Clients")
+      |> assign(:page_title, gettext("My Clients"))
       |> assign(:confirm_remove_id, nil)
       |> assign(:show_new_form, false)
       |> assign(:new_alias, "")
@@ -78,10 +78,10 @@ defmodule MehungryWeb.NutritionistLive.Clients do
          socket
          |> assign(:confirm_remove_id, nil)
          |> load_clients(professional_id)
-         |> put_flash(:info, "Client removed.")}
+         |> put_flash(:info, gettext("Client removed."))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not remove client.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not remove client."))}
     end
   end
 
@@ -98,7 +98,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
 
     case alias_name |> to_string() |> String.trim() do
       "" ->
-        {:noreply, put_flash(socket, :error, "Please enter a name for the client.")}
+        {:noreply, put_flash(socket, :error, gettext("Please enter a name for the client."))}
 
       trimmed ->
         case Professionals.create_managed_client(professional_id, trimmed) do
@@ -109,11 +109,18 @@ defmodule MehungryWeb.NutritionistLive.Clients do
              |> assign(:new_alias, "")
              |> assign(:claim_link, claim_url(token))
              |> load_clients(professional_id)
-             |> put_flash(:info, "Client created. Share the claim link below so they can log in.")}
+             |> put_flash(
+               :info,
+               gettext("Client created. Share the claim link below so they can log in.")
+             )}
 
           {:error, _changeset} ->
             {:noreply,
-             put_flash(socket, :error, "Could not create the client. Please try again.")}
+             put_flash(
+               socket,
+               :error,
+               gettext("Could not create the client. Please try again.")
+             )}
         end
     end
   end
@@ -126,10 +133,14 @@ defmodule MehungryWeb.NutritionistLive.Clients do
         {:noreply,
          socket
          |> assign(:claim_link, claim_url(token))
-         |> put_flash(:info, "New claim link generated. The previous link no longer works.")}
+         |> put_flash(
+           :info,
+           gettext("New claim link generated. The previous link no longer works.")
+         )}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not generate a claim link for this client.")}
+        {:noreply,
+         put_flash(socket, :error, gettext("Could not generate a claim link for this client."))}
     end
   end
 
@@ -155,11 +166,16 @@ defmodule MehungryWeb.NutritionistLive.Clients do
              |> assign(:preview, summarize(parsed, socket.assigns.linked_user_label))}
 
           {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Could not parse CSV: #{inspect(reason)}")}
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               gettext("Could not parse CSV: %{reason}", reason: inspect(reason))
+             )}
         end
 
       :error ->
-        {:noreply, put_flash(socket, :error, "Please choose a CSV file first.")}
+        {:noreply, put_flash(socket, :error, gettext("Please choose a CSV file first."))}
     end
   end
 
@@ -179,7 +195,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
 
   def handle_event("pick_client", %{"user_id" => user_id}, socket) do
     case safe_get_user(user_id) do
-      nil -> {:noreply, put_flash(socket, :error, "That client could not be found.")}
+      nil -> {:noreply, put_flash(socket, :error, gettext("That client could not be found."))}
       user -> {:noreply, link_user(socket, user)}
     end
   end
@@ -193,7 +209,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
          put_flash(
            socket,
            :error,
-           "Select the m3hungry client this record belongs to before importing."
+           gettext("Select the m3hungry client this record belongs to before importing.")
          )}
 
       user_id ->
@@ -209,14 +225,33 @@ defmodule MehungryWeb.NutritionistLive.Clients do
           {:ok, %{client: client, notes_count: n}} ->
             {:noreply,
              socket
-             |> put_flash(:info, "Imported #{client.full_name} with #{n} consultation notes.")
+             |> put_flash(
+               :info,
+               gettext("Imported %{name} with %{count} consultation notes.",
+                 name: client.full_name,
+                 count: n
+               )
+             )
              |> push_navigate(to: ~p"/nutritionist/records/#{client.id}")}
 
           {:error, step, reason, _changes} ->
-            {:noreply, put_flash(socket, :error, "Import failed at #{step}: #{inspect(reason)}")}
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               gettext("Import failed at %{step}: %{reason}",
+                 step: step,
+                 reason: inspect(reason)
+               )
+             )}
 
           {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               gettext("Import failed: %{reason}", reason: inspect(reason))
+             )}
         end
     end
   end
@@ -246,7 +281,9 @@ defmodule MehungryWeb.NutritionistLive.Clients do
     |> assign(:linked_user_id, user.id)
     |> assign(:linked_user_label, label)
     |> then(fn s ->
-      if Keyword.get(opts, :flash, true), do: put_flash(s, :info, "Linked to #{label}."), else: s
+      if Keyword.get(opts, :flash, true),
+        do: put_flash(s, :info, gettext("Linked to %{label}.", label: label)),
+        else: s
     end)
   end
 
@@ -270,7 +307,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
     intake = parsed.intake
 
     %{
-      full_name: presence(parsed.client[:full_name]) || presence(name_override) || "Νέος πελάτης",
+      full_name: presence(parsed.client[:full_name]) || presence(name_override) || gettext("New client"),
       notes_count: length(parsed.consultation_notes),
       bmi: intake[:bmi],
       weight_kg: intake[:weight_kg],
@@ -300,25 +337,25 @@ defmodule MehungryWeb.NutritionistLive.Clients do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto">
-      <.page_header title="My Clients">
+      <.page_header title={gettext("My Clients")}>
         <:actions>
           <.action variant={:secondary} size={:sm} patch={~p"/nutritionist/clients/import"}>
-            Import CSV
+            {gettext("Import CSV")}
           </.action>
           <.action variant={:secondary} size={:sm} phx-click="new_client">
-            Create client
+            {gettext("Create client")}
           </.action>
           <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/invitations"}>
-            Invite client
+            {gettext("Invite client")}
           </.action>
         </:actions>
       </.page_header>
 
       <p class="text-parchment-dim text-xs mb-4 -mt-2">
-        <span class="text-parchment">Create client</span>
-        — for someone without an account yet (you plan now, they claim later).
-        <span class="text-parchment">Invite client</span>
-        — connect an existing m3hungry user.
+        <span class="text-parchment">{gettext("Create client")}</span>
+        {gettext("— for someone without an account yet (you plan now, they claim later).")}
+        <span class="text-parchment">{gettext("Invite client")}</span>
+        {gettext("— connect an existing m3hungry user.")}
       </p>
 
       <%= if @live_action == :import do %>
@@ -329,18 +366,17 @@ defmodule MehungryWeb.NutritionistLive.Clients do
         <.panel_card class="mb-4">
           <form phx-submit="create_client" class="flex flex-col sm:flex-row gap-3 sm:items-end">
             <div class="flex-1">
-              <label class="block text-sm text-parchment-dim mb-1">Client name (alias)</label>
+              <label class="block text-sm text-parchment-dim mb-1">{gettext("Client name (alias)")}</label>
               <input
                 type="text"
                 name="alias"
                 value={@new_alias}
                 autofocus
-                placeholder="e.g. Maria K."
+                placeholder={gettext("e.g. Maria K.")}
                 class="w-full rounded-lg bg-ink-panel2 border border-ink-panel2 text-parchment px-3 py-2.5 focus:border-paprika focus:outline-none"
               />
               <p class="text-parchment-dim text-xs mt-1">
-                Creates a login-less account you can plan for right away. Share the claim link
-                to let them log in later — all their data carries over.
+                {gettext("Creates a login-less account you can plan for right away. Share the claim link to let them log in later — all their data carries over.")}
               </p>
             </div>
             <div class="flex gap-2">
@@ -348,14 +384,14 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                 type="submit"
                 class="text-sm py-2.5 px-4 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-bold transition"
               >
-                Create
+                {gettext("Create")}
               </button>
               <button
                 type="button"
                 phx-click="cancel_new"
                 class="text-sm py-2.5 px-4 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim transition"
               >
-                Cancel
+                {gettext("Cancel")}
               </button>
             </div>
           </form>
@@ -365,18 +401,17 @@ defmodule MehungryWeb.NutritionistLive.Clients do
       <%= if @claim_link do %>
         <.panel_card class="mb-4 border-paprika/40">
           <div class="flex items-start justify-between gap-3 mb-2">
-            <p class="text-parchment text-sm font-medium">Claim link</p>
+            <p class="text-parchment text-sm font-medium">{gettext("Claim link")}</p>
             <button
               phx-click="dismiss_link"
               class="text-parchment-dim hover:text-parchment text-xs"
-              title="Dismiss"
+              title={gettext("Dismiss")}
             >
               ✕
             </button>
           </div>
           <p class="text-parchment-dim text-xs mb-3">
-            Send this to your client. When they open it they set their own email and password
-            and take over the account — keeping the calendar and meal plans you built.
+            {gettext("Send this to your client. When they open it they set their own email and password and take over the account — keeping the calendar and meal plans you built.")}
           </p>
           <div class="flex gap-2">
             <input
@@ -391,7 +426,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
               onclick={"navigator.clipboard.writeText('#{@claim_link}')"}
               class="text-sm py-2 px-4 rounded-lg bg-ink-panel2 hover:bg-ink border border-ink-panel2 text-parchment transition"
             >
-              Copy
+              {gettext("Copy")}
             </button>
           </div>
         </.panel_card>
@@ -399,12 +434,12 @@ defmodule MehungryWeb.NutritionistLive.Clients do
 
       <%= if Enum.empty?(@clients) do %>
         <.panel_card class="text-center py-16">
-          <p class="text-parchment font-medium mb-1">No clients yet</p>
+          <p class="text-parchment font-medium mb-1">{gettext("No clients yet")}</p>
           <p class="text-parchment-dim text-sm mb-5">
-            Create a client to start planning, or invite an existing m3hungry user to connect.
+            {gettext("Create a client to start planning, or invite an existing m3hungry user to connect.")}
           </p>
           <.action variant={:primary} size={:sm} phx-click="new_client">
-            Create your first client
+            {gettext("Create your first client")}
           </.action>
         </.panel_card>
       <% else %>
@@ -428,13 +463,13 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                     <p class="text-parchment font-medium text-sm">{client.name || client.email}</p>
                     <%= if unclaimed do %>
                       <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-paprika/20 text-paprika-soft">
-                        Pending claim
+                        {gettext("Pending claim")}
                       </span>
                     <% end %>
                     <%= if unread > 0 do %>
                       <span
                         class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-red-500 text-white font-bold"
-                        title="Unread messages"
+                        title={gettext("Unread messages")}
                       >
                         <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path
@@ -449,7 +484,9 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                     <% end %>
                   </div>
                   <p class="text-parchment-dim text-xs">
-                    Client since {Calendar.strftime(assignment.inserted_at, "%b %Y")}
+                    {gettext("Client since %{date}",
+                      date: Calendar.strftime(assignment.inserted_at, "%b %Y")
+                    )}
                   </p>
                   <%= if record do %>
                     <.link
@@ -464,14 +501,14 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      Dietary history
+                      {gettext("Dietary history")}
                     </.link>
                   <% else %>
                     <.link
                       navigate={~p"/nutritionist/clients/#{client.id}"}
                       class="inline-block mt-1 text-parchment-dim hover:text-parchment text-xs"
                     >
-                      + Start file
+                      {gettext("+ Start file")}
                     </.link>
                   <% end %>
                 </div>
@@ -482,7 +519,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                   href={"/nutritionist/clients/#{client.id}"}
                   class="flex-1 text-center text-xs py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink border border-ink-panel2 text-parchment-dim hover:text-parchment transition"
                 >
-                  Overview
+                  {gettext("Overview")}
                 </a>
                 <a
                   href={"/nutritionist/clients/#{client.id}/calendar"}
@@ -502,7 +539,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                       d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
                     />
                   </svg>
-                  View Plan
+                  {gettext("View Plan")}
                 </a>
                 <%= if @confirm_remove_id == client.id do %>
                   <button
@@ -510,20 +547,20 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                     phx-value-client-id={client.id}
                     class="text-xs py-1.5 px-3 rounded-lg bg-red-700 hover:bg-red-600 text-white transition"
                   >
-                    Confirm
+                    {gettext("Confirm")}
                   </button>
                   <button
                     phx-click="cancel_remove"
                     class="text-xs py-1.5 px-3 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim transition"
                   >
-                    Cancel
+                    {gettext("Cancel")}
                   </button>
                 <% else %>
                   <button
                     phx-click="confirm_remove"
                     phx-value-client-id={client.id}
                     class="text-xs py-1.5 px-2 rounded-lg bg-ink-panel2 hover:bg-red-900/60 text-parchment-dim hover:text-red-400 transition"
-                    title="Remove client"
+                    title={gettext("Remove client")}
                   >
                     ✕
                   </button>
@@ -536,7 +573,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                   phx-value-client-id={client.id}
                   class="mt-2 w-full text-center text-xs py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink border border-ink-panel2 text-parchment-dim hover:text-parchment transition"
                 >
-                  Get claim link
+                  {gettext("Get claim link")}
                 </button>
               <% end %>
             </div>
@@ -551,19 +588,19 @@ defmodule MehungryWeb.NutritionistLive.Clients do
     ~H"""
     <.panel_card class="mb-6">
       <%= if @preview do %>
-        <h2 class="text-lg font-display font-bold text-parchment mb-3">Preview import</h2>
+        <h2 class="text-lg font-display font-bold text-parchment mb-3">{gettext("Preview import")}</h2>
         <dl class="grid grid-cols-2 gap-y-2 text-sm mb-4">
-          <dt class="text-parchment-dim">Client account</dt>
-          <dd class="text-parchment">{@linked_user_label || "— not selected —"}</dd>
-          <dt class="text-parchment-dim">Client</dt>
+          <dt class="text-parchment-dim">{gettext("Client account")}</dt>
+          <dd class="text-parchment">{@linked_user_label || gettext("— not selected —")}</dd>
+          <dt class="text-parchment-dim">{gettext("Client")}</dt>
           <dd class="text-parchment">{@preview.full_name}</dd>
-          <dt class="text-parchment-dim">Consultation notes</dt>
+          <dt class="text-parchment-dim">{gettext("Consultation notes")}</dt>
           <dd class="text-parchment">{@preview.notes_count}</dd>
-          <dt class="text-parchment-dim">BMI / Weight</dt>
+          <dt class="text-parchment-dim">{gettext("BMI / Weight")}</dt>
           <dd class="text-parchment">{@preview.bmi || "—"} / {@preview.weight_kg || "—"} kg</dd>
-          <dt class="text-parchment-dim">Goal</dt>
+          <dt class="text-parchment-dim">{gettext("Goal")}</dt>
           <dd class="text-parchment">{@preview.goal || "—"}</dd>
-          <dt class="text-parchment-dim">Visit range</dt>
+          <dt class="text-parchment-dim">{gettext("Visit range")}</dt>
           <dd class="text-parchment">
             {fmt_date(@preview.first_visit)} – {fmt_date(@preview.last_visit)}
           </dd>
@@ -573,7 +610,7 @@ defmodule MehungryWeb.NutritionistLive.Clients do
 
         <%= if is_nil(@linked_user_id) do %>
           <p class="text-red-400 text-xs mb-3">
-            Select the m3hungry client this record belongs to — records can't be headless.
+            {gettext("Select the m3hungry client this record belongs to — records can't be headless.")}
           </p>
         <% end %>
 
@@ -584,14 +621,14 @@ defmodule MehungryWeb.NutritionistLive.Clients do
             phx-click="confirm_import"
             disabled={is_nil(@linked_user_id)}
           >
-            Confirm &amp; import
+            {gettext("Confirm & import")}
           </.action>
           <.action variant={:ghost} size={:sm} phx-click="cancel_import">
-            Cancel
+            {gettext("Cancel")}
           </.action>
         </div>
       <% else %>
-        <h2 class="text-lg font-display font-bold text-parchment mb-3">Import dietary-history CSV</h2>
+        <h2 class="text-lg font-display font-bold text-parchment mb-3">{gettext("Import dietary-history CSV")}</h2>
 
         {client_select(assigns)}
 
@@ -602,22 +639,22 @@ defmodule MehungryWeb.NutritionistLive.Clients do
               class="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-ink-panel2 rounded-xl px-4 py-8 text-center cursor-pointer hover:border-paprika-soft transition-colors"
             >
               <span class="text-parchment text-sm font-medium">
-                Drag &amp; drop a CSV file here
+                {gettext("Drag & drop a CSV file here")}
               </span>
-              <span class="text-parchment-dim text-xs">or click to browse your files</span>
+              <span class="text-parchment-dim text-xs">{gettext("or click to browse your files")}</span>
               <.live_file_input upload={@uploads.csv} class="sr-only" />
             </label>
           </div>
           <%= for entry <- @uploads.csv.entries do %>
-            <p class="text-parchment text-xs mb-2">Selected: {entry.client_name}</p>
+            <p class="text-parchment text-xs mb-2">{gettext("Selected: %{name}", name: entry.client_name)}</p>
             <%= for err <- upload_errors(@uploads.csv, entry) do %>
               <p class="text-red-400 text-xs">{error_to_string(err)}</p>
             <% end %>
           <% end %>
           <div class="flex gap-2">
-            <.action variant={:primary} size={:sm} type="submit">Preview</.action>
+            <.action variant={:primary} size={:sm} type="submit">{gettext("Preview")}</.action>
             <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_import">
-              Cancel
+              {gettext("Cancel")}
             </.action>
           </div>
         </form>
@@ -633,14 +670,14 @@ defmodule MehungryWeb.NutritionistLive.Clients do
     ~H"""
     <div class="bg-ink rounded-lg p-3">
       <label class="block text-xs text-parchment-dim mb-1">
-        m3hungry client (required)
+        {gettext("m3hungry client (required)")}
       </label>
       <form id="pick-client-form" phx-change="pick_client">
         <select
           name="user_id"
           class="w-full bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
         >
-          <option value="">— select a client —</option>
+          <option value="">{gettext("— select a client —")}</option>
           <%= for {label, id} <- @options do %>
             <option value={id} selected={@linked_user_id == id}>{label}</option>
           <% end %>
@@ -649,9 +686,9 @@ defmodule MehungryWeb.NutritionistLive.Clients do
 
       <p class="text-xs text-parchment-dim mt-2">
         <%= if @linked_user_id do %>
-          Linked to {@linked_user_label}.
+          {gettext("Linked to %{label}.", label: @linked_user_label)}
         <% else %>
-          Pick the registered client this dietary history belongs to.
+          {gettext("Pick the registered client this dietary history belongs to.")}
         <% end %>
       </p>
     </div>
@@ -661,8 +698,8 @@ defmodule MehungryWeb.NutritionistLive.Clients do
   defp fmt_date(nil), do: "—"
   defp fmt_date(%Date{} = d), do: Calendar.strftime(d, "%b %d, %Y")
 
-  defp error_to_string(:too_large), do: "File is too large (max 5MB)."
-  defp error_to_string(:not_accepted), do: "Only .csv files are accepted."
-  defp error_to_string(:too_many_files), do: "Please choose a single file."
+  defp error_to_string(:too_large), do: gettext("File is too large (max 5MB).")
+  defp error_to_string(:not_accepted), do: gettext("Only .csv files are accepted.")
+  defp error_to_string(:too_many_files), do: gettext("Please choose a single file.")
   defp error_to_string(other), do: to_string(other)
 end

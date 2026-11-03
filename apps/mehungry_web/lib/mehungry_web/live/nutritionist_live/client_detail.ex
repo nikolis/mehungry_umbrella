@@ -22,7 +22,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     case Professionals.get_assignment(professional_id, client_id_int) do
       nil ->
         {:ok,
-         socket |> put_flash(:error, "Client not found.") |> redirect(to: "/nutritionist/clients")}
+         socket |> put_flash(:error, gettext("Client not found.")) |> redirect(to: "/nutritionist/clients")}
 
       _assignment ->
         if connected?(socket) do
@@ -54,7 +54,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:appointments, appointments)
          |> assign(:ratings, ratings)
          |> assign(:meal_plans, meal_plans)
-         |> assign(:page_title, "Client: #{client.name || client.email}")
+         |> assign(:page_title, gettext("Client: %{name}", name: client.name || client.email))
          |> assign(:ai_running, false)
          |> assign(:ai_steps, [])
          |> assign(:ai_result, nil)
@@ -100,7 +100,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:ai_preferences, prefs)}
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Could not start AI assistant: #{inspect(reason)}")}
+        {:noreply, put_flash(socket, :error, gettext("Could not start AI assistant: %{reason}", reason: inspect(reason)))}
     end
   end
 
@@ -129,7 +129,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:message_body, "")}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Message can't be empty.")}
+        {:noreply, put_flash(socket, :error, gettext("Message can't be empty."))}
     end
   end
 
@@ -148,10 +148,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         {:noreply,
          socket
          |> assign(:conditions, client_conditions(record))
-         |> put_flash(:info, "Condition added.")}
+         |> put_flash(:info, gettext("Condition added."))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not add the condition.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not add the condition."))}
     end
   end
 
@@ -175,7 +175,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         {:noreply, push_navigate(socket, to: ~p"/nutritionist/records/#{record.id}/edit")}
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Could not open the record: #{inspect(reason)}")}
+        {:noreply, put_flash(socket, :error, gettext("Could not open the record: %{reason}", reason: inspect(reason)))}
     end
   end
 
@@ -198,7 +198,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
        |> put_flash(:info, assign_plan_message(created, skipped, deleted, client))}
     else
       _ ->
-        {:noreply, put_flash(socket, :error, "Pick a plan and a valid start date.")}
+        {:noreply, put_flash(socket, :error, gettext("Pick a plan and a valid start date."))}
     end
   end
 
@@ -250,14 +250,14 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
              |> assign(:show_visit_form, false)
              |> load_visits()
              |> load_weight_history()
-             |> put_flash(:info, "Visit recorded.")}
+             |> put_flash(:info, gettext("Visit recorded."))}
 
           {:error, changeset} ->
             {:noreply, assign_visit_form(socket, changeset)}
         end
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Could not save visit: #{inspect(reason)}")}
+        {:noreply, put_flash(socket, :error, gettext("Could not save visit: %{reason}", reason: inspect(reason)))}
     end
   end
 
@@ -287,7 +287,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:intake_form, to_form(new_intake_changeset(intake, record), as: :intake))}
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Could not start editing: #{inspect(reason)}")}
+        {:noreply, put_flash(socket, :error, gettext("Could not start editing: %{reason}", reason: inspect(reason)))}
     end
   end
 
@@ -326,7 +326,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
              |> assign(:intake, intake)
              |> assign(:intake_editing?, false)
              |> load_weight_history()
-             |> put_flash(:info, "Dietary history saved.")}
+             |> put_flash(:info, gettext("Dietary history saved."))}
 
           {:error, changeset} ->
             {:noreply, assign(socket, :intake_form, to_form(changeset, as: :intake))}
@@ -334,7 +334,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
       {:error, reason} ->
         {:noreply,
-         put_flash(socket, :error, "Could not save dietary history: #{inspect(reason)}")}
+         put_flash(socket, :error, gettext("Could not save dietary history: %{reason}", reason: inspect(reason)))}
     end
   end
 
@@ -356,7 +356,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   defp onboarding_answers_panel(assigns) do
     ~H"""
     <div :if={@onboarding_answers != []} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
-      <h2 class="text-parchment font-display font-semibold mb-4">Onboarding answers</h2>
+      <h2 class="text-parchment font-display font-semibold mb-4">{gettext("Onboarding answers")}</h2>
       <dl class="space-y-3">
         <div :for={{q, a} <- @onboarding_answers}>
           <dt class="text-xs font-semibold uppercase tracking-wide text-parchment-dim">
@@ -408,12 +408,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     ~H"""
     <div class="mt-6 mb-2 pt-5 border-t border-ink-panel2">
       <h3 class="text-xs font-semibold uppercase tracking-wide text-parchment-dim mb-3">
-        Health conditions
+        {gettext("Health conditions")}
       </h3>
 
       <div class="flex flex-wrap items-center gap-2">
         <%= if Enum.empty?(@conditions) do %>
-          <span class="text-parchment-dim text-sm italic">None recorded yet</span>
+          <span class="text-parchment-dim text-sm italic">{gettext("None recorded yet")}</span>
         <% else %>
           <%= for condition <- @conditions do %>
             <span class="inline-flex items-center gap-2 pl-3 pr-2 py-1 rounded-full bg-paprika/20 text-paprika text-xs">
@@ -421,15 +421,15 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
               <.link
                 navigate={~p"/nutritionist/research/notes?condition_id=#{condition.id}"}
                 class="inline-flex items-center gap-0.5 text-basil hover:underline"
-                title={"Open my notes for #{condition.name}"}
+                title={gettext("Open my notes for %{name}", name: condition.name)}
               >
-                <.icon name="hero-document-text" class="w-3 h-3" /> Notes
+                <.icon name="hero-document-text" class="w-3 h-3" /> {gettext("Notes")}
               </.link>
               <button
                 type="button"
                 phx-click="remove_condition"
                 phx-value-id={condition.id}
-                aria-label={"Remove #{condition.name}"}
+                aria-label={gettext("Remove %{name}", name: condition.name)}
                 class="hover:text-parchment"
               >
                 ✕
@@ -447,12 +447,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             name="condition_id"
             class="bg-ink border border-ink-panel2 rounded-lg px-2.5 py-1.5 text-parchment text-xs"
           >
-            <option value="">+ Add condition</option>
+            <option value="">{gettext("+ Add condition")}</option>
             <%= for condition <- @available_conditions do %>
               <option value={condition.id}>{condition.name}</option>
             <% end %>
           </select>
-          <.action variant={:secondary} size={:sm} type="submit">Add</.action>
+          <.action variant={:secondary} size={:sm} type="submit">{gettext("Add")}</.action>
         </form>
       </div>
     </div>
@@ -521,9 +521,15 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     whose = client.name || client.email
 
     [
-      "Added #{created} meals to #{whose}'s calendar",
-      deleted > 0 && ", replacing #{deleted} existing meal#{if deleted == 1, do: "", else: "s"} that week",
-      skipped > 0 && " (#{skipped} skipped)",
+      gettext("Added %{created} meals to %{whose}'s calendar", created: created, whose: whose),
+      deleted > 0 &&
+        ngettext(
+          ", replacing %{count} existing meal that week",
+          ", replacing %{count} existing meals that week",
+          deleted,
+          count: deleted
+        ),
+      skipped > 0 && gettext(" (%{skipped} skipped)", skipped: skipped),
       "."
     ]
     |> Enum.reject(&(&1 == false))
@@ -664,17 +670,17 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                 d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
               />
             </svg>
-            View Plan
+            {gettext("View Plan")}
           </.action>
           <.action
             variant={:secondary}
             size={:sm}
             href={"/nutritionist/appointments?client_id=#{@client_id}"}
           >
-            Schedule Appointment
+            {gettext("Schedule Appointment")}
           </.action>
           <.action variant={:secondary} size={:sm} phx-click="open_full_record">
-            Open full record
+            {gettext("Open full record")}
           </.action>
         </div>
       </div>
@@ -691,11 +697,11 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                 d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
               />
             </svg>
-            <h2 class="text-parchment font-semibold text-sm">AI Meal Plan Assistant</h2>
+            <h2 class="text-parchment font-semibold text-sm">{gettext("AI Meal Plan Assistant")}</h2>
           </div>
           <%= if @ai_result || @ai_error do %>
             <button phx-click="ai_dismiss" class="text-parchment-dim hover:text-parchment text-xs">
-              Dismiss
+              {gettext("Dismiss")}
             </button>
           <% end %>
         </div>
@@ -707,14 +713,14 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
               type="text"
               name="preferences"
               value={@ai_preferences}
-              placeholder="Dietary notes for this client, e.g. 'low-carb, avoid shellfish'"
+              placeholder={gettext("Dietary notes for this client, e.g. 'low-carb, avoid shellfish'")}
               class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm placeholder-parchment-dim focus:outline-none focus:border-paprika"
             />
             <button
               type="submit"
               class="bg-paprika hover:bg-paprika-soft text-ink text-sm font-medium px-4 py-2 rounded-lg transition whitespace-nowrap"
             >
-              Draft 7-day Plan
+              {gettext("Draft 7-day Plan")}
             </button>
           </.form>
         <% end %>
@@ -766,13 +772,13 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
               href={"/nutritionist/clients/#{@client_id}/calendar"}
               class="text-sm bg-paprika hover:bg-paprika-soft text-ink px-3 py-1.5 rounded-lg transition"
             >
-              View Plan →
+              {gettext("View Plan →")}
             </a>
             <button
               phx-click="ai_dismiss"
               class="text-sm bg-ink-panel2 hover:bg-ink text-parchment-dim px-3 py-1.5 rounded-lg transition"
             >
-              Draft Another
+              {gettext("Draft Another")}
             </button>
           </div>
         <% end %>
@@ -786,7 +792,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             phx-click="ai_dismiss"
             class="mt-2 text-sm text-parchment-dim hover:text-parchment"
           >
-            Try again
+            {gettext("Try again")}
           </button>
         <% end %>
       </div>
@@ -802,43 +808,42 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
             />
           </svg>
-          <h2 class="text-parchment font-semibold text-sm">Assign a saved plan</h2>
+          <h2 class="text-parchment font-semibold text-sm">{gettext("Assign a saved plan")}</h2>
         </div>
 
         <%= if @plan_options == [] do %>
           <p class="text-parchment-dim text-sm">
-            You have no completed plans yet.
+            {gettext("You have no completed plans yet.")}
             <.link navigate={~p"/nutritionist/blueprints"} class="text-basil hover:underline">
-              Build one in Meal Blueprints →
+              {gettext("Build one in Meal Blueprints →")}
             </.link>
           </p>
         <% else %>
           <p class="text-parchment-dim text-sm mb-3">
-            Lay one of your plans onto {@client.name || @client.email}'s calendar. The plan's 7 days
-            start from the chosen date — <span class="text-paprika-soft">any meals already on that
-            week are replaced.</span>
+            {gettext("Lay one of your plans onto %{name}'s calendar. The plan's 7 days start from the chosen date —", name: @client.name || @client.email)}
+            <span class="text-paprika-soft">{gettext("any meals already on that week are replaced.")}</span>
           </p>
           <.form for={@assign_plan_form} phx-submit="assign_plan" class="flex flex-wrap items-end gap-3">
             <div class="flex-1 min-w-[12rem]">
-              <label class="block text-sm text-parchment-dim mb-1">Plan</label>
+              <label class="block text-sm text-parchment-dim mb-1">{gettext("Plan")}</label>
               <.input
                 field={@assign_plan_form[:plan_id]}
                 type="select"
-                prompt="Choose a plan…"
+                prompt={gettext("Choose a plan…")}
                 options={@plan_options}
               />
             </div>
             <div>
-              <label class="block text-sm text-parchment-dim mb-1">Start date</label>
+              <label class="block text-sm text-parchment-dim mb-1">{gettext("Start date")}</label>
               <.input field={@assign_plan_form[:start_date]} type="date" />
             </div>
             <.action
               variant={:primary}
               size={:sm}
               type="submit"
-              data-confirm={"This replaces that whole week on #{@client.name || @client.email}'s calendar — any meals already logged there will be deleted. Continue?"}
+              data-confirm={gettext("This replaces that whole week on %{name}'s calendar — any meals already logged there will be deleted. Continue?", name: @client.name || @client.email)}
             >
-              Add to calendar
+              {gettext("Add to calendar")}
             </.action>
           </.form>
         <% end %>
@@ -856,14 +861,14 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             />
           </svg>
           <h2 class="text-parchment font-display font-semibold">
-            Messages with {@client.name || @client.email}
+            {gettext("Messages with %{name}", name: @client.name || @client.email)}
           </h2>
         </div>
         <.message_thread
           messages={@messages}
           current_user_id={@current_user.id}
           body={@message_body}
-          placeholder="Message your client…"
+          placeholder={gettext("Message your client…")}
         />
       </div>
 
@@ -874,9 +879,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <!-- Progress trend -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
         <div class="flex items-center justify-between mb-4 gap-4">
-          <h2 class="text-parchment font-display font-semibold">Progress trend</h2>
+          <h2 class="text-parchment font-display font-semibold">{gettext("Progress trend")}</h2>
           <span :if={@progress_cards != []} class="text-parchment-dim text-xs">
-            tap a metric to chart it
+            {gettext("tap a metric to chart it")}
           </span>
         </div>
         <%= if @progress_cards != [] do %>
@@ -888,7 +893,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
           />
         <% else %>
           <p class="text-parchment-dim text-sm">
-            Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass) will chart here once there are at least two readings.
+            {gettext("Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass) will chart here once there are at least two readings.")}
           </p>
         <% end %>
       </div>
@@ -897,25 +902,25 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-parchment font-display font-semibold">Client Record — Visits</h2>
+            <h2 class="text-parchment font-display font-semibold">{gettext("Client Record — Visits")}</h2>
             <%= if @record do %>
               <.link
                 navigate={~p"/nutritionist/records/#{@record.id}"}
                 class="text-parchment-dim hover:text-parchment text-xs"
               >
-                View full dietary history →
+                {gettext("View full dietary history →")}
               </.link>
             <% else %>
-              <p class="text-parchment-dim text-xs">No dietary-history record yet.</p>
+              <p class="text-parchment-dim text-xs">{gettext("No dietary-history record yet.")}</p>
             <% end %>
           </div>
           <.action variant={:secondary} size={:sm} phx-click="new_visit">
-            + New visit
+            {gettext("+ New visit")}
           </.action>
         </div>
 
         <%= if Enum.empty?(@visits) do %>
-          <p class="text-parchment-dim text-sm">No visits recorded yet.</p>
+          <p class="text-parchment-dim text-sm">{gettext("No visits recorded yet.")}</p>
         <% else %>
           <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
             <%= for visit <- @visits do %>
@@ -930,7 +935,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                 >
                   <%= if visit.visit_number do %>
                     <span class="px-2 py-0.5 rounded-full bg-paprika/20 text-paprika text-xs shrink-0">
-                      Visit {visit.visit_number}
+                      {gettext("Visit %{number}", number: visit.visit_number)}
                     </span>
                   <% end %>
                   <span class="text-parchment text-sm">
@@ -945,7 +950,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                     <span class="text-parchment-dim text-xs">{visit.weight_kg} kg</span>
                   <% end %>
                   <%= if visit.appointment_id do %>
-                    <span class="flex items-center gap-1 text-basil text-xs" title="Linked to an appointment">
+                    <span class="flex items-center gap-1 text-basil text-xs" title={gettext("Linked to an appointment")}>
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           stroke-linecap="round"
@@ -954,7 +959,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                           d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5m8.656-1.172a4 4 0 010-5.656l3-3a4 4 0 115.656 5.656l-1.5 1.5"
                         />
                       </svg>
-                      Appointment
+                      {gettext("Appointment")}
                     </span>
                   <% end %>
                   <svg
@@ -980,17 +985,17 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                   <%= if visit.body do %>
                     <p class="text-parchment text-sm whitespace-pre-line mt-2">{visit.body}</p>
                   <% else %>
-                    <p class="text-parchment-dim text-sm mt-2 italic">No notes recorded.</p>
+                    <p class="text-parchment-dim text-sm mt-2 italic">{gettext("No notes recorded.")}</p>
                   <% end %>
                   <%= if visit.todo do %>
                     <div class="mt-3 pt-3 border-t border-ink-panel2">
-                      <p class="text-xs text-parchment-dim mb-1">To do</p>
+                      <p class="text-xs text-parchment-dim mb-1">{gettext("To do")}</p>
                       <p class="text-parchment text-sm whitespace-pre-line">{visit.todo}</p>
                     </div>
                   <% end %>
                   <%= if visit.appointment do %>
                     <div class="mt-3 pt-3 border-t border-ink-panel2">
-                      <p class="text-xs text-parchment-dim mb-1">Linked appointment</p>
+                      <p class="text-xs text-parchment-dim mb-1">{gettext("Linked appointment")}</p>
                       <p class="text-parchment text-sm">
                         {visit.appointment.title} — {Calendar.strftime(
                           visit.appointment.scheduled_at,
@@ -1009,7 +1014,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <!-- New visit modal -->
       <%= if @show_visit_form do %>
         <.modal id="new-visit-modal" show on_cancel={JS.push("cancel_visit")}>
-          <h2 class="text-lg font-display font-bold text-parchment mb-4">New visit</h2>
+          <h2 class="text-lg font-display font-bold text-parchment mb-4">{gettext("New visit")}</h2>
           <.form
             for={@visit_form}
             id="new-visit-form"
@@ -1018,52 +1023,52 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             class="space-y-4"
           >
             <div class="grid grid-cols-2 gap-4">
-              <.labeled label="Visit date">
+              <.labeled label={gettext("Visit date")}>
                 <.input field={@visit_form[:visit_date]} type="date" />
               </.labeled>
-              <.labeled label="Visit #">
+              <.labeled label={gettext("Visit #")}>
                 <.input field={@visit_form[:visit_number]} type="number" />
               </.labeled>
-              <.labeled label="Modality">
+              <.labeled label={gettext("Modality")}>
                 <.input
                   field={@visit_form[:modality]}
                   type="select"
-                  options={[{"In person", "in_person"}, {"Phone", "phone"}, {"Online", "online"}]}
+                  options={[{gettext("In person"), "in_person"}, {gettext("Phone"), "phone"}, {gettext("Online"), "online"}]}
                 />
               </.labeled>
-              <.labeled label="Weight (kg)">
+              <.labeled label={gettext("Weight (kg)")}>
                 <.input field={@visit_form[:weight_kg]} type="number" step="any" />
               </.labeled>
-              <.labeled label="Body fat (%)">
+              <.labeled label={gettext("Body fat (%)")}>
                 <.input field={@visit_form[:body_fat_percentage]} type="number" step="any" />
               </.labeled>
-              <.labeled label="Waist (cm)">
+              <.labeled label={gettext("Waist (cm)")}>
                 <.input field={@visit_form[:waist_cm]} type="number" step="any" />
               </.labeled>
-              <.labeled label="Muscle mass (kg)">
+              <.labeled label={gettext("Muscle mass (kg)")}>
                 <.input field={@visit_form[:muscle_mass_kg]} type="number" step="any" />
               </.labeled>
             </div>
             <%= if @appointments != [] do %>
-              <.labeled label="Linked appointment">
+              <.labeled label={gettext("Linked appointment")}>
                 <.input
                   field={@visit_form[:appointment_id]}
                   type="select"
-                  prompt="— none —"
+                  prompt={gettext("— none —")}
                   options={appointment_options(@appointments)}
                 />
               </.labeled>
             <% end %>
-            <.labeled label="Notes">
+            <.labeled label={gettext("Notes")}>
               <.input field={@visit_form[:body]} type="textarea" />
             </.labeled>
-            <.labeled label="To do">
+            <.labeled label={gettext("To do")}>
               <.input field={@visit_form[:todo]} type="textarea" />
             </.labeled>
             <div class="flex gap-2 pt-1">
-              <.action variant={:primary} size={:sm} type="submit">Save visit</.action>
+              <.action variant={:primary} size={:sm} type="submit">{gettext("Save visit")}</.action>
               <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_visit">
-                Cancel
+                {gettext("Cancel")}
               </.action>
             </div>
           </.form>
@@ -1073,9 +1078,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Appointment history -->
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
-          <h2 class="text-parchment font-display font-semibold mb-4">Appointment History</h2>
+          <h2 class="text-parchment font-display font-semibold mb-4">{gettext("Appointment History")}</h2>
           <%= if Enum.empty?(@appointments) do %>
-            <p class="text-parchment-dim text-sm">No appointments yet.</p>
+            <p class="text-parchment-dim text-sm">{gettext("No appointments yet.")}</p>
           <% else %>
             <div class="space-y-3 max-h-64 overflow-y-auto">
               <%= for appt <- @appointments do %>
@@ -1099,7 +1104,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      Visit note recorded
+                      {gettext("Visit note recorded")}
                     </span>
                   <% end %>
                 </div>
@@ -1110,9 +1115,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
         <!-- Meal plan ratings -->
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
-          <h2 class="text-parchment font-display font-semibold mb-4">Meal Plan Ratings</h2>
+          <h2 class="text-parchment font-display font-semibold mb-4">{gettext("Meal Plan Ratings")}</h2>
           <%= if Enum.empty?(@ratings) do %>
-            <p class="text-parchment-dim text-sm">No ratings submitted yet.</p>
+            <p class="text-parchment-dim text-sm">{gettext("No ratings submitted yet.")}</p>
           <% else %>
             <div class="space-y-3 max-h-64 overflow-y-auto">
               <%= for rating <- @ratings do %>
@@ -1156,7 +1161,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <!-- Meal plans history -->
       <%= if not Enum.empty?(@meal_plans) do %>
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mt-6">
-          <h2 class="text-parchment font-display font-semibold mb-4">Meal Plan History</h2>
+          <h2 class="text-parchment font-display font-semibold mb-4">{gettext("Meal Plan History")}</h2>
           <div class="space-y-2">
             <%= for plan <- @meal_plans do %>
               <div class="flex items-center justify-between py-2 border-b border-ink-panel2 last:border-0">
@@ -1195,19 +1200,19 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-parchment font-display font-semibold">Dietary History</h2>
+          <h2 class="text-parchment font-display font-semibold">{gettext("Dietary History")}</h2>
           <%= if @record do %>
             <.link
               navigate={~p"/nutritionist/records/#{@record.id}"}
               class="text-parchment-dim hover:text-parchment text-xs"
             >
-              Open full record →
+              {gettext("Open full record →")}
             </.link>
           <% end %>
         </div>
         <%= if not @intake_editing? do %>
           <.action variant={:secondary} size={:sm} phx-click="edit_intake">
-            {if @intake, do: "Edit", else: "Add dietary history"}
+            {if @intake, do: gettext("Edit"), else: gettext("Add dietary history")}
           </.action>
         <% end %>
       </div>
@@ -1218,7 +1223,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <% @intake -> %>
           {intake_display(assigns)}
         <% true -> %>
-          <p class="text-parchment-dim text-sm mb-2">No dietary history recorded yet.</p>
+          <p class="text-parchment-dim text-sm mb-2">{gettext("No dietary history recorded yet.")}</p>
           {conditions_panel(assigns)}
       <% end %>
     </div>
@@ -1230,33 +1235,33 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     <div>
       <%= if @intake.assessed_on do %>
         <p class="text-parchment-dim text-xs mb-3">
-          Assessed {Calendar.strftime(@intake.assessed_on, "%b %d, %Y")}
+          {gettext("Assessed %{date}", date: Calendar.strftime(@intake.assessed_on, "%b %d, %Y"))}
         </p>
       <% end %>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <.metric label="Sex" value={Anthropometrics.sex_label(@intake.sex)} unit="" />
-        <.metric label="Age" value={@intake.age} unit="yrs" />
+        <.metric label={gettext("Sex")} value={Anthropometrics.sex_label(@intake.sex)} unit="" />
+        <.metric label={gettext("Age")} value={@intake.age} unit="yrs" />
         <.metric
-          label="Activity"
+          label={gettext("Activity")}
           value={Anthropometrics.activity_label(@intake.activity_level)}
           unit=""
         />
-        <.metric label="Height" value={@intake.height_m} unit="m" />
-        <.metric label="Weight" value={@intake.weight_kg} unit="kg" />
-        <.metric label="BMI" value={@intake.bmi} unit="" />
-        <.metric label="Ideal wt" value={@intake.ideal_weight_kg} unit="kg" />
-        <.metric label="Usual wt" value={@intake.usual_weight_kg} unit="kg" />
-        <.metric label="Adjusted wt" value={@intake.adjusted_weight_kg} unit="kg" />
-        <.metric label="BMR" value={@intake.bmr_kcal} unit="kcal" />
-        <.metric label="TDEE" value={@intake.tdee_kcal} unit="kcal" />
+        <.metric label={gettext("Height")} value={@intake.height_m} unit="m" />
+        <.metric label={gettext("Weight")} value={@intake.weight_kg} unit="kg" />
+        <.metric label={gettext("BMI")} value={@intake.bmi} unit="" />
+        <.metric label={gettext("Ideal wt")} value={@intake.ideal_weight_kg} unit="kg" />
+        <.metric label={gettext("Usual wt")} value={@intake.usual_weight_kg} unit="kg" />
+        <.metric label={gettext("Adjusted wt")} value={@intake.adjusted_weight_kg} unit="kg" />
+        <.metric label={gettext("BMR")} value={@intake.bmr_kcal} unit="kcal" />
+        <.metric label={gettext("TDEE")} value={@intake.tdee_kcal} unit="kcal" />
       </div>
 
       {conditions_panel(assigns)}
 
       <%= if present?(@intake.goal) do %>
         <p class="text-sm text-parchment mb-4">
-          <span class="text-parchment-dim">Goal:</span> {@intake.goal}
+          <span class="text-parchment-dim">{gettext("Goal:")}</span> {@intake.goal}
         </p>
       <% end %>
 
@@ -1270,7 +1275,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       </dl>
 
       <%= if recall = @intake.details["recall_24h"] do %>
-        <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">24-hour recall</h3>
+        <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
           <%= for {key, label} <- Fields.recall_labels(), val = recall[key], present?(val) do %>
             <div>
@@ -1295,10 +1300,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       phx-submit="save_intake"
     >
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <.labeled label="Assessed on">
+        <.labeled label={gettext("Assessed on")}>
           <.input field={f[:assessed_on]} type="date" />
         </.labeled>
-        <.labeled label="Sex">
+        <.labeled label={gettext("Sex")}>
           <.input
             field={f[:sex]}
             type="select"
@@ -1306,10 +1311,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             options={for {v, l} <- Anthropometrics.sexes(), do: {l, v}}
           />
         </.labeled>
-        <.labeled label="Age">
+        <.labeled label={gettext("Age")}>
           <.input field={f[:age]} type="number" />
         </.labeled>
-        <.labeled label="Activity level">
+        <.labeled label={gettext("Activity level")}>
           <.input
             field={f[:activity_level]}
             type="select"
@@ -1317,37 +1322,37 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             options={for {v, l, _f} <- Anthropometrics.activity_levels(), do: {l, v}}
           />
         </.labeled>
-        <.labeled label="Height (m)">
+        <.labeled label={gettext("Height (m)")}>
           <.input field={f[:height_m]} type="number" step="0.01" />
         </.labeled>
-        <.labeled label="Weight (kg)">
+        <.labeled label={gettext("Weight (kg)")}>
           <.input field={f[:weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMI (auto)">
+        <.labeled label={gettext("BMI (auto)")}>
           <.input field={f[:bmi]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="Usual wt (kg)">
+        <.labeled label={gettext("Usual wt (kg)")}>
           <.input field={f[:usual_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="Ideal wt (kg)">
+        <.labeled label={gettext("Ideal wt (kg)")}>
           <.input field={f[:ideal_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="Adjusted wt (kg)">
+        <.labeled label={gettext("Adjusted wt (kg)")}>
           <.input field={f[:adjusted_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMR (auto, kcal)">
+        <.labeled label={gettext("BMR (auto, kcal)")}>
           <.input field={f[:bmr_kcal]} type="number" />
         </.labeled>
-        <.labeled label="TDEE (auto, kcal)">
+        <.labeled label={gettext("TDEE (auto, kcal)")}>
           <.input field={f[:tdee_kcal]} type="number" />
         </.labeled>
       </div>
 
-      <.labeled label="Goal">
+      <.labeled label={gettext("Goal")}>
         <.input field={f[:goal]} type="text" />
       </.labeled>
 
-      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">Questionnaire</h3>
+      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("Questionnaire")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- Fields.detail_labels() do %>
           <.labeled label={label}>
@@ -1360,7 +1365,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <% end %>
       </div>
 
-      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">24-hour recall</h3>
+      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- Fields.recall_labels() do %>
           <.labeled label={label}>
@@ -1375,8 +1380,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       </div>
 
       <div class="flex gap-2 mt-5">
-        <.action variant={:primary} size={:sm} type="submit">Save dietary history</.action>
-        <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_intake">Cancel</.action>
+        <.action variant={:primary} size={:sm} type="submit">{gettext("Save dietary history")}</.action>
+        <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_intake">{gettext("Cancel")}</.action>
       </div>
     </.form>
     """
@@ -1462,7 +1467,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   defp present?(val), do: is_binary(val) and String.trim(val) != ""
 
-  defp modality_label("phone"), do: "Phone"
-  defp modality_label("online"), do: "Online"
-  defp modality_label(_), do: "In person"
+  defp modality_label("phone"), do: gettext("Phone")
+  defp modality_label("online"), do: gettext("Online")
+  defp modality_label(_), do: gettext("In person")
 end

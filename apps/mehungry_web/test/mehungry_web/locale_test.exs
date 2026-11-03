@@ -24,8 +24,16 @@ defmodule MehungryWeb.LocaleTest do
       assert Locale.swap_path("/el/foods/tomato", "en") == "/en/foods/tomato"
     end
 
-    test "leaves a non-locale first segment intact" do
-      assert Locale.swap_path("/professional/users", "el") == "/el/professional/users"
+    test "prefixes a generic (localizable) first segment" do
+      assert Locale.swap_path("/something/else", "el") == "/el/something/else"
+    end
+
+    test "leaves non-localized surfaces (admin/nutritionist panels) unprefixed" do
+      # These surfaces live on bare, unprefixed routes — their locale is driven
+      # by the session/profile, so swap_path must never insert a /:locale prefix.
+      assert Locale.swap_path("/professional/users", "el") == "/professional/users"
+      assert Locale.swap_path("/nutritionist/clients", "el") == "/nutritionist/clients"
+      assert Locale.swap_path("/nutritionist/clients?tab=x", "el") == "/nutritionist/clients?tab=x"
     end
 
     test "preserves the query string" do

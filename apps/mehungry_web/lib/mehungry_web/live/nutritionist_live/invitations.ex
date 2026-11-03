@@ -11,7 +11,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
     socket =
       socket
       |> assign(:invitations, invitations)
-      |> assign(:page_title, "Invitations")
+      |> assign(:page_title, gettext("Invitations"))
       |> assign(:invite_email, "")
       |> assign(:invite_message, "")
       |> assign(:invite_error, nil)
@@ -45,7 +45,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
          socket
          |> refresh_invitations(professional_id)
          |> assign(:search_results, results)
-         |> put_flash(:info, "Invitation sent.")}
+         |> put_flash(:info, gettext("Invitation sent."))}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, invite_error_message(reason))}
@@ -66,7 +66,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
          |> assign(:invite_message, "")
          |> assign(:invite_error, nil)
          |> assign(:onboard_email, nil)
-         |> put_flash(:info, "Invitation sent to #{email}.")}
+         |> put_flash(:info, gettext("Invitation sent to %{email}.", email: email))}
 
       # No account yet for this email — offer to send them an onboarding invite
       # instead of a dead-end error. Keep the typed email + message around.
@@ -98,7 +98,10 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
          |> assign(:onboard_email, nil)
          |> put_flash(
            :info,
-           "Invitation email sent to #{email}. They'll appear in your clients once they join."
+           gettext(
+             "Invitation email sent to %{email}. They'll appear in your clients once they join.",
+             email: email
+           )
          )}
 
       # They registered in the meantime — fall back to the normal invite path.
@@ -111,7 +114,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
              |> assign(:invite_email, "")
              |> assign(:invite_message, "")
              |> assign(:onboard_email, nil)
-             |> put_flash(:info, "Invitation sent to #{email}.")}
+             |> put_flash(:info, gettext("Invitation sent to %{email}.", email: email))}
 
           {:error, reason} ->
             {:noreply,
@@ -126,13 +129,18 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
          |> assign(:onboard_email, nil)
          |> put_flash(
            :error,
-           "We created the client but couldn't send the email. You can share a claim link from your Clients page."
+           gettext(
+             "We created the client but couldn't send the email. You can share a claim link from your Clients page."
+           )
          )}
 
       {:error, _reason} ->
         {:noreply,
          socket
-         |> assign(:invite_error, "Could not send the onboarding email. Please try again.")}
+         |> assign(
+           :invite_error,
+           gettext("Could not send the onboarding email. Please try again.")
+         )}
     end
   end
 
@@ -150,10 +158,12 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
         invitations = Professionals.list_sent_invitations(professional_id)
 
         {:noreply,
-         socket |> assign(:invitations, invitations) |> put_flash(:info, "Invitation revoked.")}
+         socket
+         |> assign(:invitations, invitations)
+         |> put_flash(:info, gettext("Invitation revoked."))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not revoke invitation.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not revoke invitation."))}
     end
   end
 
@@ -163,28 +173,29 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
 
   defp claim_url(token), do: MehungryWeb.Endpoint.url() <> "/claim/" <> token
 
-  defp invite_error_message(:client_not_found), do: "No user found with that email address."
+  defp invite_error_message(:client_not_found),
+    do: gettext("No user found with that email address.")
 
   defp invite_error_message(:already_invited),
-    do: "You already have a pending invitation to this user."
+    do: gettext("You already have a pending invitation to this user.")
 
-  defp invite_error_message(:already_client), do: "This user is already your client."
-  defp invite_error_message(:self_invite), do: "You can't invite yourself."
-  defp invite_error_message(_), do: "Could not send invitation. Please try again."
+  defp invite_error_message(:already_client), do: gettext("This user is already your client.")
+  defp invite_error_message(:self_invite), do: gettext("You can't invite yourself.")
+  defp invite_error_message(_), do: gettext("Could not send invitation. Please try again.")
 
   @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-3xl mx-auto">
-      <h1 class="text-2xl font-display font-bold text-parchment mb-6">Invitations</h1>
+      <h1 class="text-2xl font-display font-bold text-parchment mb-6">{gettext("Invitations")}</h1>
 
       <!-- Invite form -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 mb-8">
-        <h2 class="text-parchment font-display font-semibold mb-4">Invite a client</h2>
+        <h2 class="text-parchment font-display font-semibold mb-4">{gettext("Invite a client")}</h2>
 
         <!-- Search existing users -->
         <div>
-          <label class="block text-sm text-parchment-dim mb-1">Search by name</label>
+          <label class="block text-sm text-parchment-dim mb-1">{gettext("Search by name")}</label>
           <form id="user-search-form" phx-change="search_users" phx-submit="search_users">
             <input
               type="text"
@@ -192,18 +203,20 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
               value={@search_query}
               phx-debounce="250"
               autocomplete="off"
-              placeholder="Search m3hungry users by name…"
+              placeholder={gettext("Search m3hungry users by name…")}
               class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
             />
           </form>
           <p class="text-parchment-dim text-xs mt-1">
-            Find users who signed in with Facebook or Google even if you don't know their email.
+            {gettext(
+              "Find users who signed in with Facebook or Google even if you don't know their email."
+            )}
           </p>
 
           <%= cond do %>
             <% String.trim(@search_query) == "" -> %>
             <% @search_results == [] -> %>
-              <p class="text-parchment-dim text-sm mt-3">No matching users found.</p>
+              <p class="text-parchment-dim text-sm mt-3">{gettext("No matching users found.")}</p>
             <% true -> %>
               <ul class="mt-3 space-y-2">
                 <%= for %{user: user, status: status} <- @search_results do %>
@@ -218,7 +231,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
                       <% end %>
                       <div class="min-w-0">
                         <p class="text-parchment text-sm font-medium truncate">
-                          {user.name || "Unknown"}
+                          {user.name || gettext("Unknown")}
                         </p>
                         <%= if user.user_profile && user.user_profile.alias && user.user_profile.alias != user.name do %>
                           <p class="text-parchment-dim text-xs truncate">{user.user_profile.alias}</p>
@@ -234,12 +247,12 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
                           phx-click="invite_user"
                           phx-value-id={user.id}
                         >
-                          Invite
+                          {gettext("Invite")}
                         </.action>
                       <% :invited -> %>
-                        <span class="text-xs text-yellow-400 flex-shrink-0">Invited</span>
+                        <span class="text-xs text-yellow-400 flex-shrink-0">{gettext("Invited")}</span>
                       <% :client -> %>
-                        <span class="text-xs text-green-400 flex-shrink-0">Client</span>
+                        <span class="text-xs text-green-400 flex-shrink-0">{gettext("Client")}</span>
                     <% end %>
                   </li>
                 <% end %>
@@ -249,13 +262,13 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
 
         <div class="flex items-center gap-3 my-5">
           <div class="flex-1 h-px bg-ink-panel2"></div>
-          <span class="text-parchment-dim text-xs uppercase tracking-wide">or invite by email</span>
+          <span class="text-parchment-dim text-xs uppercase tracking-wide">{gettext("or invite by email")}</span>
           <div class="flex-1 h-px bg-ink-panel2"></div>
         </div>
 
         <form phx-submit="invite_client" class="space-y-3">
           <div>
-            <label class="block text-sm text-parchment-dim mb-1">Client email address</label>
+            <label class="block text-sm text-parchment-dim mb-1">{gettext("Client email address")}</label>
             <input
               type="email"
               name="email"
@@ -266,26 +279,27 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
             />
           </div>
           <div>
-            <label class="block text-sm text-parchment-dim mb-1">Personal message (optional)</label>
+            <label class="block text-sm text-parchment-dim mb-1">{gettext("Personal message (optional)")}</label>
             <textarea
               name="message"
               rows="2"
-              placeholder="Hi! I'd like to be your nutrition coach..."
+              placeholder={gettext("Hi! I'd like to be your nutrition coach...")}
               class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
             >{@invite_message}</textarea>
           </div>
           <%= if @invite_error do %>
             <p class="text-red-400 text-sm">{@invite_error}</p>
           <% end %>
-          <.action variant={:primary} size={:sm} type="submit">Send invitation</.action>
+          <.action variant={:primary} size={:sm} type="submit">{gettext("Send invitation")}</.action>
         </form>
 
         <%= if @onboard_email do %>
           <div class="mt-4 bg-ink-panel2 border border-paprika/40 rounded-lg p-4">
             <p class="text-parchment text-sm">
-              No m3hungry account found for
-              <span class="font-medium">{@onboard_email}</span>. Send them an invitation to join
-              m3hungry? When they sign up they'll become your client automatically.
+              {gettext("No m3hungry account found for")}
+              <span class="font-medium">{@onboard_email}</span>{gettext(
+                ". Send them an invitation to join m3hungry? When they sign up they'll become your client automatically."
+              )}
             </p>
             <div class="flex items-center gap-4 mt-3">
               <.action
@@ -296,14 +310,14 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
                 phx-value-email={@onboard_email}
                 phx-value-message={@invite_message}
               >
-                Send invitation email
+                {gettext("Send invitation email")}
               </.action>
               <button
                 type="button"
                 phx-click="cancel_onboard"
                 class="text-xs text-parchment-dim hover:text-parchment"
               >
-                Cancel
+                {gettext("Cancel")}
               </button>
             </div>
           </div>
@@ -311,17 +325,17 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
       </div>
 
       <!-- Sent invitations -->
-      <h2 class="text-parchment font-display font-semibold mb-3">Sent Invitations</h2>
+      <h2 class="text-parchment font-display font-semibold mb-3">{gettext("Sent Invitations")}</h2>
 
       <%= if Enum.empty?(@invitations) do %>
-        <p class="text-parchment-dim text-sm">No invitations sent yet.</p>
+        <p class="text-parchment-dim text-sm">{gettext("No invitations sent yet.")}</p>
       <% else %>
         <div class="space-y-3">
           <%= for inv <- @invitations do %>
             <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 flex items-center justify-between">
               <div>
                 <p class="text-parchment text-sm font-medium">
-                  {if inv.client && inv.client.name, do: inv.client.name, else: "Unknown"}
+                  {if inv.client && inv.client.name, do: inv.client.name, else: gettext("Unknown")}
                 </p>
                 <div class="flex items-center gap-2 mt-1">
                   <span class={[
@@ -341,10 +355,10 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
                 <button
                   phx-click="revoke_invitation"
                   phx-value-id={inv.id}
-                  data-confirm="Revoke this invitation?"
+                  data-confirm={gettext("Revoke this invitation?")}
                   class="text-xs text-red-400 hover:text-red-300"
                 >
-                  Revoke
+                  {gettext("Revoke")}
                 </button>
               <% end %>
             </div>

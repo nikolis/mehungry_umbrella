@@ -29,7 +29,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       nil ->
         {:ok,
          socket
-         |> put_flash(:error, "Record not found.")
+         |> put_flash(:error, gettext("Record not found."))
          |> push_navigate(to: ~p"/nutritionist/clients")}
 
       record ->
@@ -43,7 +43,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         %ClientIntake{professional_client_id: record.id}
 
     socket
-    |> assign(:page_title, "Edit: #{record.full_name}")
+    |> assign(:page_title, gettext("Edit: %{name}", name: record.full_name))
     |> assign(:record, record)
     |> assign(:client_changeset, Professionals.change_client_record(record))
     |> assign(:intake, intake)
@@ -86,7 +86,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
 
   def handle_event("add_condition", %{"condition_id" => condition_id}, socket) do
     Professionals.add_client_condition(socket.assigns.record.id, condition_id)
-    {:noreply, socket |> assign_conditions() |> put_flash(:info, "Condition added.")}
+    {:noreply, socket |> assign_conditions() |> put_flash(:info, gettext("Condition added."))}
   end
 
   def handle_event("remove_condition", %{"id" => condition_id}, socket) do
@@ -121,7 +121,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
          socket
          |> assign(:intake, intake)
          |> assign(:intake_changeset, Professionals.change_intake(intake))
-         |> put_flash(:info, "Intake saved.")}
+         |> put_flash(:info, gettext("Intake saved."))}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :intake_changeset, changeset)}
@@ -143,8 +143,8 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     note = fetch_note(socket, id)
 
     case Professionals.update_consultation_note(note, Map.delete(params, "_id")) do
-      {:ok, _} -> {:noreply, socket |> put_flash(:info, "Note saved.") |> reload_notes()}
-      {:error, _} -> {:noreply, put_flash(socket, :error, "Could not save note.")}
+      {:ok, _} -> {:noreply, socket |> put_flash(:info, gettext("Note saved.")) |> reload_notes()}
+      {:error, _} -> {:noreply, put_flash(socket, :error, gettext("Could not save note."))}
     end
   end
 
@@ -179,7 +179,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
          socket
          |> assign(:record, record)
          |> assign(:client_changeset, Professionals.change_client_record(record))
-         |> put_flash(:info, "Client saved.")}
+         |> put_flash(:info, gettext("Client saved."))}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :client_changeset, changeset)}
@@ -201,7 +201,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         navigate={~p"/nutritionist/clients/#{@record.user_id}"}
         class="text-parchment-dim hover:text-parchment text-sm"
       >
-        ← Back to client
+        {gettext("← Back to client")}
       </.link>
 
       <h1 class="text-2xl font-display font-bold text-parchment mt-2 mb-6">
@@ -221,7 +221,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   defp client_section(assigns) do
     ~H"""
     <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
-      <h2 class="text-lg font-display font-bold text-parchment mb-4">Client details</h2>
+      <h2 class="text-lg font-display font-bold text-parchment mb-4">{gettext("Client details")}</h2>
 
       <.form
         :let={f}
@@ -232,32 +232,32 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         phx-submit="save_client"
         class="space-y-4 mt-4"
       >
-        <.labeled label="Full name">
+        <.labeled label={gettext("Full name")}>
           <.input field={f[:full_name]} type="text" />
         </.labeled>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <.labeled label="Date of birth">
+          <.labeled label={gettext("Date of birth")}>
             <.input field={f[:date_of_birth]} type="date" />
           </.labeled>
-          <.labeled label="Email">
+          <.labeled label={gettext("Email")}>
             <.input field={f[:email]} type="text" />
           </.labeled>
-          <.labeled label="Phone">
+          <.labeled label={gettext("Phone")}>
             <.input field={f[:phone]} type="text" />
           </.labeled>
-          <.labeled label="Postal code">
+          <.labeled label={gettext("Postal code")}>
             <.input field={f[:postal_code]} type="text" />
           </.labeled>
         </div>
-        <.labeled label="Address">
+        <.labeled label={gettext("Address")}>
           <.input field={f[:address]} type="text" />
         </.labeled>
-        <.labeled label="Work / schedule">
+        <.labeled label={gettext("Work / schedule")}>
           <.input field={f[:work_schedule]} type="text" />
         </.labeled>
 
         <.action variant={:primary} size={:sm} type="submit">
-          Save details
+          {gettext("Save details")}
         </.action>
       </.form>
     </section>
@@ -273,13 +273,13 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
 
     ~H"""
     <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
-      <h2 class="text-lg font-display font-bold text-parchment mb-1">Health conditions</h2>
+      <h2 class="text-lg font-display font-bold text-parchment mb-1">{gettext("Health conditions")}</h2>
       <p class="text-parchment-dim text-sm mb-4">
-        Link existing conditions to this client. Only you, the nutritionist, can record these.
+        {gettext("Link existing conditions to this client. Only you, the nutritionist, can record these.")}
       </p>
 
       <%= if Enum.empty?(@conditions) do %>
-        <p class="text-parchment-dim text-sm mb-4">No conditions recorded yet.</p>
+        <p class="text-parchment-dim text-sm mb-4">{gettext("No conditions recorded yet.")}</p>
       <% else %>
         <div class="flex flex-wrap gap-2 mb-4">
           <%= for condition <- @conditions do %>
@@ -289,7 +289,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
                 type="button"
                 phx-click="remove_condition"
                 phx-value-id={condition.id}
-                aria-label={"Remove #{condition.name}"}
+                aria-label={gettext("Remove %{name}", name: condition.name)}
                 class="hover:text-parchment"
               >
                 ✕
@@ -300,21 +300,21 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       <% end %>
 
       <%= if Enum.empty?(@available_conditions) do %>
-        <p class="text-parchment-dim text-sm">All conditions in the registry are already linked.</p>
+        <p class="text-parchment-dim text-sm">{gettext("All conditions in the registry are already linked.")}</p>
       <% else %>
         <form phx-submit="add_condition" class="flex flex-wrap items-end gap-3">
-          <.labeled label="Add a condition">
+          <.labeled label={gettext("Add a condition")}>
             <select
               name="condition_id"
               class="bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm min-w-56"
             >
-              <option value="">— Select a condition —</option>
+              <option value="">{gettext("— Select a condition —")}</option>
               <%= for condition <- @available_conditions do %>
                 <option value={condition.id}>{condition.name}</option>
               <% end %>
             </select>
           </.labeled>
-          <.action variant={:primary} size={:sm} type="submit">Add</.action>
+          <.action variant={:primary} size={:sm} type="submit">{gettext("Add")}</.action>
         </form>
       <% end %>
     </section>
@@ -334,13 +334,13 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       phx-submit="save_intake"
       class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6"
     >
-      <h2 class="text-lg font-display font-bold text-parchment mb-4">Intake</h2>
+      <h2 class="text-lg font-display font-bold text-parchment mb-4">{gettext("Intake")}</h2>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <.labeled label="Assessed on">
+        <.labeled label={gettext("Assessed on")}>
           <.input field={f[:assessed_on]} type="date" />
         </.labeled>
-        <.labeled label="Sex">
+        <.labeled label={gettext("Sex")}>
           <.input
             field={f[:sex]}
             type="select"
@@ -348,10 +348,10 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
             options={for {v, l} <- Anthropometrics.sexes(), do: {l, v}}
           />
         </.labeled>
-        <.labeled label="Age">
+        <.labeled label={gettext("Age")}>
           <.input field={f[:age]} type="number" />
         </.labeled>
-        <.labeled label="Activity level">
+        <.labeled label={gettext("Activity level")}>
           <.input
             field={f[:activity_level]}
             type="select"
@@ -359,37 +359,37 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
             options={for {v, l, _f} <- Anthropometrics.activity_levels(), do: {l, v}}
           />
         </.labeled>
-        <.labeled label="Height (m)">
+        <.labeled label={gettext("Height (m)")}>
           <.input field={f[:height_m]} type="number" step="0.01" />
         </.labeled>
-        <.labeled label="Weight (kg)">
+        <.labeled label={gettext("Weight (kg)")}>
           <.input field={f[:weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMI (auto)">
+        <.labeled label={gettext("BMI (auto)")}>
           <.input field={f[:bmi]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="Usual wt (kg)">
+        <.labeled label={gettext("Usual wt (kg)")}>
           <.input field={f[:usual_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="Ideal wt (kg)">
+        <.labeled label={gettext("Ideal wt (kg)")}>
           <.input field={f[:ideal_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="Adjusted wt (kg)">
+        <.labeled label={gettext("Adjusted wt (kg)")}>
           <.input field={f[:adjusted_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMR (auto, kcal)">
+        <.labeled label={gettext("BMR (auto, kcal)")}>
           <.input field={f[:bmr_kcal]} type="number" />
         </.labeled>
-        <.labeled label="TDEE (auto, kcal)">
+        <.labeled label={gettext("TDEE (auto, kcal)")}>
           <.input field={f[:tdee_kcal]} type="number" />
         </.labeled>
       </div>
 
-      <.labeled label="Goal">
+      <.labeled label={gettext("Goal")}>
         <.input field={f[:goal]} type="text" />
       </.labeled>
 
-      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">Questionnaire</h3>
+      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("Questionnaire")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- @detail_labels do %>
           <.labeled label={label}>
@@ -402,7 +402,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         <% end %>
       </div>
 
-      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">24-hour recall</h3>
+      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- @recall_labels do %>
           <.labeled label={label}>
@@ -416,7 +416,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         <% end %>
       </div>
 
-      <.action variant={:primary} size={:sm} type="submit" class="mt-5">Save intake</.action>
+      <.action variant={:primary} size={:sm} type="submit" class="mt-5">{gettext("Save intake")}</.action>
     </.form>
     """
   end
@@ -493,15 +493,15 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     <section>
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-lg font-display font-bold text-parchment">
-          Consultation notes ({length(@notes)})
+          {gettext("Consultation notes (%{count})", count: length(@notes))}
         </h2>
         <.action variant={:secondary} size={:sm} type="button" phx-click="add_note">
-          Add note
+          {gettext("Add note")}
         </.action>
       </div>
 
       <%= if Enum.empty?(@notes) do %>
-        <p class="text-parchment-dim text-sm">No consultation notes yet.</p>
+        <p class="text-parchment-dim text-sm">{gettext("No consultation notes yet.")}</p>
       <% else %>
         <div class="space-y-4">
           <%= for note <- @notes do %>
@@ -525,38 +525,38 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     >
       <input type="hidden" name="note[_id]" value={@note.id} />
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-        <.labeled label="Visit #">
+        <.labeled label={gettext("Visit #")}>
           <.input field={f[:visit_number]} type="number" />
         </.labeled>
-        <.labeled label="Date">
+        <.labeled label={gettext("Date")}>
           <.input field={f[:visit_date]} type="date" />
         </.labeled>
-        <.labeled label="Modality">
+        <.labeled label={gettext("Modality")}>
           <.input field={f[:modality]} type="select" options={modality_options(@modalities)} />
         </.labeled>
-        <.labeled label="Weight (kg)">
+        <.labeled label={gettext("Weight (kg)")}>
           <.input field={f[:weight_kg]} type="number" step="0.1" />
         </.labeled>
       </div>
-      <.labeled label="Notes">
+      <.labeled label={gettext("Notes")}>
         <.input field={f[:body]} type="textarea" rows="3" />
       </.labeled>
       <div class="mt-3">
-        <.labeled label="To do">
+        <.labeled label={gettext("To do")}>
           <.input field={f[:todo]} type="textarea" rows="2" />
         </.labeled>
       </div>
       <div class="flex gap-2 mt-3">
-        <.action variant={:primary} size={:sm} type="submit">Save note</.action>
+        <.action variant={:primary} size={:sm} type="submit">{gettext("Save note")}</.action>
         <.action
           variant={:danger}
           size={:sm}
           type="button"
           phx-click="delete_note"
           phx-value-id={@note.id}
-          data-confirm="Delete this note?"
+          data-confirm={gettext("Delete this note?")}
         >
-          Delete
+          {gettext("Delete")}
         </.action>
       </div>
     </.form>

@@ -75,8 +75,17 @@ with **no** locale segment (login, register, auth callbacks) it still sets a Get
 locale via `detect/1` but never redirects. A localized route hit with an **unsupported**
 locale (`/xx/browse`) is redirected to the same page under the detected/default locale.
 
-> `admin_browser` (used by `/professional/**` and `/nutritionist/**`) does **not** run
-> this plug — those surfaces are intentionally English-only, and `@locale` is nil there.
+> `admin_browser` (used by `/professional/**`) does **not** run this plug — the admin
+> tools are intentionally English-only, and `@locale` is nil there.
+>
+> The **nutritionist workspace** (`/nutritionist/**`) is **localized**. It runs through
+> the normal `:browser` pipeline (so `SetLocale` resolves a locale via `detect/1` and
+> persists it to the session) and its live_sessions list `RestoreLocale` first in
+> `on_mount`, so the connected LiveView renders in the nutritionist's language. These
+> routes are **not** URL-prefixed — the locale is driven by the session/profile and an
+> EN/ΕΛ switcher in the sidebar chrome (`/users/language/:lang`). Because the routes
+> carry no `/:locale` segment, `Locale.swap_path/2` returns them verbatim (see
+> `non_localized_surface?/1`) so the switcher redirect lands on a valid route.
 
 ### `MehungryWeb.RestoreLocale` — `live/restore_locale.ex`
 `on_mount` hook. The connected LiveView process doesn't run the pipeline, so this

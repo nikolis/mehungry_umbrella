@@ -48,7 +48,7 @@ defmodule MehungryWeb.NutritionistLive.OnboardingQuestions do
       Onboarding.delete_question(q)
     end
 
-    {:noreply, socket |> load() |> put_flash(:info, "Question deleted.")}
+    {:noreply, socket |> load() |> put_flash(:info, gettext("Question deleted."))}
   end
 
   def handle_event("move_up", %{"id" => id}, socket), do: move(socket, id, :up)
@@ -56,7 +56,7 @@ defmodule MehungryWeb.NutritionistLive.OnboardingQuestions do
 
   @impl true
   def handle_info({MehungryWeb.OnboardingQuestionLive.FormComponent, {:saved, _question}}, socket) do
-    {:noreply, socket |> assign(:editing, nil) |> load() |> put_flash(:info, "Question saved.")}
+    {:noreply, socket |> assign(:editing, nil) |> load() |> put_flash(:info, gettext("Question saved."))}
   end
 
   defp move(socket, id, direction) do
@@ -74,10 +74,12 @@ defmodule MehungryWeb.NutritionistLive.OnboardingQuestions do
   defp load(socket) do
     socket
     |> assign(:questions, Onboarding.list_questions("client", socket.assigns.professional_id))
-    |> assign(:heading, "Client onboarding questions")
+    |> assign(:heading, gettext("Client onboarding questions"))
     |> assign(
       :subheading,
-      "The questionnaire your clients fill in when they join you. Seeded from the platform default; edit it freely — your changes are yours alone."
+      gettext(
+        "The questionnaire your clients fill in when they join you. Seeded from the platform default; edit it freely — your changes are yours alone."
+      )
     )
   end
 end

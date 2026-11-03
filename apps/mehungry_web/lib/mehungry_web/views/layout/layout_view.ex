@@ -291,7 +291,8 @@ defmodule MehungryWeb.LayoutView do
     """
   end
 
-  attr :current_user, :any
+  attr :current_user, :any, default: nil
+  attr :current_language, :string, default: "en"
 
   def nutritionist_sidebar(assigns) do
     ~H"""
@@ -356,30 +357,30 @@ defmodule MehungryWeb.LayoutView do
       </div>
 
       <div class="px-5 py-3">
-        <span class="text-xs font-semibold text-basil uppercase tracking-wider">Nutritionist Panel</span>
+        <span class="text-xs font-semibold text-basil uppercase tracking-wider">{gettext("Nutritionist Panel")}</span>
       </div>
 
       <div class="flex-1 px-3 space-y-1 overflow-y-auto">
-        <.nutritionist_link href="/nutritionist" icon="hero-squares-2x2" label="Dashboard" />
+        <.nutritionist_link href="/nutritionist" icon="hero-squares-2x2" label={gettext("Dashboard")} />
         <.nutritionist_link
           href="/nutritionist/analytics"
           icon="hero-chart-bar"
-          label="Analytics"
+          label={gettext("Analytics")}
         />
         <.nutritionist_link
           href="/nutritionist/payments"
           icon="hero-banknotes"
-          label="Payments"
+          label={gettext("Payments")}
         />
         <.nutritionist_link
           href="/nutritionist/profile"
           icon="hero-identification"
-          label="My Profile"
+          label={gettext("My Profile")}
         />
         <.nutritionist_link
           href="/nutritionist/clients"
           icon="hero-user-group"
-          label="My Clients"
+          label={gettext("My Clients")}
           badge={
             if(@current_user,
               do: Mehungry.Professionals.count_unread_messages_for(@current_user.id),
@@ -390,32 +391,50 @@ defmodule MehungryWeb.LayoutView do
         <.nutritionist_link
           href="/nutritionist/blueprints"
           icon="hero-clipboard-document-list"
-          label="Blueprints"
+          label={gettext("Blueprints")}
         />
-        <.nutritionist_link href="/nutritionist/invitations" icon="hero-envelope" label="Invitations" />
+        <.nutritionist_link
+          href="/nutritionist/invitations"
+          icon="hero-envelope"
+          label={gettext("Invitations")}
+        />
         <.nutritionist_link
           href="/nutritionist/onboarding-questions"
           icon="hero-queue-list"
-          label="Onboarding Qs"
+          label={gettext("Onboarding Qs")}
         />
         <.nutritionist_link
           href="/nutritionist/appointments"
           icon="hero-calendar-days"
-          label="Appointments"
+          label={gettext("Appointments")}
         />
         <.nutritionist_link
           href="/nutritionist/articles"
           icon="hero-document-text"
-          label="Articles"
+          label={gettext("Articles")}
         />
         <.nutritionist_link
           href="/nutritionist/research"
           icon="hero-academic-cap"
-          label="Research"
+          label={gettext("Research")}
         />
       </div>
 
-      <div class="px-5 py-4 border-t border-ink-panel2">
+      <div class="px-5 py-4 border-t border-ink-panel2 space-y-3">
+        <div class="flex items-center justify-center gap-1 bg-ink-panel2 rounded-full p-0.5">
+          <a
+            href="/users/language/en"
+            class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "en", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
+          >
+            EN
+          </a>
+          <a
+            href="/users/language/el"
+            class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "el", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
+          >
+            ΕΛ
+          </a>
+        </div>
         <a
           href="/home"
           class="flex items-center gap-2 text-parchment-dim hover:text-parchment text-sm transition"
@@ -428,7 +447,7 @@ defmodule MehungryWeb.LayoutView do
               d="M10 19l-7-7m0 0l7-7m-7 7h18"
             />
           </svg>
-          Back to app
+          {gettext("Back to app")}
         </a>
       </div>
     </nav>

@@ -29,7 +29,7 @@ defmodule MehungryWeb.NutritionistLive.AnalyticsLive do
   def mount(_params, _session, socket) do
     socket =
       socket
-      |> assign(:page_title, "Analytics")
+      |> assign(:page_title, gettext("Analytics"))
       |> assign(:range, "month")
       |> assign(:dimension, "service")
 
@@ -107,25 +107,28 @@ defmodule MehungryWeb.NutritionistLive.AnalyticsLive do
 
   defp breakdown_rows("returning", pid, dr) do
     %{new_cents: n, returning_cents: r} = Professionals.revenue_new_vs_returning(pid, dr)
-    [%{label: "New clients", net_cents: n}, %{label: "Returning clients", net_cents: r}]
+    [
+      %{label: gettext("New clients"), net_cents: n},
+      %{label: gettext("Returning clients"), net_cents: r}
+    ]
   end
 
   defp breakdown_rows("outcome", pid, dr) do
     o = Professionals.revenue_by_outcome(pid, dr)
 
     [
-      %{label: "Captured", net_cents: o.captured_cents},
-      %{label: "No-show retained", net_cents: o.no_show_cents},
-      %{label: "Refunded", net_cents: o.refunded_cents},
-      %{label: "Released", net_cents: o.released_cents}
+      %{label: gettext("Captured"), net_cents: o.captured_cents},
+      %{label: gettext("No-show retained"), net_cents: o.no_show_cents},
+      %{label: gettext("Refunded"), net_cents: o.refunded_cents},
+      %{label: gettext("Released"), net_cents: o.released_cents}
     ]
   end
 
   defp service_label(%{name: name}) when is_binary(name) and name != "", do: name
-  defp service_label(%{kind: "intro"}), do: "Intro session"
-  defp service_label(%{kind: "package"}), do: "Package"
-  defp service_label(%{kind: "session"}), do: "Session"
-  defp service_label(_), do: "Other / direct"
+  defp service_label(%{kind: "intro"}), do: gettext("Intro session")
+  defp service_label(%{kind: "package"}), do: gettext("Package")
+  defp service_label(%{kind: "session"}), do: gettext("Session")
+  defp service_label(_), do: gettext("Other / direct")
 
   # Keep the top N rows by net, fold the rest into one "Other" row.
   defp fold_top_n(rows, n) when length(rows) <= n, do: rows
@@ -133,7 +136,7 @@ defmodule MehungryWeb.NutritionistLive.AnalyticsLive do
   defp fold_top_n(rows, n) do
     {top, rest} = Enum.split(rows, n)
     other = Enum.reduce(rest, 0, &(&1.net_cents + &2))
-    top ++ [%{label: "Other", net_cents: other}]
+    top ++ [%{label: gettext("Other"), net_cents: other}]
   end
 
   defp this_week_count([]), do: 0
@@ -191,7 +194,7 @@ defmodule MehungryWeb.NutritionistLive.AnalyticsLive do
     )
     |> Vl.encode_field(:y, "euros",
       type: :quantitative,
-      title: "€ net",
+      title: gettext("€ net"),
       axis: [
         title_color: @axis_label,
         label_color: @axis_label,
@@ -252,7 +255,7 @@ defmodule MehungryWeb.NutritionistLive.AnalyticsLive do
     )
     |> Vl.encode_field(:x, "euros",
       type: :quantitative,
-      title: "€ net",
+      title: gettext("€ net"),
       axis: [
         title_color: @axis_label,
         label_color: @axis_label,
@@ -281,14 +284,14 @@ defmodule MehungryWeb.NutritionistLive.AnalyticsLive do
   def euros(cents) when is_integer(cents),
     do: "€" <> :erlang.float_to_binary(cents / 100, decimals: 2)
 
-  def range_label("week"), do: "This week"
-  def range_label("month"), do: "This month"
-  def range_label("all"), do: "All time"
+  def range_label("week"), do: gettext("This week")
+  def range_label("month"), do: gettext("This month")
+  def range_label("all"), do: gettext("All time")
 
   def ranges, do: @ranges
   def dimensions, do: @dimensions
 
-  def dimension_label("service"), do: "By service"
-  def dimension_label("returning"), do: "New vs returning"
-  def dimension_label("outcome"), do: "By outcome"
+  def dimension_label("service"), do: gettext("By service")
+  def dimension_label("returning"), do: gettext("New vs returning")
+  def dimension_label("outcome"), do: gettext("By outcome")
 end

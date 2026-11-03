@@ -2,9 +2,11 @@
   <!-- Header + time range -->
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-white font-display">Earnings &amp; pipeline</h1>
+      <h1 class="text-2xl font-bold text-white font-display">{gettext("Earnings & pipeline")}</h1>
       <p class="text-parchment-dim text-sm mt-0.5">
-        What you've earned, what's in flight, and where money leaks — read straight from your payments.
+        {gettext(
+          "What you've earned, what's in flight, and where money leaks — read straight from your payments."
+        )}
       </p>
     </div>
     <div class="inline-flex rounded-xl border border-ink-panel2 bg-ink-panel p-1 shrink-0">
@@ -30,28 +32,36 @@
   <!-- Hero KPI tiles -->
   <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
     <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
-      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">Net earned</p>
+      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
+        {gettext("Net earned")}
+      </p>
       <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
         {euros(@net_cents)}
       </p>
-      <p class="text-xs text-parchment-dim mt-1">after 5% platform fee · {range_label(@range)}</p>
+      <p class="text-xs text-parchment-dim mt-1">
+        {gettext("after 5% platform fee ·")} {range_label(@range)}
+      </p>
     </div>
     <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
-      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">In flight</p>
+      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
+        {gettext("In flight")}
+      </p>
       <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
         {euros(@in_flight_cents)}
       </p>
-      <p class="text-xs text-parchment-dim mt-1">authorized holds awaiting accept</p>
+      <p class="text-xs text-parchment-dim mt-1">{gettext("authorized holds awaiting accept")}</p>
     </div>
     <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5 col-span-2 md:col-span-1">
-      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">Pending requests</p>
+      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
+        {gettext("Pending requests")}
+      </p>
       <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
         {@pending_count}
       </p>
       <a
         href="/nutritionist/appointments"
         class="text-paprika hover:text-paprika-soft text-xs mt-1 block"
-      >Review requests →</a>
+      >{gettext("Review requests →")}</a>
     </div>
   </div>
 
@@ -59,8 +69,8 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Revenue over time -->
     <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
-      <h2 class="text-sm font-semibold text-white">Revenue over time</h2>
-      <p class="text-xs text-parchment-dim mt-0.5">Net €, {range_label(@range)}</p>
+      <h2 class="text-sm font-semibold text-white">{gettext("Revenue over time")}</h2>
+      <p class="text-xs text-parchment-dim mt-0.5">{gettext("Net €,")} {range_label(@range)}</p>
       <%= if @has_revenue? do %>
         <div class="w-full overflow-hidden mt-3">
           <div
@@ -73,22 +83,26 @@
         </div>
       <% else %>
         <div class="mt-3 rounded-xl border border-dashed border-ink-panel2 py-10 text-center">
-          <p class="text-parchment text-sm font-medium">No revenue recorded yet</p>
+          <p class="text-parchment text-sm font-medium">{gettext("No revenue recorded yet")}</p>
           <p class="text-parchment-dim text-xs mt-1 max-w-xs mx-auto">
-            Paid consultations show up here once clients book and you accept them.
+            {gettext("Paid consultations show up here once clients book and you accept them.")}
           </p>
           <a
             href="/nutritionist/payments"
             class="inline-block mt-3 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium"
-          >Set up your services</a>
+          >{gettext("Set up your services")}</a>
         </div>
       <% end %>
 
       <div class="mt-5 pt-4 border-t border-ink-panel2">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">Appointments</p>
-            <p class="text-xs text-parchment-dim">{@appts_this_week} this week · active clients: {@client_count}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
+              {gettext("Appointments")}
+            </p>
+            <p class="text-xs text-parchment-dim">
+              {@appts_this_week} {gettext("this week · active clients:")} {@client_count}
+            </p>
           </div>
         </div>
         <div class="w-full overflow-hidden mt-2">
@@ -106,7 +120,7 @@
     <!-- Breakdown -->
     <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-sm font-semibold text-white">Where it came from</h2>
+        <h2 class="text-sm font-semibold text-white">{gettext("Where it came from")}</h2>
         <div class="inline-flex rounded-lg border border-ink-panel2 p-0.5">
           <%= for d <- dimensions() do %>
             <button
@@ -139,7 +153,7 @@
         </div>
       <% else %>
         <div class="mt-3 rounded-xl border border-dashed border-ink-panel2 py-10 text-center">
-          <p class="text-parchment-dim text-sm">Nothing to break down yet.</p>
+          <p class="text-parchment-dim text-sm">{gettext("Nothing to break down yet.")}</p>
         </div>
       <% end %>
     </div>
@@ -148,28 +162,34 @@
   <!-- Leakage strip (only when non-zero) -->
   <%= if @leakage? do %>
     <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
-      <h2 class="text-sm font-semibold text-white mb-3">Outcome ({range_label(@range)})</h2>
+      <h2 class="text-sm font-semibold text-white mb-3">
+        {gettext("Outcome")} ({range_label(@range)})
+      </h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div>
-          <p class="text-xs uppercase tracking-wider text-parchment-dim">Captured</p>
+          <p class="text-xs uppercase tracking-wider text-parchment-dim">{gettext("Captured")}</p>
           <p class="text-xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-0.5">
             {euros(@outcome.captured_cents)}
           </p>
         </div>
         <div>
-          <p class="text-xs uppercase tracking-wider text-parchment-dim">No-show retained</p>
+          <p class="text-xs uppercase tracking-wider text-parchment-dim">
+            {gettext("No-show retained")}
+          </p>
           <p class="text-xl font-bold text-parchment [font-variant-numeric:tabular-nums] mt-0.5">
             {euros(@outcome.no_show_cents)}
           </p>
         </div>
         <div>
-          <p class="text-xs uppercase tracking-wider text-parchment-dim">Refunded</p>
+          <p class="text-xs uppercase tracking-wider text-parchment-dim">{gettext("Refunded")}</p>
           <p class="text-xl font-bold text-paprika [font-variant-numeric:tabular-nums] mt-0.5">
             {euros(@outcome.refunded_cents)}
           </p>
         </div>
         <div>
-          <p class="text-xs uppercase tracking-wider text-parchment-dim">Released (declined/expired)</p>
+          <p class="text-xs uppercase tracking-wider text-parchment-dim">
+            {gettext("Released (declined/expired)")}
+          </p>
           <p class="text-xl font-bold text-paprika [font-variant-numeric:tabular-nums] mt-0.5">
             {euros(@outcome.released_cents)}
           </p>

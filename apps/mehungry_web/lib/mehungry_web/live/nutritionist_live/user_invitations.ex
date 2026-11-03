@@ -16,7 +16,7 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
       |> assign(:invitations, invitations)
       |> assign(:active_assignment, active_assignment)
       |> assign(:onboarding_professional_id, onboarding_professional_id(client_id, active_assignment))
-      |> assign(:page_title, "Tutor Invitations")
+      |> assign(:page_title, gettext("Tutor Invitations"))
 
     {:ok, socket}
   end
@@ -53,10 +53,10 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
            :onboarding_professional_id,
            onboarding_professional_id(client_id, active_assignment)
          )
-         |> put_flash(:info, "You now have a nutritionist!")}
+         |> put_flash(:info, gettext("You now have a nutritionist!"))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not accept invitation.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not accept invitation."))}
     end
   end
 
@@ -69,10 +69,12 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
         invitations = Professionals.list_pending_invitations_for_client(client_id)
 
         {:noreply,
-         socket |> assign(:invitations, invitations) |> put_flash(:info, "Invitation declined.")}
+         socket
+         |> assign(:invitations, invitations)
+         |> put_flash(:info, gettext("Invitation declined."))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not decline invitation.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not decline invitation."))}
     end
   end
 
@@ -85,10 +87,10 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
         {:noreply,
          socket
          |> assign(:active_assignment, nil)
-         |> put_flash(:info, "Nutritionist removed.")}
+         |> put_flash(:info, gettext("Nutritionist removed."))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not remove nutritionist.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not remove nutritionist."))}
     end
   end
 
@@ -96,13 +98,13 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
   def render(assigns) do
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-8">
-      <h1 class="text-2xl font-display font-bold text-parchment mb-6">Tutor Invitations</h1>
+      <h1 class="text-2xl font-display font-bold text-parchment mb-6">{gettext("Tutor Invitations")}</h1>
 
       <!-- Active nutritionist banner -->
       <%= if @active_assignment do %>
         <% professional = @active_assignment.professional %>
         <div class="bg-basil/10 border border-basil/30 rounded-xl p-5 mb-6">
-          <p class="text-basil text-sm font-medium mb-2">Your current nutritionist</p>
+          <p class="text-basil text-sm font-medium mb-2">{gettext("Your current nutritionist")}</p>
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
               <%= if professional.profile_pic do %>
@@ -118,10 +120,10 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
             </div>
             <button
               phx-click="unlink_nutritionist"
-              data-confirm="Remove your nutritionist? They will no longer be linked to your account. You can be re-invited later."
+              data-confirm={gettext("Remove your nutritionist? They will no longer be linked to your account. You can be re-invited later.")}
               class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-xs font-medium transition"
             >
-              Remove
+              {gettext("Remove")}
             </button>
           </div>
           <.link
@@ -129,7 +131,9 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
             navigate={~p"/nutritionist-onboarding/#{@onboarding_professional_id}"}
             class="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-lg bg-basil hover:bg-basil/80 text-ink text-xs font-semibold transition"
           >
-            <.icon name="hero-clipboard-document-list" class="w-4 h-4" /> Fill in your onboarding questionnaire
+            <.icon name="hero-clipboard-document-list" class="w-4 h-4" /> {gettext(
+              "Fill in your onboarding questionnaire"
+            )}
           </.link>
         </div>
       <% end %>
@@ -137,7 +141,7 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
       <!-- Pending invitations -->
       <%= if Enum.empty?(@invitations) do %>
         <div class="text-center py-16">
-          <p class="text-parchment-dim">No pending invitations.</p>
+          <p class="text-parchment-dim">{gettext("No pending invitations.")}</p>
         </div>
       <% else %>
         <div class="space-y-4">
@@ -170,14 +174,14 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
                   phx-value-id={inv.id}
                   class="flex-1 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-sm font-medium transition"
                 >
-                  Accept
+                  {gettext("Accept")}
                 </button>
                 <button
                   phx-click="decline_invitation"
                   phx-value-id={inv.id}
                   class="flex-1 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm font-medium transition"
                 >
-                  Decline
+                  {gettext("Decline")}
                 </button>
               </div>
             </div>

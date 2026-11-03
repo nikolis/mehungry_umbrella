@@ -20,7 +20,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
     if profile && article.professional_profile_id == profile.id do
       {:ok,
        socket
-       |> assign(:page_title, "Edit Article")
+       |> assign(:page_title, gettext("Edit Article"))
        |> assign(:profile, profile)
        |> assign(:article, article)
        |> assign(:article_changeset, Professionals.change_article(article))
@@ -44,7 +44,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
     else
       {:ok,
        socket
-       |> put_flash(:error, "Article not found.")
+       |> put_flash(:error, gettext("Article not found."))
        |> push_navigate(to: ~p"/nutritionist/articles")}
     end
   end
@@ -69,7 +69,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
       {:ok, _article} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Article saved.")
+         |> put_flash(:info, gettext("Article saved."))
          |> reload_article()}
 
       {:error, changeset} ->
@@ -80,13 +80,13 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
   @impl true
   def handle_event("publish", _params, socket) do
     {:ok, _} = Professionals.publish_article(socket.assigns.article)
-    {:noreply, socket |> put_flash(:info, "Article published.") |> reload_article()}
+    {:noreply, socket |> put_flash(:info, gettext("Article published.")) |> reload_article()}
   end
 
   @impl true
   def handle_event("unpublish", _params, socket) do
     {:ok, _} = Professionals.unpublish_article(socket.assigns.article)
-    {:noreply, socket |> put_flash(:info, "Moved back to draft.") |> reload_article()}
+    {:noreply, socket |> put_flash(:info, gettext("Moved back to draft.")) |> reload_article()}
   end
 
   # ── Paragraphs ───────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
         "image_caption" => params["image_caption"]
       })
 
-    {:noreply, socket |> put_flash(:info, "Paragraph saved.") |> reload_article()}
+    {:noreply, socket |> put_flash(:info, gettext("Paragraph saved.")) |> reload_article()}
   end
 
   @impl true
@@ -200,7 +200,11 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
 
       {:error, _reason} ->
         {:noreply,
-         put_flash(socket, :error, "Could not find PubMed paper #{pmid}. Check the PMID.")}
+         put_flash(
+           socket,
+           :error,
+           gettext("Could not find PubMed paper %{pmid}. Check the PMID.", pmid: pmid)
+         )}
     end
   end
 
@@ -226,7 +230,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
 
     case Professionals.add_reference(paragraph, attrs) do
       {:ok, _} -> reload_article(socket)
-      {:error, _} -> put_flash(socket, :error, "That reference is already cited here.")
+      {:error, _} -> put_flash(socket, :error, gettext("That reference is already cited here."))
     end
   end
 
@@ -280,14 +284,14 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
 
   # Display label + external link for a reference chip.
   defp reference_label(%{reference_type: "study", study: %{} = s}),
-    do: {s.title || "PMID #{s.pmid}", "https://pubmed.ncbi.nlm.nih.gov/#{s.pmid}"}
+    do: {s.title || gettext("PMID %{pmid}", pmid: s.pmid), "https://pubmed.ncbi.nlm.nih.gov/#{s.pmid}"}
 
   defp reference_label(%{reference_type: "species", species: %{} = s}),
     do: {s.scientific_name || s.name, nil}
 
   defp reference_label(%{reference_type: "compound", compound: %{} = c}), do: {c.name, nil}
   defp reference_label(%{reference_type: "condition", condition: %{} = c}), do: {c.name, nil}
-  defp reference_label(_), do: {"reference", nil}
+  defp reference_label(_), do: {gettext("reference"), nil}
 
   defp reference_kind(%{reference_type: t}), do: t
 
@@ -302,7 +306,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
           navigate={~p"/nutritionist/articles"}
           class="text-sm text-parchment-dim hover:text-parchment"
         >
-          ← All articles
+          {gettext("← All articles")}
         </.link>
         <div class="flex items-center gap-3">
           <span class={[
@@ -318,21 +322,21 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
             target="_blank"
             class="text-sm text-paprika hover:text-paprika-soft"
           >
-            View public →
+            {gettext("View public →")}
           </a>
           <button
             :if={@article.status == "draft"}
             phx-click="publish"
             class="px-3 py-1.5 rounded-lg bg-basil hover:bg-basil/80 text-ink font-semibold text-sm transition"
           >
-            Publish
+            {gettext("Publish")}
           </button>
           <button
             :if={@article.status == "published"}
             phx-click="unpublish"
             class="px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel text-parchment text-sm transition"
           >
-            Unpublish
+            {gettext("Unpublish")}
           </button>
         </div>
       </div>
@@ -347,15 +351,15 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
         class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4 mb-6"
       >
         <div>
-          <label class="block text-sm text-parchment-dim mb-1">Title</label>
-          <.input field={f[:title]} type="text" placeholder="Article title" class="w-full" />
+          <label class="block text-sm text-parchment-dim mb-1">{gettext("Title")}</label>
+          <.input field={f[:title]} type="text" placeholder={gettext("Article title")} class="w-full" />
         </div>
         <div>
-          <label class="block text-sm text-parchment-dim mb-1">Summary</label>
+          <label class="block text-sm text-parchment-dim mb-1">{gettext("Summary")}</label>
           <.input field={f[:summary]} type="textarea" rows="2" class="w-full" />
         </div>
         <div>
-          <label class="block text-sm text-parchment-dim mb-1">Cover image</label>
+          <label class="block text-sm text-parchment-dim mb-1">{gettext("Cover image")}</label>
           <img
             :if={@article.cover_image_url}
             src={@article.cover_image_url}
@@ -368,13 +372,13 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
             type="submit"
             class="px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-semibold text-sm transition"
           >
-            Save
+            {gettext("Save")}
           </button>
         </div>
       </.form>
 
       <!-- Paragraphs -->
-      <h2 class="text-lg font-display font-semibold text-parchment mb-3">Body</h2>
+      <h2 class="text-lg font-display font-semibold text-parchment mb-3">{gettext("Body")}</h2>
 
       <div class="space-y-4">
         <div
@@ -382,7 +386,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
           class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 space-y-4"
         >
           <div class="flex items-center justify-between">
-            <span class="text-xs text-parchment-dim">Paragraph {index + 1}</span>
+            <span class="text-xs text-parchment-dim">{gettext("Paragraph %{number}", number: index + 1)}</span>
             <div class="flex items-center gap-2">
               <button
                 phx-click="move_up"
@@ -403,10 +407,10 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
               <button
                 phx-click="delete_paragraph"
                 phx-value-id={paragraph.id}
-                data-confirm="Delete this paragraph?"
+                data-confirm={gettext("Delete this paragraph?")}
                 class="text-parchment-dim hover:text-red-400 text-sm"
               >
-                Delete
+                {gettext("Delete")}
               </button>
             </div>
           </div>
@@ -417,13 +421,13 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
               type="text"
               name="heading"
               value={paragraph.heading}
-              placeholder="Optional heading"
+              placeholder={gettext("Optional heading")}
               class="w-full bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-2 text-sm"
             />
             <textarea
               name="body"
               rows="5"
-              placeholder="Paragraph text…"
+              placeholder={gettext("Paragraph text…")}
               class="w-full bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-2 text-sm"
             >{paragraph.body}</textarea>
             <input type="hidden" name="image_caption" value={paragraph.image_caption} />
@@ -432,7 +436,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                 type="submit"
                 class="px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-semibold text-xs transition"
               >
-                Save paragraph
+                {gettext("Save paragraph")}
               </button>
             </div>
           </form>
@@ -452,7 +456,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                 phx-value-id={paragraph.id}
                 class="text-sm text-paprika hover:text-paprika-soft"
               >
-                {if paragraph.image_url, do: "Change image", else: "+ Add image"}
+                {if paragraph.image_url, do: gettext("Change image"), else: gettext("+ Add image")}
               </button>
               <button
                 :if={paragraph.image_url}
@@ -460,7 +464,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                 phx-value-id={paragraph.id}
                 class="text-sm text-parchment-dim hover:text-red-400"
               >
-                Remove image
+                {gettext("Remove image")}
               </button>
             </div>
 
@@ -476,7 +480,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                 type="text"
                 name="image_caption"
                 value={paragraph.image_caption}
-                placeholder="Image caption (optional)"
+                placeholder={gettext("Image caption (optional)")}
                 class="w-full bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-2 text-sm"
               />
               <div class="flex items-center gap-2">
@@ -484,14 +488,14 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                   type="submit"
                   class="px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-semibold text-xs transition"
                 >
-                  Save image
+                  {gettext("Save image")}
                 </button>
                 <button
                   type="button"
                   phx-click="cancel_image"
                   class="text-sm text-parchment-dim hover:text-parchment"
                 >
-                  Cancel
+                  {gettext("Cancel")}
                 </button>
               </div>
             </form>
@@ -499,7 +503,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
 
           <!-- References -->
           <div class="border-t border-ink-panel2 pt-3">
-            <span class="text-xs font-semibold text-basil uppercase tracking-wider">References</span>
+            <span class="text-xs font-semibold text-basil uppercase tracking-wider">{gettext("References")}</span>
 
             <div :if={paragraph.references != []} class="flex flex-wrap gap-2 mt-2">
               <span
@@ -527,10 +531,10 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                   type="text"
                   name="pmid"
                   inputmode="numeric"
-                  placeholder="PubMed PMID"
+                  placeholder={gettext("PubMed PMID")}
                   class="flex-1 bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-1.5 text-sm"
                 />
-                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">Add</button>
+                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">{gettext("Add")}</button>
               </form>
 
               <!-- Compound -->
@@ -540,10 +544,10 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                   name="compound_id"
                   class="flex-1 bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-1.5 text-sm"
                 >
-                  <option value="">Compound…</option>
+                  <option value="">{gettext("Compound…")}</option>
                   <option :for={c <- @compounds} value={c.id}>{c.name}</option>
                 </select>
-                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">Add</button>
+                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">{gettext("Add")}</button>
               </form>
 
               <!-- Condition -->
@@ -553,10 +557,10 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                   name="condition_id"
                   class="flex-1 bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-1.5 text-sm"
                 >
-                  <option value="">Disease…</option>
+                  <option value="">{gettext("Disease…")}</option>
                   <option :for={c <- @conditions} value={c.id}>{c.name}</option>
                 </select>
-                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">Add</button>
+                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">{gettext("Add")}</button>
               </form>
 
               <!-- Species -->
@@ -565,10 +569,10 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
                 <input
                   type="text"
                   name="term"
-                  placeholder="Search species…"
+                  placeholder={gettext("Search species…")}
                   class="flex-1 bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-1.5 text-sm"
                 />
-                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">Find</button>
+                <button type="submit" class="text-sm text-paprika hover:text-paprika-soft">{gettext("Find")}</button>
               </form>
             </div>
 
@@ -594,7 +598,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
         phx-click="add_paragraph"
         class="mt-4 w-full py-3 rounded-xl border border-dashed border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-paprika transition text-sm"
       >
-        + Add paragraph
+        {gettext("+ Add paragraph")}
       </button>
     </div>
     """

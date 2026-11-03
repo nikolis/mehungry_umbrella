@@ -30,7 +30,7 @@ defmodule MehungryWeb.NutritionistLive.Payments do
 
     {:ok,
      socket
-     |> assign(:page_title, "Payments")
+     |> assign(:page_title, gettext("Payments"))
      |> assign(:profile, profile)
      |> assign(:service_form, nil)
      |> assign(:editing_id, nil)
@@ -49,7 +49,7 @@ defmodule MehungryWeb.NutritionistLive.Payments do
          put_flash(
            socket,
            :error,
-           "Create your public profile first, then connect payouts here."
+           gettext("Create your public profile first, then connect payouts here.")
          )}
 
       true ->
@@ -64,7 +64,11 @@ defmodule MehungryWeb.NutritionistLive.Payments do
         else
           {:error, reason} ->
             {:noreply,
-             put_flash(socket, :error, "Could not start payout onboarding: #{inspect(reason)}")}
+             put_flash(
+               socket,
+               :error,
+               gettext("Could not start payout onboarding: %{reason}", reason: inspect(reason))
+             )}
         end
     end
   end
@@ -147,13 +151,13 @@ defmodule MehungryWeb.NutritionistLive.Payments do
          |> assign(:service_form, nil)
          |> assign(:editing_id, nil)
          |> load_services()
-         |> put_flash(:info, "Service saved.")}
+         |> put_flash(:info, gettext("Service saved."))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :service_form, Map.put(changeset, :action, :insert))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not save the service.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not save the service."))}
     end
   end
 
@@ -180,9 +184,11 @@ defmodule MehungryWeb.NutritionistLive.Payments do
 
       service ->
         case Professionals.delete_service(service) do
-          {:ok, _} -> {:noreply, socket |> load_services() |> put_flash(:info, "Service removed.")}
+          {:ok, _} ->
+            {:noreply, socket |> load_services() |> put_flash(:info, gettext("Service removed."))}
           {:error, :intro_undeletable} -> {:noreply, socket}
-          {:error, _} -> {:noreply, put_flash(socket, :error, "Could not remove the service.")}
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, gettext("Could not remove the service."))}
         end
     end
   end
@@ -239,21 +245,23 @@ defmodule MehungryWeb.NutritionistLive.Payments do
   def render(assigns) do
     ~H"""
     <div class="max-w-3xl mx-auto pb-16">
-      <h1 class="text-2xl font-display font-bold text-parchment mb-6">Payments</h1>
+      <h1 class="text-2xl font-display font-bold text-parchment mb-6">{gettext("Payments")}</h1>
 
       <!-- Stripe onboarding -->
       <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4 mb-6">
-        <h2 class="text-lg font-display font-semibold text-parchment">Get paid through M3Hungry</h2>
+        <h2 class="text-lg font-display font-semibold text-parchment">
+          {gettext("Get paid through M3Hungry")}
+        </h2>
         <%= if is_nil(@profile.id) do %>
           <p class="text-parchment-dim text-sm">
-            Set up your <a href="/nutritionist/profile" class="text-paprika hover:text-paprika-soft">public profile</a>
-            first, then connect payouts here.
+            {gettext("Set up your")} <a href="/nutritionist/profile" class="text-paprika hover:text-paprika-soft">{gettext("public profile")}</a>
+            {gettext("first, then connect payouts here.")}
           </p>
         <% else %>
           <div class="flex items-center gap-3">
             <%= if @profile.stripe_charges_enabled do %>
               <span class="inline-flex items-center gap-1 text-basil text-sm">
-                <.icon name="hero-check-circle" class="w-5 h-5" /> Accepting payments
+                <.icon name="hero-check-circle" class="w-5 h-5" /> {gettext("Accepting payments")}
               </span>
             <% else %>
               <button
@@ -261,12 +269,14 @@ defmodule MehungryWeb.NutritionistLive.Payments do
                 phx-click="connect_stripe"
                 class="px-4 py-2 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition"
               >
-                Connect payouts with Stripe
+                {gettext("Connect payouts with Stripe")}
               </button>
             <% end %>
           </div>
           <p class="text-parchment-dim text-xs">
-            Stripe handles identity verification and bank details securely — M3Hungry never sees them.
+            {gettext(
+              "Stripe handles identity verification and bank details securely — M3Hungry never sees them."
+            )}
           </p>
         <% end %>
       </section>
@@ -275,16 +285,18 @@ defmodule MehungryWeb.NutritionistLive.Payments do
       <section class="bg-basil/10 border border-basil/30 rounded-xl p-4 mb-6 flex gap-3">
         <.icon name="hero-information-circle" class="w-5 h-5 text-basil flex-shrink-0 mt-0.5" />
         <p class="text-parchment-dim text-sm">
-          Every nutritionist on the platform offers a <strong class="text-parchment">free 15-minute intro</strong>.
-          Clients can request one from your public profile; you accept or decline it like any booking.
-          This can't be turned off.
+          {gettext("Every nutritionist on the platform offers a")} <strong class="text-parchment">{gettext("free 15-minute intro")}</strong>.
+          {gettext("Clients can request one from your public profile; you accept or decline it like any booking.")}
+          {gettext("This can't be turned off.")}
         </p>
       </section>
 
       <!-- Services & pricing -->
       <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-display font-semibold text-parchment">Services &amp; pricing</h2>
+          <h2 class="text-lg font-display font-semibold text-parchment">
+            {gettext("Services & pricing")}
+          </h2>
           <div :if={is_nil(@service_form)} class="flex gap-2">
             <button
               type="button"
@@ -292,7 +304,7 @@ defmodule MehungryWeb.NutritionistLive.Payments do
               phx-value-kind="session"
               class="px-3 py-1.5 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition"
             >
-              + Session
+              {gettext("+ Session")}
             </button>
             <button
               type="button"
@@ -300,7 +312,7 @@ defmodule MehungryWeb.NutritionistLive.Payments do
               phx-value-kind="package"
               class="px-3 py-1.5 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition"
             >
-              + Package
+              {gettext("+ Package")}
             </button>
           </div>
         </div>
@@ -317,7 +329,7 @@ defmodule MehungryWeb.NutritionistLive.Payments do
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-parchment font-medium">{service.name}</span>
                   {kind_badge(service)}
-                  <span :if={not service.active} class="text-parchment-dim text-xs">(hidden)</span>
+                  <span :if={not service.active} class="text-parchment-dim text-xs">{gettext("(hidden)")}</span>
                 </div>
                 <p :if={service.description} class="text-parchment-dim text-sm mt-1">
                   {service.description}
@@ -333,7 +345,7 @@ defmodule MehungryWeb.NutritionistLive.Payments do
                   phx-value-id={service.id}
                   class="text-paprika hover:text-paprika-soft text-sm"
                 >
-                  Edit
+                  {gettext("Edit")}
                 </button>
                 <%= if service.kind != "intro" do %>
                   <button
@@ -343,16 +355,16 @@ defmodule MehungryWeb.NutritionistLive.Payments do
                     phx-value-id={service.id}
                     class="text-parchment-dim hover:text-parchment text-sm"
                   >
-                    Hide
+                    {gettext("Hide")}
                   </button>
                   <button
                     type="button"
                     phx-click="delete_service"
                     phx-value-id={service.id}
-                    data-confirm="Remove this service permanently?"
+                    data-confirm={gettext("Remove this service permanently?")}
                     class="text-parchment-dim hover:text-paprika text-sm"
                   >
-                    Delete
+                    {gettext("Delete")}
                   </button>
                 <% end %>
               </div>
@@ -382,28 +394,35 @@ defmodule MehungryWeb.NutritionistLive.Payments do
         {form_heading(@kind, @editing_id)}
       </p>
 
-      <.labeled label="Name">
-        <.input field={f[:name]} type="text" placeholder="e.g. Initial consultation" class="w-full" />
+      <.labeled label={gettext("Name")}>
+        <.input
+          field={f[:name]}
+          type="text"
+          placeholder={gettext("e.g. Initial consultation")}
+          class="w-full"
+        />
       </.labeled>
 
-      <.labeled label="Description">
+      <.labeled label={gettext("Description")}>
         <.input field={f[:description]} type="textarea" rows="2" class="w-full" />
       </.labeled>
 
       <div :if={@kind != "intro"} class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <.labeled label="Price (EUR)">
+        <.labeled label={gettext("Price (EUR)")}>
           <.input field={f[:price_eur]} type="number" min="0" step="0.01" class="w-full" />
         </.labeled>
-        <.labeled :if={@kind == "session"} label="Duration (minutes)">
+        <.labeled :if={@kind == "session"} label={gettext("Duration (minutes)")}>
           <.input field={f[:duration_minutes]} type="number" min="5" step="5" class="w-full" />
         </.labeled>
-        <.labeled :if={@kind == "package"} label="Sessions included">
+        <.labeled :if={@kind == "package"} label={gettext("Sessions included")}>
           <.input field={f[:session_count]} type="number" min="1" step="1" class="w-full" />
         </.labeled>
       </div>
 
       <p :if={@kind == "intro"} class="text-parchment-dim text-xs">
-        The intro is always free and 15 minutes — only its name and description can change.
+        {gettext(
+          "The intro is always free and 15 minutes — only its name and description can change."
+        )}
       </p>
 
       <div class="flex justify-end gap-2">
@@ -412,44 +431,50 @@ defmodule MehungryWeb.NutritionistLive.Payments do
           phx-click="cancel_service"
           class="px-4 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment text-sm transition"
         >
-          Cancel
+          {gettext("Cancel")}
         </button>
         <button
           type="submit"
           class="px-5 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-medium text-sm transition"
         >
-          Save
+          {gettext("Save")}
         </button>
       </div>
     </.form>
     """
   end
 
-  defp form_heading("intro", _), do: "Free intro session"
-  defp form_heading(kind, nil), do: "New #{kind}"
-  defp form_heading(kind, _id), do: "Edit #{kind}"
+  defp form_heading("intro", _), do: gettext("Free intro session")
+  defp form_heading(kind, nil), do: gettext("New %{kind}", kind: kind)
+  defp form_heading(kind, _id), do: gettext("Edit %{kind}", kind: kind)
 
   defp kind_badge(%{kind: "intro"}),
     do:
       Phoenix.HTML.raw(
-        ~s(<span class="text-basil text-xs border border-basil/40 rounded px-1.5 py-0.5">Free intro — required</span>)
+        ~s(<span class="text-basil text-xs border border-basil/40 rounded px-1.5 py-0.5">) <>
+          gettext("Free intro — required") <> ~s(</span>)
       )
 
   defp kind_badge(%{kind: "package"}),
     do:
       Phoenix.HTML.raw(
-        ~s(<span class="text-paprika text-xs border border-paprika/40 rounded px-1.5 py-0.5">Package</span>)
+        ~s(<span class="text-paprika text-xs border border-paprika/40 rounded px-1.5 py-0.5">) <>
+          gettext("Package") <> ~s(</span>)
       )
 
   defp kind_badge(_), do: Phoenix.HTML.raw("")
 
-  defp service_meta(%{kind: "intro"}), do: "Free · 15 min"
+  defp service_meta(%{kind: "intro"}), do: gettext("Free · 15 min")
 
   defp service_meta(%{kind: "package"} = s),
-    do: "#{euros(s.price_cents)} · #{s.session_count} sessions"
+    do:
+      gettext("%{price} · %{count} sessions",
+        price: euros(s.price_cents),
+        count: s.session_count
+      )
 
   defp service_meta(%{kind: "session"} = s) do
-    duration = if s.duration_minutes, do: " · #{s.duration_minutes} min", else: ""
+    duration = if s.duration_minutes, do: gettext(" · %{count} min", count: s.duration_minutes), else: ""
     "#{euros(s.price_cents)}#{duration}"
   end
 

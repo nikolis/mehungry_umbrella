@@ -27,14 +27,20 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
   def handle_event("delete_note", %{"id" => id}, socket) do
     {:ok, _} = ResearchNotes.delete_note(socket.assigns.current_user.id, String.to_integer(id))
     condition_id = socket.assigns.filter_condition && to_string(socket.assigns.filter_condition.id)
-    {:noreply, socket |> assign_notes(condition_id) |> put_flash(:info, "Note removed.")}
+    {:noreply, socket |> assign_notes(condition_id) |> put_flash(:info, gettext("Note removed."))}
   end
 
   defp assign_notes(socket, condition_id) do
     {condition, notes} = scoped_notes(socket.assigns.current_user.id, condition_id)
 
     socket
-    |> assign(:page_title, if(condition, do: "My notes · #{condition.name}", else: "My research notes"))
+    |> assign(
+      :page_title,
+      if(condition,
+        do: gettext("My notes · %{name}", name: condition.name),
+        else: gettext("My research notes")
+      )
+    )
     |> assign(:filter_condition, condition)
     |> assign(:count, length(notes))
     |> assign(:grouped, group_by_condition(notes))
@@ -72,38 +78,38 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
         navigate={~p"/nutritionist/research"}
         class="inline-flex items-center gap-1 text-sm text-parchment-dim hover:text-parchment mb-3"
       >
-        <.icon name="hero-arrow-left" class="w-4 h-4" /> All research
+        <.icon name="hero-arrow-left" class="w-4 h-4" /> {gettext("All research")}
       </.link>
 
       <header class="mb-6">
         <h1 class="text-2xl font-semibold text-parchment">
-          My research notes<span :if={@filter_condition} class="text-parchment-dim font-normal"> · {@filter_condition.name}</span>
+          {gettext("My research notes")}<span :if={@filter_condition} class="text-parchment-dim font-normal"> · {@filter_condition.name}</span>
         </h1>
         <p class="text-sm text-parchment-dim mt-1">
-          {@count} saved note{if @count == 1, do: "", else: "s"}<span :if={@filter_condition}> for {@filter_condition.name}</span>.
+          {ngettext("%{count} saved note", "%{count} saved notes", @count)}<span :if={@filter_condition}> {gettext("for %{name}", name: @filter_condition.name)}</span>.
         </p>
         <.link
           :if={@filter_condition}
           navigate={~p"/nutritionist/research/notes"}
           class="inline-flex items-center gap-1 text-xs text-basil hover:underline mt-1"
         >
-          View all notes
+          {gettext("View all notes")}
         </.link>
       </header>
 
       <div :if={@count == 0} class="text-sm text-parchment-dim py-8 text-center">
         <%= if @filter_condition do %>
-          <p>No notes saved for {@filter_condition.name} yet.</p>
+          <p>{gettext("No notes saved for %{name} yet.", name: @filter_condition.name)}</p>
           <.link
             navigate={~p"/nutritionist/research/#{@filter_condition.id}"}
             class="inline-flex items-center gap-1 text-basil hover:underline mt-2"
           >
-            Open {@filter_condition.name} research <.icon name="hero-arrow-right" class="w-4 h-4" />
+            {gettext("Open %{name} research", name: @filter_condition.name)} <.icon name="hero-arrow-right" class="w-4 h-4" />
           </.link>
         <% else %>
           <p>
-            No saved notes yet. Open a condition's research and use <strong>Save</strong>
-            on a suggested note, or write your own.
+            {gettext("No saved notes yet. Open a condition's research and use")} <strong>{gettext("Save")}</strong>
+            {gettext("on a suggested note, or write your own.")}
           </p>
         <% end %>
       </div>
@@ -125,15 +131,15 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
                 else: "bg-basil/15 text-basil"
               )
             ]}>
-              {if note.kind == "custom", do: "My note", else: "Suggested"}
+              {if note.kind == "custom", do: gettext("My note"), else: gettext("Suggested")}
             </span>
             <button
               type="button"
               phx-click="delete_note"
               phx-value-id={note.id}
-              data-confirm="Remove this note?"
+              data-confirm={gettext("Remove this note?")}
               class="text-parchment-dim hover:text-paprika"
-              aria-label="Remove note"
+              aria-label={gettext("Remove note")}
             >
               <.icon name="hero-trash" class="w-4 h-4" />
             </button>
@@ -154,7 +160,7 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
               navigate={reader_link(note)}
               class="inline-flex items-center gap-0.5 text-basil hover:underline"
             >
-              <.icon name="hero-arrow-top-right-on-square" class="w-3 h-3" /> Open in text
+              <.icon name="hero-arrow-top-right-on-square" class="w-3 h-3" /> {gettext("Open in text")}
             </.link>
             <a
               :if={is_nil(reader_link(note)) and pubmed_link(note)}
@@ -163,7 +169,7 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
               rel="noopener"
               class="text-basil hover:underline"
             >
-              source
+              {gettext("source")}
             </a>
           </div>
         </article>
@@ -172,7 +178,7 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
     """
   end
 
-  defp condition_name(nil), do: "Unlinked"
+  defp condition_name(nil), do: gettext("Unlinked")
   defp condition_name(condition), do: condition.name
 
   # Deep-link back to the in-app reader when we captured a paragraph anchor and

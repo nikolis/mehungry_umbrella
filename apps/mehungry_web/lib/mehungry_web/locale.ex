@@ -27,6 +27,19 @@ defmodule MehungryWeb.Locale do
   @doc "Whether `locale` is one of the supported locales."
   def supported?(locale), do: locale in supported()
 
+  # Surfaces mounted on unprefixed routes (admin + nutritionist panels). Their
+  # locale is driven by the session/profile, not a URL segment, so `swap_path`
+  # must never insert a `/:locale` prefix for them (it would 404).
+  @non_localized_prefixes ~w(nutritionist professional dashboard oban beam_scope)
+
+  @doc "Whether the first path segment names an unprefixed (non-localized) surface."
+  def non_localized_surface?(path) when is_binary(path) do
+    case path |> String.trim_leading("/") |> String.split("/", parts: 2) do
+      [first | _] -> first in @non_localized_prefixes
+      _ -> false
+    end
+  end
+
   @doc """
   Resolve the locale for a request using the Hierarchical Selection pattern,
   first non-nil wins: URL path param → session → user profile → `Accept-Language`
@@ -58,6 +71,16 @@ defmodule MehungryWeb.Locale do
         [p, q] -> {p, "?" <> q}
         [p] -> {p, ""}
       end
+
+    if non_localized_surface?(path) do
+      # Admin/nutritionist panels live on unprefixed routes — return verbatim.
+      path <> query
+    else
+      do_swap_path(path, query, locale)
+    end
+  end
+
+  defp do_swap_path(path, query, locale) do
 
     rest =
       case String.split(path, "/", trim: true) do

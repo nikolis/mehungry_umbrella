@@ -15,7 +15,7 @@ defmodule MehungryWeb.NutritionistLive.Articles do
 
     {:ok,
      socket
-     |> assign(:page_title, "My Articles")
+     |> assign(:page_title, gettext("My Articles"))
      |> assign(:profile, profile)
      |> assign(:articles, list_articles(profile))}
   end
@@ -24,7 +24,7 @@ defmodule MehungryWeb.NutritionistLive.Articles do
   def handle_event("new_article", _params, %{assigns: %{profile: nil}} = socket) do
     {:noreply,
      socket
-     |> put_flash(:error, "Set up your professional profile before writing articles.")
+     |> put_flash(:error, gettext("Set up your professional profile before writing articles."))
      |> push_navigate(to: ~p"/nutritionist/profile")}
   end
 
@@ -38,7 +38,7 @@ defmodule MehungryWeb.NutritionistLive.Articles do
         {:noreply, push_navigate(socket, to: ~p"/nutritionist/articles/#{article.id}/edit")}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not create the article.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not create the article."))}
     end
   end
 
@@ -51,7 +51,7 @@ defmodule MehungryWeb.NutritionistLive.Articles do
 
       {:noreply,
        socket
-       |> put_flash(:info, "Article deleted.")
+       |> put_flash(:info, gettext("Article deleted."))
        |> assign(:articles, list_articles(socket.assigns.profile))}
     else
       {:noreply, socket}
@@ -65,23 +65,23 @@ defmodule MehungryWeb.NutritionistLive.Articles do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto pb-16">
-      <.page_header title="My Articles">
+      <.page_header title={gettext("My Articles")}>
         <:actions>
           <.action :if={@profile} variant={:primary} size={:sm} phx-click="new_article">
-            New article
+            {gettext("New article")}
           </.action>
         </:actions>
       </.page_header>
 
       <p :if={@profile == nil} class="text-parchment-dim">
-        You need a professional profile first.
+        {gettext("You need a professional profile first.")}
         <.link navigate={~p"/nutritionist/profile"} class="text-paprika hover:text-paprika-soft">
-          Set it up →
+          {gettext("Set it up")} →
         </.link>
       </p>
 
       <div :if={@articles == []} class="text-parchment-dim text-center py-16">
-        No articles yet. Write your first evidence-based article for your public profile.
+        {gettext("No articles yet. Write your first evidence-based article for your public profile.")}
       </div>
 
       <ul class="space-y-3">
@@ -112,21 +112,21 @@ defmodule MehungryWeb.NutritionistLive.Articles do
               target="_blank"
               class="text-sm text-parchment-dim hover:text-parchment"
             >
-              View →
+              {gettext("View")} →
             </a>
             <.link
               navigate={~p"/nutritionist/articles/#{article.id}/edit"}
               class="text-sm text-paprika hover:text-paprika-soft"
             >
-              Edit
+              {gettext("Edit")}
             </.link>
             <button
               phx-click="delete"
               phx-value-id={article.id}
-              data-confirm="Delete this article? This cannot be undone."
+              data-confirm={gettext("Delete this article? This cannot be undone.")}
               class="text-sm text-parchment-dim hover:text-red-400"
             >
-              Delete
+              {gettext("Delete")}
             </button>
           </div>
         </li>

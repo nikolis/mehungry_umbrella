@@ -16,7 +16,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     case Professionals.get_assignment(professional_id, client_id) do
       nil ->
         {:ok,
-         socket |> put_flash(:error, "Client not found.") |> redirect(to: "/nutritionist/clients")}
+         socket |> put_flash(:error, gettext("Client not found.")) |> redirect(to: "/nutritionist/clients")}
 
       _assignment ->
         client = Accounts.get_user!(client_id)
@@ -35,7 +35,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
          |> assign(:particular_date, nil)
          |> assign(:calendar_view, "week_view")
          |> assign(:child_ids, [])
-         |> assign(:page_title, "#{client.name || client.email}'s Meal Plan")}
+         |> assign(:page_title, gettext("%{name}'s Meal Plan", name: client.name || client.email))}
     end
   end
 
@@ -64,7 +64,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
       deny_past_date(socket)
     else
       socket
-      |> assign(:page_title, "Create Meal")
+      |> assign(:page_title, gettext("Create Meal"))
       |> assign(:user_meal, struct(UserMeal))
       |> assign(:title, title)
       |> assign(:dates, %{start: start_date})
@@ -78,7 +78,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
       # Guard: nutritionists may only edit meals belonging to their assigned client.
       user_meal.user_id != socket.assigns.client_id ->
         socket
-        |> put_flash(:error, "Not authorized.")
+        |> put_flash(:error, gettext("Not authorized."))
         |> push_patch(to: "/nutritionist/clients/#{socket.assigns.client_id}/calendar")
 
       past_date?(user_meal.start_dt) ->
@@ -86,7 +86,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
       true ->
         socket
-        |> assign(:page_title, "Edit Meal")
+        |> assign(:page_title, gettext("Edit Meal"))
         |> assign(:user_meal, user_meal)
         |> assign(:title, user_meal.title)
         |> assign(:dates, %{start: user_meal.start_dt, end: user_meal.end_dt})
@@ -109,7 +109,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
   defp deny_past_date(socket) do
     socket
-    |> put_flash(:error, "You can't assign meals on a past date — pick today or a future day.")
+    |> put_flash(:error, gettext("You can't assign meals on a past date — pick today or a future day."))
     |> push_patch(to: "/nutritionist/clients/#{socket.assigns.client_id}/calendar")
   end
 
@@ -143,10 +143,10 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
          |> assign(:user_meals, user_meals)
          |> push_event("create_meals", %{meals: user_meals})}
       else
-        {:noreply, put_flash(socket, :error, "Not authorized.")}
+        {:noreply, put_flash(socket, :error, gettext("Not authorized."))}
       end
     rescue
-      Ecto.NoResultsError -> {:noreply, put_flash(socket, :error, "Meal not found.")}
+      Ecto.NoResultsError -> {:noreply, put_flash(socket, :error, gettext("Meal not found."))}
     end
   end
 
@@ -213,7 +213,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
           </div>
         <% end %>
         <p class="text-parchment-dim text-sm">
-          Editing <span class="font-medium text-parchment">{@client.name || @client.email}</span>'s meal plan
+          {gettext("Editing")} <span class="font-medium text-parchment">{@client.name || @client.email}</span>{gettext("'s meal plan")}
         </p>
       </div>
 
@@ -224,7 +224,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
           id={:new}
           user_meals={@user_meals}
           particular_date={@particular_date}
-          title="Meal Plan"
+          title={gettext("Meal Plan")}
           calendar_view={@calendar_view}
           action={@live_action}
           user={@client}

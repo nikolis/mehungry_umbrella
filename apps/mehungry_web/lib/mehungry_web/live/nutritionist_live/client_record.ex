@@ -18,7 +18,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
       nil ->
         {:ok,
          socket
-         |> put_flash(:error, "Record not found.")
+         |> put_flash(:error, gettext("Record not found."))
          |> push_navigate(to: ~p"/nutritionist/clients")}
 
       record ->
@@ -30,7 +30,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
          |> assign(:conditions, Professionals.list_client_conditions(client_id))
          |> assign(:intake, Professionals.get_latest_intake(client_id))
          |> assign(:notes, Professionals.list_consultation_notes(client_id))
-         |> assign(:page_title, "Record: #{record.full_name}")}
+         |> assign(:page_title, gettext("Record: %{name}", name: record.full_name))}
     end
   end
 
@@ -56,16 +56,16 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
           navigate={~p"/nutritionist/clients"}
           class="text-parchment-dim hover:text-parchment text-sm"
         >
-          ← Back to clients
+          {gettext("← Back to clients")}
         </.link>
         <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/records/#{@record.id}/edit"}>
-          Edit
+          {gettext("Edit")}
         </.action>
       </div>
 
       <div class="flex items-center gap-2 mt-2 mb-1">
         <h1 class="text-2xl font-display font-bold text-parchment">{@record.full_name}</h1>
-        <span class="px-2 py-0.5 rounded-full bg-basil/20 text-basil text-xs">m3hungry client</span>
+        <span class="px-2 py-0.5 rounded-full bg-basil/20 text-basil text-xs">{gettext("m3hungry client")}</span>
       </div>
       <p class="text-parchment-dim text-sm mb-6">
         {[@record.email, @record.phone, @record.address]
@@ -75,7 +75,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
 
       <%= unless Enum.empty?(@conditions) do %>
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
-          <h2 class="text-lg font-display font-bold text-parchment mb-3">Health conditions</h2>
+          <h2 class="text-lg font-display font-bold text-parchment mb-3">{gettext("Health conditions")}</h2>
           <div class="flex flex-wrap gap-2">
             <%= for condition <- @conditions do %>
               <span class="px-3 py-1 rounded-full bg-paprika/20 text-paprika text-sm">
@@ -89,7 +89,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
       <%= if @intake do %>
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
           <h2 class="text-lg font-display font-bold text-parchment mb-3">
-            Intake
+            {gettext("Intake")}
             <%= if @intake.assessed_on do %>
               <span class="text-parchment-dim text-sm font-normal">
                 · {Calendar.strftime(@intake.assessed_on, "%b %d, %Y")}
@@ -98,22 +98,22 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
           </h2>
 
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <.metric label="Sex" value={Anthropometrics.sex_label(@intake.sex)} unit="" />
-            <.metric label="Age" value={@intake.age} unit="yrs" />
-            <.metric label="Activity" value={Anthropometrics.activity_label(@intake.activity_level)} unit="" />
-            <.metric label="Height" value={@intake.height_m} unit="m" />
-            <.metric label="Weight" value={@intake.weight_kg} unit="kg" />
-            <.metric label="BMI" value={@intake.bmi} unit="" />
-            <.metric label="Ideal wt" value={@intake.ideal_weight_kg} unit="kg" />
-            <.metric label="Usual wt" value={@intake.usual_weight_kg} unit="kg" />
-            <.metric label="Adjusted wt" value={@intake.adjusted_weight_kg} unit="kg" />
-            <.metric label="BMR" value={@intake.bmr_kcal} unit="kcal" />
-            <.metric label="TDEE" value={@intake.tdee_kcal} unit="kcal" />
+            <.metric label={gettext("Sex")} value={Anthropometrics.sex_label(@intake.sex)} unit="" />
+            <.metric label={gettext("Age")} value={@intake.age} unit={gettext("yrs")} />
+            <.metric label={gettext("Activity")} value={Anthropometrics.activity_label(@intake.activity_level)} unit="" />
+            <.metric label={gettext("Height")} value={@intake.height_m} unit="m" />
+            <.metric label={gettext("Weight")} value={@intake.weight_kg} unit="kg" />
+            <.metric label={gettext("BMI")} value={@intake.bmi} unit="" />
+            <.metric label={gettext("Ideal wt")} value={@intake.ideal_weight_kg} unit="kg" />
+            <.metric label={gettext("Usual wt")} value={@intake.usual_weight_kg} unit="kg" />
+            <.metric label={gettext("Adjusted wt")} value={@intake.adjusted_weight_kg} unit="kg" />
+            <.metric label={gettext("BMR")} value={@intake.bmr_kcal} unit="kcal" />
+            <.metric label={gettext("TDEE")} value={@intake.tdee_kcal} unit="kcal" />
           </div>
 
           <%= if @intake.goal do %>
             <p class="text-sm text-parchment mb-4">
-              <span class="text-parchment-dim">Goal:</span> {@intake.goal}
+              <span class="text-parchment-dim">{gettext("Goal:")}</span> {@intake.goal}
             </p>
           <% end %>
 
@@ -127,7 +127,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
           </dl>
 
           <%= if recall = @intake.details["recall_24h"] do %>
-            <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">24-hour recall</h3>
+            <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
               <%= for {key, label} <- @recall_labels, val = recall[key], present?(val) do %>
                 <div>
@@ -142,11 +142,11 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
 
       <section>
         <h2 class="text-lg font-display font-bold text-parchment mb-3">
-          Consultation notes ({length(@notes)})
+          {gettext("Consultation notes (%{count})", count: length(@notes))}
         </h2>
 
         <%= if Enum.empty?(@notes) do %>
-          <p class="text-parchment-dim text-sm">No consultation notes.</p>
+          <p class="text-parchment-dim text-sm">{gettext("No consultation notes.")}</p>
         <% else %>
           <ol class="space-y-4">
             <%= for note <- @notes do %>
@@ -154,7 +154,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
                 <div class="flex items-center gap-2 mb-2 text-sm">
                   <%= if note.visit_number do %>
                     <span class="px-2 py-0.5 rounded-full bg-paprika/20 text-paprika text-xs">
-                      Visit {note.visit_number}
+                      {gettext("Visit %{number}", number: note.visit_number)}
                     </span>
                   <% end %>
                   <span class="text-parchment-dim">
@@ -171,7 +171,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
                 <% end %>
                 <%= if note.todo do %>
                   <div class="mt-3 pt-3 border-t border-ink-panel2">
-                    <p class="text-xs text-parchment-dim mb-1">To do</p>
+                    <p class="text-xs text-parchment-dim mb-1">{gettext("To do")}</p>
                     <p class="text-parchment text-sm whitespace-pre-line">{note.todo}</p>
                   </div>
                 <% end %>
@@ -201,7 +201,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
 
   defp present?(val), do: is_binary(val) and String.trim(val) != ""
 
-  defp modality_label("phone"), do: "Phone"
-  defp modality_label("online"), do: "Online"
-  defp modality_label(_), do: "In person"
+  defp modality_label("phone"), do: gettext("Phone")
+  defp modality_label("online"), do: gettext("Online")
+  defp modality_label(_), do: gettext("In person")
 end

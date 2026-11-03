@@ -48,7 +48,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> assign(:google_connected, google_connected)
       |> assign(:professional_name, professional_name(profile, user))
       |> assign(:public_url, public_url(profile))
-      |> assign(:page_title, "Appointments")
+      |> assign(:page_title, gettext("Appointments"))
       |> assign(:current_month, today)
       |> assign(:selected_date, today)
       |> assign(:show_modal, not is_nil(preselected_client_id))
@@ -221,7 +221,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
            measurement_record_id: nil,
            measurement_appointment_id: nil
          )
-         |> put_flash(:info, "Measurement logged.")}
+         |> put_flash(:info, gettext("Measurement logged."))}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :measurement_form, to_form(changeset))}
@@ -240,7 +240,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     if manual_client_allowed?(socket, attrs) do
       persist_appointment(socket, attrs)
     else
-      {:noreply, put_flash(socket, :error, "Select one of your own clients.")}
+      {:noreply, put_flash(socket, :error, gettext("Select one of your own clients."))}
     end
   end
 
@@ -258,7 +258,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
          socket
          |> assign(:appointments, appointments)
          |> assign(:show_modal, false)
-         |> put_flash(:info, "Appointment deleted.")}
+         |> put_flash(:info, gettext("Appointment deleted."))}
     end
   end
 
@@ -285,11 +285,11 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
              |> refresh()
              |> put_flash(
                :info,
-               "Appointment accepted — the client has been emailed a calendar invite."
+               gettext("Appointment accepted — the client has been emailed a calendar invite.")
              )}
 
           {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Could not accept the appointment.")}
+            {:noreply, put_flash(socket, :error, gettext("Could not accept the appointment."))}
         end
     end
   end
@@ -311,10 +311,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
             {:noreply,
              socket
              |> refresh()
-             |> put_flash(:info, "Request declined — the client has been notified.")}
+             |> put_flash(:info, gettext("Request declined — the client has been notified."))}
 
           {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Could not decline the request.")}
+            {:noreply, put_flash(socket, :error, gettext("Could not decline the request."))}
         end
     end
   end
@@ -338,10 +338,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
              |> assign(:show_modal, false)
              |> assign(:editing_appointment, nil)
              |> refresh()
-             |> put_flash(:info, "Appointment cancelled — the client has been fully refunded.")}
+             |> put_flash(:info, gettext("Appointment cancelled — the client has been fully refunded."))}
 
           {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Could not cancel the appointment.")}
+            {:noreply, put_flash(socket, :error, gettext("Could not cancel the appointment."))}
         end
     end
   end
@@ -408,7 +408,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     socket
     |> assign(:show_modal, false)
     |> assign(:editing_appointment, nil)
-    |> put_flash(:error, "Appointment not found.")
+    |> put_flash(:error, gettext("Appointment not found."))
   end
 
   defp persist_appointment(socket, attrs) do
@@ -427,7 +427,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
          |> assign(:appointments, appointments)
          |> assign(:show_modal, false)
          |> assign(:editing_appointment, nil)
-         |> put_flash(:info, "Appointment saved.")}
+         |> put_flash(:info, gettext("Appointment saved."))}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :appointment_changeset, changeset)}
@@ -452,7 +452,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
   defp client_display(%{name: name}) when is_binary(name) and name != "", do: name
   defp client_display(%{email: email}), do: email
-  defp client_display(_), do: "Client"
+  defp client_display(_), do: gettext("Client")
 
   # Party label for an appointment: a linked client, else the external name.
   defp appt_party_label(%Appointment{client: %{} = client}), do: client_display(client)
@@ -461,13 +461,13 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
        when is_binary(name) and name != "",
        do: name
 
-  defp appt_party_label(_), do: "Client"
+  defp appt_party_label(_), do: gettext("Client")
 
   defp professional_name(%{display_name: name}, _user) when is_binary(name) and name != "",
     do: name
 
   defp professional_name(_, %{name: name}) when is_binary(name) and name != "", do: name
-  defp professional_name(_, _), do: "Your nutritionist"
+  defp professional_name(_, _), do: gettext("Your nutritionist")
 
   defp public_url(%{is_public: true, slug: slug}) when is_binary(slug),
     do: url(~p"/nutritionists/#{slug}")
@@ -652,7 +652,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   def render(assigns) do
     ~H"""
     <div class="profile-form max-w-5xl mx-auto">
-      <h1 class="text-2xl font-display font-bold text-parchment mb-6">Appointment Calendar</h1>
+      <h1 class="text-2xl font-display font-bold text-parchment mb-6">{gettext("Appointment Calendar")}</h1>
 
       <!-- Google Calendar connection -->
       <div class="flex items-center justify-between gap-3 bg-ink-panel border border-ink-panel2 rounded-xl px-4 py-3 mb-6">
@@ -662,12 +662,12 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
           </svg>
           <%= if @google_connected do %>
             <p class="text-sm text-parchment truncate">
-              <span class="text-basil font-medium">Google Calendar connected</span>
-              — accepted appointments sync and your busy times block new bookings.
+              <span class="text-basil font-medium">{gettext("Google Calendar connected")}</span>
+              {gettext("— accepted appointments sync and your busy times block new bookings.")}
             </p>
           <% else %>
             <p class="text-sm text-parchment-dim truncate">
-              Connect your Google Calendar to auto-add accepted appointments (with a Meet link) and block your busy times.
+              {gettext("Connect your Google Calendar to auto-add accepted appointments (with a Meet link) and block your busy times.")}
             </p>
           <% end %>
         </div>
@@ -675,17 +675,17 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
           <.link
             href={~p"/nutritionist/google-calendar/disconnect"}
             method="delete"
-            data-confirm="Disconnect Google Calendar? Accepted appointments will stop syncing."
+            data-confirm={gettext("Disconnect Google Calendar? Accepted appointments will stop syncing.")}
             class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-red-700/60 text-parchment-dim hover:text-red-200 text-xs transition"
           >
-            Disconnect
+            {gettext("Disconnect")}
           </.link>
         <% else %>
           <.link
             href={~p"/nutritionist/google-calendar/connect"}
             class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-xs font-medium"
           >
-            Connect Google Calendar
+            {gettext("Connect Google Calendar")}
           </.link>
         <% end %>
       </div>
@@ -694,7 +694,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       <%= if @pending_requests != [] do %>
         <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 mb-6">
           <h2 class="text-amber-200 font-semibold mb-3">
-            Pending requests ({length(@pending_requests)})
+            {gettext("Pending requests (%{count})", count: length(@pending_requests))}
           </h2>
           <div class="space-y-3">
             <%= for req <- @pending_requests do %>
@@ -717,7 +717,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                 <input
                   type="url"
                   name="meeting_url"
-                  placeholder="Video call link (optional)"
+                  placeholder={gettext("Video call link (optional)")}
                   class="bg-ink-panel2 border border-ink-panel2 rounded px-2 py-1.5 text-xs text-parchment sm:w-48 focus:outline-none focus:border-paprika"
                 />
                 <div class="flex gap-2">
@@ -725,16 +725,16 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                     type="submit"
                     class="px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-xs font-medium"
                   >
-                    Accept
+                    {gettext("Accept")}
                   </button>
                   <button
                     type="button"
                     phx-click="decline_appointment"
                     phx-value-id={req.id}
-                    data-confirm="Decline this request?"
+                    data-confirm={gettext("Decline this request?")}
                     class="px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-red-700/60 text-parchment-dim hover:text-red-200 text-xs transition"
                   >
-                    Decline
+                    {gettext("Decline")}
                   </button>
                 </div>
               </form>
@@ -769,7 +769,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       <!-- Calendar grid -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
         <div class="grid grid-cols-7 border-b border-ink-panel2">
-          <%= for day <- ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] do %>
+          <%= for day <- [gettext("Mon"), gettext("Tue"), gettext("Wed"), gettext("Thu"), gettext("Fri"), gettext("Sat"), gettext("Sun")] do %>
             <div class="py-2 text-center text-xs font-medium text-parchment-dim">{day}</div>
           <% end %>
         </div>
@@ -840,7 +840,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                   {Calendar.strftime(@selected_date, "%A, %b %-d, %Y")}
                 </h3>
                 <p class="text-parchment-dim text-xs mt-0.5">
-                  {length(appts)} {if length(appts) == 1, do: "appointment", else: "appointments"}
+                  {ngettext("%{count} appointment", "%{count} appointments", length(appts), count: length(appts))}
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -849,7 +849,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                   phx-click="new_appointment"
                   class="px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-xs font-medium"
                 >
-                  + New
+                  {gettext("+ New")}
                 </button>
                 <button
                   phx-click="close_day_modal"
@@ -898,9 +898,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                   <div
                     class="absolute left-14 right-2 bg-ink-panel2/70 border-l-2 border-parchment-dim/40 pointer-events-none rounded-sm overflow-hidden"
                     style={availability_block_style(window)}
-                    title="Busy (Google Calendar)"
+                    title={gettext("Busy (Google Calendar)")}
                   >
-                    <span class="text-[9px] text-parchment-dim pl-1 select-none">Busy</span>
+                    <span class="text-[9px] text-parchment-dim pl-1 select-none">{gettext("Busy")}</span>
                   </div>
                 <% end %>
 
@@ -937,7 +937,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
             <!-- Modal header (fixed) -->
             <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
               <h3 class="text-parchment font-display font-semibold">
-                {if @editing_appointment, do: "Edit Appointment", else: "New Appointment"}
+                {if @editing_appointment, do: gettext("Edit Appointment"), else: gettext("New Appointment")}
               </h3>
               <button
                 phx-click="close_modal"
@@ -965,7 +965,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
               <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 <!-- Client selector (internal or external) -->
                 <div x-data={"{ clientType: '#{initial_client_type(@editing_appointment)}' }"}>
-                  <label class="block text-sm text-parchment-dim mb-1">Client</label>
+                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Client")}</label>
 
                   <!-- Toggle -->
                   <div class="flex gap-1 mb-2 p-0.5 bg-ink rounded-lg w-fit">
@@ -974,13 +974,13 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                       x-on:click="clientType = 'internal'"
                       x-bind:class="clientType === 'internal' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
                       class="px-3 py-1 rounded-md text-xs font-medium transition"
-                    >M3Hungry Client</button>
+                    >{gettext("M3Hungry Client")}</button>
                     <button
                       type="button"
                       x-on:click="clientType = 'external'"
                       x-bind:class="clientType === 'external' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
                       class="px-3 py-1 rounded-md text-xs font-medium transition"
-                    >External Client</button>
+                    >{gettext("External Client")}</button>
                   </div>
 
                   <!-- Internal: dropdown of assigned clients -->
@@ -990,7 +990,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                       x-bind:disabled="clientType !== 'internal'"
                       class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                     >
-                      <option value="">Select client...</option>
+                      <option value="">{gettext("Select client...")}</option>
                       <%= for assignment <- @clients do %>
                         <option
                           value={assignment.client.id}
@@ -1013,7 +1013,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                       name="appointment[external_client_name]"
                       x-bind:disabled="clientType !== 'external'"
                       value={@editing_appointment && @editing_appointment.external_client_name}
-                      placeholder="Client name (external)"
+                      placeholder={gettext("Client name (external)")}
                       class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                     />
                   </div>
@@ -1021,18 +1021,18 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
                 <!-- Title -->
                 <div>
-                  <label class="block text-sm text-parchment-dim mb-1">Title</label>
+                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Title")}</label>
                   <.input
                     field={f[:title]}
                     type="text"
-                    placeholder="Initial consultation"
+                    placeholder={gettext("Initial consultation")}
                     class="w-full"
                   />
                 </div>
 
                 <!-- Date -->
                 <div>
-                  <label class="block text-sm text-parchment-dim mb-1">Date</label>
+                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Date")}</label>
                   <input
                     type="date"
                     name="appointment[date]"
@@ -1044,7 +1044,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                 <!-- From / Until time row -->
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-sm text-parchment-dim mb-1">From</label>
+                    <label class="block text-sm text-parchment-dim mb-1">{gettext("From")}</label>
                     <div class="flex gap-1">
                       <select
                         name="appointment[start_hour]"
@@ -1065,7 +1065,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                     </div>
                   </div>
                   <div>
-                    <label class="block text-sm text-parchment-dim mb-1">Until</label>
+                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Until")}</label>
                     <div class="flex gap-1">
                       <select
                         name="appointment[end_hour]"
@@ -1089,12 +1089,12 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
                 <!-- Notes -->
                 <div>
-                  <label class="block text-sm text-parchment-dim mb-1">Session notes (optional)</label>
+                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Session notes (optional)")}</label>
                   <.input
                     field={f[:notes]}
                     type="textarea"
                     rows="3"
-                    placeholder="Notes from the session..."
+                    placeholder={gettext("Notes from the session...")}
                     class="w-full"
                   />
                 </div>
@@ -1106,17 +1106,17 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                   type="submit"
                   class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-medium py-2 px-4 rounded-lg transition text-sm"
                 >
-                  Save Appointment
+                  {gettext("Save Appointment")}
                 </button>
                 <%= if @editing_appointment && @editing_appointment.status == "accepted" do %>
                   <button
                     type="button"
                     phx-click="cancel_appointment_professional"
                     phx-value-id={@editing_appointment.id}
-                    data-confirm="Cancel this appointment and fully refund the client?"
+                    data-confirm={gettext("Cancel this appointment and fully refund the client?")}
                     class="px-4 py-2 rounded-lg bg-red-700/60 hover:bg-red-600 text-red-200 text-sm transition"
                   >
-                    Cancel &amp; refund
+                    {gettext("Cancel & refund")}
                   </button>
                 <% else %>
                   <%= if @editing_appointment do %>
@@ -1124,10 +1124,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                       type="button"
                       phx-click="delete_appointment"
                       phx-value-id={@editing_appointment.id}
-                      data-confirm="Delete this appointment?"
+                      data-confirm={gettext("Delete this appointment?")}
                       class="px-4 py-2 rounded-lg bg-red-700/60 hover:bg-red-600 text-red-200 text-sm transition"
                     >
-                      Delete
+                      {gettext("Delete")}
                     </button>
                   <% end %>
                 <% end %>
@@ -1138,7 +1138,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                     phx-value-id={@editing_appointment.id}
                     class="px-4 py-2 rounded-lg bg-basil/20 hover:bg-basil/30 text-basil text-sm transition"
                   >
-                    Log measurement
+                    {gettext("Log measurement")}
                   </button>
                 <% end %>
                 <button
@@ -1146,7 +1146,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                   phx-click="close_modal"
                   class="px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm transition"
                 >
-                  Cancel
+                  {gettext("Cancel")}
                 </button>
               </div>
             </.form>
@@ -1158,7 +1158,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div class="bg-ink-panel border border-ink-panel2 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
             <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
-              <h3 class="text-parchment font-display font-semibold">Log measurement</h3>
+              <h3 class="text-parchment font-display font-semibold">{gettext("Log measurement")}</h3>
               <button
                 phx-click="close_measurement_modal"
                 class="text-parchment-dim hover:text-parchment transition"
@@ -1182,32 +1182,32 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
             >
               <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 <p class="text-parchment-dim text-xs">
-                  BMI and BMR are computed automatically from the client's latest intake.
+                  {gettext("BMI and BMR are computed automatically from the client's latest intake.")}
                 </p>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-sm text-parchment-dim mb-1">Visit date</label>
+                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Visit date")}</label>
                     <.input field={@measurement_form[:visit_date]} type="date" />
                   </div>
                   <div>
-                    <label class="block text-sm text-parchment-dim mb-1">Weight (kg)</label>
+                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Weight (kg)")}</label>
                     <.input field={@measurement_form[:weight_kg]} type="number" step="any" />
                   </div>
                   <div>
-                    <label class="block text-sm text-parchment-dim mb-1">Body fat (%)</label>
+                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Body fat (%)")}</label>
                     <.input field={@measurement_form[:body_fat_percentage]} type="number" step="any" />
                   </div>
                   <div>
-                    <label class="block text-sm text-parchment-dim mb-1">Waist (cm)</label>
+                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Waist (cm)")}</label>
                     <.input field={@measurement_form[:waist_cm]} type="number" step="any" />
                   </div>
                   <div>
-                    <label class="block text-sm text-parchment-dim mb-1">Muscle mass (kg)</label>
+                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Muscle mass (kg)")}</label>
                     <.input field={@measurement_form[:muscle_mass_kg]} type="number" step="any" />
                   </div>
                 </div>
                 <div>
-                  <label class="block text-sm text-parchment-dim mb-1">Notes (optional)</label>
+                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Notes (optional)")}</label>
                   <.input field={@measurement_form[:body]} type="textarea" rows="2" />
                 </div>
               </div>
@@ -1217,14 +1217,14 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                   type="submit"
                   class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-medium py-2 px-4 rounded-lg transition text-sm"
                 >
-                  Save measurement
+                  {gettext("Save measurement")}
                 </button>
                 <button
                   type="button"
                   phx-click="close_measurement_modal"
                   class="px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm transition"
                 >
-                  Cancel
+                  {gettext("Cancel")}
                 </button>
               </div>
             </.form>

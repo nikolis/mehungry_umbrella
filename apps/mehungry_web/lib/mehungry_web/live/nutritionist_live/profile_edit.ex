@@ -34,7 +34,7 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
 
     socket =
       socket
-      |> assign(:page_title, "My Professional Profile")
+      |> assign(:page_title, gettext("My Professional Profile"))
       |> assign(:profile, profile)
       |> assign(:short_link_base, MehungryWeb.Endpoint.url())
       |> assign(:short_link_host, URI.parse(MehungryWeb.Endpoint.url()).host)
@@ -94,7 +94,7 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
         {:noreply,
          socket
          |> assign(:changeset, Map.put(changeset, :action, :insert))
-         |> put_flash(:error, "Please fix the errors below.")}
+         |> put_flash(:error, gettext("Please fix the errors below."))}
     end
   end
 
@@ -116,9 +116,9 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
   end
 
   defp profile_saved_flash(%{is_public: true, slug: slug}) when is_binary(slug),
-    do: "Profile saved and published at /nutritionists/#{slug}."
+    do: gettext("Profile saved and published at /nutritionists/%{slug}.", slug: slug)
 
-  defp profile_saved_flash(_), do: "Profile saved."
+  defp profile_saved_flash(_), do: gettext("Profile saved.")
 
   # Build a dow => %{start, end} map for the form from stored availability rows
   # (first window per day; the editor supports one window per day).
@@ -170,14 +170,14 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
     ~H"""
     <div class="max-w-3xl mx-auto pb-16">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-display font-bold text-parchment">My Professional Profile</h1>
+        <h1 class="text-2xl font-display font-bold text-parchment">{gettext("My Professional Profile")}</h1>
         <a
           :if={@profile.slug && @profile.is_public}
           href={~p"/nutritionists/#{@profile.slug}"}
           target="_blank"
           class="text-sm text-paprika hover:text-paprika-soft"
         >
-          View public page →
+          {gettext("View public page →")}
         </a>
       </div>
 
@@ -190,42 +190,42 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
       >
         <!-- Public details -->
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4">
-          <h2 class="text-lg font-display font-semibold text-parchment">Public details</h2>
+          <h2 class="text-lg font-display font-semibold text-parchment">{gettext("Public details")}</h2>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <.labeled label="Display name">
+            <.labeled label={gettext("Display name")}>
               <.input
                 field={f[:display_name]}
                 type="text"
-                placeholder="e.g. Maria Papadaki"
+                placeholder={gettext("e.g. Maria Papadaki")}
                 class="w-full"
               />
             </.labeled>
-            <.labeled label="Specialization">
+            <.labeled label={gettext("Specialization")}>
               <.input
                 field={f[:specialization]}
                 type="text"
-                placeholder="Clinical Dietitian"
+                placeholder={gettext("Clinical Dietitian")}
                 class="w-full"
               />
             </.labeled>
           </div>
 
-          <.labeled label="Short bio">
+          <.labeled label={gettext("Short bio")}>
             <.input field={f[:bio]} type="textarea" rows="3" class="w-full" />
           </.labeled>
-          <.labeled label="Education">
+          <.labeled label={gettext("Education")}>
             <.input field={f[:education]} type="textarea" rows="3" class="w-full" />
           </.labeled>
-          <.labeled label="Scientific contributions">
+          <.labeled label={gettext("Scientific contributions")}>
             <.input field={f[:scientific_contributions]} type="textarea" rows="3" class="w-full" />
           </.labeled>
-          <.labeled label="Professional achievements">
+          <.labeled label={gettext("Professional achievements")}>
             <.input field={f[:professional_achievements]} type="textarea" rows="3" class="w-full" />
           </.labeled>
 
           <div>
-            <label class="block text-sm text-parchment-dim mb-1">Profile photo</label>
+            <label class="block text-sm text-parchment-dim mb-1">{gettext("Profile photo")}</label>
             <img
               :if={@profile.photo_url}
               src={@profile.photo_url}
@@ -237,12 +237,13 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
 
         <!-- Personal short link -->
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4">
-          <h2 class="text-lg font-display font-semibold text-parchment">Personal short link</h2>
+          <h2 class="text-lg font-display font-semibold text-parchment">{gettext("Personal short link")}</h2>
           <p class="text-parchment-dim text-sm">
-            A short, memorable link to print on cards or drop in your social bios. It redirects
-            visitors to your public profile.
+            {gettext(
+              "A short, memorable link to print on cards or drop in your social bios. It redirects visitors to your public profile."
+            )}
           </p>
-          <.labeled label="Handle">
+          <.labeled label={gettext("Handle")}>
             <div class="flex items-center gap-2">
               <span class="text-parchment-dim text-sm whitespace-nowrap">{@short_link_host}/@</span>
               <.input field={f[:handle]} type="text" placeholder="maria" class="flex-1" />
@@ -256,40 +257,40 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
               type="button"
               x-data
               data-link={"#{@short_link_base}/@#{f[:handle].value}"}
-              @click="navigator.clipboard.writeText($el.dataset.link); $el.textContent = 'Copied!'"
+              @click={"navigator.clipboard.writeText($el.dataset.link); $el.textContent = '#{gettext("Copied!")}'"}
               class="px-3 py-1.5 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition"
             >
-              Copy link
+              {gettext("Copy link")}
             </button>
           </div>
           <p :if={(f[:handle].value || "") != "" and not @profile.is_public} class="text-parchment-dim text-xs">
-            Publish your profile below for this link to go live.
+            {gettext("Publish your profile below for this link to go live.")}
           </p>
         </section>
 
         <!-- Contact & location -->
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4">
-          <h2 class="text-lg font-display font-semibold text-parchment">Contact &amp; location</h2>
+          <h2 class="text-lg font-display font-semibold text-parchment">{gettext("Contact & location")}</h2>
           <p class="text-parchment-dim text-sm">
-            The city is used to rank your profile for local searches (e.g. “nutritionist Rethymno”).
+            {gettext("The city is used to rank your profile for local searches (e.g. “nutritionist Rethymno”).")}
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <.labeled label="City">
+            <.labeled label={gettext("City")}>
               <.input field={f[:city]} type="text" placeholder="Rethymno" class="w-full" />
             </.labeled>
-            <.labeled label="Region">
+            <.labeled label={gettext("Region")}>
               <.input field={f[:region]} type="text" placeholder="Crete" class="w-full" />
             </.labeled>
-            <.labeled label="Office address">
+            <.labeled label={gettext("Office address")}>
               <.input field={f[:office_address]} type="text" class="w-full" />
             </.labeled>
-            <.labeled label="Phone">
+            <.labeled label={gettext("Phone")}>
               <.input field={f[:phone]} type="text" class="w-full" />
             </.labeled>
-            <.labeled label="Contact email">
+            <.labeled label={gettext("Contact email")}>
               <.input field={f[:contact_email]} type="text" class="w-full" />
             </.labeled>
-            <.labeled label="Website">
+            <.labeled label={gettext("Website")}>
               <.input field={f[:website_url]} type="text" placeholder="https://" class="w-full" />
             </.labeled>
           </div>
@@ -297,12 +298,12 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
 
         <!-- Availability -->
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4">
-          <h2 class="text-lg font-display font-semibold text-parchment">Weekly availability</h2>
+          <h2 class="text-lg font-display font-semibold text-parchment">{gettext("Weekly availability")}</h2>
           <p class="text-parchment-dim text-sm">
-            Set the hours you take appointments each week. Visitors can request open slots inside these windows.
+            {gettext("Set the hours you take appointments each week. Visitors can request open slots inside these windows.")}
           </p>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <.labeled label="Appointment length (minutes)">
+            <.labeled label={gettext("Appointment length (minutes)")}>
               <.input
                 field={f[:appointment_slot_minutes]}
                 type="number"
@@ -324,14 +325,14 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
                   checked={Map.has_key?(@availability, dow)}
                   class="rounded w-4 h-4 cursor-pointer"
                 />
-                {name}
+                {weekday_label(name)}
               </label>
               <.time_dropdown
                 name={"availability[#{dow}][start]"}
                 value={get_in(@availability, [dow, :start]) || "09:00"}
                 options={@time_options}
               />
-              <span class="text-parchment-dim">to</span>
+              <span class="text-parchment-dim">{gettext("to")}</span>
               <.time_dropdown
                 name={"availability[#{dow}][end]"}
                 value={get_in(@availability, [dow, :end]) || "17:00"}
@@ -343,11 +344,11 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
 
         <!-- Payments (moved to its own workspace) -->
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-2">
-          <h2 class="text-lg font-display font-semibold text-parchment">Payments &amp; pricing</h2>
+          <h2 class="text-lg font-display font-semibold text-parchment">{gettext("Payments & pricing")}</h2>
           <p class="text-parchment-dim text-sm">
-            Connect payouts and set your session/package prices on the
-            <a href="/nutritionist/payments" class="text-paprika hover:text-paprika-soft">Payments</a>
-            page.
+            {gettext("Connect payouts and set your session/package prices on the")}
+            <a href="/nutritionist/payments" class="text-paprika hover:text-paprika-soft">{gettext("Payments")}</a>
+            {gettext("page.")}
           </p>
         </section>
 
@@ -355,11 +356,12 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-3">
           <label class="flex items-center gap-3 text-parchment">
             <.input field={f[:is_public]} type="checkbox" />
-            <span class="font-medium">Make my profile public</span>
+            <span class="font-medium">{gettext("Make my profile public")}</span>
           </label>
           <p class="text-parchment-dim text-sm">
-            A display name, city and short bio are required to publish. Public profiles appear in the
-            nutritionist directory and search engines.
+            {gettext(
+              "A display name, city and short bio are required to publish. Public profiles appear in the nutritionist directory and search engines."
+            )}
           </p>
         </section>
 
@@ -368,7 +370,7 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
             type="submit"
             class="px-5 py-2.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-medium text-sm transition"
           >
-            Save profile
+            {gettext("Save profile")}
           </button>
         </div>
       </.form>
@@ -427,4 +429,15 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
     </div>
     """
   end
+
+  # Weekday names are stored in the @weekdays module attribute (compile-time), so
+  # they can't be wrapped in gettext in place. Translate the literal at render.
+  defp weekday_label("Monday"), do: gettext("Monday")
+  defp weekday_label("Tuesday"), do: gettext("Tuesday")
+  defp weekday_label("Wednesday"), do: gettext("Wednesday")
+  defp weekday_label("Thursday"), do: gettext("Thursday")
+  defp weekday_label("Friday"), do: gettext("Friday")
+  defp weekday_label("Saturday"), do: gettext("Saturday")
+  defp weekday_label("Sunday"), do: gettext("Sunday")
+  defp weekday_label(other), do: other
 end

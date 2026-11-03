@@ -122,7 +122,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
     user = socket.assigns.current_user
 
     if body == "" do
-      {:noreply, socket |> put_flash(:error, "Write something first.") |> assign(:composing_study_id, nil)}
+      {:noreply, socket |> put_flash(:error, gettext("Write something first.")) |> assign(:composing_study_id, nil)}
     else
       {:ok, _} =
         ResearchNotes.create_custom(user.id, %{
@@ -134,15 +134,29 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
       {:noreply,
        socket
        |> assign(:composing_study_id, nil)
-       |> put_flash(:info, "Note saved to your notes.")}
+       |> put_flash(:info, gettext("Note saved to your notes."))}
     end
   end
 
   defp sort_key_atom(s), do: Enum.find(Keyword.keys(@sorts), &(to_string(&1) == s)) || :relevance
   defp filter_key_atom(f), do: Enum.find(Keyword.keys(@filters), &(to_string(&1) == f))
 
-  defp sort_options, do: @sorts
-  defp filter_options, do: @filters
+  defp sort_options do
+    [
+      relevance: gettext("Best match"),
+      newest: gettext("Newest first"),
+      sample: gettext("Largest sample"),
+      findings: gettext("Most findings")
+    ]
+  end
+
+  defp filter_options do
+    [
+      full_text: gettext("Full text"),
+      medline: gettext("MEDLINE-indexed"),
+      independent: gettext("Independent funding")
+    ]
+  end
 
   # Apply the active filters + chosen sort to each group's papers, dropping any
   # group left empty. Operates on the already-loaded groups (no DB round-trip).
@@ -190,13 +204,13 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
           navigate={~p"/nutritionist/research"}
           class="inline-flex items-center gap-1 text-sm text-parchment-dim hover:text-parchment"
         >
-          <.icon name="hero-arrow-left" class="w-4 h-4" /> All research
+          <.icon name="hero-arrow-left" class="w-4 h-4" /> {gettext("All research")}
         </.link>
         <.link
           navigate={~p"/nutritionist/research/notes"}
           class="inline-flex items-center gap-1 text-sm text-parchment-dim hover:text-parchment"
         >
-          <.icon name="hero-bookmark" class="w-4 h-4" /> My notes
+          <.icon name="hero-bookmark" class="w-4 h-4" /> {gettext("My notes")}
         </.link>
       </div>
 
@@ -207,11 +221,14 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         <h1 class="text-2xl font-semibold text-parchment">{@condition.name}</h1>
         <p class="text-sm text-parchment-dim mt-1">
           <span :if={MapSet.size(@filters) == 0}>
-            {@study_count} nutrition-relevant stud{if @study_count == 1, do: "y", else: "ies"},
-            grouped by research type (strongest evidence first).
+            {ngettext(
+              "%{count} nutrition-relevant study, grouped by research type (strongest evidence first).",
+              "%{count} nutrition-relevant studies, grouped by research type (strongest evidence first).",
+              @study_count
+            )}
           </span>
           <span :if={MapSet.size(@filters) > 0}>
-            Showing {shown} of {@study_count} studies.
+            {gettext("Showing %{shown} of %{total} studies.", shown: shown, total: @study_count)}
           </span>
         </p>
       </header>
@@ -245,11 +262,11 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
           phx-click="clear_filters"
           class="text-xs text-parchment-dim hover:text-parchment underline"
         >
-          Clear
+          {gettext("Clear")}
         </button>
 
         <form id="research-sort" phx-change="set_sort" class="ml-auto flex items-center gap-1.5">
-          <label for="sort" class="text-xs text-parchment-dim">Sort</label>
+          <label for="sort" class="text-xs text-parchment-dim">{gettext("Sort")}</label>
           <select
             id="sort"
             name="sort"
@@ -263,16 +280,16 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
       </div>
 
       <p :if={@groups == []} class="text-sm text-parchment-dim py-8 text-center">
-        No digested research for this condition yet.
+        {gettext("No digested research for this condition yet.")}
       </p>
 
       <p
         :if={@groups != [] and visible == []}
         class="text-sm text-parchment-dim py-8 text-center"
       >
-        No studies match these filters.
+        {gettext("No studies match these filters.")}
         <button type="button" phx-click="clear_filters" class="text-basil hover:underline">
-          Clear filters
+          {gettext("Clear filters")}
         </button>
       </p>
 
@@ -299,7 +316,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
               rel="noopener"
               class="text-parchment font-medium hover:text-basil hover:underline"
             >
-              {analysis.paper_title || (analysis.study && analysis.study.title) || "Untitled"}
+              {analysis.paper_title || (analysis.study && analysis.study.title) || gettext("Untitled")}
             </a>
 
           <p :if={authors_line(analysis)} class="text-xs text-parchment-dim mt-1">
@@ -310,7 +327,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
             <span
               :if={authority_label(analysis)}
               class="px-2 py-0.5 rounded-full bg-basil/15 text-basil font-medium"
-              title="Published in a MEDLINE-indexed journal — vetted and selectively indexed by the U.S. National Library of Medicine."
+              title={gettext("Published in a MEDLINE-indexed journal — vetted and selectively indexed by the U.S. National Library of Medicine.")}
             >
               {authority_label(analysis)}
             </span>
@@ -336,9 +353,9 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
             <span
               :if={analysis.source_type && analysis.source_type != "open_access"}
               class="px-2 py-0.5 rounded-full bg-ink text-parchment-dim italic"
-              title="Findings extracted from the abstract only (no open-access full text)"
+              title={gettext("Findings extracted from the abstract only (no open-access full text)")}
             >
-              abstract only
+              {gettext("abstract only")}
             </span>
           </div>
 
@@ -351,9 +368,9 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                   name="hero-chevron-right"
                   class="w-3 h-3 self-center transition-transform group-open/toc:rotate-90"
                 />
-                Read full text
+                {gettext("Read full text")}
                 <span class="font-normal text-parchment-dim">
-                  · {length(analysis.outline)} sections
+                  · {ngettext("%{count} section", "%{count} sections", length(analysis.outline))}
                 </span>
               </summary>
 
@@ -415,7 +432,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                   class="w-3 h-3 transition-transform group-open/claims:rotate-90"
                 />
                 <span class="group-open/claims:hidden">{show_findings_label(analysis)}</span>
-                <span class="hidden group-open/claims:inline">Hide suggested notes</span>
+                <span class="hidden group-open/claims:inline">{gettext("Hide suggested notes")}</span>
               </summary>
 
               <ul class="mt-2 space-y-2">
@@ -427,7 +444,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                     :if={disease_state(claim)}
                     class="text-[10px] inline-block px-2 py-0.5 rounded-full bg-paprika/20 text-paprika-soft mb-0.5"
                   >
-                    disease state: {disease_state(claim)}
+                    {gettext("disease state:")} {disease_state(claim)}
                   </div>
                   <div class="text-parchment">
                     <span class="font-medium">{endpoint(claim, "subject")}</span>
@@ -448,7 +465,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                       navigate={target}
                       class="inline-flex items-center gap-0.5 text-basil hover:underline"
                     >
-                      <.icon name="hero-arrow-top-right-on-square" class="w-3 h-3" /> Open in text
+                      <.icon name="hero-arrow-top-right-on-square" class="w-3 h-3" /> {gettext("Open in text")}
                     </.link>
                     <a
                       :if={kind == :pubmed}
@@ -457,7 +474,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                       rel="noopener"
                       class="text-basil hover:underline"
                     >
-                      source
+                      {gettext("source")}
                     </a>
                     <button
                       type="button"
@@ -474,7 +491,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                         name={if saved, do: "hero-bookmark-solid", else: "hero-bookmark"}
                         class="w-3 h-3"
                       />
-                      {if saved, do: "Saved", else: "Save"}
+                      {if saved, do: gettext("Saved"), else: gettext("Save")}
                     </button>
                   </div>
                 </li>
@@ -485,7 +502,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
               :if={not analysis.has_full_text and visible_claims(analysis) == []}
               class="mt-3 text-xs text-parchment-dim italic"
             >
-              No highlighted findings for this paper.
+              {gettext("No highlighted findings for this paper.")}
             </p>
 
             <%!-- Write your own note against this paper (saved to "My notes"). --%>
@@ -496,7 +513,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
               phx-value-study_id={analysis.study_id}
               class="mt-3 inline-flex items-center gap-1 text-xs text-parchment-dim hover:text-parchment"
             >
-              <.icon name="hero-plus" class="w-3 h-3" /> Write your own note
+              <.icon name="hero-plus" class="w-3 h-3" /> {gettext("Write your own note")}
             </button>
 
             <form
@@ -509,7 +526,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                 name="body"
                 rows="3"
                 autofocus
-                placeholder="Your note about this paper…"
+                placeholder={gettext("Your note about this paper…")}
                 class="w-full rounded-md border border-ink-panel2 bg-ink text-parchment text-xs px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-basil/50"
               ></textarea>
               <div class="flex items-center gap-2 mt-1.5">
@@ -517,14 +534,14 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
                   type="submit"
                   class="px-2.5 py-1 rounded-md bg-basil/15 text-basil text-xs hover:bg-basil/25"
                 >
-                  Save note
+                  {gettext("Save note")}
                 </button>
                 <button
                   type="button"
                   phx-click="cancel_compose"
                   class="text-xs text-parchment-dim hover:text-parchment"
                 >
-                  Cancel
+                  {gettext("Cancel")}
                 </button>
               </div>
             </form>
@@ -607,7 +624,8 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
 
   defp visible_claims(_), do: []
 
-  defp show_findings_label(analysis), do: "Suggested notes (#{length(visible_claims(analysis))})"
+  defp show_findings_label(analysis),
+    do: gettext("Suggested notes (%{count})", count: length(visible_claims(analysis)))
 
   # "Open in text": deep-link to the reader at the claim's first evidence
   # paragraph when the paper has full text; else fall back to PubMed.
@@ -664,7 +682,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
     end)
   end
 
-  defp certainty_suffix(%{"certainty" => "hedged"}), do: " · hedged"
+  defp certainty_suffix(%{"certainty" => "hedged"}), do: " · " <> gettext("hedged")
   defp certainty_suffix(_), do: ""
 
   defp polarity_class("positive"), do: "text-basil"
@@ -694,7 +712,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
 
   defp authors_line(_), do: nil
 
-  defp funding_label("independent"), do: "independent funding"
-  defp funding_label("conflicted"), do: "conflicted funding"
+  defp funding_label("independent"), do: gettext("independent funding")
+  defp funding_label("conflicted"), do: gettext("conflicted funding")
   defp funding_label(other), do: other
 end

@@ -339,7 +339,11 @@ defmodule MehungryWeb.Router do
     pipe_through([:browser, :require_authenticated_user])
 
     live_session :nutritionist,
-      on_mount: [MehungryWeb.NutritionistAuthLive, MehungryWeb.SessionMetrics],
+      on_mount: [
+        MehungryWeb.RestoreLocale,
+        MehungryWeb.NutritionistAuthLive,
+        MehungryWeb.SessionMetrics
+      ],
       layout: {MehungryWeb.LayoutView, :nutritionist_live} do
       live("/", NutritionistLive.Dashboard, :index)
       live("/analytics", NutritionistLive.AnalyticsLive, :index)
@@ -385,7 +389,11 @@ defmodule MehungryWeb.Router do
     # injected `nav_section` session flag tells those LiveViews to keep all internal
     # navigation under `/nutritionist/conditions` instead of the public `/:locale/conditions`.
     live_session :nutritionist_conditions,
-      on_mount: [MehungryWeb.NutritionistAuthLive, MehungryWeb.SessionMetrics],
+      on_mount: [
+        MehungryWeb.RestoreLocale,
+        MehungryWeb.NutritionistAuthLive,
+        MehungryWeb.SessionMetrics
+      ],
       layout: {MehungryWeb.LayoutView, :nutritionist_live},
       session: %{"nav_section" => "nutritionist"} do
       live("/conditions", HealthLive.Index, :index)
