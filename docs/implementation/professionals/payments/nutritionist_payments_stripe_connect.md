@@ -54,21 +54,21 @@ Onboarding only — enough for a nutritionist to become payable, with no chargin
 
 - **Schema** (`professional_profiles`): `stripe_connect_account_id`, `stripe_charges_enabled`,
   `consultation_fee_cents`.
-- **`Billing.StripeHandler`** (account lifecycle on **Accounts v2** since 2026-11-03 — see
-  `go_live_runbook.md` §1):
-  - `create_connect_account/1` → `POST /v2/core/accounts` (Express dashboard; requests
+- **`Billing.StripeHandler`** (account lifecycle has **both v1 and v2** implementations, selected by
+  `config :mehungry, :stripe_accounts_api`, **default `:v1`** — see `go_live_runbook.md` §1):
+  - `create_connect_account/1` — **v1** (default): `POST /v1/accounts` (Express, requests
+    `transfers` + `card_payments`). **v2**: `POST /v2/core/accounts` requesting
     `configuration.merchant.card_payments` **and** `configuration.recipient.stripe_balance.stripe_transfers`
-    — both, because we keep `on_behalf_of` with the nutritionist as merchant of record; platform owns
+    (both, because we keep `on_behalf_of` with the nutritionist as merchant of record; platform owns
     fees/losses).
-  - `create_account_link/3` → `POST /v2/core/account_links` (`use_case.account_onboarding`,
-    `collection_options.fields: eventually_due`) — the hosted onboarding URL.
-  - `get_connect_account/1` → `GET /v2/core/accounts/:id` — `charges_enabled` is derived as **both**
-    the merchant `card_payments` and recipient `stripe_transfers` capability statuses = `active`.
-  - `create_login_link/1` → v1 `login_links` (unchanged; works for v2 Express accounts).
-  - Webhook: thin `v2.core.account[...].capability_status_updated` → `related_object.id` →
-    `Professionals.sync_stripe_account_status/1` re-fetches status and flips the stored flag so the UI
-    shows "connected". The v1 `account.updated` → `set_stripe_charges_enabled/2` clause is kept during
-    the transition.
+  - `create_account_link/3` — **v1**: `POST /v1/account_links`. **v2**: `POST /v2/core/account_links`
+    (`use_case.account_onboarding`, `collection_options.fields: eventually_due`).
+  - `get_connect_account/1` — **v1**: reads `charges_enabled`. **v2**: derives `charges_enabled` from
+    **both** the merchant `card_payments` and recipient `stripe_transfers` capability statuses = `active`.
+  - `create_login_link/1` → v1 `login_links` (same for both; works for v1 + v2 Express accounts).
+  - Webhook (toggle-independent): v1 `account.updated` → `set_stripe_charges_enabled/2`; v2 thin
+    `v2.core.account[...].capability_status_updated` → `related_object.id` →
+    `Professionals.sync_stripe_account_status/1` (re-fetch + recompute). Both clauses are always live.
 - **UI**: `/nutritionist/profile` → "Connect payouts with Stripe" starts onboarding;
   Stripe returns to `/nutritionist/profile?stripe=return`, which re-syncs status. A green
   "Payouts connected" badge shows when `charges_enabled`.

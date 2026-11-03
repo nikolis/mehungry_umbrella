@@ -12,11 +12,16 @@ all of them.
 
 ## 1. Accounts v1 → v2 migration plan
 
-> **Status (2026-11-03): the code migration is DONE and merged.** The account
-> lifecycle (`Billing.StripeHandler.create_connect_account/1`,
-> `create_account_link/3`, `get_connect_account/1`, the account webhook) now runs
-> on **Accounts v2** (`/v2/core/*`, JSON body, `Stripe-Version` preview header
-> pinned in `config :mehungry, :stripe_accounts_api_version` = `2026-10-28.preview`).
+> **Status (2026-11-03): v2 code DONE, but behind a toggle defaulting to v1.** The account
+> lifecycle (`Billing.StripeHandler.create_connect_account/1`, `create_account_link/3`,
+> `get_connect_account/1`) now has **both** a v1 and a v2 implementation, selected by
+> `config :mehungry, :stripe_accounts_api` (**default `:v1`**). **Launch on `:v1`** — the
+> stable, live-verified path (requires "Accounts v1 support" enabled in the Stripe dashboard).
+> Flip the toggle to `:v2` once Accounts v2 is GA; the v2 path runs on `/v2/core/*` (JSON body,
+> `Stripe-Version` preview header pinned in `:stripe_accounts_api_version` = `2026-10-28.preview`).
+> The webhook handles **both** v1 `account.updated` and v2 `capability_status_updated` regardless
+> of the toggle. **Owner decision (2026-11-03): don't launch real money on the v2 preview API —
+> launch on v1, keep v2 as the GA fast-follow.**
 > **Decision (owner, 2026-11-03):** we **keep `on_behalf_of`** (nutritionist is
 > merchant of record, bears Stripe fees, their name on receipts, full 5% stays
 > net), so each account requests **both** `configuration.merchant`
@@ -192,10 +197,10 @@ EU cross-border reverse charge. The ledger already records `fee_vat_cents` per r
 - **§2 done** — prod Connect enabled + webhook endpoint registered (live mode). Without the prod
   webhook endpoint the charge flow silently breaks: holds never capture, capability status never
   syncs. This is **owner dashboard work** and cannot be skipped.
-- **§1 verified** — account creation is now **v2-only** in code (the v1 create path was removed in
-  the migration), so the `2026-10-28.preview` v2 flow **must** be proven in a fresh test sandbox
-  (onboard → book → capture → refund) and you must accept moving live money on a preview version.
-  There is **no v1 fallback** to launch on anymore unless a v1 code path is re-added behind a toggle.
+- **§1 — launch on v1** (`:stripe_accounts_api = :v1`, the default). This is the live-verified path;
+  just enable **"Accounts v1 support"** in the Stripe dashboard. The v2 path stays dark until
+  Accounts v2 is GA, at which point flip the toggle to `:v2` and re-run the sandbox verify. (No need
+  to accept preview-API risk for live money.)
 - **§3a/§3b published** — ✅ done.
 - **§3c — deferred to first income** (owner decision 2026-11-03): the flag may flip before the
   commission-invoicing mechanism is set, because income is €0 and no invoice is yet due — but the
@@ -221,7 +226,7 @@ request-only (no charge), prices become display-only. In-flight authorized holds
 
 ## Checklist
 
-- [x] **§1** v2 migration code shipped (2026-11-03). ⏳ Still: verify in a fresh sandbox with Accounts v1 support OFF, **or** enable Accounts v1 support on prod to launch on the dark v1 path instead
+- [x] **§1** v2 code shipped behind `:stripe_accounts_api` toggle (default `:v1`). **Launch on v1** — enable "Accounts v1 support" in the Stripe dashboard. v2 is the GA fast-follow (flip toggle + sandbox-verify then).
 - [ ] **§2** Enable Connect + platform profile/branding/support; confirm `debit_negative_balances`
 - [ ] **§2** Register webhook endpoint + events on `https://www.m3hungry.com/webhooks/stripe`; set `STRIPE_WEBHOOK_SECRET`
 - [x] **§3a** Refund copy wired into Terms + booking step (2026-11-03) — ⏳ owner reviews final wording

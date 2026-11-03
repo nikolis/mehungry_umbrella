@@ -74,24 +74,52 @@ defmodule Mehungry.Billing.StripeHandler do
   # ── Connect (nutritionist payouts — minimal onboarding slice) ─────────────────
 
   @doc """
-  Create an Accounts-v2 connected account for a nutritionist (Express dashboard)
-  so they can receive payouts. Returns `{:ok, account_id}` or `{:error, reason}`.
+  Create a connected account for a nutritionist (Express) so they can receive
+  payouts. Returns `{:ok, account_id}` or `{:error, reason}`.
 
-  We keep the destination-charge + `on_behalf_of` flow where the nutritionist is
-  the merchant of record, so the account gets **both** configurations:
-
-    * `merchant` — requests the `card_payments` capability (MoR for the charge),
-    * `recipient` — requests `stripe_balance.stripe_transfers` (receives the
-      destination transfer).
-
-  Responsibilities are platform-owned (`fees_collector`/`losses_collector =
-  application`), as required for destination charges: we carry negative-balance
-  and dispute liability. MCC/industry is left to the nutritionist's onboarding
-  industry selection (non-medical wellness coaching) unless `:connect_account_mcc`
-  is explicitly set — Stripe has no numeric "wellness coaching" code and a forced
-  one must match the chosen industry or it's rejected.
+  Dispatches to the **v1** or **v2** Accounts API per `:stripe_accounts_api`
+  (default `:v1`). v1 is the live-verified path and the one to launch on; v2
+  (Accounts v2) runs on a **preview** API version and is the fast-follow — flip
+  the toggle to `:v2` once Accounts v2 is GA.
   """
   def create_connect_account(email) do
+    case accounts_api() do
+      :v2 -> create_connect_account_v2(email)
+      _ -> create_connect_account_v1(email)
+    end
+  end
+
+  # v1 (stable, live-verified): a flat Express account requesting the `transfers`
+  # + `card_payments` capabilities. Classification is left to the nutritionist's
+  # onboarding industry pick; product_description/url/MCC reinforce it when set.
+  defp create_connect_account_v1(email) do
+    params =
+      %{
+        "type" => "express",
+        "email" => email,
+        "capabilities[transfers][requested]" => "true",
+        "capabilities[card_payments][requested]" => "true"
+      }
+      |> maybe_put("business_profile[product_description]", opt(:connect_product_description))
+      |> maybe_put("business_profile[url]", opt(:connect_business_url))
+      |> maybe_put("business_profile[mcc]", opt(:connect_account_mcc))
+
+    case post("/accounts", params) do
+      {:ok, %{"id" => account_id}} -> {:ok, account_id}
+      {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # v2 (Accounts v2, preview API). We keep the destination-charge + `on_behalf_of`
+  # flow where the nutritionist is the merchant of record, so the account gets
+  # **both** configurations: `merchant` (requests `card_payments` — MoR for the
+  # charge) and `recipient` (requests `stripe_balance.stripe_transfers` — receives
+  # the destination transfer). Responsibilities are platform-owned
+  # (`fees_collector`/`losses_collector = application`), as required for
+  # destination charges: we carry negative-balance and dispute liability. MCC is
+  # left to the onboarding industry pick unless `:connect_account_mcc` is set.
+  defp create_connect_account_v2(email) do
     body =
       %{
         "contact_email" => email,
@@ -155,9 +183,31 @@ defmodule Mehungry.Billing.StripeHandler do
   @doc """
   Create an onboarding Account Link the nutritionist visits to complete KYC.
   `refresh_url` is used if the link expires; `return_url` when they finish.
-  Returns `{:ok, onboarding_url}`.
+  Dispatches v1/v2 per `:stripe_accounts_api`. Returns `{:ok, onboarding_url}`.
   """
   def create_account_link(account_id, refresh_url, return_url) do
+    case accounts_api() do
+      :v2 -> create_account_link_v2(account_id, refresh_url, return_url)
+      _ -> create_account_link_v1(account_id, refresh_url, return_url)
+    end
+  end
+
+  defp create_account_link_v1(account_id, refresh_url, return_url) do
+    params = %{
+      "account" => account_id,
+      "refresh_url" => refresh_url,
+      "return_url" => return_url,
+      "type" => "account_onboarding"
+    }
+
+    case post("/account_links", params) do
+      {:ok, %{"url" => url}} -> {:ok, url}
+      {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp create_account_link_v2(account_id, refresh_url, return_url) do
     body = %{
       "account" => account_id,
       "use_case" => %{
@@ -180,17 +230,39 @@ defmodule Mehungry.Billing.StripeHandler do
   end
 
   @doc """
-  Fetch a connected account's onboarding/charge status (Accounts v2). Returns
+  Fetch a connected account's onboarding/charge status. Dispatches v1/v2 per
+  `:stripe_accounts_api`. Returns
   `{:ok, %{charges_enabled: bool, details_submitted: bool, payouts_enabled: bool}}`.
 
-  `charges_enabled` keeps its stored meaning — "can be charged onto right now" —
-  which for our destination + `on_behalf_of` flow needs **both** the merchant
-  `card_payments` capability and the recipient `stripe_transfers` capability to
-  be `active`. `payouts_enabled` reflects the recipient transfers capability;
-  `details_submitted` is best-effort (true once there are no currently-due
-  requirement entries).
+  `charges_enabled` keeps its stored meaning — "can be charged onto right now".
   """
   def get_connect_account(account_id) do
+    case accounts_api() do
+      :v2 -> get_connect_account_v2(account_id)
+      _ -> get_connect_account_v1(account_id)
+    end
+  end
+
+  defp get_connect_account_v1(account_id) do
+    case get("/accounts/#{account_id}") do
+      {:ok, account} ->
+        {:ok,
+         %{
+           charges_enabled: account["charges_enabled"] == true,
+           details_submitted: account["details_submitted"] == true,
+           payouts_enabled: account["payouts_enabled"] == true
+         }}
+
+      error ->
+        error
+    end
+  end
+
+  # v2: `charges_enabled` needs **both** the merchant `card_payments` and the
+  # recipient `stripe_transfers` capabilities `active` (destination + on_behalf_of
+  # flow); `payouts_enabled` reflects transfers; `details_submitted` is best-effort
+  # (true once there are no currently-due requirement entries).
+  defp get_connect_account_v2(account_id) do
     query = "?include=configuration.merchant&include=configuration.recipient&include=requirements"
 
     case get_v2("/core/accounts/#{account_id}#{query}") do
@@ -601,6 +673,28 @@ defmodule Mehungry.Billing.StripeHandler do
     end
   end
 
+  defp get(path) do
+    secret_key = config(:stripe_secret_key)
+
+    if secret_key == "" do
+      {:error, :stripe_not_configured}
+    else
+      headers = [{"Authorization", "Bearer #{secret_key}"}]
+
+      case HTTPoison.get(@stripe_api <> path, headers, recv_timeout: 15_000) do
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
+          Jason.decode(resp_body)
+
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} ->
+          Logger.warning("Stripe GET #{path} returned #{code}: #{resp_body}")
+          {:error, "Stripe error #{code}"}
+
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          {:error, "HTTP error: #{inspect(reason)}"}
+      end
+    end
+  end
+
   # ── Private: HTTP (Accounts v2 core) ──────────────────────────────────────────
   #
   # The v2 core API takes a JSON body (not form-encoded) and requires the
@@ -691,6 +785,11 @@ defmodule Mehungry.Billing.StripeHandler do
   # ── Private: helpers ─────────────────────────────────────────────────────────
 
   defp config(key), do: Application.get_env(:mehungry, key, "")
+
+  # Which Accounts API the connected-account lifecycle uses. Default `:v1` (the
+  # live-verified path to launch on); set to `:v2` once Accounts v2 is GA. Only
+  # the account lifecycle honours this — charging stays on the stable v1 endpoints.
+  defp accounts_api, do: Application.get_env(:mehungry, :stripe_accounts_api, :v1)
 
   defp unix_to_naive(nil), do: nil
 

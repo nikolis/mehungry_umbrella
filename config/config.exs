@@ -53,6 +53,11 @@ config :mehungry,
        "Nutrition and wellness coaching consultations booked through M3Hungry. Counseling and education — not medical diagnosis or treatment."
 
 config :mehungry, :connect_business_url, "https://www.m3hungry.com"
+# Which Stripe Accounts API the connected-account LIFECYCLE uses: :v1 (stable,
+# live-verified — launch on this) or :v2 (Accounts v2, on a preview API version).
+# Charging/refunds always stay on stable v1 regardless. Flip to :v2 once Accounts
+# v2 is GA; requires "Accounts v1 support" enabled in the Stripe dashboard while :v1.
+config :mehungry, :stripe_accounts_api, :v1
 # Accounts v2 API version. Connect account lifecycle (create / onboarding link /
 # status / account webhooks) runs on the v2 core endpoints, which are still
 # delivered on a preview API version pinned here. Bump this when migrating to a
