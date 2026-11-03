@@ -1831,7 +1831,9 @@ defmodule MehungryWeb.CoreComponents do
         <div>
           <p class="text-parchment font-medium">{gettext("Are you a nutritionist?")}</p>
           <p class="text-parchment-dim text-sm mt-0.5">
-            {gettext("Get discovered, manage your clients, and let AI draft the plans — your advice stays 100% yours.")}
+            {gettext(
+              "Get discovered, manage your clients, and let AI draft the plans — your advice stays 100% yours."
+            )}
           </p>
         </div>
         <a
@@ -1904,6 +1906,8 @@ defmodule MehungryWeb.CoreComponents do
 
       <form phx-submit="send_message" class="mt-3 flex items-end gap-2">
         <textarea
+          id="message-compose"
+          phx-hook="EnterToSend"
           name="body"
           rows="2"
           placeholder={@placeholder}

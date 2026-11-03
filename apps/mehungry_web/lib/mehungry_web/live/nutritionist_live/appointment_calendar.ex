@@ -49,6 +49,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> assign(:professional_name, professional_name(profile, user))
       |> assign(:public_url, public_url(profile))
       |> assign(:page_title, gettext("Appointments"))
+      |> assign(:today, today)
       |> assign(:current_month, today)
       |> assign(:selected_date, today)
       |> assign(:show_modal, not is_nil(preselected_client_id))
@@ -237,6 +238,12 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> Map.put("professional_id", professional_id)
       |> build_datetimes()
 
+    # Keep the raw date/time inputs in sync so a validation error re-renders the
+    # form with what the user actually submitted. These fields are bound to
+    # form_* assigns, not the changeset, so without this they snap back to the
+    # stale modal-open values (title/notes survive via the changeset).
+    socket = sync_form_fields(socket, params)
+
     if manual_client_allowed?(socket, attrs) do
       persist_appointment(socket, attrs)
     else
@@ -348,15 +355,26 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
   @impl true
   def handle_event("prev_month", _params, socket) do
-    new_month = Date.add(socket.assigns.current_month, -28)
+    new_month = first_of_prev_month(socket.assigns.current_month)
     {:noreply, socket |> assign(:current_month, new_month) |> load_month_appointments(new_month)}
   end
 
   @impl true
   def handle_event("next_month", _params, socket) do
-    new_month = Date.add(socket.assigns.current_month, 32)
-    new_month = %{new_month | day: 1}
+    new_month = first_of_next_month(socket.assigns.current_month)
     {:noreply, socket |> assign(:current_month, new_month) |> load_month_appointments(new_month)}
+  end
+
+  # Month stepping pinned to the first of the target month. Date.add/2 by a fixed
+  # 28/32 days drifts: -28 from a late-month date can land back in the same month
+  # (so "previous" appears to do nothing), and +32 can then skip a month.
+  defp first_of_prev_month(date) do
+    last_of_prev = Date.add(%{date | day: 1}, -1)
+    %{last_of_prev | day: 1}
+  end
+
+  defp first_of_next_month(date) do
+    %{date | day: 1} |> Date.end_of_month() |> Date.add(1)
   end
 
   defp load_month_appointments(socket, month_date) do
@@ -502,6 +520,25 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     end
   end
 
+  # Mirror the submitted raw date/time inputs back into the form_* assigns so a
+  # rejected save keeps the user's picks. Falls back to the current assign when a
+  # field is missing or unparseable.
+  defp sync_form_fields(socket, params) do
+    socket
+    |> assign(:form_date, Map.get(params, "date", socket.assigns.form_date))
+    |> assign(:form_start_hour, parse_int(params["start_hour"], socket.assigns.form_start_hour))
+    |> assign(:form_start_minute, parse_int(params["start_minute"], socket.assigns.form_start_minute))
+    |> assign(:form_end_hour, parse_int(params["end_hour"], socket.assigns.form_end_hour))
+    |> assign(:form_end_minute, parse_int(params["end_minute"], socket.assigns.form_end_minute))
+  end
+
+  defp parse_int(value, fallback) do
+    case Integer.parse(to_string(value)) do
+      {n, _} -> n
+      _ -> fallback
+    end
+  end
+
   defp decompose_appointment(%Appointment{scheduled_at: s, ends_at: e}) do
     date_str = s |> NaiveDateTime.to_date() |> Date.to_iso8601()
     end_dt = e || NaiveDateTime.add(s, 3600)
@@ -574,9 +611,11 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     "top: #{(hour - @agenda_start_hour) * @hour_px}px; height: #{@hour_px}px;"
   end
 
-  # Absolute top/height (px) for an appointment block in the agenda column,
-  # clamped to the visible 06:00–22:00 window.
-  defp appointment_block_style(%Appointment{scheduled_at: s} = appt) do
+  # Absolute top/height/left/width for an appointment block in the agenda column.
+  # Vertical position clamps to the visible 06:00–22:00 window; horizontal position
+  # divides the column into `lanes` equal tracks so overlapping appointments sit
+  # side by side instead of stacking opaquely on top of one another.
+  defp appointment_block_style(%Appointment{scheduled_at: s} = appt, lane, lanes) do
     ends_at = appt.ends_at || NaiveDateTime.add(s, 3600)
 
     top = minutes_from_start(s.hour, s.minute)
@@ -586,7 +625,51 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     top_px = top / 60 * @hour_px
     height_px = max((bottom - top) / 60 * @hour_px, 22)
 
-    "top: #{Float.round(top_px, 1)}px; height: #{Float.round(height_px, 1)}px;"
+    lanes = max(lanes, 1)
+    width_pct = 100 / lanes
+    left_pct = width_pct * lane
+
+    "top: #{Float.round(top_px, 1)}px; height: #{Float.round(height_px, 1)}px; " <>
+      "left: calc(#{Float.round(left_pct, 2)}% + 1px); width: calc(#{Float.round(width_pct, 2)}% - 2px);"
+  end
+
+  # Lay out a day's appointments into columns ("lanes") so overlapping meetings
+  # render side by side. Greedy: each appointment takes the first lane whose last
+  # block has already ended; its rendered width is divided by the widest lane
+  # count among everything it overlaps. Returns {appointment, lane, lane_count}.
+  defp day_appointment_layout(appts) do
+    sorted = Enum.sort_by(appts, & &1.scheduled_at, NaiveDateTime)
+
+    {placed, _lane_ends} =
+      Enum.reduce(sorted, {[], []}, fn appt, {acc, lane_ends} ->
+        s = appt.scheduled_at
+        e = appt.ends_at || NaiveDateTime.add(s, 3600)
+
+        free = Enum.find_index(lane_ends, fn le -> NaiveDateTime.compare(le, s) != :gt end)
+
+        {lane, lane_ends} =
+          case free do
+            nil -> {length(lane_ends), lane_ends ++ [e]}
+            i -> {i, List.replace_at(lane_ends, i, e)}
+          end
+
+        {acc ++ [{appt, s, e, lane}], lane_ends}
+      end)
+
+    Enum.map(placed, fn {appt, s, e, lane} ->
+      lane_count =
+        placed
+        |> Enum.filter(fn {_a, s2, e2, _l} -> intervals_overlap?(s, e, s2, e2) end)
+        |> Enum.map(fn {_a, _s, _e, l} -> l end)
+        |> Enum.max()
+        |> Kernel.+(1)
+
+      {appt, lane, lane_count}
+    end)
+  end
+
+  defp intervals_overlap?(s1, e1, s2, e2) do
+    NaiveDateTime.compare(s1, e2) == :lt and NaiveDateTime.compare(s2, e1) == :lt
   end
 
   # Weekly availability windows that fall on the selected date, as {start, end}
@@ -787,15 +870,15 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                 class={[
                   "min-h-20 p-2 border-r border-ink-panel2 last:border-0 cursor-pointer hover:bg-ink-panel2/50 transition",
                   not is_current_month && "opacity-40",
-                  day == Date.utc_today() && "bg-basil/10"
+                  day == @today && "bg-basil/10"
                 ]}
                 phx-click="select_date"
                 phx-value-date={Date.to_iso8601(day)}
               >
                 <p class={[
                   "text-xs font-medium mb-1",
-                  day == Date.utc_today() && "text-basil",
-                  day != Date.utc_today() && is_current_month && "text-parchment",
+                  day == @today && "text-basil",
+                  day != @today && is_current_month && "text-parchment",
                   not is_current_month && "text-parchment-dim"
                 ]}>
                   {day.day}
@@ -820,56 +903,28 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       </div>
 
       <!-- Day-agenda modal -->
-      <%= if @show_day_modal do %>
+      <.modal :if={@show_day_modal} id="day-agenda-modal" show on_cancel={JS.push("close_day_modal")}>
         <% appts = day_appointments(@appointments, @selected_date)
         windows = availability_windows_for(@availabilities, @selected_date)
         busy_windows = busy_windows_for(@day_busy, @selected_date) %>
-        <div
-          class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4"
-          phx-click="close_day_modal"
-        >
-          <div
-            class="bg-ink-panel border border-ink-panel2 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]"
-            phx-click="close_day_modal"
-            phx-stop-propagation
-          >
-            <!-- Header -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
-              <div>
-                <h3 class="text-parchment font-display font-semibold">
-                  {Calendar.strftime(@selected_date, "%A, %b %-d, %Y")}
-                </h3>
-                <p class="text-parchment-dim text-xs mt-0.5">
-                  {ngettext("%{count} appointment", "%{count} appointments", length(appts), count: length(appts))}
-                </p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  phx-click="new_appointment"
-                  class="px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-xs font-medium"
-                >
-                  {gettext("+ New")}
-                </button>
-                <button
-                  phx-click="close_day_modal"
-                  class="text-parchment-dim hover:text-parchment transition"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
+        <!-- Header -->
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 id="day-agenda-modal-title" class="text-parchment font-display font-semibold">
+              {Calendar.strftime(@selected_date, "%A, %b %-d, %Y")}
+            </h3>
+            <p class="text-parchment-dim text-xs mt-0.5">
+              {ngettext("%{count} appointment", "%{count} appointments", length(appts), count: length(appts))}
+            </p>
+          </div>
+          <.action type="button" variant={:primary} size={:sm} phx-click="new_appointment" class="mr-6 shrink-0">
+            {gettext("+ New")}
+          </.action>
+        </div>
 
-            <!-- Hourly agenda -->
-            <div class="flex-1 overflow-y-auto px-4 py-4">
-              <div class="relative" style={"height: #{agenda_height_px()}px;"}>
+        <!-- Hourly agenda -->
+        <div class="overflow-y-auto" style="max-height: 70vh;">
+          <div class="relative" style={"height: #{agenda_height_px()}px;"}>
                 <!-- Hour gridlines + labels + clickable empty slots -->
                 <%= for hour <- agenda_hours() do %>
                   <div
@@ -904,333 +959,301 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                   </div>
                 <% end %>
 
-                <!-- Appointment blocks -->
-                <%= for appt <- appts do %>
-                  <div
-                    class={[
-                      "absolute left-14 right-2 rounded-md px-2 py-1 overflow-hidden cursor-pointer shadow-sm",
-                      appt_block_class(appt.status)
-                    ]}
-                    style={appointment_block_style(appt)}
-                    phx-click="edit_appointment"
-                    phx-value-id={appt.id}
-                    phx-stop-propagation
-                  >
-                    <p class="text-[11px] font-semibold leading-tight truncate">
-                      {Calendar.strftime(appt.scheduled_at, "%H:%M")} · {appt.title}
-                    </p>
-                    <p class="text-[10px] leading-tight truncate opacity-90">
-                      {appt_party_label(appt)}
-                    </p>
-                  </div>
-                <% end %>
+                <!-- Appointment blocks (overlapping ones split into side-by-side lanes) -->
+                <div class="absolute left-14 right-2 top-0 bottom-0 pointer-events-none">
+                  <%= for {appt, lane, lanes} <- day_appointment_layout(appts) do %>
+                    <div
+                      class={[
+                        "absolute rounded-md px-2 py-1 overflow-hidden cursor-pointer shadow-sm pointer-events-auto",
+                        appt_block_class(appt.status)
+                      ]}
+                      style={appointment_block_style(appt, lane, lanes)}
+                      phx-click="edit_appointment"
+                      phx-value-id={appt.id}
+                      phx-stop-propagation
+                    >
+                      <p class="text-[11px] font-semibold leading-tight truncate">
+                        {Calendar.strftime(appt.scheduled_at, "%H:%M")} · {appt.title}
+                      </p>
+                      <p class="text-[10px] leading-tight truncate opacity-90">
+                        {appt_party_label(appt)}
+                      </p>
+                    </div>
+                  <% end %>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      <% end %>
+      </.modal>
 
       <!-- Appointment modal -->
-      <%= if @show_modal do %>
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div class="bg-ink-panel border border-ink-panel2 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
-            <!-- Modal header (fixed) -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
-              <h3 class="text-parchment font-display font-semibold">
-                {if @editing_appointment, do: gettext("Edit Appointment"), else: gettext("New Appointment")}
-              </h3>
+      <.modal :if={@show_modal} id="appointment-modal" show on_cancel={JS.push("close_modal")}>
+        <h3 id="appointment-modal-title" class="text-parchment font-display font-semibold mb-4">
+          {if @editing_appointment, do: gettext("Edit Appointment"), else: gettext("New Appointment")}
+        </h3>
+
+        <.form
+          :let={f}
+          for={@appointment_changeset}
+          id="appointment-form"
+          phx-submit="save_appointment"
+          class="space-y-4"
+        >
+          <!-- Client selector (internal or external) -->
+          <div x-data={"{ clientType: '#{initial_client_type(@editing_appointment)}' }"}>
+            <label class="block text-sm text-parchment-dim mb-1">{gettext("Client")}</label>
+
+            <!-- Toggle -->
+            <div class="flex gap-1 mb-2 p-0.5 bg-ink rounded-lg w-fit">
               <button
-                phx-click="close_modal"
-                class="text-parchment-dim hover:text-parchment transition"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                type="button"
+                x-on:click="clientType = 'internal'"
+                x-bind:class="clientType === 'internal' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
+                class="px-3 py-1 rounded-md text-xs font-medium transition"
+              >{gettext("M3Hungry Client")}</button>
+              <button
+                type="button"
+                x-on:click="clientType = 'external'"
+                x-bind:class="clientType === 'external' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
+                class="px-3 py-1 rounded-md text-xs font-medium transition"
+              >{gettext("External Client")}</button>
             </div>
 
-            <!-- Form (scrollable body + fixed footer) -->
-            <.form
-              :let={f}
-              for={@appointment_changeset}
-              phx-submit="save_appointment"
-              class="flex flex-col flex-1 min-h-0"
-            >
-              <!-- Scrollable fields -->
-              <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                <!-- Client selector (internal or external) -->
-                <div x-data={"{ clientType: '#{initial_client_type(@editing_appointment)}' }"}>
-                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Client")}</label>
-
-                  <!-- Toggle -->
-                  <div class="flex gap-1 mb-2 p-0.5 bg-ink rounded-lg w-fit">
-                    <button
-                      type="button"
-                      x-on:click="clientType = 'internal'"
-                      x-bind:class="clientType === 'internal' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
-                      class="px-3 py-1 rounded-md text-xs font-medium transition"
-                    >{gettext("M3Hungry Client")}</button>
-                    <button
-                      type="button"
-                      x-on:click="clientType = 'external'"
-                      x-bind:class="clientType === 'external' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
-                      class="px-3 py-1 rounded-md text-xs font-medium transition"
-                    >{gettext("External Client")}</button>
-                  </div>
-
-                  <!-- Internal: dropdown of assigned clients -->
-                  <div x-show="clientType === 'internal'">
-                    <select
-                      name="appointment[client_id]"
-                      x-bind:disabled="clientType !== 'internal'"
-                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
-                    >
-                      <option value="">{gettext("Select client...")}</option>
-                      <%= for assignment <- @clients do %>
-                        <option
-                          value={assignment.client.id}
-                          selected={
-                            (@editing_appointment &&
-                               @editing_appointment.client_id == assignment.client.id) ||
-                              @modal_client_id == assignment.client.id
-                          }
-                        >
-                          {assignment.client.name || assignment.client.email}
-                        </option>
-                      <% end %>
-                    </select>
-                  </div>
-
-                  <!-- External: free-text name -->
-                  <div x-show="clientType === 'external'">
-                    <input
-                      type="text"
-                      name="appointment[external_client_name]"
-                      x-bind:disabled="clientType !== 'external'"
-                      value={@editing_appointment && @editing_appointment.external_client_name}
-                      placeholder={gettext("Client name (external)")}
-                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
-                    />
-                  </div>
-                </div>
-
-                <!-- Title -->
-                <div>
-                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Title")}</label>
-                  <.input
-                    field={f[:title]}
-                    type="text"
-                    placeholder={gettext("Initial consultation")}
-                    class="w-full"
-                  />
-                </div>
-
-                <!-- Date -->
-                <div>
-                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Date")}</label>
-                  <input
-                    type="date"
-                    name="appointment[date]"
-                    value={@form_date}
-                    class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
-                  />
-                </div>
-
-                <!-- From / Until time row -->
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-sm text-parchment-dim mb-1">{gettext("From")}</label>
-                    <div class="flex gap-1">
-                      <select
-                        name="appointment[start_hour]"
-                        class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
-                      >
-                        <%= for {label, h} <- hour_options() do %>
-                          <option value={h} selected={h == @form_start_hour}>{label}</option>
-                        <% end %>
-                      </select>
-                      <select
-                        name="appointment[start_minute]"
-                        class="w-16 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
-                      >
-                        <%= for {label, m} <- minute_options() do %>
-                          <option value={m} selected={m == @form_start_minute}>{label}</option>
-                        <% end %>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Until")}</label>
-                    <div class="flex gap-1">
-                      <select
-                        name="appointment[end_hour]"
-                        class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
-                      >
-                        <%= for {label, h} <- hour_options() do %>
-                          <option value={h} selected={h == @form_end_hour}>{label}</option>
-                        <% end %>
-                      </select>
-                      <select
-                        name="appointment[end_minute]"
-                        class="w-16 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
-                      >
-                        <%= for {label, m} <- minute_options() do %>
-                          <option value={m} selected={m == @form_end_minute}>{label}</option>
-                        <% end %>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Notes -->
-                <div>
-                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Session notes (optional)")}</label>
-                  <.input
-                    field={f[:notes]}
-                    type="textarea"
-                    rows="3"
-                    placeholder={gettext("Notes from the session...")}
-                    class="w-full"
-                  />
-                </div>
-              </div>
-
-              <!-- Fixed footer with buttons -->
-              <div class="px-6 py-4 border-t border-ink-panel2 flex-shrink-0 flex gap-3">
-                <button
-                  type="submit"
-                  class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-medium py-2 px-4 rounded-lg transition text-sm"
-                >
-                  {gettext("Save Appointment")}
-                </button>
-                <%= if @editing_appointment && @editing_appointment.status == "accepted" do %>
-                  <button
-                    type="button"
-                    phx-click="cancel_appointment_professional"
-                    phx-value-id={@editing_appointment.id}
-                    data-confirm={gettext("Cancel this appointment and fully refund the client?")}
-                    class="px-4 py-2 rounded-lg bg-red-700/60 hover:bg-red-600 text-red-200 text-sm transition"
+            <!-- Internal: dropdown of assigned clients -->
+            <div x-show="clientType === 'internal'" x-cloak>
+              <select
+                id="appointment_client_id"
+                name="appointment[client_id]"
+                x-bind:disabled="clientType !== 'internal'"
+                class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
+              >
+                <option value="">{gettext("Select client...")}</option>
+                <%= for assignment <- @clients do %>
+                  <option
+                    value={assignment.client.id}
+                    selected={
+                      (@editing_appointment &&
+                         @editing_appointment.client_id == assignment.client.id) ||
+                        @modal_client_id == assignment.client.id
+                    }
                   >
-                    {gettext("Cancel & refund")}
-                  </button>
-                <% else %>
-                  <%= if @editing_appointment do %>
-                    <button
-                      type="button"
-                      phx-click="delete_appointment"
-                      phx-value-id={@editing_appointment.id}
-                      data-confirm={gettext("Delete this appointment?")}
-                      class="px-4 py-2 rounded-lg bg-red-700/60 hover:bg-red-600 text-red-200 text-sm transition"
-                    >
-                      {gettext("Delete")}
-                    </button>
+                    {assignment.client.name || assignment.client.email}
+                  </option>
+                <% end %>
+              </select>
+            </div>
+
+            <!-- External: free-text name -->
+            <div x-show="clientType === 'external'" x-cloak>
+              <input
+                type="text"
+                name="appointment[external_client_name]"
+                aria-label={gettext("External client name")}
+                x-bind:disabled="clientType !== 'external'"
+                value={@editing_appointment && @editing_appointment.external_client_name}
+                placeholder={gettext("Client name (external)")}
+                class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
+              />
+            </div>
+          </div>
+
+          <!-- Title -->
+          <div>
+            <label for="appointment_title" class="block text-sm text-parchment-dim mb-1">{gettext("Title")}</label>
+            <.input
+              field={f[:title]}
+              type="text"
+              placeholder={gettext("Initial consultation")}
+              class="w-full"
+            />
+          </div>
+
+          <!-- Date -->
+          <div>
+            <label for="appointment_date" class="block text-sm text-parchment-dim mb-1">{gettext("Date")}</label>
+            <input
+              id="appointment_date"
+              type="date"
+              name="appointment[date]"
+              value={@form_date}
+              class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
+            />
+          </div>
+
+          <!-- From / Until time row -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="appointment_start_hour" class="block text-sm text-parchment-dim mb-1">{gettext("From")}</label>
+              <div class="flex gap-1">
+                <select
+                  id="appointment_start_hour"
+                  name="appointment[start_hour]"
+                  class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
+                >
+                  <%= for {label, h} <- hour_options() do %>
+                    <option value={h} selected={h == @form_start_hour}>{label}</option>
                   <% end %>
-                <% end %>
-                <%= if @editing_appointment && @editing_appointment.client_id do %>
-                  <button
-                    type="button"
-                    phx-click="log_measurement"
-                    phx-value-id={@editing_appointment.id}
-                    class="px-4 py-2 rounded-lg bg-basil/20 hover:bg-basil/30 text-basil text-sm transition"
-                  >
-                    {gettext("Log measurement")}
-                  </button>
-                <% end %>
-                <button
-                  type="button"
-                  phx-click="close_modal"
-                  class="px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm transition"
+                </select>
+                <select
+                  name="appointment[start_minute]"
+                  aria-label={gettext("Start minute")}
+                  class="w-16 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                 >
-                  {gettext("Cancel")}
-                </button>
+                  <%= for {label, m} <- minute_options() do %>
+                    <option value={m} selected={m == @form_start_minute}>{label}</option>
+                  <% end %>
+                </select>
               </div>
-            </.form>
-          </div>
-        </div>
-      <% end %>
-
-      <%= if @show_measurement_modal do %>
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div class="bg-ink-panel border border-ink-panel2 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
-              <h3 class="text-parchment font-display font-semibold">{gettext("Log measurement")}</h3>
-              <button
-                phx-click="close_measurement_modal"
-                class="text-parchment-dim hover:text-parchment transition"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
             </div>
-
-            <.form
-              for={@measurement_form}
-              id="measurement-form"
-              phx-submit="save_measurement"
-              class="flex flex-col flex-1 min-h-0"
-            >
-              <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                <p class="text-parchment-dim text-xs">
-                  {gettext("BMI and BMR are computed automatically from the client's latest intake.")}
-                </p>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Visit date")}</label>
-                    <.input field={@measurement_form[:visit_date]} type="date" />
-                  </div>
-                  <div>
-                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Weight (kg)")}</label>
-                    <.input field={@measurement_form[:weight_kg]} type="number" step="any" />
-                  </div>
-                  <div>
-                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Body fat (%)")}</label>
-                    <.input field={@measurement_form[:body_fat_percentage]} type="number" step="any" />
-                  </div>
-                  <div>
-                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Waist (cm)")}</label>
-                    <.input field={@measurement_form[:waist_cm]} type="number" step="any" />
-                  </div>
-                  <div>
-                    <label class="block text-sm text-parchment-dim mb-1">{gettext("Muscle mass (kg)")}</label>
-                    <.input field={@measurement_form[:muscle_mass_kg]} type="number" step="any" />
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm text-parchment-dim mb-1">{gettext("Notes (optional)")}</label>
-                  <.input field={@measurement_form[:body]} type="textarea" rows="2" />
-                </div>
-              </div>
-
-              <div class="px-6 py-4 border-t border-ink-panel2 flex-shrink-0 flex gap-3">
-                <button
-                  type="submit"
-                  class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-medium py-2 px-4 rounded-lg transition text-sm"
+            <div>
+              <label for="appointment_end_hour" class="block text-sm text-parchment-dim mb-1">{gettext("Until")}</label>
+              <div class="flex gap-1">
+                <select
+                  id="appointment_end_hour"
+                  name="appointment[end_hour]"
+                  class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                 >
-                  {gettext("Save measurement")}
-                </button>
-                <button
-                  type="button"
-                  phx-click="close_measurement_modal"
-                  class="px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm transition"
+                  <%= for {label, h} <- hour_options() do %>
+                    <option value={h} selected={h == @form_end_hour}>{label}</option>
+                  <% end %>
+                </select>
+                <select
+                  name="appointment[end_minute]"
+                  aria-label={gettext("End minute")}
+                  class="w-16 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                 >
-                  {gettext("Cancel")}
-                </button>
+                  <%= for {label, m} <- minute_options() do %>
+                    <option value={m} selected={m == @form_end_minute}>{label}</option>
+                  <% end %>
+                </select>
               </div>
-            </.form>
+            </div>
           </div>
-        </div>
-      <% end %>
+
+          <!-- Notes -->
+          <div>
+            <label for="appointment_notes" class="block text-sm text-parchment-dim mb-1">{gettext("Session notes (optional)")}</label>
+            <.input
+              field={f[:notes]}
+              type="textarea"
+              rows="3"
+              placeholder={gettext("Notes from the session...")}
+              class="w-full"
+            />
+          </div>
+
+          <!-- Footer actions -->
+          <div class="pt-2 flex flex-wrap gap-3">
+            <.action
+              type="submit"
+              variant={:primary}
+              phx-disable-with={gettext("Saving...")}
+              class="flex-1"
+            >
+              {gettext("Save Appointment")}
+            </.action>
+            <%= if @editing_appointment && @editing_appointment.status == "accepted" do %>
+              <.action
+                type="button"
+                variant={:danger}
+                phx-click="cancel_appointment_professional"
+                phx-value-id={@editing_appointment.id}
+                data-confirm={gettext("Cancel this appointment and fully refund the client?")}
+              >
+                {gettext("Cancel & refund")}
+              </.action>
+            <% else %>
+              <%= if @editing_appointment do %>
+                <.action
+                  type="button"
+                  variant={:danger}
+                  phx-click="delete_appointment"
+                  phx-value-id={@editing_appointment.id}
+                  data-confirm={gettext("Delete this appointment?")}
+                >
+                  {gettext("Delete")}
+                </.action>
+              <% end %>
+            <% end %>
+            <%= if @editing_appointment && @editing_appointment.client_id do %>
+              <.action
+                type="button"
+                variant={:secondary}
+                phx-click="log_measurement"
+                phx-value-id={@editing_appointment.id}
+              >
+                {gettext("Log measurement")}
+              </.action>
+            <% end %>
+            <.action type="button" variant={:ghost} phx-click="close_modal">
+              {gettext("Close")}
+            </.action>
+          </div>
+        </.form>
+      </.modal>
+
+      <.modal
+        :if={@show_measurement_modal}
+        id="measurement-modal"
+        show
+        on_cancel={JS.push("close_measurement_modal")}
+      >
+        <h3 id="measurement-modal-title" class="text-parchment font-display font-semibold mb-4">
+          {gettext("Log measurement")}
+        </h3>
+
+        <.form
+          for={@measurement_form}
+          id="measurement-form"
+          phx-submit="save_measurement"
+          class="space-y-4"
+        >
+          <p class="text-parchment-dim text-xs">
+            {gettext("BMI and BMR are computed automatically from the client's latest intake.")}
+          </p>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="consultation_note_visit_date" class="block text-sm text-parchment-dim mb-1">{gettext("Visit date")}</label>
+              <.input field={@measurement_form[:visit_date]} type="date" />
+            </div>
+            <div>
+              <label for="consultation_note_weight_kg" class="block text-sm text-parchment-dim mb-1">{gettext("Weight (kg)")}</label>
+              <.input field={@measurement_form[:weight_kg]} type="number" step="any" />
+            </div>
+            <div>
+              <label for="consultation_note_body_fat_percentage" class="block text-sm text-parchment-dim mb-1">{gettext("Body fat (%)")}</label>
+              <.input field={@measurement_form[:body_fat_percentage]} type="number" step="any" />
+            </div>
+            <div>
+              <label for="consultation_note_waist_cm" class="block text-sm text-parchment-dim mb-1">{gettext("Waist (cm)")}</label>
+              <.input field={@measurement_form[:waist_cm]} type="number" step="any" />
+            </div>
+            <div>
+              <label for="consultation_note_muscle_mass_kg" class="block text-sm text-parchment-dim mb-1">{gettext("Muscle mass (kg)")}</label>
+              <.input field={@measurement_form[:muscle_mass_kg]} type="number" step="any" />
+            </div>
+          </div>
+          <div>
+            <label for="consultation_note_body" class="block text-sm text-parchment-dim mb-1">{gettext("Notes (optional)")}</label>
+            <.input field={@measurement_form[:body]} type="textarea" rows="2" />
+          </div>
+
+          <div class="pt-2 flex gap-3">
+            <.action
+              type="submit"
+              variant={:primary}
+              phx-disable-with={gettext("Saving...")}
+              class="flex-1"
+            >
+              {gettext("Save measurement")}
+            </.action>
+            <.action type="button" variant={:ghost} phx-click="close_measurement_modal">
+              {gettext("Close")}
+            </.action>
+          </div>
+        </.form>
+      </.modal>
     </div>
     """
   end

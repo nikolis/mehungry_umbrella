@@ -297,20 +297,74 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     assert html =~ "Assign a saved plan"
     assert html =~ "UC Weekly — Week 1"
 
+    # A non-past start date — assign_plan now rejects past weeks, matching the
+    # calendar's own guard.
+    start = Date.add(Date.utc_today(), 7)
+    week_end = Date.add(start, 6)
+
     html =
       view
       |> form("form[phx-submit='assign_plan']",
-        assign: %{plan_id: "#{plan.id}", start_date: "2026-05-04"}
+        assign: %{plan_id: "#{plan.id}", start_date: Date.to_iso8601(start)}
       )
       |> render_submit()
 
     assert html =~ "Added 1 meals to"
 
     # The meal landed on the *client's* calendar, not the nutritionist's.
-    assert [_meal] =
-             History.list_user_meals_in_range(client_user.id, ~D[2026-05-04], ~D[2026-05-10])
+    assert [_meal] = History.list_user_meals_in_range(client_user.id, start, week_end)
 
-    assert [] = History.list_user_meals_in_range(nutritionist.id, ~D[2026-05-04], ~D[2026-05-10])
+    assert [] = History.list_user_meals_in_range(nutritionist.id, start, week_end)
+  end
+
+  test "assigning a plan to a past week is rejected", %{
+    conn: conn,
+    nutritionist: nutritionist,
+    client_user: client_user
+  } do
+    {:ok, bp} =
+      MealBlueprints.create_blueprint(
+        MealBlueprints.default_blueprint_attrs(nutritionist.id, "Past Weekly")
+      )
+
+    {:ok, plan} =
+      MealBlueprints.create_plan(%{
+        name: "Week 1",
+        start_date: Date.utc_today(),
+        status: "generating",
+        blueprint_id: bp.id,
+        user_id: nutritionist.id
+      })
+
+    recipe = recipe_fixture(nutritionist)
+
+    {:ok, _plan} =
+      MealBlueprints.store_plan_meals(plan, [
+        %{
+          day_index: 1,
+          meal_type: "breakfast",
+          recipe_id: recipe.id,
+          cooking_portions: 2,
+          ingredient_id: nil,
+          quantity: nil,
+          measurement_unit_id: nil,
+          ingredient_portion_id: nil
+        }
+      ])
+
+    {:ok, view, _html} = live(conn, "/nutritionist/clients/#{client_user.id}")
+
+    past = Date.add(Date.utc_today(), -7)
+
+    html =
+      view
+      |> form("form[phx-submit='assign_plan']",
+        assign: %{plan_id: "#{plan.id}", start_date: Date.to_iso8601(past)}
+      )
+      |> render_submit()
+
+    assert html =~ "can&#39;t be in the past"
+    assert [] = History.list_user_meals_in_range(client_user.id, past, Date.add(past, 6))
   end
 
   test "assign-plan panel points to the blueprint builder when there are no plans", %{

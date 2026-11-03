@@ -3,45 +3,7 @@
   class="calendar-page bg-ink text-parchment"
 >
   <div class="px-3 sm:px-4 pt-3">
-    <div class="flex justify-end gap-2 mb-2">
-      <button
-        type="button"
-        id="share-week-open"
-        phx-click={show_modal("share_week_modal")}
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-paprika/40 text-xs font-medium transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-          />
-        </svg>
-        {gettext("Share this week")}
-      </button>
-      <button
-        type="button"
-        id="avoid-foods-open"
-        phx-click={show_modal("avoid_foods_modal")}
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-amber-400/50 text-xs font-medium transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-          />
-        </svg>
-        {gettext("Foods I avoid")}
-        <span
-          :if={@avoid_foods != []}
-          class="ml-0.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-amber-500/20 text-amber-300 text-[0.65rem] font-bold"
-        >
-          {length(@avoid_foods)}
-        </span>
-      </button>
+    <div class="flex justify-end items-center gap-2 mb-2">
       <button
         type="button"
         id="create-week-basket"
@@ -60,50 +22,103 @@
       </button>
       <button
         type="button"
-        id="clear-week"
-        phx-click="clear_week_meals"
-        data-confirm={gettext("Delete every meal from the week you're viewing? This can't be undone.")}
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-red-300 hover:border-red-500/50 text-xs font-medium transition-colors"
+        id="share-week-open"
+        phx-click={show_modal("share_week_modal")}
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-paprika/40 text-xs font-medium transition-colors"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
           />
         </svg>
-        {gettext("Clear week")}
+        {gettext("Share this week")}
       </button>
-      <button
-        type="button"
-        id="ai-plan-toggle"
-        phx-click={
-          Phoenix.LiveView.JS.toggle(
-            to: "#ai-plan-panel",
-            in:
-              {"transition-all duration-300 ease-out", "opacity-0 -translate-y-2 scale-95",
-               "opacity-100 translate-y-0 scale-100"},
-            out:
-              {"transition-all duration-200 ease-in", "opacity-100 translate-y-0 scale-100",
-               "opacity-0 -translate-y-2 scale-95"}
-          )
-          |> Phoenix.LiveView.JS.toggle_class("bg-ink-panel2 border-basil/50",
-            to: "#ai-plan-toggle"
-          )
-        }
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-basil/40 text-xs font-medium transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 10V3L4 14h7v7l9-11h-7z"
-          />
-        </svg>
-        Plan with AI
-      </button>
+
+      <%!-- Secondary / destructive actions live under an overflow menu so they
+            don't compete with the plan content or risk a mistap on "Clear week". --%>
+      <div class="relative" x-data="{open: false}" @keydown.escape.window="open = false">
+        <button
+          type="button"
+          @click="open = !open"
+          aria-haspopup="true"
+          x-bind:aria-expanded="open ? 'true' : 'false'"
+          aria-label={gettext("Week options")}
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim text-xs font-medium transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01" />
+          </svg>
+          {gettext("Week options")}
+        </button>
+        <div
+          x-show="open"
+          x-transition
+          @click.outside="open = false"
+          x-cloak
+          class="absolute right-0 mt-1 z-30 w-60 bg-ink-panel border border-ink-panel2 rounded-xl shadow-xl p-1"
+          role="menu"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            @click="open = false"
+            phx-click={
+              Phoenix.LiveView.JS.toggle(
+                to: "#ai-plan-panel",
+                in:
+                  {"transition-all duration-300 ease-out", "opacity-0 -translate-y-2 scale-95",
+                   "opacity-100 translate-y-0 scale-100"},
+                out:
+                  {"transition-all duration-200 ease-in", "opacity-100 translate-y-0 scale-100",
+                   "opacity-0 -translate-y-2 scale-95"}
+              )
+            }
+            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 text-sm text-left transition-colors"
+          >
+            <svg class="w-4 h-4 flex-shrink-0 text-basil" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {gettext("Plan with AI")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            id="avoid-foods-open"
+            @click="open = false"
+            phx-click={show_modal("avoid_foods_modal")}
+            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 text-sm text-left transition-colors"
+          >
+            <svg class="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            {gettext("Foods I avoid")}
+            <span
+              :if={@avoid_foods != []}
+              class="ml-auto inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-amber-500/20 text-amber-300 text-[0.65rem] font-bold"
+            >
+              {length(@avoid_foods)}
+            </span>
+          </button>
+          <div class="my-1 border-t border-ink-panel2"></div>
+          <button
+            type="button"
+            role="menuitem"
+            id="clear-week"
+            @click="open = false"
+            phx-click="clear_week_meals"
+            data-confirm={gettext("Delete every meal from the week you're viewing? This can't be undone.")}
+            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-300 hover:bg-red-500/10 text-sm text-left transition-colors"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            {gettext("Clear week")}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div
@@ -524,7 +539,7 @@
   </.modal>
 
   <.live_component
-    module={MehungryWeb.CalendarLive.Calendar.Widget}
+    module={MehungryWeb.CalendarLive.Calendar.Reader}
     id={:new}
     user_meals={@user_meals}
     day_notes={@day_notes}
