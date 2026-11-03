@@ -145,13 +145,21 @@ control, then refund it — confirming the live webhook signs + delivers to prod
 > (Stripe's processing time). M3Hungry charges the nutritionist a small platform fee; all payments
 > are processed securely by Stripe — we never see or store your card number.
 
-**Where to surface it (wire-up, after approval):**
-1. **Terms** (`TermsController` template) — add a "Consultation bookings — cancellation & refunds"
-   section with the above.
-2. **At the paid-booking step** — a one-line summary + link in the booking modal (before Confirm):
-   *"Paid bookings follow our cancellation policy: full refund ≥24h, 50% 4–24h, none under 4h.
-   Your card is only charged once the nutritionist accepts."*
-3. Optionally a standalone `/refund-policy` page linked from the footer.
+**Where it's surfaced — WIRED 2026-11-03** (owner to review final wording; copy lives in the app now):
+1. ✅ **Terms** (`terms_html/index.html.heex`, §6 Nutritionist marketplace) — a "Consultation
+   bookings — cancellation & refunds" subsection carrying the copy above.
+2. ✅ **At the paid-booking step** — a one-line summary + Terms link in the booking modal
+   (`PublicNutritionistLive.Show`, Step-3 confirm form), shown only when payments are live
+   (`:consultation_payments_enabled`) **and** a priced service is selected. The thresholds are
+   **interpolated from config** (`Professionals.free_cancel_hours/0`, `partial_refund_hours/0`) so
+   this surface can never drift from the refund logic. Test:
+   `public_nutritionist_live_test.exs` "cancellation-policy notice shows at the paid-booking confirm step".
+3. ⏭️ Standalone `/refund-policy` page — **skipped** (the Terms subsection + in-flow notice cover it;
+   add later if a footer link is wanted).
+
+The Terms thresholds are plain text with a sync comment pointing at the config keys. If you change
+`:consultation_free_cancel_hours` / `:consultation_partial_refund_hours`, update the Terms copy (the
+booking-modal copy updates itself).
 
 > Keep the thresholds in the copy in sync with the config keys
 > (`:consultation_free_cancel_hours`, `:consultation_partial_refund_hours`). If you change the
@@ -195,7 +203,7 @@ request-only (no charge), prices become display-only. In-flight authorized holds
 - [x] **§1** v2 migration code shipped (2026-11-03). ⏳ Still: verify in a fresh sandbox with Accounts v1 support OFF, **or** enable Accounts v1 support on prod to launch on the dark v1 path instead
 - [ ] **§2** Enable Connect + platform profile/branding/support; confirm `debit_negative_balances`
 - [ ] **§2** Register webhook endpoint + events on `https://www.m3hungry.com/webhooks/stripe`; set `STRIPE_WEBHOOK_SECRET`
-- [ ] **§3a** Owner approves refund copy → wire into Terms + booking step
+- [x] **§3a** Refund copy wired into Terms + booking step (2026-11-03) — ⏳ owner reviews final wording
 - [ ] **§3b** Extend Stripe sub-processor line in privacy policy *(done with this doc)*
 - [ ] **§3c** Accountant confirms commission-invoicing mechanism
 - [ ] **§4** Flip `:consultation_payments_enabled` in prod + smoke test

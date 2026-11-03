@@ -49,6 +49,7 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
          |> reset_booking_state()
          |> load_slots()
          |> load_services()
+         |> assign(:payments_enabled, Professionals.consultation_payments_enabled?())
          |> assign_seo(profile)}
     end
   end
@@ -214,13 +215,22 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
 
   defp service_price_label(%{kind: "intro"}), do: "Free · 15 min"
 
-  defp service_price_label(%{price_cents: cents} = service) when is_integer(cents) and cents > 0 do
+  defp service_price_label(%{price_cents: cents} = service)
+       when is_integer(cents) and cents > 0 do
     euros = :erlang.float_to_binary(cents / 100, decimals: 2)
     suffix = if service.kind == "package", do: " · #{service.session_count} sessions", else: ""
     "€#{euros}#{suffix}"
   end
 
   defp service_price_label(_), do: "Free"
+
+  # The selected service if it carries a real price (drives the paid-booking
+  # cancellation-policy notice). nil for the free intro or when none is selected.
+  defp selected_paid_service(services, id) do
+    Enum.find(services, fn s ->
+      s.id == id and is_integer(s.price_cents) and s.price_cents > 0
+    end)
+  end
 
   defp load_slots(socket) do
     profile = socket.assigns.profile
@@ -467,6 +477,7 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
         booking_status={@booking_status}
         booked_slot={@booked_slot}
         current_user={@current_user}
+        payments_enabled={@payments_enabled}
       />
 
       <.modal
@@ -496,6 +507,7 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
   attr :booking_status, :atom, default: :idle
   attr :booked_slot, :any, default: nil
   attr :current_user, :map, default: nil
+  attr :payments_enabled, :boolean, default: false
 
   defp booking_modal(assigns) do
     ~H"""
@@ -656,6 +668,19 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
                 class="w-full border border-ink-panel2 bg-ink-panel2 text-parchment rounded-lg px-2 py-1.5 text-sm mb-4 placeholder-parchment-dim focus:outline-none focus:border-paprika"
                 placeholder="What would you like to discuss?"
               ></textarea>
+              <p
+                :if={@payments_enabled and selected_paid_service(@services, @booking_service_id)}
+                class="text-xs text-parchment-dim mb-4 leading-relaxed"
+              >
+                Your card is only <strong class="text-parchment">authorised now</strong>
+                — you're
+                charged once {display_name(@profile)} accepts. Paid bookings follow our cancellation
+                policy: full refund {Professionals.free_cancel_hours()}h+ before, 50% between {Professionals.partial_refund_hours()} and {Professionals.free_cancel_hours()}h before,
+                none under {Professionals.partial_refund_hours()}h or for a no-show. See our <.link
+                  navigate={~p"/terms"}
+                  class="text-paprika hover:underline"
+                >Terms</.link>.
+              </p>
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <p class="text-sm text-parchment flex items-center gap-1.5">
                   <.icon name="hero-calendar-days" class="w-4 h-4 text-paprika flex-none" />

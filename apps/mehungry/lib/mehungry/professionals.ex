@@ -1862,9 +1862,12 @@ defmodule Mehungry.Professionals do
 
   defp platform_fee_bps, do: Application.get_env(:mehungry, :platform_fee_bps, 500)
   defp platform_fee_vat_bps, do: Application.get_env(:mehungry, :platform_fee_vat_bps, 2400)
-  defp free_cancel_hours, do: Application.get_env(:mehungry, :consultation_free_cancel_hours, 24)
 
-  defp partial_refund_hours,
+  @doc "Hours-before-appointment threshold for a full client-cancellation refund (config)."
+  def free_cancel_hours, do: Application.get_env(:mehungry, :consultation_free_cancel_hours, 24)
+
+  @doc "Hours-before-appointment threshold below which only a 50% refund applies (config)."
+  def partial_refund_hours,
     do: Application.get_env(:mehungry, :consultation_partial_refund_hours, 4)
 
   defp hours_until(%Appointment{scheduled_at: scheduled_at}),

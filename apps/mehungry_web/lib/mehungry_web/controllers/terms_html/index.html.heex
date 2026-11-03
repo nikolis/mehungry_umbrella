@@ -16,7 +16,8 @@
 
     <div class="mt-8 rounded-xl border border-ink-panel2 bg-ink-panel p-5 text-sm leading-relaxed text-parchment-dim">
       These terms govern your use of M3Hungry. By creating an account or using the service you agree
-      to them. Please read the <strong class="text-parchment">health-information disclaimer</strong>
+      to them. Please read the
+      <strong class="text-parchment">health-information disclaimer</strong>
       in section 7 carefully.
     </div>
 
@@ -24,8 +25,10 @@
       <h2 class="font-display text-2xl text-parchment">1. Who we are</h2>
       <p class="mt-3 leading-relaxed text-parchment-dim">
         M3Hungry is operated by Nikolaos Galerakis, an individual sole trader established in
-        Greece (EU). Full operator and contact details are in our
-        <a href="/legal" class="text-paprika hover:underline">Legal Notice</a>.
+        Greece (EU). Full operator and contact details are in our <a
+          href="/legal"
+          class="text-paprika hover:underline"
+        >Legal Notice</a>.
       </p>
     </section>
 
@@ -33,7 +36,9 @@
       <h2 class="font-display text-2xl text-parchment">2. Eligibility & accounts</h2>
       <ul class="mt-3 list-disc space-y-2 pl-5 leading-relaxed text-parchment-dim">
         <li>You must be at least 16 (or the minimum age in your country) to use M3Hungry.</li>
-        <li>You are responsible for keeping your account credentials secure and for activity under your account.</li>
+        <li>
+          You are responsible for keeping your account credentials secure and for activity under your account.
+        </li>
         <li>You must provide accurate information and keep it up to date.</li>
       </ul>
     </section>
@@ -44,7 +49,9 @@
       <ul class="mt-2 list-disc space-y-2 pl-5 leading-relaxed text-parchment-dim">
         <li>Post unlawful, infringing, misleading, harmful or abusive content.</li>
         <li>Upload content you do not have the right to share.</li>
-        <li>Attempt to disrupt, reverse-engineer, scrape, or gain unauthorised access to the service.</li>
+        <li>
+          Attempt to disrupt, reverse-engineer, scrape, or gain unauthorised access to the service.
+        </li>
         <li>Misuse the platform's AI, messaging or nutritionist features.</li>
       </ul>
       <p class="mt-3 leading-relaxed text-parchment-dim">
@@ -65,15 +72,22 @@
     <section class="mt-10">
       <h2 class="font-display text-2xl text-parchment">5. Subscriptions & payments</h2>
       <ul class="mt-3 list-disc space-y-2 pl-5 leading-relaxed text-parchment-dim">
-        <li>Paid tiers (e.g. M3Hungry Plus and the nutritionist Pro tier) are billed through Stripe at the prices shown at checkout.</li>
-        <li>Subscriptions renew automatically until cancelled; you can cancel at any time, effective at the end of the current billing period.</li>
         <li>
-          <strong class="text-parchment">EU right of withdrawal.</strong> If you are an EU consumer,
+          Paid tiers (e.g. M3Hungry Plus and the nutritionist Pro tier) are billed through Stripe at the prices shown at checkout.
+        </li>
+        <li>
+          Subscriptions renew automatically until cancelled; you can cancel at any time, effective at the end of the current billing period.
+        </li>
+        <li>
+          <strong class="text-parchment">EU right of withdrawal.</strong>
+          If you are an EU consumer,
           you may withdraw from a subscription within 14 days of purchase without giving a reason. To
           withdraw, email us (see section 13) before the 14-day period expires; we will refund you for
           the unused portion without undue delay.
         </li>
-        <li>Prices are shown inclusive of applicable VAT where required; tax is handled via Stripe.</li>
+        <li>
+          Prices are shown inclusive of applicable VAT where required; tax is handled via Stripe.
+        </li>
       </ul>
     </section>
 
@@ -86,13 +100,55 @@
         their client, and we are not responsible for the advice they give. Payments to nutritionists
         are processed via Stripe Connect; platform fees are disclosed at the point of booking.
       </p>
+
+      <%!--
+        Cancellation & refund thresholds below MUST stay in sync with the config keys
+        :consultation_free_cancel_hours (24) and :consultation_partial_refund_hours (4).
+        If you change the config, change this copy. See
+        docs/implementation/professionals/payments/go_live_runbook.md §3a.
+      --%>
+      <h3 class="mt-6 font-display text-lg text-parchment">
+        Consultation bookings — cancellation &amp; refunds
+      </h3>
+      <p class="mt-3 leading-relaxed text-parchment-dim">
+        When you book a paid consultation, your card is <strong class="text-parchment">authorised
+        (held), not charged</strong>, at the time of booking. The nutritionist must
+        <strong class="text-parchment">accept</strong>
+        the request before any money is taken — if they
+        decline, or don't respond in time, the hold is released and you are not charged.
+      </p>
+      <p class="mt-3 leading-relaxed text-parchment-dim">
+        Once a booking is accepted and paid, you can cancel it from <em>My appointments</em>:
+      </p>
+      <ul class="mt-2 list-disc space-y-2 pl-5 leading-relaxed text-parchment-dim">
+        <li>
+          <strong class="text-parchment">24 hours or more</strong>
+          before the appointment — full refund.
+        </li>
+        <li>
+          <strong class="text-parchment">Between 4 and 24 hours</strong> before — 50% refund.
+        </li>
+        <li>
+          <strong class="text-parchment">Less than 4 hours</strong>
+          before, or a no-show — no refund.
+        </li>
+      </ul>
+      <p class="mt-3 leading-relaxed text-parchment-dim">
+        If the <strong class="text-parchment">nutritionist cancels</strong>
+        an accepted appointment, you
+        receive a full refund regardless of timing. Refunds are issued to your original payment method
+        and typically appear within 5–10 business days (Stripe's processing time). M3Hungry charges the
+        nutritionist a small platform fee; all payments are processed securely by Stripe — we never see
+        or store your card number.
+      </p>
     </section>
 
     <section class="mt-10">
       <h2 class="font-display text-2xl text-parchment">7. Health-information disclaimer</h2>
       <div class="mt-3 rounded-xl border border-paprika/40 bg-ink-panel p-5 leading-relaxed text-parchment-dim">
         M3Hungry provides general nutritional and food information, including AI-generated content and
-        condition-related badges. This is <strong class="text-parchment">not medical advice</strong>
+        condition-related badges. This is
+        <strong class="text-parchment">not medical advice</strong>
         and is not intended to diagnose, treat, cure or prevent any disease. It is not a substitute for
         consultation with a qualified healthcare professional. Always seek professional advice before
         making decisions about your diet or health, especially if you have a medical condition.
@@ -148,8 +204,10 @@
     <section class="mt-10">
       <h2 class="font-display text-2xl text-parchment">13. Contact</h2>
       <p class="mt-3 leading-relaxed text-parchment-dim">
-        Questions about these terms:
-        <a href="mailto:nikolisgal@gmail.com" class="text-paprika hover:underline">nikolisgal@gmail.com</a>.
+        Questions about these terms: <a
+          href="mailto:nikolisgal@gmail.com"
+          class="text-paprika hover:underline"
+        >nikolisgal@gmail.com</a>.
       </p>
     </section>
   </div>

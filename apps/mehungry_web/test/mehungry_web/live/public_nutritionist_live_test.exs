@@ -38,7 +38,9 @@ defmodule MehungryWeb.PublicNutritionistLiveTest do
 
   # A full week of 09:00–11:00 availability → future 60-min slots every day.
   defp with_availability(user) do
-    rows = for dow <- 0..6, do: %{day_of_week: dow, start_time: ~T[09:00:00], end_time: ~T[11:00:00]}
+    rows =
+      for dow <- 0..6, do: %{day_of_week: dow, start_time: ~T[09:00:00], end_time: ~T[11:00:00]}
+
     {:ok, _} = Professionals.replace_availabilities(user.id, rows)
     user
   end
@@ -170,6 +172,54 @@ defmodule MehungryWeb.PublicNutritionistLiveTest do
 
       assert appt.status == "requested"
       assert appt.scheduled_at == slot
+    end
+
+    test "the cancellation-policy notice shows at the paid-booking confirm step", %{
+      conn: conn,
+      profile: profile
+    } do
+      # Payments live + a priced service → the policy notice must appear before Confirm.
+      prev = Application.get_env(:mehungry, :consultation_payments_enabled)
+      Application.put_env(:mehungry, :consultation_payments_enabled, true)
+
+      on_exit(fn ->
+        if is_nil(prev),
+          do: Application.delete_env(:mehungry, :consultation_payments_enabled),
+          else: Application.put_env(:mehungry, :consultation_payments_enabled, prev)
+      end)
+
+      {:ok, _service} =
+        Professionals.create_service(%{
+          professional_id: profile.user_id,
+          kind: "session",
+          name: "Initial consultation",
+          price_cents: 5000,
+          currency: "eur",
+          duration_minutes: 60
+        })
+
+      client = Mehungry.AccountsFixtures.user_fixture()
+      conn = log_in_user(conn, client)
+
+      {:ok, view, _html} = live(conn, ~p"/nutritionists/#{profile.slug}")
+
+      service = hd(Professionals.list_active_services(profile.user_id))
+      render_click(view, "select_booking_service", %{"id" => to_string(service.id)})
+
+      today = Date.utc_today()
+      [slot | _] = Professionals.available_slots(profile.user_id, today, Date.add(today, 30))
+
+      render_click(view, "select_booking_date", %{
+        "date" => slot |> NaiveDateTime.to_date() |> Date.to_iso8601()
+      })
+
+      html = render_click(view, "select_booking_slot", %{"at" => NaiveDateTime.to_iso8601(slot)})
+
+      assert html =~ "authorised now"
+      assert html =~ "cancellation"
+      # Thresholds interpolated from config (24h / 4h) so copy can't drift.
+      assert html =~ "full refund 24h+ before"
+      assert html =~ ~r/href="[^"]*\/terms"/
     end
 
     test "a slot taken before confirm surfaces a friendly error", %{conn: conn, profile: profile} do
