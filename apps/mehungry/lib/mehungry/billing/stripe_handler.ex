@@ -74,34 +74,73 @@ defmodule Mehungry.Billing.StripeHandler do
   # ── Connect (nutritionist payouts — minimal onboarding slice) ─────────────────
 
   @doc """
-  Create an Express connected account for a nutritionist so they can receive
-  payouts. Requests the `transfers` + `card_payments` capabilities. Returns
-  `{:ok, account_id}` or `{:error, reason}`.
+  Create an Accounts-v2 connected account for a nutritionist (Express dashboard)
+  so they can receive payouts. Returns `{:ok, account_id}` or `{:error, reason}`.
+
+  We keep the destination-charge + `on_behalf_of` flow where the nutritionist is
+  the merchant of record, so the account gets **both** configurations:
+
+    * `merchant` — requests the `card_payments` capability (MoR for the charge),
+    * `recipient` — requests `stripe_balance.stripe_transfers` (receives the
+      destination transfer).
+
+  Responsibilities are platform-owned (`fees_collector`/`losses_collector =
+  application`), as required for destination charges: we carry negative-balance
+  and dispute liability. MCC/industry is left to the nutritionist's onboarding
+  industry selection (non-medical wellness coaching) unless `:connect_account_mcc`
+  is explicitly set — Stripe has no numeric "wellness coaching" code and a forced
+  one must match the chosen industry or it's rejected.
   """
   def create_connect_account(email) do
-    params =
+    body =
       %{
-        "type" => "express",
-        "email" => email,
-        "capabilities[transfers][requested]" => "true",
-        "capabilities[card_payments][requested]" => "true"
+        "contact_email" => email,
+        "dashboard" => "express",
+        "defaults" => %{
+          "responsibilities" => %{
+            "fees_collector" => "application",
+            "losses_collector" => "application"
+          }
+        },
+        "identity" => %{"country" => connect_account_country()},
+        "configuration" => %{
+          "merchant" => merchant_configuration(),
+          "recipient" => %{
+            "capabilities" => %{
+              "stripe_balance" => %{"stripe_transfers" => %{"requested" => true}}
+            }
+          }
+        },
+        "include" => [
+          "configuration.merchant",
+          "configuration.recipient",
+          "identity",
+          "requirements"
+        ]
       }
-      # Classify the account as non-medical nutrition/wellness coaching so Stripe's
-      # risk review lands in the right (unrestricted) category. The nutritionist
-      # ALSO selects the "Health and wellness coaching" industry during Express
-      # onboarding — that's what Stripe auto-maps to the MCC; product_description +
-      # url reinforce it. We do NOT force a numeric MCC by default: Stripe has no
-      # "wellness coaching" numeric code, and a manually set MCC must match the
-      # account's chosen industry or Stripe rejects/overrides it — so leave it to
-      # industry auto-assignment unless :connect_account_mcc is explicitly set.
-      |> maybe_put("business_profile[product_description]", opt(:connect_product_description))
-      |> maybe_put("business_profile[url]", opt(:connect_business_url))
-      |> maybe_put("business_profile[mcc]", opt(:connect_account_mcc))
 
-    case post("/accounts", params) do
+    case post_v2("/core/accounts", body) do
       {:ok, %{"id" => account_id}} -> {:ok, account_id}
       {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Merchant config requests card_payments; an optional numeric MCC is nested
+  # under it when `:connect_account_mcc` is set.
+  defp merchant_configuration do
+    base = %{"capabilities" => %{"card_payments" => %{"requested" => true}}}
+
+    case opt(:connect_account_mcc) do
+      nil -> base
+      mcc -> Map.put(base, "mcc", mcc)
+    end
+  end
+
+  defp connect_account_country do
+    case Application.get_env(:mehungry, :connect_account_country) do
+      c when is_binary(c) and c != "" -> c
+      _ -> "GR"
     end
   end
 
@@ -119,14 +158,21 @@ defmodule Mehungry.Billing.StripeHandler do
   Returns `{:ok, onboarding_url}`.
   """
   def create_account_link(account_id, refresh_url, return_url) do
-    params = %{
+    body = %{
       "account" => account_id,
-      "refresh_url" => refresh_url,
-      "return_url" => return_url,
-      "type" => "account_onboarding"
+      "use_case" => %{
+        "type" => "account_onboarding",
+        "account_onboarding" => %{
+          "refresh_url" => refresh_url,
+          "return_url" => return_url,
+          # Collect eventually_due up front so the nutritionist isn't bounced
+          # back through onboarding for incremental requirements later.
+          "collection_options" => %{"fields" => "eventually_due"}
+        }
+      }
     }
 
-    case post("/account_links", params) do
+    case post_v2("/core/account_links", body) do
       {:ok, %{"url" => url}} -> {:ok, url}
       {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
       {:error, reason} -> {:error, reason}
@@ -134,22 +180,53 @@ defmodule Mehungry.Billing.StripeHandler do
   end
 
   @doc """
-  Fetch a connected account's onboarding/charge status. Returns
+  Fetch a connected account's onboarding/charge status (Accounts v2). Returns
   `{:ok, %{charges_enabled: bool, details_submitted: bool, payouts_enabled: bool}}`.
+
+  `charges_enabled` keeps its stored meaning — "can be charged onto right now" —
+  which for our destination + `on_behalf_of` flow needs **both** the merchant
+  `card_payments` capability and the recipient `stripe_transfers` capability to
+  be `active`. `payouts_enabled` reflects the recipient transfers capability;
+  `details_submitted` is best-effort (true once there are no currently-due
+  requirement entries).
   """
   def get_connect_account(account_id) do
-    case get("/accounts/#{account_id}") do
+    query = "?include=configuration.merchant&include=configuration.recipient&include=requirements"
+
+    case get_v2("/core/accounts/#{account_id}#{query}") do
       {:ok, account} ->
+        card_payments? = capability_active?(account, ["merchant", "card_payments"])
+
+        transfers? =
+          capability_active?(account, ["recipient", "stripe_balance", "stripe_transfers"])
+
         {:ok,
          %{
-           charges_enabled: account["charges_enabled"] == true,
-           details_submitted: account["details_submitted"] == true,
-           payouts_enabled: account["payouts_enabled"] == true
+           charges_enabled: card_payments? and transfers?,
+           payouts_enabled: transfers?,
+           details_submitted: no_currently_due_requirements?(account)
          }}
 
       error ->
         error
     end
+  end
+
+  # Walk configuration.<config>.capabilities.<...>.status and test for "active".
+  defp capability_active?(account, path) do
+    get_in(account, ["configuration" | capability_status_path(path)]) == "active"
+  end
+
+  defp capability_status_path([config | rest]), do: [config, "capabilities"] ++ rest ++ ["status"]
+
+  # No requirement entry is currently due → the account has submitted everything
+  # Stripe is asking for right now.
+  defp no_currently_due_requirements?(account) do
+    entries = get_in(account, ["requirements", "entries"]) || []
+
+    not Enum.any?(entries, fn entry ->
+      get_in(entry, ["minimum_deadline", "status"]) == "currently_due"
+    end)
   end
 
   # ── Connect (consultation charging — destination charge + manual capture) ─────
@@ -240,7 +317,9 @@ defmodule Mehungry.Billing.StripeHandler do
       }
       |> maybe_put("amount", partial? && to_string(amount_cents))
 
-    case post("/refunds", params, idempotency_key: refund_idempotency_key(payment_intent_id, opts)) do
+    case post("/refunds", params,
+           idempotency_key: refund_idempotency_key(payment_intent_id, opts)
+         ) do
       {:ok, %{"id" => id}} -> {:ok, %{refund_id: id}}
       {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
       {:error, reason} -> {:error, reason}
@@ -398,8 +477,23 @@ defmodule Mehungry.Billing.StripeHandler do
     :ok
   end
 
-  # A connected account changed — reflect whether the nutritionist can now be
-  # charged/paid onto so the UI can show "connected".
+  # Accounts v2 account event (thin `v2.core.event` envelope — the capability/
+  # requirements change is carried in `related_object.id`, not an inline object).
+  # Fires as `v2.core.account[configuration.merchant].capability_status_updated`,
+  # the recipient equivalent, and `v2.core.account[requirements].updated`. Any of
+  # them can flip chargeability, so we re-fetch the account and recompute rather
+  # than trust the (delivery-mode-dependent) inline `changes` hash.
+  defp dispatch_event(%{
+         "type" => "v2.core.account" <> _,
+         "related_object" => %{"id" => account_id}
+       })
+       when is_binary(account_id) do
+    Mehungry.Professionals.sync_stripe_account_status(account_id)
+    :ok
+  end
+
+  # Accounts v1 account.updated — kept during the v1→v2 transition. Existing v1
+  # connected accounts still fire this; v2-created accounts fire the clause above.
   defp dispatch_event(%{"type" => "account.updated", "data" => %{"object" => account}}) do
     account_id = account["id"]
     charges_enabled = account["charges_enabled"] == true
@@ -507,26 +601,62 @@ defmodule Mehungry.Billing.StripeHandler do
     end
   end
 
-  defp get(path) do
+  # ── Private: HTTP (Accounts v2 core) ──────────────────────────────────────────
+  #
+  # The v2 core API takes a JSON body (not form-encoded) and requires the
+  # preview `Stripe-Version` header. Path is relative to the /v2 base, e.g.
+  # "/core/accounts".
+
+  @stripe_v2_api "https://api.stripe.com/v2"
+
+  defp post_v2(path, body) when is_map(body) do
     secret_key = config(:stripe_secret_key)
 
     if secret_key == "" do
       {:error, :stripe_not_configured}
     else
-      headers = [{"Authorization", "Bearer #{secret_key}"}]
-
-      case HTTPoison.get(@stripe_api <> path, headers, recv_timeout: 15_000) do
+      case HTTPoison.post(@stripe_v2_api <> path, Jason.encode!(body), v2_headers(),
+             recv_timeout: 15_000
+           ) do
         {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
           Jason.decode(resp_body)
 
         {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} ->
-          Logger.warning("Stripe GET #{path} returned #{code}: #{resp_body}")
+          Logger.warning("Stripe v2 POST #{path} returned #{code}: #{resp_body}")
           {:error, "Stripe error #{code}"}
 
         {:error, %HTTPoison.Error{reason: reason}} ->
           {:error, "HTTP error: #{inspect(reason)}"}
       end
     end
+  end
+
+  defp get_v2(path) do
+    secret_key = config(:stripe_secret_key)
+
+    if secret_key == "" do
+      {:error, :stripe_not_configured}
+    else
+      case HTTPoison.get(@stripe_v2_api <> path, v2_headers(), recv_timeout: 15_000) do
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
+          Jason.decode(resp_body)
+
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} ->
+          Logger.warning("Stripe v2 GET #{path} returned #{code}: #{resp_body}")
+          {:error, "Stripe error #{code}"}
+
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          {:error, "HTTP error: #{inspect(reason)}"}
+      end
+    end
+  end
+
+  defp v2_headers do
+    [
+      {"Authorization", "Bearer #{config(:stripe_secret_key)}"},
+      {"Content-Type", "application/json"},
+      {"Stripe-Version", config(:stripe_accounts_api_version)}
+    ]
   end
 
   defp idempotency_header(nil), do: []

@@ -12,7 +12,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   alias Mehungry.Plans, as: PlansCtx
   alias Mehungry.MealBlueprints
   alias Mehungry.ObanWorkers.NutritionistAgentWorker
-  alias VegaLite, as: Vl
+  alias MehungryWeb.MeasurementChart
 
   @impl true
   def mount(%{"id" => client_id}, _session, socket) do
@@ -264,11 +264,27 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   # ── Weight chart (responsive) ───────────────────────────────────────────────────
 
   def handle_event("resize_chart", %{"width" => width}, socket) when width > 50 do
-    spec = build_weight_spec(socket.assigns.weight_history, width)
-    {:noreply, assign(socket, :weight_chart_spec, spec)}
+    spec =
+      MeasurementChart.build_spec(
+        socket.assigns.measurement_history,
+        socket.assigns.selected_metric,
+        width
+      )
+
+    {:noreply, assign(socket, :measurement_chart_spec, spec)}
   end
 
   def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
+
+  def handle_event("select_metric", %{"metric" => metric}, socket) do
+    {:noreply,
+     socket
+     |> assign(:selected_metric, metric)
+     |> assign(
+       :measurement_chart_spec,
+       MeasurementChart.build_spec(socket.assigns.measurement_history, metric, :container)
+     )}
+  end
 
   # ── Intake (dietary history) events ─────────────────────────────────────────────
 
@@ -337,16 +353,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   # Lazily create the client's ProfessionalClient record on the first visit.
   defp ensure_record(%{assigns: %{record: nil}} = socket) do
-    client = socket.assigns.client
-
-    attrs = %{
-      professional_id: socket.assigns.current_user.id,
-      user_id: socket.assigns.client_id,
-      full_name: client.name || client.email,
-      email: client.email
-    }
-
-    case Professionals.create_client_record(attrs) do
+    case Professionals.ensure_client_record(socket.assigns.current_user.id, socket.assigns.client) do
       {:ok, record} -> {:ok, assign(socket, :record, record), record}
       {:error, changeset} -> {:error, changeset}
     end
@@ -549,51 +556,24 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     assign(socket, :intake, intake)
   end
 
+  # Loads the client's full body-measurement history and builds the chart for the
+  # currently-selected metric (defaulting to weight). One metric at a time —
+  # the metrics have incompatible units. See `MehungryWeb.MeasurementChart`.
   defp load_weight_history(socket) do
     history =
       case socket.assigns.record do
         nil -> []
-        record -> Professionals.weight_history(record.id)
+        record -> Professionals.measurement_history(record.id)
       end
 
+    available = MeasurementChart.available_metrics(history)
+    selected = MeasurementChart.pick_metric(socket.assigns[:selected_metric], available)
+
     socket
-    |> assign(:weight_history, history)
-    |> assign(:weight_chart_spec, build_weight_spec(history))
-  end
-
-  # Weight (kg) over time, merged from intakes + consultation notes. Basil/emerald
-  # tone, matching the analytics session chart. Non-zero y-scale so small
-  # fluctuations are readable.
-  defp build_weight_spec(data, width \\ :container) do
-    chart_data =
-      Enum.map(data, fn %{date: d, weight_kg: w} ->
-        %{"date" => to_string(d), "weight" => w}
-      end)
-
-    Vl.new(width: width, height: 200, autosize: [type: "fit", contains: "padding"])
-    |> Vl.data_from_values(chart_data)
-    |> Vl.mark(:line, color: "#10B981", point: [color: "#10B981", filled: true])
-    |> Vl.encode_field(:x, "date",
-      type: :temporal,
-      axis: [
-        label_angle: -35,
-        title: nil,
-        label_color: "#94A3B8",
-        domain_color: "#334155",
-        tick_color: "#334155"
-      ]
-    )
-    |> Vl.encode_field(:y, "weight",
-      type: :quantitative,
-      scale: [zero: false],
-      axis: [title: "kg", label_color: "#94A3B8", domain_color: "#334155", grid_color: "#1E293B"]
-    )
-    |> Vl.encode(:tooltip, [
-      [field: "date", type: :temporal, title: "Date"],
-      [field: "weight", type: :quantitative, title: "Weight (kg)"]
-    ])
-    |> Vl.config(background: "transparent", view: [stroke: nil])
-    |> Vl.to_spec()
+    |> assign(:measurement_history, history)
+    |> assign(:available_metrics, available)
+    |> assign(:selected_metric, selected)
+    |> assign(:measurement_chart_spec, MeasurementChart.build_spec(history, selected, :container))
   end
 
   # ── PubSub messages ───────────────────────────────────────────────────────────
@@ -901,29 +881,45 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
       {onboarding_answers_panel(assigns)}
 
-      <!-- Weight trend -->
+      <!-- Progress trend -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
-        <h2 class="text-parchment font-display font-semibold mb-4">Weight trend</h2>
-        <%= if length(@weight_history) >= 2 do %>
+        <div class="flex items-center justify-between mb-4 gap-4">
+          <h2 class="text-parchment font-display font-semibold">Progress trend</h2>
+          <%= if @available_metrics != [] do %>
+            <form id="measurement-metric-selector" phx-change="select_metric">
+              <select
+                name="metric"
+                class="bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-1.5 text-parchment text-sm focus:outline-none focus:border-paprika"
+              >
+                <%= for key <- @available_metrics do %>
+                  <option value={key} selected={key == @selected_metric}>
+                    {MeasurementChart.metric_label(key)}
+                  </option>
+                <% end %>
+              </select>
+            </form>
+          <% end %>
+        </div>
+        <%= if @available_metrics != [] && @measurement_chart_spec do %>
           <div
-            id="weight-chart-wrapper"
+            id="measurement-chart-wrapper"
             phx-hook="ResponsiveChart"
-            data-id="weight"
-            data-origin_id="weight"
+            data-id="measurement"
+            data-origin_id="measurement"
             data-size="full"
             class="w-full overflow-hidden"
           >
             <div
-              id="vega-weight"
+              id="vega-measurement"
               phx-hook="VegaLite"
-              data-spec={Jason.encode!(@weight_chart_spec)}
+              data-spec={Jason.encode!(@measurement_chart_spec)}
               class="w-full"
             >
             </div>
           </div>
         <% else %>
           <p class="text-parchment-dim text-sm">
-            Not enough weight data yet — recorded weights will chart here.
+            Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass) will chart here once there are at least two readings.
           </p>
         <% end %>
       </div>
@@ -1068,6 +1064,15 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
               </.labeled>
               <.labeled label="Weight (kg)">
                 <.input field={@visit_form[:weight_kg]} type="number" step="any" />
+              </.labeled>
+              <.labeled label="Body fat (%)">
+                <.input field={@visit_form[:body_fat_percentage]} type="number" step="any" />
+              </.labeled>
+              <.labeled label="Waist (cm)">
+                <.input field={@visit_form[:waist_cm]} type="number" step="any" />
+              </.labeled>
+              <.labeled label="Muscle mass (kg)">
+                <.input field={@visit_form[:muscle_mass_kg]} type="number" step="any" />
               </.labeled>
             </div>
             <%= if @appointments != [] do %>

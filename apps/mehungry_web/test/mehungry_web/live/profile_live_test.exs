@@ -310,4 +310,59 @@ defmodule MehungryWeb.ProfileLiveTest do
     assert Repo.get(PublishedMealPlan, plan.id) == nil
     refute render(index_live) =~ "/meal-plans/#{plan.slug}"
   end
+
+  test "own profile shows the My progress tab", %{conn: conn, user: user} do
+    onboard(user)
+
+    {:ok, _index_live, html} = live(conn, Routes.profile_index_path(conn, :index))
+
+    assert html =~ "My progress"
+  end
+
+  test "progress tab charts the client's measurements logged by their nutritionist", %{
+    conn: conn,
+    user: user
+  } do
+    onboard(user)
+
+    nutritionist = Mehungry.AccountsFixtures.user_fixture()
+
+    {:ok, record} =
+      Mehungry.Professionals.create_client_record(%{
+        professional_id: nutritionist.id,
+        user_id: user.id,
+        full_name: "Me"
+      })
+
+    for {date, w} <- [{~D[2026-01-10], 90.0}, {~D[2026-02-10], 88.0}] do
+      {:ok, _} =
+        Mehungry.Professionals.create_consultation_note(%{
+          professional_client_id: record.id,
+          visit_date: date,
+          weight_kg: w
+        })
+    end
+
+    {:ok, _index_live, html} =
+      live(conn, Routes.profile_index_path(conn, :index) <> "?tab=progress")
+
+    assert html =~ "My progress"
+    assert html =~ ~s(id="profile-vega-measurement")
+    assert html =~ ~s(phx-hook="VegaLite")
+    refute html =~ "recorded measurements yet"
+  end
+
+  test "progress tab shows an empty state for a user with no measurements", %{
+    conn: conn,
+    user: user
+  } do
+    onboard(user)
+
+    {:ok, _index_live, html} =
+      live(conn, Routes.profile_index_path(conn, :index) <> "?tab=progress")
+
+    assert html =~ "My progress"
+    assert html =~ "recorded measurements yet"
+    refute html =~ ~s(id="profile-vega-measurement")
+  end
 end

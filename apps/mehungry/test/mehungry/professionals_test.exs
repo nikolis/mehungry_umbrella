@@ -807,6 +807,202 @@ defmodule Mehungry.ProfessionalsTest do
     end
   end
 
+  describe "measurement_history/1" do
+    setup do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, record} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Maria Papadaki"
+        })
+
+      %{record: record}
+    end
+
+    test "carries every metric per dated point, sorted, dropping metric-less points", %{
+      record: record
+    } do
+      {:ok, _} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "assessed_on" => "2026-01-10",
+          "height_m" => "1.70",
+          "weight_kg" => "72.0"
+        })
+
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-02-05",
+          "weight_kg" => "71.2",
+          "body_fat_percentage" => "28.0",
+          "waist_cm" => "84.0",
+          "muscle_mass_kg" => "30.0"
+        })
+
+      # a note with a date but no metrics at all → dropped
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-03-01",
+          "body" => "notes only"
+        })
+
+      history = Professionals.measurement_history(record.id)
+
+      assert Enum.map(history, & &1.date) == [~D[2026-01-10], ~D[2026-02-05]]
+
+      [intake_point, visit_point] = history
+
+      assert intake_point.source == :intake
+      assert intake_point.weight_kg == 72.0
+      # intake computes bmi; visit-only metrics are nil on an intake point
+      assert intake_point.bmi == 24.9
+      assert intake_point.body_fat_percentage == nil
+
+      assert visit_point.source == :visit
+      assert visit_point.weight_kg == 71.2
+      assert visit_point.body_fat_percentage == 28.0
+      assert visit_point.waist_cm == 84.0
+      assert visit_point.muscle_mass_kg == 30.0
+    end
+
+    test "weight_history/1 still returns the legacy weight-only shape", %{record: record} do
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-02-05",
+          "weight_kg" => "71.2",
+          "waist_cm" => "84.0"
+        })
+
+      assert [point] = Professionals.weight_history(record.id)
+      assert Map.keys(point) |> Enum.sort() == [:date, :source, :weight_kg]
+      assert point.weight_kg == 71.2
+    end
+  end
+
+  describe "measurement_history_for_user/1" do
+    test "aggregates a user's measurements across every nutritionist, sorted by date" do
+      pro_a = user_fixture()
+      pro_b = user_fixture()
+      client = user_fixture()
+
+      {:ok, rec_a} =
+        Professionals.create_client_record(%{
+          professional_id: pro_a.id,
+          user_id: client.id,
+          full_name: "A"
+        })
+
+      {:ok, rec_b} =
+        Professionals.create_client_record(%{
+          professional_id: pro_b.id,
+          user_id: client.id,
+          full_name: "B"
+        })
+
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => rec_b.id,
+          "visit_date" => "2026-03-01",
+          "weight_kg" => "70.0"
+        })
+
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => rec_a.id,
+          "visit_date" => "2026-01-10",
+          "weight_kg" => "72.0"
+        })
+
+      history = Professionals.measurement_history_for_user(client.id)
+
+      assert Enum.map(history, & &1.date) == [~D[2026-01-10], ~D[2026-03-01]]
+      assert Enum.map(history, & &1.weight_kg) == [72.0, 70.0]
+    end
+
+    test "returns [] for a user with no client record" do
+      user = user_fixture()
+      assert Professionals.measurement_history_for_user(user.id) == []
+    end
+  end
+
+  describe "consultation note measurement auto-calc" do
+    setup do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, record} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Maria Papadaki"
+        })
+
+      %{record: record}
+    end
+
+    test "fills blank BMI/BMR from the latest intake + measured weight", %{record: record} do
+      {:ok, _} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "assessed_on" => "2026-01-01",
+          "height_m" => "1.70",
+          "sex" => "female",
+          "age" => "34"
+        })
+
+      {:ok, note} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-02-01",
+          "weight_kg" => "72"
+        })
+
+      assert note.bmi == 24.9
+      assert note.bmr_kcal == 1452
+    end
+
+    test "leaves BMI/BMR nil when the client has no intake", %{record: record} do
+      {:ok, note} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-02-01",
+          "weight_kg" => "72"
+        })
+
+      assert note.bmi == nil
+      assert note.bmr_kcal == nil
+    end
+
+    test "does not overwrite a caller-supplied BMI", %{record: record} do
+      {:ok, _} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "assessed_on" => "2026-01-01",
+          "height_m" => "1.70",
+          "sex" => "female",
+          "age" => "34"
+        })
+
+      {:ok, note} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-02-01",
+          "weight_kg" => "72",
+          "bmi" => "99.9"
+        })
+
+      assert note.bmi == 99.9
+      # the blank one still auto-fills
+      assert note.bmr_kcal == 1452
+    end
+  end
+
   describe "records_by_user_id/1" do
     test "maps each user to their record, scoped to the professional" do
       professional = user_fixture()

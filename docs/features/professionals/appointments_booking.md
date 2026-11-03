@@ -35,6 +35,16 @@ intervals overlaid. Clicking an appointment block opens the edit form; clicking 
 the modal's **"+ New"**) opens the create form pre-filled for that date/hour. The month-cell
 chips still open edit directly.
 
+**Log measurement from the meeting.** The appointment edit modal has a **"Log measurement"** button
+(shown only when the appointment has an internal `client_id` — **hidden for external clients**, who
+have no platform user and thus no clinical file). It resolves the appointment's client `User` to the
+nutritionist's `ProfessionalClient` via `Professionals.ensure_client_record/2` (lazy-creating the
+file if none exists) and opens a measurement form (weight, body fat %, waist, muscle mass). On save
+it writes a `ConsultationNote` pre-linked to the appointment (`appointment_id`) and dated to the
+appointment; BMI/BMR are auto-filled from the client's latest intake. These measurements feed the
+client-file **Progress trend** chart and the client's own **My progress** profile chart — see
+[`client_records.md`](client_records.md) §Progress tracking.
+
 ## Flow
 
 1. **Request** — logged-in visitor picks a **service** (the booking modal lists the active

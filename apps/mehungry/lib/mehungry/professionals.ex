@@ -22,7 +22,8 @@ defmodule Mehungry.Professionals do
     AssignmentMessage,
     AppointmentPayment,
     GoogleAccount,
-    CalendarBusy
+    CalendarBusy,
+    Anthropometrics
   }
 
   alias Mehungry.Professionals.DietaryHistory
@@ -75,6 +76,22 @@ defmodule Mehungry.Professionals do
     case get_profile_by_stripe_account(account_id) do
       nil -> {:error, :not_found}
       profile -> update_professional_stripe(profile, %{stripe_charges_enabled: enabled})
+    end
+  end
+
+  @doc """
+  Webhook helper (Accounts v2): re-fetch the connected account's live capability
+  status and persist whether it can be charged onto. Used by the thin
+  `v2.core.account[...]` events, which carry only the account id — so we read the
+  authoritative status from Stripe rather than an inline payload.
+  """
+  def sync_stripe_account_status(account_id) when is_binary(account_id) do
+    with profile when not is_nil(profile) <- get_profile_by_stripe_account(account_id),
+         {:ok, %{charges_enabled: enabled}} <- payment_client().get_connect_account(account_id) do
+      update_professional_stripe(profile, %{stripe_charges_enabled: enabled})
+    else
+      nil -> {:error, :not_found}
+      error -> error
     end
   end
 
@@ -1276,7 +1293,9 @@ defmodule Mehungry.Professionals do
 
   # Remove the pushed Google event when an appointment is declined/cancelled.
   defp tap_calendar_delete({:ok, appointment} = result) do
-    if appointment.google_event_id, do: AppointmentCalendarSyncWorker.enqueue(:delete, appointment.id)
+    if appointment.google_event_id,
+      do: AppointmentCalendarSyncWorker.enqueue(:delete, appointment.id)
+
     result
   end
 
@@ -1564,13 +1583,244 @@ defmodule Mehungry.Professionals do
 
   defp refund_payment_partial(_), do: :ok
 
-  @doc "Sum of captured (paid) earnings for a nutritionist, net of our fee, in cents."
-  def professional_net_earnings_cents(professional_user_id) do
+  # ── Analytics (Earnings & pipeline) ─────────────────────────────────────────────
+  #
+  # All aggregation happens in SQL (GROUP BY / sum) — we never load payment rows
+  # into the LiveView. Net earned is always the single shared formula
+  # `amount_cents - platform_fee_cents - refunded_amount_cents` over rows the
+  # nutritionist actually keeps money on (`paid` + `partially_refunded`), matching
+  # `AppointmentPayment.net_cents/1`. A `date_range` is `:all` or a
+  # `{start_ndt, end_ndt}` NaiveDateTime tuple, applied on `captured_at`
+  # (coalescing to `inserted_at` for safety). See
+  # docs/features/professionals/analytics.md.
+
+  @earning_statuses ~w(paid partially_refunded)
+
+  @doc "Sum of captured earnings for a nutritionist, net of our fee + refunds, in cents."
+  def professional_net_earnings_cents(professional_user_id),
+    do: net_earnings_cents(professional_user_id, :all)
+
+  @doc "Net captured earnings (cents) within an optional date range."
+  def net_earnings_cents(professional_user_id, date_range \\ :all) do
     from(p in AppointmentPayment,
-      where: p.professional_id == ^professional_user_id and p.status == "paid",
-      select: coalesce(sum(p.amount_cents - p.platform_fee_cents), 0)
+      where: p.professional_id == ^professional_user_id and p.status in @earning_statuses,
+      select: coalesce(sum(p.amount_cents - p.platform_fee_cents - p.refunded_amount_cents), 0)
+    )
+    |> payment_range(date_range)
+    |> Repo.one()
+  end
+
+  @doc "Gross value of authorized-but-uncaptured holds (money in flight), in cents."
+  def in_flight_cents(professional_user_id) do
+    from(p in AppointmentPayment,
+      where: p.professional_id == ^professional_user_id and p.status == "authorized",
+      select: coalesce(sum(p.amount_cents), 0)
     )
     |> Repo.one()
+  end
+
+  @doc "Count of pending (status `requested`) appointment requests awaiting accept/decline."
+  def count_pending_requests(professional_user_id) do
+    from(a in Appointment,
+      where: a.professional_id == ^professional_user_id and a.status == "requested",
+      select: count(a.id)
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Net captured earnings (cents) grouped by period (`:week`, `:month`, `:day`) for
+  the revenue-over-time chart. Returns `[%{period: NaiveDateTime, net_cents: int}]`
+  ordered ascending.
+  """
+  def revenue_per_period(professional_user_id, date_range \\ :all, granularity \\ :week) do
+    trunc = to_string(granularity)
+
+    from(p in AppointmentPayment,
+      where: p.professional_id == ^professional_user_id and p.status in @earning_statuses,
+      group_by: selected_as(:period),
+      order_by: selected_as(:period),
+      select: %{
+        period:
+          selected_as(
+            fragment("date_trunc(?, coalesce(?, ?))", ^trunc, p.captured_at, p.inserted_at),
+            :period
+          ),
+        net_cents:
+          coalesce(sum(p.amount_cents - p.platform_fee_cents - p.refunded_amount_cents), 0)
+      }
+    )
+    |> payment_range(date_range)
+    |> Repo.all()
+  end
+
+  @doc """
+  Count of `accepted` appointments grouped by ISO week over the last `weeks`
+  weeks. Returns `[%{period: NaiveDateTime, count: int}]` ordered ascending.
+  """
+  def appointments_per_week(professional_user_id, weeks \\ 8) do
+    since = NaiveDateTime.add(now(), -weeks * 7 * 24 * 3600, :second)
+
+    from(a in Appointment,
+      where:
+        a.professional_id == ^professional_user_id and a.status == "accepted" and
+          a.scheduled_at >= ^since,
+      group_by: fragment("date_trunc('week', ?)", a.scheduled_at),
+      order_by: fragment("date_trunc('week', ?)", a.scheduled_at),
+      select: %{period: fragment("date_trunc('week', ?)", a.scheduled_at), count: count(a.id)}
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Net captured earnings (cents) grouped by the service sold. Returns
+  `[%{service_id, name, kind, net_cents}]` ordered by net descending. Top-N
+  folding into "Other" is a display concern handled in the LiveView.
+  """
+  def revenue_by_service(professional_user_id, date_range \\ :all) do
+    from(p in AppointmentPayment,
+      left_join: s in ProfessionalService,
+      on: s.id == p.professional_service_id,
+      where: p.professional_id == ^professional_user_id and p.status in @earning_statuses,
+      group_by: [s.id, s.name, s.kind],
+      order_by: [
+        desc: coalesce(sum(p.amount_cents - p.platform_fee_cents - p.refunded_amount_cents), 0)
+      ],
+      select: %{
+        service_id: s.id,
+        name: s.name,
+        kind: s.kind,
+        net_cents:
+          coalesce(sum(p.amount_cents - p.platform_fee_cents - p.refunded_amount_cents), 0)
+      }
+    )
+    |> payment_range(date_range)
+    |> Repo.all()
+  end
+
+  @doc """
+  Money breakdown by outcome within a range — the leakage view. Returns a single
+  map `%{captured_cents, no_show_cents, refunded_cents, released_cents}`:
+
+    * `captured_cents`   — net kept on completed (accepted) consultations
+    * `no_show_cents`    — net retained despite the client not showing
+    * `refunded_cents`   — total refunded back to clients (full + partial)
+    * `released_cents`   — gross of authorized holds that were released (€0 earned)
+  """
+  def revenue_by_outcome(professional_user_id, date_range \\ :all) do
+    from(p in AppointmentPayment,
+      left_join: a in Appointment,
+      on: a.id == p.appointment_id,
+      where: p.professional_id == ^professional_user_id,
+      select: %{
+        captured_cents:
+          coalesce(
+            sum(
+              fragment(
+                "CASE WHEN ? IN ('paid','partially_refunded') AND (? = 'accepted' OR ? IS NULL) THEN ? - ? - ? ELSE 0 END",
+                p.status,
+                a.status,
+                a.status,
+                p.amount_cents,
+                p.platform_fee_cents,
+                p.refunded_amount_cents
+              )
+            ),
+            0
+          ),
+        no_show_cents:
+          coalesce(
+            sum(
+              fragment(
+                "CASE WHEN ? IN ('paid','partially_refunded') AND ? = 'no_show' THEN ? - ? - ? ELSE 0 END",
+                p.status,
+                a.status,
+                p.amount_cents,
+                p.platform_fee_cents,
+                p.refunded_amount_cents
+              )
+            ),
+            0
+          ),
+        refunded_cents:
+          coalesce(
+            sum(
+              fragment(
+                "CASE WHEN ? IN ('refunded','partially_refunded') THEN ? ELSE 0 END",
+                p.status,
+                p.refunded_amount_cents
+              )
+            ),
+            0
+          ),
+        released_cents:
+          coalesce(
+            sum(
+              fragment(
+                "CASE WHEN ? = 'canceled' AND ? IS NOT NULL THEN ? ELSE 0 END",
+                p.status,
+                p.authorized_at,
+                p.amount_cents
+              )
+            ),
+            0
+          )
+      }
+    )
+    |> payment_range(date_range)
+    |> Repo.one()
+  end
+
+  @doc """
+  Net captured earnings (cents) split into first-time vs repeat clients. A
+  payment is "new" when it is the client's **lifetime-first** captured payment
+  with this nutritionist, else "returning" — classified by capture order, then
+  summed only over payments inside `date_range`. Returns
+  `%{new_cents, returning_cents}`.
+  """
+  def revenue_new_vs_returning(professional_user_id, date_range \\ :all) do
+    ranked =
+      from(p in AppointmentPayment,
+        where: p.professional_id == ^professional_user_id and p.status in @earning_statuses,
+        select: %{
+          net: p.amount_cents - p.platform_fee_cents - p.refunded_amount_cents,
+          ts: coalesce(p.captured_at, p.inserted_at),
+          rn:
+            over(row_number(),
+              partition_by: p.client_id,
+              order_by: coalesce(p.captured_at, p.inserted_at)
+            )
+        }
+      )
+
+    from(r in subquery(ranked),
+      select: %{
+        new_cents: coalesce(sum(fragment("CASE WHEN ? = 1 THEN ? ELSE 0 END", r.rn, r.net)), 0),
+        returning_cents:
+          coalesce(sum(fragment("CASE WHEN ? > 1 THEN ? ELSE 0 END", r.rn, r.net)), 0)
+      }
+    )
+    |> subquery_range(date_range)
+    |> Repo.one()
+  end
+
+  # Apply a `{start, end}` range on a payment query's capture timestamp (`:all` = no filter).
+  defp payment_range(query, :all), do: query
+
+  defp payment_range(query, {start_ndt, end_ndt}) do
+    where(
+      query,
+      [p],
+      coalesce(p.captured_at, p.inserted_at) >= ^start_ndt and
+        coalesce(p.captured_at, p.inserted_at) <= ^end_ndt
+    )
+  end
+
+  # Same, but on the pre-ranked subquery's materialized `ts` column.
+  defp subquery_range(query, :all), do: query
+
+  defp subquery_range(query, {start_ndt, end_ndt}) do
+    where(query, [r], r.ts >= ^start_ndt and r.ts <= ^end_ndt)
   end
 
   @doc """
@@ -1899,6 +2149,27 @@ defmodule Mehungry.Professionals do
     |> Repo.insert()
   end
 
+  @doc """
+  Returns the professional's client record for `user` (a `%Accounts.User{}`),
+  lazily creating a minimal one (name/email seeded from the user) if none exists.
+  The single lazy-create used wherever a clinical file must exist before writing
+  to it (client detail, appointment measurement logging).
+  """
+  def ensure_client_record(professional_id, %Mehungry.Accounts.User{} = user) do
+    case get_client_record_by_user(professional_id, user.id) do
+      nil ->
+        create_client_record(%{
+          professional_id: professional_id,
+          user_id: user.id,
+          full_name: user.name || user.email,
+          email: user.email
+        })
+
+      record ->
+        {:ok, record}
+    end
+  end
+
   def update_client_record(%ProfessionalClient{} = client, attrs) do
     client
     |> ProfessionalClient.changeset(attrs)
@@ -2004,39 +2275,140 @@ defmodule Mehungry.Professionals do
     )
   end
 
+  @measurement_metrics [
+    :weight_kg,
+    :body_fat_percentage,
+    :waist_cm,
+    :muscle_mass_kg,
+    :bmi,
+    :bmr_kcal
+  ]
+
   @doc """
-  A client's dated weight points, merged from both sources — each `ClientIntake`
-  (`assessed_on`) and each `ConsultationNote` (`visit_date`) that carries a
-  `weight_kg`. Rows missing a weight or a date are dropped. Returns
-  `[%{date: ~D[...], weight_kg: float, source: :intake | :visit}, ...]` sorted
-  ascending by date, suitable for plotting a weight trend.
+  The body metrics tracked longitudinally per client. Order is the preferred
+  display order for the progress-chart metric selector.
   """
-  def weight_history(professional_client_id) do
+  def measurement_metrics, do: @measurement_metrics
+
+  @doc """
+  A client's dated body-measurement points, merged from both sources — each
+  `ClientIntake` (`assessed_on`) and each `ConsultationNote` (`visit_date`).
+  Each point carries every metric present at that date
+  (`#{inspect(@measurement_metrics)}`); metrics a source doesn't track are `nil`
+  (intakes only carry `weight_kg`/`bmi`/`bmr_kcal`). Points missing a date or
+  carrying no metric at all are dropped. Returns
+  `[%{date: ~D[...], source: :intake | :visit, <metric> => number | nil}, ...]`
+  sorted ascending by date, suitable for plotting a progress trend.
+  """
+  def measurement_history(professional_client_id) do
     intakes =
       professional_client_id
       |> list_intakes()
-      |> Enum.filter(&(&1.weight_kg && &1.assessed_on))
-      |> Enum.map(&%{date: &1.assessed_on, weight_kg: &1.weight_kg, source: :intake})
+      |> Enum.map(fn i ->
+        %{
+          date: i.assessed_on,
+          source: :intake,
+          weight_kg: i.weight_kg,
+          body_fat_percentage: nil,
+          waist_cm: nil,
+          muscle_mass_kg: nil,
+          bmi: i.bmi,
+          bmr_kcal: i.bmr_kcal
+        }
+      end)
 
     visits =
       professional_client_id
       |> list_consultation_notes()
-      |> Enum.filter(&(&1.weight_kg && &1.visit_date))
-      |> Enum.map(&%{date: &1.visit_date, weight_kg: &1.weight_kg, source: :visit})
+      |> Enum.map(fn n ->
+        %{
+          date: n.visit_date,
+          source: :visit,
+          weight_kg: n.weight_kg,
+          body_fat_percentage: n.body_fat_percentage,
+          waist_cm: n.waist_cm,
+          muscle_mass_kg: n.muscle_mass_kg,
+          bmi: n.bmi,
+          bmr_kcal: n.bmr_kcal
+        }
+      end)
 
-    Enum.sort_by(intakes ++ visits, & &1.date, Date)
+    (intakes ++ visits)
+    |> Enum.filter(&(&1.date && Enum.any?(@measurement_metrics, fn m -> &1[m] end)))
+    |> Enum.sort_by(& &1.date, Date)
+  end
+
+  @doc """
+  A client's dated weight points — the `weight_kg`-only slice of
+  `measurement_history/1`, kept for callers that plot weight alone. Returns
+  `[%{date: ~D[...], weight_kg: float, source: :intake | :visit}, ...]`.
+  """
+  def weight_history(professional_client_id) do
+    professional_client_id
+    |> measurement_history()
+    |> Enum.filter(& &1.weight_kg)
+    |> Enum.map(&Map.take(&1, [:date, :weight_kg, :source]))
+  end
+
+  @doc """
+  A user's own body-measurement history across **every** nutritionist who keeps a
+  file on them — the client-facing progress feed. Aggregates
+  `measurement_history/1` over all `ProfessionalClient` records for `user_id`
+  (no professional scope), sorted by date. Pass only the viewer's own id.
+  """
+  def measurement_history_for_user(user_id) do
+    ProfessionalClient
+    |> where([c], c.user_id == ^user_id)
+    |> Repo.all()
+    |> Enum.flat_map(&measurement_history(&1.id))
+    |> Enum.sort_by(& &1.date, Date)
   end
 
   def create_consultation_note(attrs) do
     %ConsultationNote{}
-    |> ConsultationNote.changeset(attrs)
+    |> ConsultationNote.changeset(fill_measurement_energy(attrs))
     |> Repo.insert()
   end
 
   def update_consultation_note(%ConsultationNote{} = note, attrs) do
     note
-    |> ConsultationNote.changeset(attrs)
+    |> ConsultationNote.changeset(fill_measurement_energy(attrs))
     |> Repo.update()
+  end
+
+  # Fills `bmi` / `bmr_kcal` that the caller left blank, derived from the client's
+  # latest intake (height_m / sex / age) + the note's measured weight. Mirrors
+  # `ClientIntake.maybe_fill_energy/1`'s never-overwrite rule, but lives here
+  # because the inputs span two rows (the note has weight; the intake has the
+  # rest). No intake → nothing to derive → measured values saved as-is.
+  defp fill_measurement_energy(attrs) do
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+
+    with pcid when not is_nil(pcid) <- attrs["professional_client_id"],
+         %ClientIntake{} = intake <- get_latest_intake(pcid) do
+      derived =
+        Anthropometrics.compute(%{
+          height_m: intake.height_m,
+          weight_kg: attrs["weight_kg"],
+          sex: intake.sex,
+          age: intake.age
+        })
+
+      attrs
+      |> put_blank("bmi", derived[:bmi])
+      |> put_blank("bmr_kcal", derived[:bmr_kcal])
+    else
+      _ -> attrs
+    end
+  end
+
+  defp put_blank(attrs, _key, nil), do: attrs
+
+  defp put_blank(attrs, key, value) do
+    case attrs[key] do
+      blank when blank in [nil, ""] -> Map.put(attrs, key, value)
+      _present -> attrs
+    end
   end
 
   def delete_consultation_note(%ConsultationNote{} = note), do: Repo.delete(note)

@@ -35,8 +35,15 @@ defmodule Mehungry.Billing.StripePaymentClientStub do
     end)
   end
 
+  def get_connect_account(account_id) do
+    dispatch(:get_connect_account, account_id, fn ->
+      {:ok, %{charges_enabled: true, payouts_enabled: true, details_submitted: true}}
+    end)
+  end
+
   defp dispatch(name, args, default) do
-    if pid = Application.get_env(:mehungry, :stripe_stub_pid), do: send(pid, {:stripe, name, args})
+    if pid = Application.get_env(:mehungry, :stripe_stub_pid),
+      do: send(pid, {:stripe, name, args})
 
     case Application.get_env(:mehungry, :"stripe_stub_#{name}") do
       fun when is_function(fun, 1) -> fun.(args)

@@ -100,7 +100,7 @@
 
   <%= if @live_action in [:index, :show] do %>
     <div class="mb-6">
-      <%= if @content_state in [:created, :saved, :meal_plans] do %>
+      <%= if @content_state in [:created, :saved, :meal_plans, :progress] do %>
         <div class="border-b border-ink-panel2 mb-6">
           <div class="flex justify-center gap-1 overflow-x-auto">
             <.link
@@ -155,6 +155,15 @@
                   {@meal_plans_count}
                 </span>
               </.link>
+              <.link
+                patch={tab_path(assigns, "progress")}
+                class={
+                  "flex-shrink-0 inline-flex items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika" <>
+                    get_active(@content_state, :progress)}
+              >
+                <.icon name="hero-chart-bar" class="hidden sm:block w-5 h-5 flex-shrink-0" />
+                <span>My progress</span>
+              </.link>
             <% end %>
           </div>
         </div>
@@ -180,6 +189,9 @@
         friends_ingredients={@friends_ingredients}
         user_meal_plans={@user_meal_plans}
         nutritionist_assignment={@nutritionist_assignment}
+        available_metrics={@available_metrics}
+        selected_metric={@selected_metric}
+        measurement_chart_spec={@measurement_chart_spec}
         live_action={@live_action}
         user_recipes={@user_recipes}
         current_user_recipes={@current_user_recipes}

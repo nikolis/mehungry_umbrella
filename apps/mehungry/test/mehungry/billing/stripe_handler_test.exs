@@ -133,6 +133,85 @@ defmodule Mehungry.Billing.StripeHandlerTest do
     end
   end
 
+  describe "Accounts v2 connected-account events" do
+    setup %{user: user} do
+      # Route the webhook's account re-sync through the stub instead of the live
+      # v2 API, and capture what it was asked.
+      prev_client = Application.get_env(:mehungry, :stripe_payment_client)
+
+      Application.put_env(
+        :mehungry,
+        :stripe_payment_client,
+        Mehungry.Billing.StripePaymentClientStub
+      )
+
+      Application.put_env(:mehungry, :stripe_stub_pid, self())
+
+      {:ok, profile} =
+        Mehungry.Professionals.create_professional_profile(%{
+          user_id: user.id,
+          specialization: "Dietitian",
+          display_name: "Dr. V2"
+        })
+
+      {:ok, profile} =
+        Mehungry.Professionals.update_professional_stripe(profile, %{
+          stripe_connect_account_id: "acct_v2_test",
+          stripe_charges_enabled: false
+        })
+
+      on_exit(fn ->
+        restore(:stripe_payment_client, prev_client)
+        Application.delete_env(:mehungry, :stripe_stub_pid)
+        Application.delete_env(:mehungry, :stripe_stub_get_connect_account)
+      end)
+
+      %{profile: profile}
+    end
+
+    defp v2_capability_event(account_id) do
+      Jason.encode!(%{
+        "object" => "v2.core.event",
+        "type" => "v2.core.account[configuration.merchant].capability_status_updated",
+        "data" => %{"updated_capability" => "card_payments"},
+        "related_object" => %{"id" => account_id, "type" => "v2.core.account"}
+      })
+    end
+
+    test "capability_status_updated re-fetches status and flips the flag on", %{
+      user: user,
+      profile: profile
+    } do
+      Application.put_env(:mehungry, :stripe_stub_get_connect_account, fn _id ->
+        {:ok, %{charges_enabled: true, payouts_enabled: true, details_submitted: true}}
+      end)
+
+      body = v2_capability_event(profile.stripe_connect_account_id)
+      assert :ok = StripeHandler.handle_webhook(body, sign(body))
+
+      # It re-fetched the authoritative status for that account id, not trusting
+      # an inline payload.
+      assert_received {:stripe, :get_connect_account, "acct_v2_test"}
+      assert Mehungry.Professionals.get_professional_profile(user.id).stripe_charges_enabled
+    end
+
+    test "capability still restricted keeps the flag off", %{user: user, profile: profile} do
+      Application.put_env(:mehungry, :stripe_stub_get_connect_account, fn _id ->
+        {:ok, %{charges_enabled: false, payouts_enabled: false, details_submitted: false}}
+      end)
+
+      body = v2_capability_event(profile.stripe_connect_account_id)
+      assert :ok = StripeHandler.handle_webhook(body, sign(body))
+
+      refute Mehungry.Professionals.get_professional_profile(user.id).stripe_charges_enabled
+    end
+
+    test "an unknown account id is a no-op (no crash)", _ctx do
+      body = v2_capability_event("acct_not_ours")
+      assert :ok = StripeHandler.handle_webhook(body, sign(body))
+    end
+  end
+
   describe "subscription lifecycle events" do
     setup %{user: user} do
       {:ok, _sub} =

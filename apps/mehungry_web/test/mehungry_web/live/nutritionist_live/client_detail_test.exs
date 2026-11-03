@@ -357,7 +357,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     assert html =~ "brunch: 12:00 ομελέτα"
   end
 
-  test "weight trend chart renders once there are >= 2 dated weights", %{
+  test "progress chart renders once there are >= 2 dated weights", %{
     conn: conn,
     nutritionist: nutritionist,
     client_user: client_user
@@ -385,22 +385,86 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
 
     {:ok, _view, html} = live(conn, "/nutritionist/clients/#{client_user.id}")
 
-    assert html =~ "Weight trend"
+    assert html =~ "Progress trend"
     # The Vega-Lite chart hook is mounted with the encoded spec.
-    assert html =~ ~s(id="vega-weight")
+    assert html =~ ~s(id="vega-measurement")
     assert html =~ ~s(phx-hook="VegaLite")
-    refute html =~ "Not enough weight data yet"
+    refute html =~ "Not enough data yet"
   end
 
-  test "weight trend shows the empty state with fewer than 2 weights", %{
+  test "progress chart shows the empty state with fewer than 2 readings", %{
     conn: conn,
     client_user: client_user
   } do
     {:ok, _view, html} = live(conn, "/nutritionist/clients/#{client_user.id}")
 
-    assert html =~ "Weight trend"
-    assert html =~ "Not enough weight data yet"
-    refute html =~ ~s(id="vega-weight")
+    assert html =~ "Progress trend"
+    assert html =~ "Not enough data yet"
+    refute html =~ ~s(id="vega-measurement")
+  end
+
+  test "a new visit persists the body-composition measurements", %{
+    conn: conn,
+    nutritionist: nutritionist,
+    client_user: client_user
+  } do
+    {:ok, view, _html} = live(conn, "/nutritionist/clients/#{client_user.id}")
+
+    view |> element("button", "New visit") |> render_click()
+
+    view
+    |> form("#new-visit-modal form",
+      consultation_note: %{
+        visit_number: "1",
+        visit_date: "2026-02-01",
+        modality: "in_person",
+        weight_kg: "88.0",
+        body_fat_percentage: "27.5",
+        waist_cm: "82.0",
+        muscle_mass_kg: "31.0"
+      }
+    )
+    |> render_submit()
+
+    record = Professionals.get_client_record_by_user(nutritionist.id, client_user.id)
+    assert [note] = Professionals.list_consultation_notes(record.id)
+    assert note.weight_kg == 88.0
+    assert note.body_fat_percentage == 27.5
+    assert note.waist_cm == 82.0
+    assert note.muscle_mass_kg == 31.0
+  end
+
+  test "the progress chart offers a metric selector across available metrics", %{
+    conn: conn,
+    nutritionist: nutritionist,
+    client_user: client_user
+  } do
+    {:ok, record} =
+      Professionals.create_client_record(%{
+        professional_id: nutritionist.id,
+        user_id: client_user.id,
+        full_name: "Platform Client"
+      })
+
+    for {date, bf} <- [{~D[2026-01-10], 30.0}, {~D[2026-02-10], 28.0}] do
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          professional_client_id: record.id,
+          visit_date: date,
+          weight_kg: 88.0,
+          body_fat_percentage: bf
+        })
+    end
+
+    {:ok, view, html} = live(conn, "/nutritionist/clients/#{client_user.id}")
+
+    # Both weight and body fat have >= 2 points, so both appear in the selector.
+    assert html =~ "Weight"
+    assert html =~ "Body fat"
+
+    # Switching metric rebuilds the chart without error.
+    html = render_change(view, "select_metric", %{"metric" => "body_fat_percentage"})
+    assert html =~ ~s(id="vega-measurement")
   end
 
   test "adding dietary history inline lazily creates the record and intake", %{

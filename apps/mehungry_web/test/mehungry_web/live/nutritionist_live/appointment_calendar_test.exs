@@ -135,4 +135,87 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
     assert render(view) =~ "Select one of your own clients."
     assert Repo.aggregate(Professionals.Appointment, :count) == before
   end
+
+  describe "log measurement" do
+    setup %{attacker: attacker} do
+      client = Mehungry.AccountsFixtures.user_fixture()
+
+      {:ok, appt} =
+        Professionals.create_appointment(%{
+          professional_id: attacker.id,
+          client_id: client.id,
+          scheduled_at: ~N[2099-02-01 10:00:00],
+          ends_at: ~N[2099-02-01 11:00:00],
+          title: "My consultation",
+          status: "accepted"
+        })
+
+      %{own_appt: appt, measured_client: client}
+    end
+
+    test "logs a measurement linked to the appointment, auto-filling BMI/BMR", %{
+      conn: conn,
+      attacker: attacker,
+      own_appt: appt,
+      measured_client: client
+    } do
+      # Pre-create the client file + an intake so BMI/BMR can be derived.
+      {:ok, record} = Professionals.ensure_client_record(attacker.id, client)
+
+      {:ok, _intake} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "assessed_on" => "2026-01-01",
+          "height_m" => "1.70",
+          "sex" => "female",
+          "age" => "34"
+        })
+
+      {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+
+      html = render_click(view, "edit_appointment", %{"id" => to_string(appt.id)})
+      assert html =~ "Log measurement"
+
+      render_click(view, "log_measurement", %{"id" => to_string(appt.id)})
+
+      render_submit(view, "save_measurement", %{
+        "consultation_note" => %{
+          "visit_date" => "2099-02-01",
+          "weight_kg" => "72",
+          "body_fat_percentage" => "28"
+        }
+      })
+
+      note =
+        Professionals.ConsultationNote
+        |> Repo.get_by(appointment_id: appt.id)
+
+      assert note
+      assert note.professional_client_id == record.id
+      assert note.weight_kg == 72.0
+      assert note.body_fat_percentage == 28.0
+      assert note.bmi == 24.9
+      assert note.bmr_kcal == 1452
+    end
+
+    test "hides Log measurement for an external-client appointment", %{
+      conn: conn,
+      attacker: attacker
+    } do
+      {:ok, external} =
+        Professionals.create_appointment(%{
+          professional_id: attacker.id,
+          external_client_name: "Walk-in",
+          scheduled_at: ~N[2099-03-01 10:00:00],
+          ends_at: ~N[2099-03-01 11:00:00],
+          title: "External",
+          status: "accepted"
+        })
+
+      {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+      html = render_click(view, "edit_appointment", %{"id" => to_string(external.id)})
+
+      refute html =~ "Log measurement"
+    end
+  end
 end

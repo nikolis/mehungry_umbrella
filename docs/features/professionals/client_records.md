@@ -51,9 +51,17 @@ client keyed by `assessed_on`, so a client can be re-assessed over time.
 
 ### `ConsultationNote` — table `consultation_notes`
 A clinical progress note for a visit (distinct from `Appointment`; may optionally reference one).
+It also carries the per-visit **body measurements** that drive the client progress chart.
 - `visit_number` (intentionally not unique — real histories skip/repeat), `visit_date`,
   `modality` (`in_person | phone | online`, via `ConsultationNote.modalities/0`), `body`, `todo`,
-  `weight_kg`, `details`.
+  `details`.
+- **Measurements** — directly entered: `weight_kg`, `body_fat_percentage` (validated 0–100),
+  `waist_cm`, `muscle_mass_kg` (all floats). **Auto-computed on save**: `bmi` (float) and
+  `bmr_kcal` (integer), derived from the note's `weight_kg` + the client's **latest `ClientIntake`**
+  (`height_m`/`sex`/`age`) via `Anthropometrics.compute/1`, filling only blanks the nutritionist
+  left (never overwriting a typed value; both stay `nil` when the client has no intake). The fill
+  lives in `create_consultation_note/1`/`update_consultation_note/2` (context), not the changeset,
+  because the inputs span two rows.
 
 ### `ClientCondition` — table `professional_client_conditions`
 The **structured client↔condition link**: a join row connecting a `ProfessionalClient` to an
@@ -80,6 +88,15 @@ previously a client's conditions lived only as free text inside `ClientIntake.de
   `change_intake/2`.
 - **Notes:** `list_consultation_notes/1` (chronological), `create_consultation_note/1`,
   `update_consultation_note/2`, `delete_consultation_note/1`, `change_consultation_note/2`.
+- **Progress / measurements:** `measurement_history/1` (per-client dated points, each carrying every
+  metric present — `weight_kg`, `body_fat_percentage`, `waist_cm`, `muscle_mass_kg`, `bmi`,
+  `bmr_kcal` — merged from intakes + consultation notes, sorted by date);
+  `weight_history/1` (the legacy weight-only slice, still used where only weight is plotted);
+  `measurement_history_for_user/1` (a **user-scoped**, cross-nutritionist aggregation powering the
+  client's own "My progress" chart — pass only the viewer's own id); `measurement_metrics/0`.
+- **Lazy file:** `ensure_client_record/2` — fetches the professional's record for a user, creating a
+  minimal one if none exists (the single lazy-create shared by the client file and appointment
+  measurement logging).
 - **Conditions:** `list_client_conditions/1` (linked `Health.Condition`s, name-ordered),
   `add_client_condition/2` (idempotent — a duplicate pair is a no-op via `on_conflict: :nothing`),
   `remove_client_condition/2` (no-op if unlinked, returns `{:ok, count}`).
@@ -157,7 +174,31 @@ modality, weight) with the full body/todo revealed on expand via client-side `JS
 chevron `JS.toggle_class("rotate-180")` (no server round-trip). A **View full dietary history**
 link deep-links to `/nutritionist/records/:id`. A **+ New visit** button opens a `<.modal>` form
 (`save_visit`) that **lazily creates** the `ProfessionalClient` (from the client `User`'s
-name/email) on the first visit if none exists, then `create_consultation_note/1`.
+name/email) on the first visit if none exists, then `create_consultation_note/1`. The visit form
+captures the full measurement set (weight, body fat %, waist, muscle mass); BMI/BMR are filled
+automatically from the client's latest intake.
+
+## Progress tracking — measurement chart
+
+The overview renders a **Progress trend** chart below the visits: `measurement_history/1` feeds a
+single-series VegaLite line+point spec (shared `MehungryWeb.MeasurementChart`), with a metric
+selector offering every metric that has **≥2 dated readings** (one metric at a time — the units are
+incompatible). The chart is gated on ≥2 points; otherwise an empty state shows.
+
+Measurements can be logged two ways, both writing a `ConsultationNote`:
+1. **From the client file** — the **+ New visit** form (above).
+2. **From the meeting** — a **"Log measurement"** button in the appointment detail modal on
+   `/nutritionist/appointments` (`NutritionistLive.AppointmentCalendar`). It resolves the appointment's
+   client `User` → `ProfessionalClient` via `ensure_client_record/2` (lazy-create) and opens a
+   measurement form whose saved note is pre-linked to that `appointment_id`. The button is **hidden
+   for external-client appointments** (no `client_id` → no platform user → no clinical file possible).
+
+**Client-facing view.** The client sees their own progress on their profile (`/profile` →
+**My progress** tab, owner-only). `measurement_history_for_user/1` aggregates every
+`ProfessionalClient` record keyed to the viewer's `user_id` (across all nutritionists) and renders
+the same chart. The read path uses only `current_user.id` and the tab is rendered only on the
+owner's own `:index` profile (never on a `:show` of someone else) — a client only ever sees their
+own body data.
 
 ## The payoff — the client file feeds the AI meal-plan draft
 

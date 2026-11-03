@@ -42,15 +42,27 @@ config :mehungry, :platform_fee_vat_bps, 2400
 # Client refund tiers: full refund if cancelling >= 24h out, 50% if >= 4h, else 0.
 config :mehungry, :consultation_free_cancel_hours, 24
 config :mehungry, :consultation_partial_refund_hours, 4
-# Connected-account classification (set on each nutritionist's Stripe account at
-# creation). We describe the service as non-medical nutrition/wellness coaching so
-# Stripe's risk review lands in the right, unrestricted category; the nutritionist
-# also picks the "Health and wellness coaching" industry during Express onboarding.
+# Connected-account classification. We describe the service as non-medical
+# nutrition/wellness coaching so Stripe's risk review lands in the right,
+# unrestricted category. On Accounts v2 these are NOT sent at account creation
+# (the v2 business-profile field shape differs); the nutritionist instead picks
+# the "Health and wellness coaching" industry during Express onboarding, which is
+# what Stripe auto-maps. Kept here as the canonical copy + for reference.
 config :mehungry,
        :connect_product_description,
        "Nutrition and wellness coaching consultations booked through M3Hungry. Counseling and education — not medical diagnosis or treatment."
 
 config :mehungry, :connect_business_url, "https://www.m3hungry.com"
+# Accounts v2 API version. Connect account lifecycle (create / onboarding link /
+# status / account webhooks) runs on the v2 core endpoints, which are still
+# delivered on a preview API version pinned here. Bump this when migrating to a
+# newer preview, or once v2 leaves preview, to the GA version string. Only the
+# /v2/core/* calls send it; subscriptions stay on the stable v1 endpoints.
+config :mehungry, :stripe_accounts_api_version, "2026-10-28.preview"
+# Home country stamped on each connected account at creation (ISO-3166 alpha-2).
+# ~all nutritionists are in Greece; a non-GR nutritionist needs this overridden
+# before they onboard (v2 account creation requires identity.country).
+config :mehungry, :connect_account_country, "GR"
 # Leave :connect_account_mcc UNSET — Stripe has no numeric "wellness coaching" MCC,
 # and a manually set code must match the account's chosen industry or Stripe
 # rejects/overrides it. Rely on industry auto-assignment. Only set this (to a

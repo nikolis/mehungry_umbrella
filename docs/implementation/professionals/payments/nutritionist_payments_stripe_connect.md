@@ -54,15 +54,21 @@ Onboarding only — enough for a nutritionist to become payable, with no chargin
 
 - **Schema** (`professional_profiles`): `stripe_connect_account_id`, `stripe_charges_enabled`,
   `consultation_fee_cents`.
-- **`Billing.StripeHandler`**:
-  - `create_connect_account/1` → `POST /accounts` (Express, requests `transfers` +
-    `card_payments` capabilities).
-  - `create_account_link/2` → `POST /account_links` (`account_onboarding`) — the hosted
-    onboarding URL.
-  - `get_connect_account/1` → `GET /accounts/:id` — reads `charges_enabled` /
-    `details_submitted` / `payouts_enabled`.
-  - Webhook `account.updated` → `Professionals.set_stripe_charges_enabled/2` flips the stored
-    flag so the UI shows "connected".
+- **`Billing.StripeHandler`** (account lifecycle on **Accounts v2** since 2026-11-03 — see
+  `go_live_runbook.md` §1):
+  - `create_connect_account/1` → `POST /v2/core/accounts` (Express dashboard; requests
+    `configuration.merchant.card_payments` **and** `configuration.recipient.stripe_balance.stripe_transfers`
+    — both, because we keep `on_behalf_of` with the nutritionist as merchant of record; platform owns
+    fees/losses).
+  - `create_account_link/3` → `POST /v2/core/account_links` (`use_case.account_onboarding`,
+    `collection_options.fields: eventually_due`) — the hosted onboarding URL.
+  - `get_connect_account/1` → `GET /v2/core/accounts/:id` — `charges_enabled` is derived as **both**
+    the merchant `card_payments` and recipient `stripe_transfers` capability statuses = `active`.
+  - `create_login_link/1` → v1 `login_links` (unchanged; works for v2 Express accounts).
+  - Webhook: thin `v2.core.account[...].capability_status_updated` → `related_object.id` →
+    `Professionals.sync_stripe_account_status/1` re-fetches status and flips the stored flag so the UI
+    shows "connected". The v1 `account.updated` → `set_stripe_charges_enabled/2` clause is kept during
+    the transition.
 - **UI**: `/nutritionist/profile` → "Connect payouts with Stripe" starts onboarding;
   Stripe returns to `/nutritionist/profile?stripe=return`, which re-syncs status. A green
   "Payouts connected" badge shows when `charges_enabled`.
@@ -94,3 +100,14 @@ Connect onboarding: click "Connect payouts", complete the Express onboarding wit
 test data, confirm the browser returns to `/nutritionist/profile?stripe=return` and the badge
 flips to connected; confirm `account.updated` also flips it via webhook. Use
 `stripe listen --forward-to /webhooks/stripe` locally.
+
+## 7. Reporting over the ledger
+
+The nutritionist **Earnings & pipeline** page (`/nutritionist/analytics`) reads this ledger —
+never Stripe — for all revenue figures. Net is the single shared formula
+`amount_cents − platform_fee_cents − refunded_amount_cents` over `paid`/`partially_refunded`
+rows, identical to `AppointmentPayment.net_cents/1`, so a dashboard total can never drift from
+the ledger. The SQL-aggregate functions live in `Mehungry.Professionals`:
+`net_earnings_cents/2`, `in_flight_cents/1`, `count_pending_requests/1`, `revenue_per_period/3`,
+`appointments_per_week/2`, `revenue_by_service/2`, `revenue_by_outcome/2`,
+`revenue_new_vs_returning/2`. See `docs/features/professionals/analytics.md`.

@@ -21,6 +21,11 @@ defmodule Mehungry.Professionals.ConsultationNote do
     field :body, :string
     field :todo, :string
     field :weight_kg, :float
+    field :body_fat_percentage, :float
+    field :waist_cm, :float
+    field :muscle_mass_kg, :float
+    field :bmi, :float
+    field :bmr_kcal, :integer
     field :details, :map, default: %{}
 
     belongs_to :professional_client, Mehungry.Professionals.ProfessionalClient
@@ -40,10 +45,22 @@ defmodule Mehungry.Professionals.ConsultationNote do
       :body,
       :todo,
       :weight_kg,
+      :body_fat_percentage,
+      :waist_cm,
+      :muscle_mass_kg,
+      :bmi,
+      :bmr_kcal,
       :details
     ])
     |> validate_required([:professional_client_id])
     |> validate_inclusion(:modality, @modalities)
+    |> validate_number(:weight_kg, greater_than: 0)
+    |> validate_number(:body_fat_percentage,
+      greater_than_or_equal_to: 0,
+      less_than_or_equal_to: 100
+    )
+    |> validate_number(:waist_cm, greater_than: 0)
+    |> validate_number(:muscle_mass_kg, greater_than: 0)
     |> foreign_key_constraint(:professional_client_id)
     |> foreign_key_constraint(:appointment_id)
   end

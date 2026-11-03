@@ -14,6 +14,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias Mehungry.Posts
   alias Mehungry.Professionals
   alias Mehungry.Professionals.ProfessionalProfile
+  alias MehungryWeb.MeasurementChart
 
   @impl true
   def mount(_params, session, socket) do
@@ -39,6 +40,10 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:friends_ingredients, [])
      |> assign(:user_meal_plans, [])
      |> assign(:nutritionist_assignment, nil)
+     |> assign(:measurement_history, [])
+     |> assign(:available_metrics, [])
+     |> assign(:selected_metric, nil)
+     |> assign(:measurement_chart_spec, nil)
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
@@ -53,7 +58,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  @profile_tabs ~w(created saved meal_plans ingredients edit_profile connected_accounts)
+  @profile_tabs ~w(created saved meal_plans progress ingredients edit_profile connected_accounts)
 
   defp content_state_from_tab(tab, live_action) when tab in @profile_tabs do
     case {tab, live_action} do
@@ -62,7 +67,8 @@ defmodule MehungryWeb.ProfileLive.Index do
              "edit_profile",
              "connected_accounts",
              "ingredients",
-             "meal_plans"
+             "meal_plans",
+             "progress"
            ] ->
         :created
 
@@ -279,6 +285,18 @@ defmodule MehungryWeb.ProfileLive.Index do
           nil
       end
 
+    # The client's own body-measurement progress, loaded only for the Progress
+    # tab. Keyed strictly on current_user.id — a client only ever sees their own
+    # measurements, aggregated across every nutritionist who keeps a file on them.
+    measurement_history =
+      case {content_state, is_nil(current_user)} do
+        {:progress, false} -> Professionals.measurement_history_for_user(current_user.id)
+        _ -> []
+      end
+
+    available_metrics = MeasurementChart.available_metrics(measurement_history)
+    selected_metric = MeasurementChart.pick_metric(nil, available_metrics)
+
     # Tab badges must show real totals even for tabs whose lists aren't loaded
     # (only the active tab's list is fetched above). Cheap COUNT queries, always.
     socket
@@ -289,6 +307,13 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:friends_ingredients, friends_ingredients)
     |> assign(:user_meal_plans, user_meal_plans)
     |> assign(:nutritionist_assignment, nutritionist_assignment)
+    |> assign(:measurement_history, measurement_history)
+    |> assign(:available_metrics, available_metrics)
+    |> assign(:selected_metric, selected_metric)
+    |> assign(
+      :measurement_chart_spec,
+      MeasurementChart.build_spec(measurement_history, selected_metric, :container)
+    )
     |> assign(:created_count, Food.count_user_created_recipes(current_user.id) || 0)
     |> assign(:saved_count, Accounts.count_user_saved_recipes(current_user.id) || 0)
     |> assign(:meal_plans_count, PublishedPlans.count_plans_for_user(current_user.id))
@@ -365,6 +390,31 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   defp plural(1, word), do: word
   defp plural(_, word), do: word <> "s"
+
+  # The VegaLite JS hook pushes "resize_chart" with the measured container width;
+  # rebuild the progress spec at that width. (Without this handler the event crashes.)
+  def handle_event("resize_chart", %{"width" => width}, socket) when width > 50 do
+    spec =
+      MeasurementChart.build_spec(
+        socket.assigns.measurement_history,
+        socket.assigns.selected_metric,
+        width
+      )
+
+    {:noreply, assign(socket, :measurement_chart_spec, spec)}
+  end
+
+  def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
+
+  def handle_event("select_metric", %{"metric" => metric}, socket) do
+    {:noreply,
+     socket
+     |> assign(:selected_metric, metric)
+     |> assign(
+       :measurement_chart_spec,
+       MeasurementChart.build_spec(socket.assigns.measurement_history, metric, :container)
+     )}
+  end
 
   def handle_event("add_friend", %{"id" => id}, socket) do
     requester_id = socket.assigns.current_user.id
@@ -651,6 +701,55 @@ defmodule MehungryWeb.ProfileLive.Index do
             Remove
           </button>
         </div>
+      </div>
+    </div>
+    """
+  end
+
+  def get_profile_content(%{content_state: :progress} = assigns) do
+    ~H"""
+    <div class="pb-20 w-full max-w-3xl mx-auto px-4">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4 gap-4">
+          <h2 class="text-parchment font-display font-semibold">My progress</h2>
+          <%= if @available_metrics != [] do %>
+            <form id="progress-metric-selector" phx-change="select_metric">
+              <select
+                name="metric"
+                class="bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-1.5 text-parchment text-sm focus:outline-none focus:border-paprika"
+              >
+                <%= for key <- @available_metrics do %>
+                  <option value={key} selected={key == @selected_metric}>
+                    {MeasurementChart.metric_label(key)}
+                  </option>
+                <% end %>
+              </select>
+            </form>
+          <% end %>
+        </div>
+        <%= if @available_metrics != [] && @measurement_chart_spec do %>
+          <div
+            id="profile-measurement-chart-wrapper"
+            phx-hook="ResponsiveChart"
+            data-id="measurement"
+            data-origin_id="measurement"
+            data-size="full"
+            class="w-full overflow-hidden"
+          >
+            <div
+              id="profile-vega-measurement"
+              phx-hook="VegaLite"
+              data-spec={Jason.encode!(@measurement_chart_spec)}
+              class="w-full"
+            >
+            </div>
+          </div>
+        <% else %>
+          <p class="text-parchment-dim text-sm">
+            Your nutritionist hasn't recorded measurements yet. Once you've had at least
+            two measured visits, your progress will chart here.
+          </p>
+        <% end %>
       </div>
     </div>
     """

@@ -12,6 +12,24 @@ all of them.
 
 ## 1. Accounts v1 → v2 migration plan
 
+> **Status (2026-11-03): the code migration is DONE and merged.** The account
+> lifecycle (`Billing.StripeHandler.create_connect_account/1`,
+> `create_account_link/3`, `get_connect_account/1`, the account webhook) now runs
+> on **Accounts v2** (`/v2/core/*`, JSON body, `Stripe-Version` preview header
+> pinned in `config :mehungry, :stripe_accounts_api_version` = `2026-10-28.preview`).
+> **Decision (owner, 2026-11-03):** we **keep `on_behalf_of`** (nutritionist is
+> merchant of record, bears Stripe fees, their name on receipts, full 5% stays
+> net), so each account requests **both** `configuration.merchant`
+> (`card_payments`) **and** `configuration.recipient`
+> (`stripe_balance.stripe_transfers`). Money movement (Checkout/capture/cancel/
+> refund) is unchanged. `create_login_link/1` stays on the v1 `login_links`
+> endpoint (shared account id; works for v2 Express accounts). What's left before
+> this track is "launch-ready" is **operational**: still verify in a fresh sandbox
+> with *Accounts v1 support OFF* (so the test proves v2), and decide whether to
+> stay on the pinned preview version for live money or wait for v2 GA (see the
+> caveat below). The v1 `account.updated` webhook clause is kept alongside the v2
+> one during transition.
+
 ### Why
 Stripe now **defaults new Connect integrations to Accounts v2** (`POST /v2/core/accounts`) and
 **rejects v1 account creation** in fresh sandboxes/accounts unless "Accounts v1 support" is enabled
@@ -30,44 +48,38 @@ https://api.stripe.com/v1`).
   backfill** — it's a pure code swap. Doing it before the first real nutritionist onboards avoids
   ever having to migrate account records.
 
-### What actually changes (v1 → v2) — scoped to our `Billing.StripeHandler`
-| Area | v1 (today) | v2 |
+### What actually changed (v1 → v2) — scoped to our `Billing.StripeHandler` (DONE)
+| Area | v1 (before) | v2 (now, shipped) |
 |---|---|---|
-| Base/path | `POST /v1/accounts` | `POST /v2/core/accounts` (+ `Stripe-Version` preview header, `include[]=configuration.merchant`) |
-| Account shape | flat `business_profile[...]`, `capabilities[...]` | nested `configuration.merchant.{mcc, capabilities, ...}` + `identity` + **controller** properties |
-| Onboarding link | `POST /v1/account_links` | Account Links v2 / hosted onboarding (connected to the v2 account) |
-| Status read (`get_connect_account/1`) | `account["charges_enabled"] / details_submitted / payouts_enabled` | read `configuration.merchant.capabilities` (e.g. `card_payments`, `transfers` = `active`) |
-| Login link | `POST /v1/accounts/:id/login_links` | v2 dashboard/login equivalent |
-| `account.updated` webhook | `account["charges_enabled"]` | **`v2.core.account[configuration.merchant].updated`** — different event type + payload shape |
-| `account.application.deauthorized` | `event["account"]` | confirm v2 equivalent |
-| **Charging flow** (Checkout session, PI capture/cancel, refunds, `transfer_data[destination]` + `on_behalf_of` + `application_fee_amount`) | — | **largely unchanged**; these reference the connected account id and are not Accounts-version-specific |
+| Base/path | `POST /v1/accounts` (form-encoded) | `POST /v2/core/accounts` — **JSON body** + `Stripe-Version: 2026-10-28.preview` header (`post_v2/2` helper) |
+| Account shape | flat `business_profile[...]`, `capabilities[...]` | nested `configuration.merchant.capabilities.card_payments` **and** `configuration.recipient.capabilities.stripe_balance.stripe_transfers` + `identity.country` + `dashboard: express` + `defaults.responsibilities.{fees,losses}_collector: application` |
+| Onboarding link | `POST /v1/account_links` (`type: account_onboarding`) | `POST /v2/core/account_links` with `use_case.account_onboarding.{refresh_url,return_url,collection_options.fields: eventually_due}` |
+| Status read (`get_connect_account/1`) | `account["charges_enabled"] / details_submitted / payouts_enabled` | `GET /v2/core/accounts/:id?include=configuration.merchant&…recipient&…requirements`; `charges_enabled` ⇔ **both** `merchant…card_payments.status` **and** `recipient…stripe_transfers.status` = `active` |
+| Login link | `POST /v1/accounts/:id/login_links` | **unchanged** — v1 `login_links` works for v2 Express accounts (shared `acct_…` id) |
+| account webhook | `account.updated` → `account["charges_enabled"]` | thin `v2.core.account[...].capability_status_updated` (merchant/recipient) + `[requirements].updated` → `related_object.id` → re-fetch + recompute via `Professionals.sync_stripe_account_status/1`. v1 clause kept during transition. |
+| `account.application.deauthorized` | `event["account"]` | left as-is — platform-created Express/recipient accounts don't user-deauthorize; no v2 equivalent needed |
+| **Charging flow** (Checkout session, PI capture/cancel, refunds, `transfer_data[destination]` + `on_behalf_of` + `application_fee_amount`) | — | **unchanged** — references the connected account id, not Accounts-version-specific. `on_behalf_of` is **kept** (nutritionist = MoR), which is why both merchant + recipient configs are requested |
 
-**Key insight:** the migration is contained to the **account lifecycle** (create / onboarding /
-status / account webhooks) — roughly `create_connect_account/1`, `create_account_link/*`,
-`get_connect_account/1`, `create_login_link/1`, and the two account webhook clauses. The
-money-movement half (what we spent the most effort verifying) is untouched.
+**Key insight (held):** the migration stayed contained to the **account lifecycle**
+(`create_connect_account/1`, `create_account_link/3`, `get_connect_account/1`, the account webhook
+clause + the new `Professionals.sync_stripe_account_status/1`). The money-movement half is untouched.
 
-### Steps
-1. Make the API version + base path configurable per call (add a `Stripe-Version` header helper;
-   allow `/v2/...` paths). Keep subscriptions (`/v1/checkout`, `/v1/subscriptions`) on v1.
-2. Rewrite `create_connect_account/1` → `POST /v2/core/accounts` with
-   `configuration.merchant.{mcc, capabilities[card_payments][requested], capabilities[transfers][requested]}`
-   + `identity` + the **controller** block (platform-controlled, Express-equivalent dashboard/fees/losses).
-3. Rewrite `get_connect_account/1` to derive `charges_enabled`-equivalent from
-   `configuration.merchant.capabilities` (we can keep the stored boolean `stripe_charges_enabled`
-   semantics — "can be charged onto now").
-4. Rewrite account onboarding link + login link to the v2 equivalents.
-5. Add the `v2.core.account[configuration.merchant].updated` webhook clause → keep calling
-   `Professionals.set_stripe_charges_enabled/2`; retire the v1 `account.updated` clause (or keep
-   both during transition).
-6. Keep `business_profile`/MCC classification intent (now `configuration.merchant.mcc`).
-7. Verify in a **fresh sandbox with Accounts v1 support OFF** (so the test proves v2), re-running
-   the full `go_live_runbook` §... test-mode flow (onboard → book → authorize → capture → refund).
-8. Update `stripe_handler_test.exs` / stubs for the v2 shapes.
+### Steps — all code steps ✅ done (2026-11-03)
+1. ✅ v2 HTTP layer: `post_v2/2` (JSON) + `get_v2/1` + `Stripe-Version` header; `:stripe_accounts_api_version` config. Subscriptions stay on the v1 form-encoded path.
+2. ✅ `create_connect_account/1` → `POST /v2/core/accounts` with merchant (`card_payments`) + recipient (`stripe_transfers`) configs, `identity.country` (`:connect_account_country`, default `GR`), express dashboard, application fees/losses. Optional `:connect_account_mcc` nested under merchant.
+3. ✅ `get_connect_account/1` reads the two v2 capability statuses; stored `stripe_charges_enabled` keeps "can be charged onto now" semantics (needs both active).
+4. ✅ Onboarding link → `POST /v2/core/account_links`. Login link kept on v1 (works for v2 Express).
+5. ✅ v2 `capability_status_updated` webhook clause → `Professionals.sync_stripe_account_status/1` (re-fetch, not inline); v1 `account.updated` kept during transition.
+6. ✅ MCC/classification: industry chosen at onboarding; `business_profile` product/url **not** sent on v2 create (field shape differs) — config retained as reference.
+7. ⏳ **Operational, not done:** verify in a **fresh sandbox with Accounts v1 support OFF** (so the test proves v2), re-running the full test-mode flow (onboard → book → authorize → capture → refund).
+8. ✅ `stripe_handler_test.exs` covers v2 `capability_status_updated` dispatch (stubbed `get_connect_account`); `StripePaymentClientStub` gained `get_connect_account/1`.
 
-### Effort
-~1–1.5 eng days (account lifecycle only), + test-mode re-verification. **Not** on the launch
-critical path if v1-support is enabled.
+### Caveat before live money
+The pinned `2026-10-28.preview` version is a **preview** API. Moving real money on a preview version
+is the one remaining judgement call: either accept the pin (it's isolated to the account-lifecycle
+calls — money movement is on stable endpoints) or wait for Accounts v2 GA and bump the version string.
+The §1 alternative — launch on **Accounts v1 support** and keep this v2 code dark — is also still open,
+since the v1 `account.updated` clause remains.
 
 ---
 
@@ -180,7 +192,7 @@ request-only (no charge), prices become display-only. In-flight authorized holds
 
 ## Checklist
 
-- [ ] **§1** Enable Accounts v1 support on prod **or** ship v2 migration
+- [x] **§1** v2 migration code shipped (2026-11-03). ⏳ Still: verify in a fresh sandbox with Accounts v1 support OFF, **or** enable Accounts v1 support on prod to launch on the dark v1 path instead
 - [ ] **§2** Enable Connect + platform profile/branding/support; confirm `debit_negative_balances`
 - [ ] **§2** Register webhook endpoint + events on `https://www.m3hungry.com/webhooks/stripe`; set `STRIPE_WEBHOOK_SECRET`
 - [ ] **§3a** Owner approves refund copy → wire into Terms + booking step

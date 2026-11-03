@@ -342,6 +342,7 @@ defmodule MehungryWeb.Router do
       on_mount: [MehungryWeb.NutritionistAuthLive, MehungryWeb.SessionMetrics],
       layout: {MehungryWeb.LayoutView, :nutritionist_live} do
       live("/", NutritionistLive.Dashboard, :index)
+      live("/analytics", NutritionistLive.AnalyticsLive, :index)
       live("/profile", NutritionistLive.ProfileEdit, :edit)
       live("/payments", NutritionistLive.Payments, :index)
       live("/invitations", NutritionistLive.Invitations, :index)

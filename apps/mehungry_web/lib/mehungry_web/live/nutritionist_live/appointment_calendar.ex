@@ -1,8 +1,10 @@
 defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   use MehungryWeb, :live_view
 
+  alias Mehungry.Accounts
   alias Mehungry.Professionals
   alias Mehungry.Professionals.Appointment
+  alias Mehungry.Professionals.ConsultationNote
   alias Mehungry.ObanWorkers.AppointmentMailerWorker
 
   # Vertical day-agenda bounds (wall-clock hours) and pixel height per hour.
@@ -52,6 +54,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> assign(:show_modal, not is_nil(preselected_client_id))
       |> assign(:show_day_modal, false)
       |> assign(:day_busy, [])
+      |> assign(:show_measurement_modal, false)
+      |> assign(:measurement_form, nil)
+      |> assign(:measurement_record_id, nil)
+      |> assign(:measurement_appointment_id, nil)
       |> assign(:editing_appointment, nil)
       |> assign(:modal_client_id, preselected_client_id)
       |> assign(
@@ -152,6 +158,68 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   @impl true
   def handle_event("close_modal", _params, socket) do
     {:noreply, assign(socket, show_modal: false, editing_appointment: nil)}
+  end
+
+  @impl true
+  def handle_event("log_measurement", %{"id" => id}, socket) do
+    professional_id = socket.assigns.current_user.id
+
+    with appt when not is_nil(appt) <- fetch_owned(socket, id),
+         client_id when not is_nil(client_id) <- appt.client_id,
+         user <- Accounts.get_user!(client_id),
+         {:ok, record} <- Professionals.ensure_client_record(professional_id, user) do
+      note = %ConsultationNote{
+        visit_date: NaiveDateTime.to_date(appt.scheduled_at),
+        appointment_id: appt.id,
+        modality: "in_person"
+      }
+
+      {:noreply,
+       socket
+       |> assign(:show_modal, false)
+       |> assign(:show_measurement_modal, true)
+       |> assign(:measurement_record_id, record.id)
+       |> assign(:measurement_appointment_id, appt.id)
+       |> assign(:measurement_form, to_form(Professionals.change_consultation_note(note)))}
+    else
+      _ -> {:noreply, appointment_not_found(socket)}
+    end
+  end
+
+  @impl true
+  def handle_event("close_measurement_modal", _params, socket) do
+    {:noreply,
+     assign(socket,
+       show_measurement_modal: false,
+       measurement_form: nil,
+       measurement_record_id: nil,
+       measurement_appointment_id: nil
+     )}
+  end
+
+  @impl true
+  def handle_event("save_measurement", %{"consultation_note" => params}, socket) do
+    params =
+      Map.merge(params, %{
+        "professional_client_id" => socket.assigns.measurement_record_id,
+        "appointment_id" => socket.assigns.measurement_appointment_id
+      })
+
+    case Professionals.create_consultation_note(params) do
+      {:ok, _note} ->
+        {:noreply,
+         socket
+         |> assign(
+           show_measurement_modal: false,
+           measurement_form: nil,
+           measurement_record_id: nil,
+           measurement_appointment_id: nil
+         )
+         |> put_flash(:info, "Measurement logged.")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :measurement_form, to_form(changeset))}
+    end
   end
 
   @impl true
@@ -1057,9 +1125,97 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                     </button>
                   <% end %>
                 <% end %>
+                <%= if @editing_appointment && @editing_appointment.client_id do %>
+                  <button
+                    type="button"
+                    phx-click="log_measurement"
+                    phx-value-id={@editing_appointment.id}
+                    class="px-4 py-2 rounded-lg bg-basil/20 hover:bg-basil/30 text-basil text-sm transition"
+                  >
+                    Log measurement
+                  </button>
+                <% end %>
                 <button
                   type="button"
                   phx-click="close_modal"
+                  class="px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </.form>
+          </div>
+        </div>
+      <% end %>
+
+      <%= if @show_measurement_modal do %>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div class="bg-ink-panel border border-ink-panel2 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
+              <h3 class="text-parchment font-display font-semibold">Log measurement</h3>
+              <button
+                phx-click="close_measurement_modal"
+                class="text-parchment-dim hover:text-parchment transition"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <.form
+              for={@measurement_form}
+              id="measurement-form"
+              phx-submit="save_measurement"
+              class="flex flex-col flex-1 min-h-0"
+            >
+              <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <p class="text-parchment-dim text-xs">
+                  BMI and BMR are computed automatically from the client's latest intake.
+                </p>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-parchment-dim mb-1">Visit date</label>
+                    <.input field={@measurement_form[:visit_date]} type="date" />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-parchment-dim mb-1">Weight (kg)</label>
+                    <.input field={@measurement_form[:weight_kg]} type="number" step="any" />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-parchment-dim mb-1">Body fat (%)</label>
+                    <.input field={@measurement_form[:body_fat_percentage]} type="number" step="any" />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-parchment-dim mb-1">Waist (cm)</label>
+                    <.input field={@measurement_form[:waist_cm]} type="number" step="any" />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-parchment-dim mb-1">Muscle mass (kg)</label>
+                    <.input field={@measurement_form[:muscle_mass_kg]} type="number" step="any" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm text-parchment-dim mb-1">Notes (optional)</label>
+                  <.input field={@measurement_form[:body]} type="textarea" rows="2" />
+                </div>
+              </div>
+
+              <div class="px-6 py-4 border-t border-ink-panel2 flex-shrink-0 flex gap-3">
+                <button
+                  type="submit"
+                  class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-medium py-2 px-4 rounded-lg transition text-sm"
+                >
+                  Save measurement
+                </button>
+                <button
+                  type="button"
+                  phx-click="close_measurement_modal"
                   class="px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm transition"
                 >
                   Cancel

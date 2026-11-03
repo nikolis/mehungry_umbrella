@@ -362,6 +362,11 @@ defmodule MehungryWeb.LayoutView do
       <div class="flex-1 px-3 space-y-1 overflow-y-auto">
         <.nutritionist_link href="/nutritionist" icon="hero-squares-2x2" label="Dashboard" />
         <.nutritionist_link
+          href="/nutritionist/analytics"
+          icon="hero-chart-bar"
+          label="Analytics"
+        />
+        <.nutritionist_link
           href="/nutritionist/profile"
           icon="hero-identification"
           label="My Profile"

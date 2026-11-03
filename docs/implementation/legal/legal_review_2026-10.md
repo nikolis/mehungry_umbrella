@@ -12,7 +12,7 @@
 | Account (email, hashed password, OAuth profile) | Registration, Facebook/Google/Instagram sign-in | Normal |
 | Profile & preferences (diet, survey, calorie target, **health-condition badges**) | `Accounts.UserProfile` opt-in | **Special category (health)** |
 | User content (recipes, comments, votes, posts, meal plans, baskets, media) | User-generated | Normal |
-| **Nutritionist client records** (height/weight/BMI/BMR/TDEE, goals, free-text medical notes) | `Professionals.ClientIntake` / `ConsultationNote` / CSV import | **Special category (health) + PII** |
+| **Nutritionist client records** (height/weight/BMI/BMR/TDEE, **body fat %, waist, muscle mass**, goals, free-text medical notes) | `Professionals.ClientIntake` / `ConsultationNote` / CSV import | **Special category (health) + PII** (per-meeting body-composition measurements are additional health data; now also surfaced back to the client on their own `/profile` → My progress) |
 | Payment / subscription status | Stripe | Normal (cards never stored locally) |
 | Usage & device (IP, referrer, pages, timings, visitor_id) | Visit tracking + GA4 | Normal |
 
