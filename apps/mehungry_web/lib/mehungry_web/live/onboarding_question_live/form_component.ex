@@ -27,17 +27,17 @@ defmodule MehungryWeb.OnboardingQuestionLive.FormComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <.input field={@form[:prompt_en]} label="Question (English)" />
-        <.input field={@form[:prompt_el]} label="Question (Greek)" />
+        <.input field={@form[:prompt_en]} label={gettext("Question (English)")} />
+        <.input field={@form[:prompt_el]} label={gettext("Question (Greek)")} />
 
         <.input
           field={@form[:question_type]}
           type="select"
-          label="Answer type"
+          label={gettext("Answer type")}
           options={[
-            {"Free text / number (value)", "value"},
-            {"Multiple choice — pick one", "single_choice"},
-            {"Multiple choice — pick many", "multi_choice"}
+            {gettext("Free text / number (value)"), "value"},
+            {gettext("Multiple choice — pick one"), "single_choice"},
+            {gettext("Multiple choice — pick many"), "multi_choice"}
           ]}
         />
 
@@ -45,21 +45,21 @@ defmodule MehungryWeb.OnboardingQuestionLive.FormComponent do
           :if={@form[:question_type].value == "value"}
           field={@form[:value_kind]}
           type="select"
-          label="Value kind"
-          options={[{"Text", "text"}, {"Number", "number"}]}
+          label={gettext("Value kind")}
+          options={[{gettext("Text"), "text"}, {gettext("Number"), "number"}]}
         />
 
         <div :if={Question.choice_type?(@form[:question_type].value)} class="space-y-3">
-          <p class="text-sm font-semibold text-parchment-dim">Choices</p>
+          <p class="text-sm font-semibold text-parchment-dim">{gettext("Choices")}</p>
           <.inputs_for :let={opt} field={@form[:options]}>
             <div class="flex flex-col sm:flex-row sm:items-end gap-3 bg-black/20 border border-ink-panel2 rounded-xl p-3">
               <input type="hidden" name="question[options_sort][]" value={opt.index} />
               <input type="hidden" name={opt[:key].name} value={opt[:key].value} />
               <div class="flex-1">
-                <.input field={opt[:label_en]} label="Choice (English)" />
+                <.input field={opt[:label_en]} label={gettext("Choice (English)")} />
               </div>
               <div class="flex-1">
-                <.input field={opt[:label_el]} label="Choice (Greek)" />
+                <.input field={opt[:label_el]} label={gettext("Choice (Greek)")} />
               </div>
               <button
                 type="submit"
@@ -78,15 +78,15 @@ defmodule MehungryWeb.OnboardingQuestionLive.FormComponent do
             value="add_option"
             class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:bg-ink-panel2 hover:text-parchment text-xs font-semibold transition-colors"
           >
-            + Add choice
+            {gettext("+ Add choice")}
           </button>
         </div>
 
-        <.input field={@form[:required]} type="checkbox" label="Required" />
-        <.input field={@form[:active]} type="checkbox" label="Active (shown in onboarding)" />
+        <.input field={@form[:required]} type="checkbox" label={gettext("Required")} />
+        <.input field={@form[:active]} type="checkbox" label={gettext("Active (shown in onboarding)")} />
 
         <:actions>
-          <.button phx-disable-with="Saving...">Save question</.button>
+          <.button phx-disable-with={gettext("Saving...")}>{gettext("Save question")}</.button>
         </:actions>
       </.simple_form>
     </div>

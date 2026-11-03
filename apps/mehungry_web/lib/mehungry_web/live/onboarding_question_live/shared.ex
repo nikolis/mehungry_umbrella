@@ -21,13 +21,15 @@ defmodule MehungryWeb.OnboardingQuestionLive.Shared do
           phx-click="new"
           class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-sm font-semibold transition-colors"
         >
-          + Add question
+          {gettext("+ Add question")}
         </button>
       </div>
       <p class="text-sm text-parchment-dim mb-6">{@subheading}</p>
 
       <div :if={@questions == []} class="text-parchment-dim text-sm py-8 text-center">
-        No questions yet. Click <span class="font-semibold">Add question</span> to create one.
+        {gettext("No questions yet. Click")}
+        <span class="font-semibold">{gettext("Add question")}</span>
+        {gettext("to create one.")}
       </div>
 
       <ul class="space-y-2">
@@ -58,8 +60,8 @@ defmodule MehungryWeb.OnboardingQuestionLive.Shared do
             <p class="text-parchment font-medium truncate">{q.prompt_en}</p>
             <p class="text-xs text-parchment-dim flex items-center gap-2 mt-0.5">
               <span>{type_label(q)}</span>
-              <span :if={q.required} class="text-paprika">• required</span>
-              <span :if={!q.active} class="text-parchment-dim/60">• hidden</span>
+              <span :if={q.required} class="text-paprika">• {gettext("required")}</span>
+              <span :if={!q.active} class="text-parchment-dim/60">• {gettext("hidden")}</span>
             </p>
           </div>
 
@@ -73,7 +75,7 @@ defmodule MehungryWeb.OnboardingQuestionLive.Shared do
           <button
             phx-click="delete"
             phx-value-id={q.id}
-            data-confirm="Delete this question? Existing answers to it will also be removed."
+            data-confirm={gettext("Delete this question? Existing answers to it will also be removed.")}
             class="text-parchment-dim hover:text-red-400 transition-colors p-1"
           >
             <.icon name="hero-trash" class="w-4 h-4" />
@@ -85,7 +87,7 @@ defmodule MehungryWeb.OnboardingQuestionLive.Shared do
         <.live_component
           module={MehungryWeb.OnboardingQuestionLive.FormComponent}
           id={"onboarding-question-form-#{@editing.id || "new"}"}
-          title={if(@editing.id, do: "Edit question", else: "New question")}
+          title={if(@editing.id, do: gettext("Edit question"), else: gettext("New question"))}
           action={if(@editing.id, do: :edit, else: :new)}
           question={@editing}
         />
@@ -94,12 +96,12 @@ defmodule MehungryWeb.OnboardingQuestionLive.Shared do
     """
   end
 
-  def type_label(%Question{question_type: "value", value_kind: "number"}), do: "Number"
-  def type_label(%Question{question_type: "value"}), do: "Free text"
+  def type_label(%Question{question_type: "value", value_kind: "number"}), do: gettext("Number")
+  def type_label(%Question{question_type: "value"}), do: gettext("Free text")
 
   def type_label(%Question{question_type: "single_choice", options: options}),
-    do: "Pick one of #{length(options)}"
+    do: gettext("Pick one of %{count}", count: length(options))
 
   def type_label(%Question{question_type: "multi_choice", options: options}),
-    do: "Pick any of #{length(options)}"
+    do: gettext("Pick any of %{count}", count: length(options))
 end

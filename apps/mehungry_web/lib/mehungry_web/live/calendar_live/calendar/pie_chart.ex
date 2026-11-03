@@ -12,6 +12,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
   use Phoenix.LiveComponent
 
   import Phoenix.HTML, only: [raw: 1]
+  use Gettext, backend: MehungryWeb.Gettext
 
   # Categorical ramp derived from the brand: paprika + basil lead, then warm/earthy
   # hues that stay distinguishable against the dark `#211D16` panel. Cycled by slice.
@@ -80,8 +81,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
 
   # ── donut SVG ───────────────────────────────────────────────────────────────
   defp donut_svg([]) do
+    aria = gettext("No data")
+
     raw(
-      ~s(<svg viewBox="0 0 #{@size} #{@size}" class="w-full h-auto block" role="img" aria-label="No data">) <>
+      ~s(<svg viewBox="0 0 #{@size} #{@size}" class="w-full h-auto block" role="img" aria-label="#{aria}">) <>
         ~s(<circle cx="#{@cx}" cy="#{@cy}" r="#{(@r_out + @r_in) / 2}" fill="none" stroke="#2B2619" stroke-width="#{@r_out - @r_in}"/>) <>
         "</svg>"
     )
@@ -104,8 +107,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
 
   defp svg_wrap(body, slices) do
     label = slices |> Enum.map_join(", ", & &1.category)
+    aria = gettext("Nutrient breakdown: %{items}", items: esc(label))
 
-    ~s(<svg viewBox="0 0 #{@size} #{@size}" class="w-full h-auto block" role="img" aria-label="Nutrient breakdown: #{esc(label)}">) <>
+    ~s(<svg viewBox="0 0 #{@size} #{@size}" class="w-full h-auto block" role="img" aria-label="#{aria}">) <>
       body <>
       "</svg>"
   end

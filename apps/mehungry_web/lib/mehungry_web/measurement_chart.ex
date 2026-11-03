@@ -21,6 +21,7 @@ defmodule MehungryWeb.MeasurementChart do
 
   use Phoenix.Component
   import Phoenix.HTML, only: [raw: 1]
+  use Gettext, backend: MehungryWeb.Gettext
 
   # ── design tokens (these surfaces are always on the dark `ink-panel`) ──────────
   @c_basil "#45C4AE"
@@ -65,10 +66,19 @@ defmodule MehungryWeb.MeasurementChart do
   @doc "Display label for a metric key (e.g. `\"weight_kg\"` → `\"Weight\"`)."
   def metric_label(key) do
     case List.keyfind(@metrics, key, 0) do
-      {_, {label, _unit}} -> label
+      {_, {label, _unit}} -> translate_label(label)
       _ -> key
     end
   end
+
+  # @metrics labels are compile-time, so gettext is applied here at runtime.
+  defp translate_label("Weight"), do: gettext("Weight")
+  defp translate_label("Body fat"), do: gettext("Body fat")
+  defp translate_label("Waist"), do: gettext("Waist")
+  defp translate_label("Muscle mass"), do: gettext("Muscle mass")
+  defp translate_label("BMI"), do: gettext("BMI")
+  defp translate_label("BMR"), do: gettext("BMR")
+  defp translate_label(other), do: other
 
   @doc "Unit string for a metric key, or `nil` (e.g. BMI)."
   def metric_unit(key) do
@@ -270,7 +280,8 @@ defmodule MehungryWeb.MeasurementChart do
     y2 = y_of.(blo)
 
     ~s(<rect x="#{@ml}" y="#{f(y1)}" width="#{plot_w}" height="#{f(y2 - y1)}" fill="#{@c_basil}" opacity="0.1"/>) <>
-      ~s(<text x="#{@ml + plot_w - 6}" y="#{f(y1 + 13)}" text-anchor="end" fill="#{@c_basil}" opacity="0.8" font-size="10.5">healthy range</text>)
+      ~s(<text x="#{@ml + plot_w - 6}" y="#{f(y1 + 13)}" text-anchor="end" fill="#{@c_basil}" opacity="0.8" font-size="10.5">) <>
+      gettext("healthy range") <> "</text>"
   end
 
   defp gridlines_svg(lo, hi, y_of, plot_w) do
@@ -289,7 +300,8 @@ defmodule MehungryWeb.MeasurementChart do
     gy = y_of.(goal)
 
     ~s(<line x1="#{@ml}" y1="#{f(gy)}" x2="#{@ml + plot_w}" y2="#{f(gy)}" stroke="#{@c_paprika}" stroke-width="1.6" stroke-dasharray="5 4"/>) <>
-      ~s(<text x="#{@ml + 4}" y="#{f(gy - 6)}" fill="#{@c_paprika}" font-size="11" font-weight="600">goal #{fmt_num(Float.round(goal, 1))}</text>)
+      ~s(<text x="#{@ml + 4}" y="#{f(gy - 6)}" fill="#{@c_paprika}" font-size="11" font-weight="600">) <>
+      gettext("goal %{value}", value: fmt_num(Float.round(goal, 1))) <> "</text>"
   end
 
   defp area_line_svg(coords, base) do
@@ -460,9 +472,9 @@ defmodule MehungryWeb.MeasurementChart do
 
     <div :if={@selected_card} class="flex items-baseline gap-x-3 gap-y-1 flex-wrap mb-1">
       <span class="font-display text-parchment font-semibold">{@selected_card.label}</span>
-      <span class="text-parchment-dim text-sm tabular-nums">{@selected_card.current_display} now</span>
+      <span class="text-parchment-dim text-sm tabular-nums">{gettext("%{value} now", value: @selected_card.current_display)}</span>
       <span class={["text-sm font-semibold tabular-nums", tone_text(@selected_card.tone)]}>
-        {@selected_card.arrow} {@selected_card.delta_abs} since start
+        {@selected_card.arrow} {gettext("%{delta} since start", delta: @selected_card.delta_abs)}
       </span>
     </div>
 
@@ -470,16 +482,16 @@ defmodule MehungryWeb.MeasurementChart do
 
     <div class="flex gap-4 flex-wrap mt-2 text-xs text-parchment-dim">
       <span :if={:intake in @legend} class="inline-flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full" style="background:#45C4AE"></span>intake
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#45C4AE"></span>{gettext("intake")}
       </span>
       <span :if={:visit in @legend} class="inline-flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full" style="background:#211D16;border:1.5px solid #45C4AE"></span>visit
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#211D16;border:1.5px solid #45C4AE"></span>{gettext("visit")}
       </span>
       <span :if={:goal in @legend} class="inline-flex items-center gap-1.5">
-        <span class="inline-block w-4" style="border-top:2px dashed #E8622C"></span>goal
+        <span class="inline-block w-4" style="border-top:2px dashed #E8622C"></span>{gettext("goal")}
       </span>
       <span :if={:band in @legend} class="inline-flex items-center gap-1.5">
-        <span class="inline-block w-3.5 h-2.5 rounded-sm" style="background:rgba(69,196,174,0.18)"></span>healthy range
+        <span class="inline-block w-3.5 h-2.5 rounded-sm" style="background:rgba(69,196,174,0.18)"></span>{gettext("healthy range")}
       </span>
     </div>
     """

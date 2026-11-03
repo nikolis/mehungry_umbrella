@@ -888,6 +888,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/client_onboarding_live.ex:70
 #: lib/mehungry_web/live/onboarding/form_component.ex:70
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:89
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr ""
@@ -3782,6 +3783,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail.ex:1252
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:106
+#: lib/mehungry_web/measurement_chart.ex:79
 #, elixir-autogen, elixir-format
 msgid "BMI"
 msgstr ""
@@ -3804,6 +3806,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail.ex:1256
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:110
+#: lib/mehungry_web/measurement_chart.ex:80
 #, elixir-autogen, elixir-format
 msgid "BMR"
 msgstr ""
@@ -6170,6 +6173,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail.ex:1251
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:105
+#: lib/mehungry_web/measurement_chart.ex:75
 #, elixir-autogen, elixir-format
 msgid "Weight"
 msgstr ""
@@ -6469,4 +6473,206 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:59
 #, elixir-autogen, elixir-format
 msgid "← Back to clients"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:477
+#, elixir-autogen, elixir-format
+msgid "%{delta} since start"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:475
+#, elixir-autogen, elixir-format
+msgid "%{value} now"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:81
+#, elixir-autogen, elixir-format
+msgid "+ Add choice"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:24
+#, elixir-autogen, elixir-format
+msgid "+ Add question"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:86
+#, elixir-autogen, elixir-format
+msgid "Active (shown in onboarding)"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:31
+#, elixir-autogen, elixir-format
+msgid "Add question"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:36
+#, elixir-autogen, elixir-format
+msgid "Answer type"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:76
+#, elixir-autogen, elixir-format
+msgid "Body fat"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:59
+#, elixir-autogen, elixir-format
+msgid "Choice (English)"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:62
+#, elixir-autogen, elixir-format
+msgid "Choice (Greek)"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:53
+#, elixir-autogen, elixir-format
+msgid "Choices"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:78
+#, elixir-autogen, elixir-format
+msgid "Delete this question? Existing answers to it will also be removed."
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:90
+#, elixir-autogen, elixir-format
+msgid "Edit question"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:100
+#, elixir-autogen, elixir-format
+msgid "Free text"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:38
+#, elixir-autogen, elixir-format
+msgid "Free text / number (value)"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:40
+#, elixir-autogen, elixir-format
+msgid "Multiple choice — pick many"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:39
+#, elixir-autogen, elixir-format
+msgid "Multiple choice — pick one"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:78
+#, elixir-autogen, elixir-format
+msgid "Muscle mass"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:90
+#, elixir-autogen, elixir-format
+msgid "New question"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/pie_chart.ex:84
+#, elixir-autogen, elixir-format
+msgid "No data"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:30
+#, elixir-autogen, elixir-format
+msgid "No questions yet. Click"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:49
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:99
+#, elixir-autogen, elixir-format
+msgid "Number"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/pie_chart.ex:110
+#, elixir-autogen, elixir-format
+msgid "Nutrient breakdown: %{items}"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:106
+#, elixir-autogen, elixir-format
+msgid "Pick any of %{count}"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:103
+#, elixir-autogen, elixir-format
+msgid "Pick one of %{count}"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:30
+#, elixir-autogen, elixir-format
+msgid "Question (English)"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:31
+#, elixir-autogen, elixir-format
+msgid "Question (Greek)"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:85
+#, elixir-autogen, elixir-format
+msgid "Required"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:89
+#, elixir-autogen, elixir-format
+msgid "Save question"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:49
+#, elixir-autogen, elixir-format
+msgid "Text"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/form_component.ex:48
+#, elixir-autogen, elixir-format
+msgid "Value kind"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:77
+#, elixir-autogen, elixir-format
+msgid "Waist"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:491
+#, elixir-autogen, elixir-format
+msgid "goal"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:304
+#, elixir-autogen, elixir-format
+msgid "goal %{value}"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:284
+#: lib/mehungry_web/measurement_chart.ex:494
+#, elixir-autogen, elixir-format
+msgid "healthy range"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:64
+#, elixir-autogen, elixir-format
+msgid "hidden"
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:485
+#, elixir-autogen, elixir-format
+msgid "intake"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:63
+#, elixir-autogen, elixir-format
+msgid "required"
+msgstr ""
+
+#: lib/mehungry_web/live/onboarding_question_live/shared.ex:32
+#, elixir-autogen, elixir-format
+msgid "to create one."
+msgstr ""
+
+#: lib/mehungry_web/measurement_chart.ex:488
+#, elixir-autogen, elixir-format
+msgid "visit"
 msgstr ""
