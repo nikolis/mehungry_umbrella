@@ -11,6 +11,7 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
     client_count = Professionals.count_clients(user.id)
     upcoming = Professionals.list_upcoming_appointments(user.id, 5)
     blueprint_count = length(MealBlueprints.list_blueprints_for_user(user.id))
+    net_earnings_cents = Professionals.net_earnings_cents(user.id)
 
     pending_sent =
       length(Enum.filter(Professionals.list_sent_invitations(user.id), &(&1.status == "pending")))
@@ -24,6 +25,7 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
       |> assign(:upcoming_appointments, upcoming)
       |> assign(:pending_invitations_sent, pending_sent)
       |> assign(:blueprint_count, blueprint_count)
+      |> assign(:net_earnings_cents, net_earnings_cents)
       |> assign(:setup_steps, setup_steps)
       |> assign(:setup_complete?, Enum.all?(setup_steps, & &1.done))
       |> assign(:page_title, "Nutritionist Dashboard")
@@ -64,6 +66,11 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
       }
     ]
   end
+
+  defp euros(nil), do: "€0.00"
+
+  defp euros(cents) when is_integer(cents),
+    do: "€" <> :erlang.float_to_binary(cents / 100, decimals: 2)
 
   @impl true
   def render(assigns) do
@@ -165,6 +172,16 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
             href="/nutritionist/blueprints"
             class="text-paprika hover:text-paprika-soft text-xs mt-2 block"
           >Author & share →</a>
+        </div>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+          <p class="text-parchment-dim text-sm">Net Earnings</p>
+          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
+            {euros(@net_earnings_cents)}
+          </p>
+          <a
+            href="/nutritionist/payments"
+            class="text-paprika hover:text-paprika-soft text-xs mt-2 block"
+          >Payments & payouts →</a>
         </div>
       </div>
 

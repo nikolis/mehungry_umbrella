@@ -367,6 +367,11 @@ defmodule MehungryWeb.LayoutView do
           label="Analytics"
         />
         <.nutritionist_link
+          href="/nutritionist/payments"
+          icon="hero-banknotes"
+          label="Payments"
+        />
+        <.nutritionist_link
           href="/nutritionist/profile"
           icon="hero-identification"
           label="My Profile"
