@@ -172,17 +172,36 @@ to cover: (a) connected-account onboarding data for nutritionists (identity/bank
 Stripe, not us), and (b) client payment data for bookings. (This edit is made alongside this doc.)
 No new sub-processor; card data still never touches our servers (PCI SAQ A).
 
-### 3c. VAT invoicing (accountant — outstanding)
+### 3c. VAT invoicing (accountant — deferred to first income)
 The 5% commission is **VAT-inclusive** (decided). Still to finalise with the accountant: the
-**invoicing mechanism** for the commission (manual vs Stripe Tax/Invoicing). The ledger already
-records `fee_vat_cents` per row. Not code-blocking for launch, but required for compliant books.
+**invoicing mechanism** for the commission (manual/myDATA vs Stripe Tax/Invoicing), cadence, and
+EU cross-border reverse charge. The ledger already records `fee_vat_cents` per row.
+
+> **Owner decision (2026-11-03):** this is **deferred to first income**. Platform commission income
+> is currently **€0**, so no commission invoice is yet due; the obligation only bites when the first
+> paid booking settles. The invoicing mechanism **must be agreed with the accountant before the first
+> paid booking**, not before flipping the flag technically. A ready-to-send brief for the accountant
+> is in `accountant_commission_invoicing_note.md`.
 
 ---
 
 ## 4. Go-live: flip the flag
 
-**Do this last, only after §2 is done and §3 is published** (and §1's v1-support toggle is on, or
-the v2 migration shipped).
+**Hard prerequisites before the flag goes true** (§3c is the one that's been deferred — see below):
+
+- **§2 done** — prod Connect enabled + webhook endpoint registered (live mode). Without the prod
+  webhook endpoint the charge flow silently breaks: holds never capture, capability status never
+  syncs. This is **owner dashboard work** and cannot be skipped.
+- **§1 verified** — account creation is now **v2-only** in code (the v1 create path was removed in
+  the migration), so the `2026-10-28.preview` v2 flow **must** be proven in a fresh test sandbox
+  (onboard → book → capture → refund) and you must accept moving live money on a preview version.
+  There is **no v1 fallback** to launch on anymore unless a v1 code path is re-added behind a toggle.
+- **§3a/§3b published** — ✅ done.
+- **§3c — deferred to first income** (owner decision 2026-11-03): the flag may flip before the
+  commission-invoicing mechanism is set, because income is €0 and no invoice is yet due — but the
+  mechanism **must be agreed with the accountant before the first paid booking settles**.
+
+Then:
 
 1. Final **test-mode** pass green (onboard → book → authorize → capture → decline → refund tiers).
 2. Set prod config **`:consultation_payments_enabled = true`** (prod `config/runtime.exs` or the
@@ -190,6 +209,8 @@ the v2 migration shipped).
 3. **Prod smoke test** (§2 "Verify") — one real low-value live booking + refund with your own card.
 4. Announce to nutritionists: connect payouts on `/nutritionist/payments`, pick **Health &
    Wellness Coaching** at Stripe onboarding, set their service prices.
+5. **Watch for the first paid booking** → that's the trigger to have the accountant's invoicing
+   mechanism live (§3c).
 
 ### Rollback
 Flip `:consultation_payments_enabled` back to `false` and deploy — booking instantly reverts to
@@ -205,5 +226,5 @@ request-only (no charge), prices become display-only. In-flight authorized holds
 - [ ] **§2** Register webhook endpoint + events on `https://www.m3hungry.com/webhooks/stripe`; set `STRIPE_WEBHOOK_SECRET`
 - [x] **§3a** Refund copy wired into Terms + booking step (2026-11-03) — ⏳ owner reviews final wording
 - [ ] **§3b** Extend Stripe sub-processor line in privacy policy *(done with this doc)*
-- [ ] **§3c** Accountant confirms commission-invoicing mechanism
+- [~] **§3c** Commission-invoicing mechanism — **deferred to first income** (income €0 now); brief drafted (`accountant_commission_invoicing_note.md`); agree with accountant **before the first paid booking**
 - [ ] **§4** Flip `:consultation_payments_enabled` in prod + smoke test
