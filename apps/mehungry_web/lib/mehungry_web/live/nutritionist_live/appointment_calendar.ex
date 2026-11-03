@@ -983,8 +983,6 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                 </div>
               </div>
             </div>
-          </div>
-        </div>
       </.modal>
 
       <!-- Appointment modal -->
