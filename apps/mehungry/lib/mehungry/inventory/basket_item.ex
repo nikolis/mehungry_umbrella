@@ -35,7 +35,8 @@ defmodule Mehungry.Inventory.BasketItem do
       :recipe_id,
       :shopping_basket_id,
       :measurement_unit_id,
-      :description
+      :description,
+      :nutrition_data
     ])
     |> validate_required([:quantity, :name])
   end

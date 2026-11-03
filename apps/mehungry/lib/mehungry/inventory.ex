@@ -77,6 +77,34 @@ defmodule Mehungry.Inventory do
   end
 
   @doc """
+  Gets a basket by id **scoped to its owner**, or `nil` when it does not exist or
+  belongs to another user. Use this for any lookup driven by a user-supplied id
+  (LiveView events, route params) so one user cannot load another's basket.
+  """
+  def get_user_shopping_basket(user_id, id) do
+    from(s in ShoppingBasket, where: s.id == ^id and s.user_id == ^user_id)
+    |> Repo.one()
+    |> case do
+      nil ->
+        nil
+
+      basket ->
+        Repo.preload(basket,
+          basket_items: [
+            :measurement_unit
+          ],
+          basket_ingredients: [
+            :measurement_unit,
+            ingredient: [
+              :category,
+              :ingredient_translation
+            ]
+          ]
+        )
+    end
+  end
+
+  @doc """
   Creates a shopping_basket.
 
   ## Examples
@@ -115,33 +143,34 @@ defmodule Mehungry.Inventory do
     end
   end
 
+  @doc """
+  Adds a single `BasketItem` to a basket. `item_params` is a map that may carry
+  any of `:name`, `:quantity`, `:measurement_unit_id`, `:description` (a
+  free-text unit label, used by the USDA/manual paths that have no
+  `MeasurementUnit` row), `:nutrition` (stored into `nutrition_data`) and
+  `:usda_fdc_id`. Missing keys are tolerated — e.g. USDA items pass a free-text
+  unit via `:description` and no `:measurement_unit_id`.
+  """
+  def add_item(nil, _item_params), do: {:error, :nil_basket_id}
+
   def add_item(basket_id, item_params) do
-    if !is_nil(basket_id) do
-      basket = get_shopping_basket!(basket_id)
+    result =
+      %BasketItem{}
+      |> BasketItem.changeset(%{
+        name: Map.get(item_params, :name),
+        quantity: Map.get(item_params, :quantity),
+        shopping_basket_id: basket_id,
+        measurement_unit_id: Map.get(item_params, :measurement_unit_id),
+        description: Map.get(item_params, :description),
+        nutrition_data: Map.get(item_params, :nutrition),
+        usda_fdc_id: Map.get(item_params, :usda_fdc_id),
+        in_storage: false
+      })
+      |> Repo.insert()
 
-      result =
-        %BasketItem{}
-        |> BasketItem.changeset(%{
-          list_id: basket.id,
-          name: item_params.name,
-          quantity: item_params.quantity,
-          shopping_basket_id: basket_id,
-          measurement_unit_id: item_params.measurement_unit_id,
-          nutrition_data: item_params.nutrition,
-          usda_fdc_id: item_params.usda_fdc_id,
-          checked: false
-        })
-        |> Repo.insert()
-
-      case result do
-        {:ok, result} ->
-          {:ok, Repo.preload(result, :measurement_unit)}
-
-        {:eror, problem} ->
-          {:error, problem}
-      end
-    else
-      {:error, :nil_basket_id}
+    case result do
+      {:ok, item} -> {:ok, Repo.preload(item, :measurement_unit)}
+      {:error, problem} -> {:error, problem}
     end
   end
 

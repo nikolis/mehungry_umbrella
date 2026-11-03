@@ -25,9 +25,11 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
         phx-submit="save"
       >
         <.input field={@form[:start_dt]} type="hidden" />
-        <.input field={@form[:end_dt]} type="hidden" label="Intro" />
+        <.input field={@form[:end_dt]} type="hidden" />
         <:actions>
-          <.button type="primary" phx-disable-with="Saving...">Create Basket</.button>
+          <.button type="primary" phx-disable-with={gettext("Saving…")}>
+            {gettext("Build list")}
+          </.button>
         </:actions>
       </.simple_form>
     </div>
