@@ -39,6 +39,13 @@ canonical_path = @conn.assigns[:canonical_path] || canonical_path
 # the title-map form resolved (nil for plain-string pages → default OG image).
 og_image = @conn.assigns[:og_image] || og_image
 
+# OG/Twitter images MUST be absolute URLs — a relative value (e.g. a stored
+# object key like "recipe_images/tmp/…jpg" left behind by a half-failed upload)
+# would resolve against the page path and 404, killing the social preview. Drop
+# anything that isn't an http(s) URL so we fall back to the default OG card.
+og_image =
+  if is_binary(og_image) and String.starts_with?(og_image, "http"), do: og_image, else: nil
+
 base_url = "https://www.m3hungry.com"
 
 # Locale-aware canonical + hreflang alternates. `@locale` is only assigned on

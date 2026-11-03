@@ -207,11 +207,12 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       <div class=" mx-auto px-4 py-8 max-w-4xl">
         <div class="w-full">
           <!-- Hero Section -->
+          <% hero_image = MehungryWeb.RecipeSeo.absolute_image(@recipe.image_url) %>
           <div class="bg-ink-panel rounded-2xl overflow-hidden border border-ink-panel2 mb-8">
             <!-- Image -->
             <div class="relative aspect-video bg-ink-panel2">
-              <%= if @recipe.image_url do %>
-                <img src={@recipe.image_url} alt={@recipe.title} class="w-full h-full object-cover" />
+              <%= if hero_image do %>
+                <img src={hero_image} alt={@recipe.title} class="w-full h-full object-cover" />
               <% else %>
                 <div class="w-full h-full flex items-center justify-center">
                   <svg
@@ -237,7 +238,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 id={@id <> "like_container"}
                 myself={@myself}
               />
-              <%= if @recipe.image_url do %>
+              <%= if hero_image do %>
                 <button
                   type="button"
                   phx-click="generate_graphic"

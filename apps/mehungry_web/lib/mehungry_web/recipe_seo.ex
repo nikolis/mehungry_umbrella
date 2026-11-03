@@ -75,7 +75,11 @@ defmodule MehungryWeb.RecipeSeo do
       "description" => recipe.description || recipe.title
     }
 
-    base = if recipe.image_url, do: Map.put(base, "image", recipe.image_url), else: base
+    base =
+      case absolute_image(recipe.image_url) do
+        nil -> base
+        url -> Map.put(base, "image", url)
+      end
 
     base =
       if recipe.cooking_time_lower_limit && recipe.cooking_time_lower_limit > 0 do
@@ -177,6 +181,17 @@ defmodule MehungryWeb.RecipeSeo do
         base
     end
   end
+
+  # An image_url is only usable for OG/JSON-LD/`<img>` if it's an absolute
+  # http(s) URL. A stored object key or a "recipe_images/tmp/…" path left by a
+  # half-failed upload would resolve against the page path and 404, so we treat
+  # it as absent (callers fall back to the default OG card / a placeholder).
+  @doc false
+  def absolute_image(url) when is_binary(url) do
+    if String.starts_with?(url, "http"), do: url, else: nil
+  end
+
+  def absolute_image(_), do: nil
 
   # Sum of prep + cook lower limits (minutes), or nil when neither is set.
   defp total_time_minutes(recipe) do

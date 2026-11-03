@@ -248,7 +248,7 @@ Same idea as Open Graph but specifically for Twitter/X previews.
 |---|---|---|
 | `name` | `recipe.title` | |
 | `url` | `/browse/:id` | |
-| `image` | `recipe.image_url` | omitted if absent |
+| `image` | `recipe.image_url` | omitted if absent **or non-absolute** — guarded by `RecipeSeo.absolute_image/1` (see the absolute-URL rule below) |
 | `description` | `recipe.description` | falls back to title |
 | `author` | `recipe.author`, else `recipe.user.name` | `jsonld_author/1`; omitted if both blank |
 | `cookTime` / `prepTime` | `cooking_time_lower_limit` / `preperation_time_lower_limit` | ISO-8601 `PTnM` |
@@ -283,6 +283,11 @@ These rich results get far higher click-through rates than plain blue links.
 - All fields are optional — Google will show rich results as long as at minimum `name`, `image`, and at least one instruction are present
 
 **To test your JSON-LD**: Use Google's [Rich Results Test](https://search.google.com/test/rich-results) — paste a recipe URL and it will show you what Google sees and whether the structured data is valid.
+
+**Two invariants for recipe pages (regression-guarded in `browser_live_test.exs` → `describe "recipe detail SEO"`):**
+
+1. **A recipe image must be an absolute `http(s)` URL.** `recipes.image_url` is meant to hold the full public URL (the upload flow stores `%{public_url: url}` directly). A half-failed upload can leave a raw object key / tmp path (e.g. `recipe_images/tmp/<uuid>.jpg`) with no scheme or host — which, emitted verbatim, resolves against the page path and **404s** (broken hero image + dead social preview). Every emission point is therefore guarded by `MehungryWeb.RecipeSeo.absolute_image/1`: the hero `<img>` (`recipe_details_component.ex`), the JSON-LD `image`, and the OG/Twitter image (a central guard in `head.html.heex` drops any non-`http` `og_image` so the **default OG card** renders instead). The one-time data migration `*_null_malformed_recipe_image_urls` nulled existing malformed rows.
+2. **A missing recipe returns 404, never a 302 to `/home`.** `Food.get_recipe!/2` returns `nil` (it does not raise) for a missing id. The `:show_recipe` / `:show` actions in `recipe_browser_live/index.ex` therefore `raise Ecto.NoResultsError` on nil (→ 404 via `Plug.Exception` on the disconnected render). Redirecting a dead URL to the homepage is a **soft-404** that wastes crawl budget and can suppress the whole `/browse/:id` pattern.
 
 ---
 

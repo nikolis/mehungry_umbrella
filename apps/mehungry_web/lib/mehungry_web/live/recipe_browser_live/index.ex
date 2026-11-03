@@ -600,12 +600,22 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       maybe_track_user(%{page: "browser", type: :show_recipe, recipe: recipe}, socket)
       socket
     else
-      socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")
+      # A missing recipe must be a 404, never a 302 to /home — redirecting a
+      # dead URL to the homepage is a soft-404 that wastes crawl budget and can
+      # suppress the whole /browse/:id pattern in search. Raising
+      # Ecto.NoResultsError renders the 404 page on the disconnected (crawler)
+      # render via Plug.Exception.
+      raise Ecto.NoResultsError, queryable: Mehungry.Food.Recipe
     end
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id, get_user_language(socket))
+
+    # Same 404 contract as :show_recipe — `get_recipe!/2` returns nil (not raises)
+    # for a missing id, so guard before touching recipe.* (would otherwise 500).
+    if is_nil(recipe), do: raise(Ecto.NoResultsError, queryable: Mehungry.Food.Recipe)
+
     maybe_track_user(recipe, socket)
 
     query_str = ""

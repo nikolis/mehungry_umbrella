@@ -499,5 +499,28 @@ defmodule MehungryWeb.BrowserLiveTest do
       assert html =~ "/browse/#{recipe.id}"
       refute html =~ ~s(rel="canonical" href="https://www.m3hungry.com/en/home/#{recipe.id}")
     end
+
+    test "a non-absolute image_url degrades to the default OG card, never a broken URL",
+         %{conn: conn} do
+      user = user_fixture()
+      # A half-failed upload can leave a raw object key / tmp path (no scheme or
+      # host) in image_url. It must never be emitted as an og:image or JSON-LD
+      # "image" — it would resolve against the page path and 404.
+      recipe = recipe_fixture(user, %{image_url: "recipe_images/tmp/broken.jpg"})
+
+      html = conn |> get(~p"/browse/#{recipe.id}") |> html_response(200)
+
+      # Falls back to the default OG card instead of the broken path.
+      assert html =~ "/images/og-default.png"
+      refute html =~ "recipe_images/tmp/broken.jpg"
+      # JSON-LD omits the image entirely rather than asserting a dead URL.
+      refute html =~ ~s("image":"recipe_images)
+    end
+
+    test "a missing recipe returns 404, not a 302 to /home", %{conn: conn} do
+      # Deleted/never-existed recipes must 404 (not soft-404 via redirect to the
+      # homepage, which wastes crawl budget and can suppress /browse/:id).
+      assert_error_sent(404, fn -> get(conn, ~p"/browse/999999") end)
+    end
   end
 end
