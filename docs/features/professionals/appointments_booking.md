@@ -41,7 +41,12 @@ have no platform user and thus no clinical file). It resolves the appointment's 
 nutritionist's `ProfessionalClient` via `Professionals.ensure_client_record/2` (lazy-creating the
 file if none exists) and opens a measurement form (weight, body fat %, waist, muscle mass). On save
 it writes a `ConsultationNote` pre-linked to the appointment (`appointment_id`) and dated to the
-appointment; BMI/BMR are auto-filled from the client's latest intake. These measurements feed the
+appointment; BMI/BMR are auto-filled from the client's latest intake. **One note per meeting:** if
+progress was already logged for that appointment the button re-opens the form **pre-filled** with the
+existing note, and saving **updates** it rather than inserting a second row
+(`Professionals.upsert_consultation_note_for_appointment/1`) — and if stale duplicates linger from
+before this rule, the most recent is updated and the rest are deleted in the same transaction, so
+exactly one note survives. These measurements feed the
 client-file **Progress trend** chart and the client's own **My progress** profile chart — see
 [`client_records.md`](client_records.md) §Progress tracking.
 

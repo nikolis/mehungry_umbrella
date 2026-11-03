@@ -1003,6 +1003,105 @@ defmodule Mehungry.ProfessionalsTest do
     end
   end
 
+  describe "upsert_consultation_note_for_appointment/1 (one note per meeting)" do
+    setup do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, _} =
+        Professionals.replace_availabilities(professional.id, [
+          %{day_of_week: 0, start_time: ~T[09:00:00], end_time: ~T[11:00:00]},
+          %{day_of_week: 1, start_time: ~T[09:00:00], end_time: ~T[11:00:00]},
+          %{day_of_week: 2, start_time: ~T[09:00:00], end_time: ~T[11:00:00]},
+          %{day_of_week: 3, start_time: ~T[09:00:00], end_time: ~T[11:00:00]},
+          %{day_of_week: 4, start_time: ~T[09:00:00], end_time: ~T[11:00:00]},
+          %{day_of_week: 5, start_time: ~T[09:00:00], end_time: ~T[11:00:00]},
+          %{day_of_week: 6, start_time: ~T[09:00:00], end_time: ~T[11:00:00]}
+        ])
+
+      today = Date.utc_today()
+      [slot | _] = Professionals.available_slots(professional.id, today, Date.add(today, 7))
+      {:ok, appt} = Professionals.request_appointment(professional.id, client.id, slot)
+
+      {:ok, record} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Maria Papadaki"
+        })
+
+      %{record: record, appt: appt}
+    end
+
+    test "creates a note when none exists for the meeting", %{record: record, appt: appt} do
+      assert {:ok, note} =
+               Professionals.upsert_consultation_note_for_appointment(%{
+                 "professional_client_id" => record.id,
+                 "appointment_id" => appt.id,
+                 "weight_kg" => "72"
+               })
+
+      assert note.weight_kg == 72.0
+      assert length(Professionals.list_consultation_notes(record.id)) == 1
+    end
+
+    test "updates the existing note instead of inserting a duplicate", %{
+      record: record,
+      appt: appt
+    } do
+      {:ok, first} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "appointment_id" => appt.id,
+          "weight_kg" => "72"
+        })
+
+      assert {:ok, updated} =
+               Professionals.upsert_consultation_note_for_appointment(%{
+                 "professional_client_id" => record.id,
+                 "appointment_id" => appt.id,
+                 "weight_kg" => "70"
+               })
+
+      assert updated.id == first.id
+      assert updated.weight_kg == 70.0
+      assert length(Professionals.list_consultation_notes(record.id)) == 1
+    end
+
+    test "consolidates pre-existing duplicates down to the latest note", %{
+      record: record,
+      appt: appt
+    } do
+      {:ok, _old} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "appointment_id" => appt.id,
+          "weight_kg" => "72"
+        })
+
+      {:ok, newer} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "appointment_id" => appt.id,
+          "weight_kg" => "71"
+        })
+
+      assert {:ok, kept} =
+               Professionals.upsert_consultation_note_for_appointment(%{
+                 "professional_client_id" => record.id,
+                 "appointment_id" => appt.id,
+                 "weight_kg" => "69"
+               })
+
+      assert kept.id == newer.id
+      assert kept.weight_kg == 69.0
+
+      notes = Professionals.list_consultation_notes(record.id)
+      assert length(notes) == 1
+      assert hd(notes).id == newer.id
+    end
+  end
+
   describe "records_by_user_id/1" do
     test "maps each user to their record, scoped to the professional" do
       professional = user_fixture()

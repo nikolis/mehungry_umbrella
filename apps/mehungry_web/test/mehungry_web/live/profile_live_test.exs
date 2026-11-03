@@ -347,8 +347,10 @@ defmodule MehungryWeb.ProfileLiveTest do
       live(conn, Routes.profile_index_path(conn, :index) <> "?tab=progress")
 
     assert html =~ "My progress"
-    assert html =~ ~s(id="profile-vega-measurement")
-    assert html =~ ~s(phx-hook="VegaLite")
+    # Progress dashboard: a KPI card per metric (drives the chart) + a server-rendered SVG trend.
+    assert html =~ ~s(phx-click="select_metric")
+    assert html =~ "Weight"
+    assert html =~ "<svg"
     refute html =~ "recorded measurements yet"
   end
 

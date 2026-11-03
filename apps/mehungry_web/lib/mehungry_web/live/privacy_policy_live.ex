@@ -7,7 +7,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
   # upon in production, and the substantive risks (health claims, Art. 9 basis,
   # erasure cascade) in docs/implementation/legal/legal_review_2026-10.md remain open.
 
-  @last_updated "13 October 2026"
+  @last_updated "3 November 2026"
 
   @impl true
   def mount(_params, _session, socket) do
@@ -33,9 +33,13 @@ defmodule MehungryWeb.PrivacyPolicyLive do
         <div class="mt-8 rounded-xl border border-ink-panel2 bg-ink-panel p-5 text-sm leading-relaxed text-parchment-dim">
           This notice explains what personal data M3Hungry collects, why, who we share it with,
           how long we keep it, and the rights you have under the EU General Data Protection
-          Regulation (GDPR). M3Hungry is a food, recipe and nutrition platform. Some features
-          (health-condition badges, nutritionist records) involve
-          <strong class="text-parchment">health data</strong>, which we treat with extra care — see
+          Regulation (GDPR). M3Hungry is a food, recipe and nutrition platform available on the
+          web and as a mobile app. Creating an account and using the app — including onboarding —
+          involves only your account details and dietary preferences; we do not collect health or
+          body-measurement data at sign-up. Health data arises only from optional features — chiefly
+          nutritionist client records — and is collected only with your
+          <strong class="text-parchment">explicit consent</strong>, never during normal sign-up or
+          onboarding. We treat it with extra care — see
           <a href="#health-data" class="text-paprika hover:underline">section 4</a>.
         </div>
 
@@ -101,9 +105,11 @@ defmodule MehungryWeb.PrivacyPolicyLive do
 
         <.section id="health-data" title="4. Health data (special category)">
           <p>
-            Health-condition badges and nutritionist client records are
+            Nutritionist client records (and any health-condition information) are
             <strong class="text-parchment">"data concerning health"</strong> — a special category
-            under GDPR Art. 9, which is protected more strictly.
+            under GDPR Art. 9, which is protected more strictly. We collect this data only within an
+            established nutritionist–client relationship you choose to enter; it is never requested
+            when you create an account or during app onboarding.
           </p>
           <ul class="mt-3 list-disc space-y-2 pl-5">
             <li>

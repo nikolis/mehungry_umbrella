@@ -41,9 +41,12 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_meal_plans, [])
      |> assign(:nutritionist_assignment, nil)
      |> assign(:measurement_history, [])
+     |> assign(:measurement_context, %{})
      |> assign(:available_metrics, [])
      |> assign(:selected_metric, nil)
-     |> assign(:measurement_chart_spec, nil)
+     |> assign(:progress_cards, [])
+     |> assign(:progress_chart_svg, nil)
+     |> assign(:progress_legend, [])
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
@@ -288,10 +291,14 @@ defmodule MehungryWeb.ProfileLive.Index do
     # The client's own body-measurement progress, loaded only for the Progress
     # tab. Keyed strictly on current_user.id — a client only ever sees their own
     # measurements, aggregated across every nutritionist who keeps a file on them.
-    measurement_history =
+    {measurement_history, measurement_context} =
       case {content_state, is_nil(current_user)} do
-        {:progress, false} -> Professionals.measurement_history_for_user(current_user.id)
-        _ -> []
+        {:progress, false} ->
+          {Professionals.measurement_history_for_user(current_user.id),
+           Professionals.measurement_context_for_user(current_user.id)}
+
+        _ ->
+          {[], %{}}
       end
 
     available_metrics = MeasurementChart.available_metrics(measurement_history)
@@ -308,12 +315,12 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_meal_plans, user_meal_plans)
     |> assign(:nutritionist_assignment, nutritionist_assignment)
     |> assign(:measurement_history, measurement_history)
+    |> assign(:measurement_context, measurement_context)
     |> assign(:available_metrics, available_metrics)
     |> assign(:selected_metric, selected_metric)
-    |> assign(
-      :measurement_chart_spec,
-      MeasurementChart.build_spec(measurement_history, selected_metric, :container)
-    )
+    |> assign(:progress_cards, MeasurementChart.cards(measurement_history))
+    |> assign(:progress_chart_svg, MeasurementChart.chart_svg(measurement_history, selected_metric, measurement_context))
+    |> assign(:progress_legend, MeasurementChart.legend_items(measurement_context, selected_metric))
     |> assign(:created_count, Food.count_user_created_recipes(current_user.id) || 0)
     |> assign(:saved_count, Accounts.count_user_saved_recipes(current_user.id) || 0)
     |> assign(:meal_plans_count, PublishedPlans.count_plans_for_user(current_user.id))
@@ -391,29 +398,14 @@ defmodule MehungryWeb.ProfileLive.Index do
   defp plural(1, word), do: word
   defp plural(_, word), do: word <> "s"
 
-  # The VegaLite JS hook pushes "resize_chart" with the measured container width;
-  # rebuild the progress spec at that width. (Without this handler the event crashes.)
-  def handle_event("resize_chart", %{"width" => width}, socket) when width > 50 do
-    spec =
-      MeasurementChart.build_spec(
-        socket.assigns.measurement_history,
-        socket.assigns.selected_metric,
-        width
-      )
-
-    {:noreply, assign(socket, :measurement_chart_spec, spec)}
-  end
-
-  def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
-
   def handle_event("select_metric", %{"metric" => metric}, socket) do
+    context = socket.assigns.measurement_context
+
     {:noreply,
      socket
      |> assign(:selected_metric, metric)
-     |> assign(
-       :measurement_chart_spec,
-       MeasurementChart.build_spec(socket.assigns.measurement_history, metric, :container)
-     )}
+     |> assign(:progress_chart_svg, MeasurementChart.chart_svg(socket.assigns.measurement_history, metric, context))
+     |> assign(:progress_legend, MeasurementChart.legend_items(context, metric))}
   end
 
   def handle_event("add_friend", %{"id" => id}, socket) do
@@ -712,38 +704,17 @@ defmodule MehungryWeb.ProfileLive.Index do
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
         <div class="flex items-center justify-between mb-4 gap-4">
           <h2 class="text-parchment font-display font-semibold">My progress</h2>
-          <%= if @available_metrics != [] do %>
-            <form id="progress-metric-selector" phx-change="select_metric">
-              <select
-                name="metric"
-                class="bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-1.5 text-parchment text-sm focus:outline-none focus:border-paprika"
-              >
-                <%= for key <- @available_metrics do %>
-                  <option value={key} selected={key == @selected_metric}>
-                    {MeasurementChart.metric_label(key)}
-                  </option>
-                <% end %>
-              </select>
-            </form>
-          <% end %>
+          <span :if={@progress_cards != []} class="text-parchment-dim text-xs">
+            tap a metric to chart it
+          </span>
         </div>
-        <%= if @available_metrics != [] && @measurement_chart_spec do %>
-          <div
-            id="profile-measurement-chart-wrapper"
-            phx-hook="ResponsiveChart"
-            data-id="measurement"
-            data-origin_id="measurement"
-            data-size="full"
-            class="w-full overflow-hidden"
-          >
-            <div
-              id="profile-vega-measurement"
-              phx-hook="VegaLite"
-              data-spec={Jason.encode!(@measurement_chart_spec)}
-              class="w-full"
-            >
-            </div>
-          </div>
+        <%= if @progress_cards != [] do %>
+          <MeasurementChart.progress_dashboard
+            cards={@progress_cards}
+            selected={@selected_metric}
+            chart={@progress_chart_svg}
+            legend={@progress_legend}
+          />
         <% else %>
           <p class="text-parchment-dim text-sm">
             Your nutritionist hasn't recorded measurements yet. Once you've had at least

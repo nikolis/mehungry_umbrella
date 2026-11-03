@@ -261,29 +261,16 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     end
   end
 
-  # ── Weight chart (responsive) ───────────────────────────────────────────────────
-
-  def handle_event("resize_chart", %{"width" => width}, socket) when width > 50 do
-    spec =
-      MeasurementChart.build_spec(
-        socket.assigns.measurement_history,
-        socket.assigns.selected_metric,
-        width
-      )
-
-    {:noreply, assign(socket, :measurement_chart_spec, spec)}
-  end
-
-  def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
+  # ── Progress dashboard ──────────────────────────────────────────────────────────
 
   def handle_event("select_metric", %{"metric" => metric}, socket) do
+    context = socket.assigns.measurement_context
+
     {:noreply,
      socket
      |> assign(:selected_metric, metric)
-     |> assign(
-       :measurement_chart_spec,
-       MeasurementChart.build_spec(socket.assigns.measurement_history, metric, :container)
-     )}
+     |> assign(:progress_chart_svg, MeasurementChart.chart_svg(socket.assigns.measurement_history, metric, context))
+     |> assign(:progress_legend, MeasurementChart.legend_items(context, metric))}
   end
 
   # ── Intake (dietary history) events ─────────────────────────────────────────────
@@ -556,14 +543,14 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     assign(socket, :intake, intake)
   end
 
-  # Loads the client's full body-measurement history and builds the chart for the
-  # currently-selected metric (defaulting to weight). One metric at a time —
-  # the metrics have incompatible units. See `MehungryWeb.MeasurementChart`.
+  # Loads the client's full body-measurement history + intake reference values and
+  # builds the progress dashboard (KPI cards for every metric + the detail chart
+  # for the selected one). See `MehungryWeb.MeasurementChart`.
   defp load_weight_history(socket) do
-    history =
+    {history, context} =
       case socket.assigns.record do
-        nil -> []
-        record -> Professionals.measurement_history(record.id)
+        nil -> {[], %{}}
+        record -> {Professionals.measurement_history(record.id), Professionals.measurement_context(record.id)}
       end
 
     available = MeasurementChart.available_metrics(history)
@@ -571,9 +558,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
     socket
     |> assign(:measurement_history, history)
+    |> assign(:measurement_context, context)
     |> assign(:available_metrics, available)
     |> assign(:selected_metric, selected)
-    |> assign(:measurement_chart_spec, MeasurementChart.build_spec(history, selected, :container))
+    |> assign(:progress_cards, MeasurementChart.cards(history))
+    |> assign(:progress_chart_svg, MeasurementChart.chart_svg(history, selected, context))
+    |> assign(:progress_legend, MeasurementChart.legend_items(context, selected))
   end
 
   # ── PubSub messages ───────────────────────────────────────────────────────────
@@ -885,38 +875,17 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
         <div class="flex items-center justify-between mb-4 gap-4">
           <h2 class="text-parchment font-display font-semibold">Progress trend</h2>
-          <%= if @available_metrics != [] do %>
-            <form id="measurement-metric-selector" phx-change="select_metric">
-              <select
-                name="metric"
-                class="bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-1.5 text-parchment text-sm focus:outline-none focus:border-paprika"
-              >
-                <%= for key <- @available_metrics do %>
-                  <option value={key} selected={key == @selected_metric}>
-                    {MeasurementChart.metric_label(key)}
-                  </option>
-                <% end %>
-              </select>
-            </form>
-          <% end %>
+          <span :if={@progress_cards != []} class="text-parchment-dim text-xs">
+            tap a metric to chart it
+          </span>
         </div>
-        <%= if @available_metrics != [] && @measurement_chart_spec do %>
-          <div
-            id="measurement-chart-wrapper"
-            phx-hook="ResponsiveChart"
-            data-id="measurement"
-            data-origin_id="measurement"
-            data-size="full"
-            class="w-full overflow-hidden"
-          >
-            <div
-              id="vega-measurement"
-              phx-hook="VegaLite"
-              data-spec={Jason.encode!(@measurement_chart_spec)}
-              class="w-full"
-            >
-            </div>
-          </div>
+        <%= if @progress_cards != [] do %>
+          <MeasurementChart.progress_dashboard
+            cards={@progress_cards}
+            selected={@selected_metric}
+            chart={@progress_chart_svg}
+            legend={@progress_legend}
+          />
         <% else %>
           <p class="text-parchment-dim text-sm">
             Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass) will chart here once there are at least two readings.

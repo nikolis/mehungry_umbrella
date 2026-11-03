@@ -148,7 +148,9 @@ Primary aggregator: **`Mehungry.NutrientUtils.summarize_meals_nutrients/1`**
 
 Callers (all in `calendar_live/calendar/widget.ex`): day chart (`:19`), meal-type
 chart (`:559`), week chart (`:586`), grouped view (`:607`); results also drive
-`calendar_live/calendar/pie_chart.ex`.
+`calendar_live/calendar/pie_chart.ex` — the macro/micro **nutrient donut**, a
+**hand-built server-side SVG** (categorical slices in a brand-derived palette +
+a value legend), **not VegaLite**, fed `[%{category, value, display}]` slices.
 
 > **Single implementation (reconciled).** A second, divergent
 > `Mehungry.Food.NutrientMerger.summarize_meals_nutrients/1` used to exist. It

@@ -168,11 +168,15 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
          client_id when not is_nil(client_id) <- appt.client_id,
          user <- Accounts.get_user!(client_id),
          {:ok, record} <- Professionals.ensure_client_record(professional_id, user) do
-      note = %ConsultationNote{
-        visit_date: NaiveDateTime.to_date(appt.scheduled_at),
-        appointment_id: appt.id,
-        modality: "in_person"
-      }
+      # If progress was already logged for this meeting, pre-fill the form with
+      # the existing note so saving updates it instead of inserting a duplicate.
+      note =
+        Professionals.get_consultation_note_by_appointment(appt.id) ||
+          %ConsultationNote{
+            visit_date: NaiveDateTime.to_date(appt.scheduled_at),
+            appointment_id: appt.id,
+            modality: "in_person"
+          }
 
       {:noreply,
        socket
@@ -205,7 +209,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
         "appointment_id" => socket.assigns.measurement_appointment_id
       })
 
-    case Professionals.create_consultation_note(params) do
+    # One note per meeting: creates when none exists, otherwise updates the
+    # latest and deletes any duplicates left for this appointment.
+    case Professionals.upsert_consultation_note_for_appointment(params) do
       {:ok, _note} ->
         {:noreply,
          socket

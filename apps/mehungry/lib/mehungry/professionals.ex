@@ -2367,10 +2367,106 @@ defmodule Mehungry.Professionals do
     |> Enum.sort_by(& &1.date, Date)
   end
 
+  @doc """
+  Static reference values the progress chart draws goal lines / healthy bands
+  from, pulled from the client's latest `ClientIntake`: `height_m` (→ healthy
+  weight range via BMI 18.5–24.9), `sex` (→ body-fat healthy band) and
+  `ideal_weight_kg` (→ weight goal line). No intake → empty map (the chart simply
+  omits the bands/goal). See `MehungryWeb.MeasurementChart`.
+  """
+  def measurement_context(professional_client_id) do
+    case get_latest_intake(professional_client_id) do
+      nil -> %{}
+      intake -> intake_context(intake)
+    end
+  end
+
+  @doc """
+  The user-facing counterpart to `measurement_context/1`: the reference values
+  from the viewer's most-recently-assessed intake across every nutritionist who
+  keeps a file on them. Pass only the viewer's own id.
+  """
+  def measurement_context_for_user(user_id) do
+    ProfessionalClient
+    |> where([c], c.user_id == ^user_id)
+    |> Repo.all()
+    |> Enum.map(&get_latest_intake(&1.id))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.sort_by(&(&1.assessed_on || ~D[0001-01-01]), {:desc, Date})
+    |> case do
+      [intake | _] -> intake_context(intake)
+      [] -> %{}
+    end
+  end
+
+  defp intake_context(intake) do
+    %{height_m: intake.height_m, sex: intake.sex, ideal_weight_kg: intake.ideal_weight_kg}
+  end
+
+  @doc """
+  The consultation note already logged for a given appointment, if any.
+
+  Used by the "Log measurement" flow so a second log for the same meeting
+  pre-fills and updates the existing note instead of inserting a duplicate.
+  Returns `nil` when no note has been logged for the appointment yet.
+  """
+  def get_consultation_note_by_appointment(nil), do: nil
+
+  def get_consultation_note_by_appointment(appointment_id) do
+    Repo.one(
+      from n in ConsultationNote,
+        where: n.appointment_id == ^appointment_id,
+        order_by: [desc: n.inserted_at],
+        limit: 1
+    )
+  end
+
   def create_consultation_note(attrs) do
     %ConsultationNote{}
     |> ConsultationNote.changeset(fill_measurement_energy(attrs))
     |> Repo.insert()
+  end
+
+  @doc """
+  Logs the measurement note for an appointment as a single source of truth.
+
+  There must be at most one consultation note per meeting. When none exists a
+  note is created; when one or more exist (duplicates can linger from before
+  the single-note rule) the most recent is **updated** and every other note for
+  that appointment is **deleted** in the same transaction, so after an update
+  exactly one note remains. Falls back to a plain create when `appointment_id`
+  is missing. Returns `{:ok, note}` / `{:error, changeset}`.
+  """
+  def upsert_consultation_note_for_appointment(attrs) do
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+
+    case attrs["appointment_id"] do
+      blank when blank in [nil, ""] ->
+        create_consultation_note(attrs)
+
+      appointment_id ->
+        notes =
+          Repo.all(
+            from n in ConsultationNote,
+              where: n.appointment_id == ^appointment_id,
+              order_by: [desc: n.inserted_at, desc: n.id]
+          )
+
+        case notes do
+          [] ->
+            create_consultation_note(attrs)
+
+          [latest | stale] ->
+            Repo.transaction(fn ->
+              Enum.each(stale, &Repo.delete!/1)
+
+              case update_consultation_note(latest, attrs) do
+                {:ok, note} -> note
+                {:error, changeset} -> Repo.rollback(changeset)
+              end
+            end)
+        end
+    end
   end
 
   def update_consultation_note(%ConsultationNote{} = note, attrs) do

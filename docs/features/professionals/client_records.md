@@ -180,10 +180,17 @@ automatically from the client's latest intake.
 
 ## Progress tracking — measurement chart
 
-The overview renders a **Progress trend** chart below the visits: `measurement_history/1` feeds a
-single-series VegaLite line+point spec (shared `MehungryWeb.MeasurementChart`), with a metric
-selector offering every metric that has **≥2 dated readings** (one metric at a time — the units are
-incompatible). The chart is gated on ≥2 points; otherwise an empty state shows.
+The overview renders a **Progress dashboard** below the visits (shared `MehungryWeb.MeasurementChart`,
+reused on the client's own `/profile`). `measurement_history/1` feeds a row of **KPI cards** — one per
+metric with **≥2 dated readings** — each showing the current value, the since-baseline delta (tinted
+good/bad/neutral by whether the change is the right direction for that metric) and a sparkline. Clicking
+a card focuses the **detail trend chart** below it for that metric (one metric at a time — the units are
+incompatible). The detail chart is a **hand-built server-side SVG** (area + line, intake vs. visit points
+distinguished, latest reading emphasized) — **not VegaLite**; it draws a dashed **goal line** and a shaded
+**healthy-range band** when `measurement_context/1` supplies the grounding intake values (`ideal_weight_kg`
+→ weight goal; `height_m` → healthy weight range via BMI 18.5–24.9; `sex` → body-fat band; BMI uses the
+universal 18.5–24.9 band). The dashboard is gated on ≥2 points for at least one metric; otherwise an
+empty state shows.
 
 Measurements can be logged two ways, both writing a `ConsultationNote`:
 1. **From the client file** — the **+ New visit** form (above).
@@ -192,6 +199,10 @@ Measurements can be logged two ways, both writing a `ConsultationNote`:
    client `User` → `ProfessionalClient` via `ensure_client_record/2` (lazy-create) and opens a
    measurement form whose saved note is pre-linked to that `appointment_id`. The button is **hidden
    for external-client appointments** (no `client_id` → no platform user → no clinical file possible).
+   This surface enforces **one note per meeting**: re-logging the same appointment re-opens the form
+   **pre-filled** with the existing note and **updates** it on save (not a new row), via
+   `Professionals.upsert_consultation_note_for_appointment/1`, which also consolidates any pre-existing
+   duplicates down to the latest note (deleting the rest in the same transaction).
 
 **Client-facing view.** The client sees their own progress on their profile (`/profile` →
 **My progress** tab, owner-only). `measurement_history_for_user/1` aggregates every

@@ -386,9 +386,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     {:ok, _view, html} = live(conn, "/nutritionist/clients/#{client_user.id}")
 
     assert html =~ "Progress trend"
-    # The Vega-Lite chart hook is mounted with the encoded spec.
-    assert html =~ ~s(id="vega-measurement")
-    assert html =~ ~s(phx-hook="VegaLite")
+    # The progress dashboard: KPI cards (drive the chart) + a server-rendered SVG trend.
+    assert html =~ ~s(phx-click="select_metric")
+    assert html =~ "<svg"
     refute html =~ "Not enough data yet"
   end
 
@@ -400,7 +400,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
 
     assert html =~ "Progress trend"
     assert html =~ "Not enough data yet"
-    refute html =~ ~s(id="vega-measurement")
+    refute html =~ ~s(phx-click="select_metric")
   end
 
   test "a new visit persists the body-composition measurements", %{
@@ -463,8 +463,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     assert html =~ "Body fat"
 
     # Switching metric rebuilds the chart without error.
-    html = render_change(view, "select_metric", %{"metric" => "body_fat_percentage"})
-    assert html =~ ~s(id="vega-measurement")
+    html = render_click(view, "select_metric", %{"metric" => "body_fat_percentage"})
+    assert html =~ "<svg"
+    assert html =~ "Body fat (%)"
   end
 
   test "adding dietary history inline lazily creates the record and intake", %{
