@@ -275,9 +275,13 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
     ~H"""
     <div class="mt-2 rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel">
-      <div
+      <button
+        type="button"
+        disabled={!@foldable}
+        aria-expanded="false"
+        aria-controls={"summary-body-" <> @id_key}
         class={[
-          "flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-black/20 border-b border-ink-panel2",
+          "w-full text-left flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-black/20 border-b border-ink-panel2",
           @foldable && "cursor-pointer select-none"
         ]}
         phx-click={
@@ -292,6 +296,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                  "opacity-0 -translate-y-2"}
             )
             |> Phoenix.LiveView.JS.toggle_class("rotate-180", to: "#summary-chevron-" <> @id_key)
+            |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
         }
       >
         <div class="flex flex-col">
@@ -333,7 +338,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </svg>
           </div>
         <% end %>
-      </div>
+      </button>
       <div
         id={"summary-body-" <> @id_key}
         class={["flex flex-col sm:flex-row min-h-0", @foldable && "hidden"]}
@@ -902,72 +907,100 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     >
       <div :for={day <- week} class="mb-2">
         <div
-          class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden day_of_week"
+          class={[
+            "bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden day_of_week",
+            day == @current_date && "copen"
+          ]}
           id={"dat_" <> Date.to_string(day)}
         >
-          <div
-            class="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2 cursor-pointer select-none"
-            phx-click={
-              Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
-              |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
-            }
-          >
-            <%!-- Raised above the header's expand/collapse click target (and given
-                  its own phx-click, which LiveView routes to the nearest binding)
-                  so tapping the day name still opens the add-meal modal. --%>
-            <span
-              class="relative z-10 flex items-center gap-2 text-parchment font-semibold text-sm sm:text-base cursor-pointer hover:text-parchment-dim transition-colors"
+          <div class="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2">
+            <%!-- Expand/collapse toggle. A real <button> so it's keyboard-operable
+                  (Enter/Space fire the click, running the JS commands), with
+                  aria-expanded kept in sync client-side via toggle_attribute. The
+                  current day renders open (`copen` + aria-expanded="true"). --%>
+            <button
+              type="button"
+              aria-expanded={if day == @current_date, do: "true", else: "false"}
+              aria-controls={"daybody-" <> Date.to_string(day)}
+              class="flex-1 min-w-0 flex flex-wrap items-center gap-2 text-left cursor-pointer select-none"
+              phx-click={
+                Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
+                |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
+                |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
+              }
+            >
+              <span class="flex items-center gap-2 text-parchment font-semibold text-sm sm:text-base">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-4 text-parchment-dim flex-shrink-0"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                  />
+                </svg>
+                {day_name(day, assigns[:current_language] || "en")}
+              </span>
+              <span class="text-parchment-dim text-xs sm:text-sm">
+                {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
+              </span>
+              <%!-- Following a blueprint swaps the day's nutrient totals for the
+                    blueprint's Goals/Avoid targets (each with its current measure);
+                    otherwise every day shows its consumed-nutrient badges so the
+                    collapsed week is scannable at a glance (empty days render none). --%>
+              <.blueprint_goals_tags
+                :if={@active_blueprint && @blueprint_progress}
+                progress={day_progress(@blueprint_progress, day)}
+              />
+              <.day_header_tags
+                :if={is_nil(@active_blueprint)}
+                summary={@day_summaries[day]}
+                calorie_target={@calorie_target}
+              />
+              <span class="ml-auto text-parchment-dim p-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class={["size-5 widget_day", day == @current_date && "copen"]}
+                  id={"widget" <> Date.to_string(day)}
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+              </span>
+            </button>
+            <%!-- Add a meal to *this* day. A sibling of the toggle (not nested
+                  inside it), routing through the same `pick-date` → `:initial_modal`
+                  flow both parents handle (incl. the nutritionist past-date guard). --%>
+            <button
+              type="button"
               phx-target={@myself}
               phx-click="pick-date"
               phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
+              aria-label={gettext("Add a meal on %{day}", day: day_name(day, assigns[:current_language] || "en"))}
+              class="shrink-0 p-1.5 rounded-full text-paprika-soft hover:bg-ink-panel2 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="1.5"
+                stroke-width="2"
                 stroke="currentColor"
-                class="size-4 text-parchment-dim flex-shrink-0"
+                class="size-4"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              {day_name(day, assigns[:current_language] || "en")}
-            </span>
-            <span class="text-parchment-dim text-xs sm:text-sm">
-              {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
-            </span>
-            <%!-- Following a blueprint swaps the day's nutrient totals for the
-                  blueprint's Goals/Avoid targets (each with its current measure);
-                  otherwise the current day shows its consumed-nutrient badges. --%>
-            <.blueprint_goals_tags
-              :if={@active_blueprint && @blueprint_progress}
-              progress={day_progress(@blueprint_progress, day)}
-            />
-            <.day_header_tags
-              :if={is_nil(@active_blueprint) and day == @current_date}
-              summary={@day_summaries[day]}
-              calorie_target={@calorie_target}
-            />
-            <span class="ml-auto text-parchment-dim p-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-5 widget_day"
-                id={"widget" <> Date.to_string(day)}
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-              </svg>
-            </span>
+            </button>
           </div>
 
-          <div>
+          <div id={"daybody-" <> Date.to_string(day)}>
             <% day_meals = @day_summaries[day].meals %>
             <%= if day_meals == [] do %>
               <div class="flex flex-col items-center gap-3 py-8 px-4">
@@ -1009,6 +1042,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   <section class="rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel/60">
                     <button
                       type="button"
+                      aria-expanded={if day == @current_date, do: "true", else: "false"}
+                      aria-controls={section_key <> "-body"}
                       class="w-full flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 bg-black/20 hover:bg-black/30 transition-colors text-left cursor-pointer select-none"
                       phx-click={
                         Phoenix.LiveView.JS.toggle(
@@ -1023,6 +1058,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                         |> Phoenix.LiveView.JS.toggle_class("rotate-180",
                           to: "#" <> section_key <> "-chevron"
                         )
+                        |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
                       }
                     >
                       <span class="font-display font-medium text-parchment text-sm">
@@ -1031,7 +1067,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                       <div class="flex flex-wrap gap-2 items-center ml-auto">
                         <svg
                           id={section_key <> "-chevron"}
-                          class="w-5 h-5 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0"
+                          class={[
+                            "w-5 h-5 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0",
+                            day == @current_date && "rotate-180"
+                          ]}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1045,7 +1084,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                         </svg>
                       </div>
                     </button>
-                    <div id={section_key <> "-body"} class="hidden p-2 sm:p-3 space-y-2">
+                    <div
+                      id={section_key <> "-body"}
+                      class={["p-2 sm:p-3 space-y-2", day != @current_date && "hidden"]}
+                    >
                       <%= for meal <- group.meals do %>
                         <%= for re_u_m <- meal.recipe_user_meals do %>
                           <.card_meal

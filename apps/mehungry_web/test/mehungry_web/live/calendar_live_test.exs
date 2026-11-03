@@ -349,13 +349,72 @@ defmodule MehungryWeb.CalendarLiveTest do
       # The combined day roll-up is still present below the sections.
       assert html =~ "Daily Summary"
 
-      # Each meal type is a collapsible accordion: its details body is hidden by
-      # default and only the header button (with the toggle) is expanded on tap.
+      # Each meal type is a collapsible accordion. The *current day* renders open
+      # by default so today lands readable, so its section bodies are NOT hidden
+      # and the toggle buttons report aria-expanded="true" (keyboard-operable).
       today = Date.utc_today() |> Date.to_string()
 
-      assert html =~ ~s(id="meal-type-#{today}-breakfast-body" class="hidden)
-      assert html =~ ~s(id="meal-type-#{today}-dinner-body" class="hidden)
-      assert html =~ ~s(id="meal-type-#{today}-unsorted-body" class="hidden)
+      refute html =~ ~s(id="meal-type-#{today}-breakfast-body" class="hidden)
+      refute html =~ ~s(id="meal-type-#{today}-dinner-body" class="hidden)
+      refute html =~ ~s(id="meal-type-#{today}-unsorted-body" class="hidden)
+      assert html =~ ~s(aria-controls="meal-type-#{today}-breakfast-body")
+    end
+
+    test "current day lands expanded; other days collapse but show badges; headers are keyboard-operable",
+         %{conn: conn, user: user} do
+      recipe = recipe_fixture(user)
+      today = Date.utc_today()
+      week_start = Date.beginning_of_week(today)
+      # A different day inside the same visible week as today.
+      other = if today == week_start, do: Date.add(week_start, 1), else: week_start
+
+      for {day, meal_type} <- [{today, "breakfast"}, {other, "lunch"}] do
+        dt = NaiveDateTime.new!(day, ~T[12:00:00])
+
+        {:ok, _} =
+          History.create_user_meal(%{
+            start_dt: dt,
+            end_dt: dt,
+            user_id: user.id,
+            title: "Meal",
+            meal_type: meal_type,
+            recipe_user_meals: [
+              %{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 2}
+            ]
+          })
+      end
+
+      {:ok, view, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      today_s = Date.to_string(today)
+      other_s = Date.to_string(other)
+
+      # The current day renders open by default (container + chevron carry `copen`),
+      # and its meal-type body is not hidden — today lands readable with zero taps.
+      assert html =~ "day_of_week copen"
+      assert html =~ ~s(class="size-5 widget_day copen")
+      refute html =~ ~s(id="meal-type-#{today_s}-breakfast-body" class="hidden)
+
+      # A non-current day stays collapsed: its section body keeps the `hidden` class.
+      assert html =~ ~s(id="meal-type-#{other_s}-lunch-body")
+      assert html =~ "p-2 sm:p-3 space-y-2 hidden"
+
+      # Every day (not just today) now carries its at-a-glance header badge row —
+      # the day-header tags render for the non-current day too.
+      assert html =~ ~s(class="ml-auto flex flex-wrap gap-2 items-center justify-start")
+
+      # Accordion headers are real buttons with aria state kept in sync client-side.
+      assert html =~ ~s(aria-expanded="true")
+      assert html =~ ~s(aria-expanded="false")
+      assert html =~ ~s(aria-controls="daybody-#{today_s}")
+
+      # The per-day "+" is a discoverable, labelled add control (no longer a hidden
+      # click target on the day name), wired to open the add-meal flow for that day.
+      assert html =~ "Add a meal on"
+      assert has_element?(view, ~s(button[phx-click="pick-date"][phx-value-date="#{other_s}"]))
     end
 
     test "the meal-type picker updates the form's meal_type", %{conn: conn} do
