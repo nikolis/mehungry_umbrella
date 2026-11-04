@@ -487,10 +487,10 @@ defmodule Mehungry.NutrientUtils do
   `summarize_meals_nutrients/1`): `%{energy_kcal, protein_g, fat_g, carbs_g,
   sugars_g, fiber_g, sodium_mg, saturated_fat_g}`.
 
-  This is the single source of truth for the macro numbers shown on the
-  calendar's day/week headers (`CalendarLive.Calendar.Widget.summary_metrics/3`)
-  and the shareable weekly-plan card (`MehungryWeb.WeeklyPlanGraphic`), so the two
-  can never drift. Macro grams are the representative bucket nutrient's raw
+  This is the single source of truth for the macro numbers shown across the
+  calendar surfaces (the `Reader` status band, the `Editor` totals row, and the
+  `MealCore` summary card) and the shareable weekly-plan card
+  (`MehungryWeb.WeeklyPlanGraphic`), so they can never drift. Macro grams are the representative bucket nutrient's raw
   `amount` (USDA stores these in grams, so no unit conversion); energy is pulled
   out separately by canonical name since it isn't a macro bucket.
 

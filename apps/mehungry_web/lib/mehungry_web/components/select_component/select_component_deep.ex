@@ -22,7 +22,8 @@ defmodule MehungryWeb.SelectComponentDeep do
       <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer h-full">
         <%= if @selected_item do %>
           <div class="bg-ink-panel2 border border-[#3A3323] rounded-lg text-parchment px-4 py-2 min-h-10 flex justify-between items-center h-full transition-colors hover:border-paprika">
-            <span class="font-semibold text-sm truncate pr-2">
+            <span class="font-semibold text-sm truncate pr-2 flex items-center gap-1">
+              <span :if={@selected_item[:icon]} aria-hidden="true">{@selected_item[:icon]}</span>
               <.display_label label={@selected_item.label} />
             </span>
             <button
@@ -88,8 +89,11 @@ defmodule MehungryWeb.SelectComponentDeep do
                       phx-value-id={item.id}
                       phx-value-parent_id={@parent_id}
                       phx-target={@myself}
-                      class="cursor-pointer hover:bg-ink-panel2 p-2 rounded-lg transition-colors"
+                      class="cursor-pointer hover:bg-ink-panel2 p-2 rounded-lg transition-colors flex items-center gap-2"
                     >
+                      <span :if={item[:icon]} class="text-base shrink-0" aria-hidden="true">
+                        {item[:icon]}
+                      </span>
                       <.display_label label={item.label} />
                     </li>
                   <% end %>
@@ -150,7 +154,7 @@ defmodule MehungryWeb.SelectComponentDeep do
             nil
 
           item ->
-            %{label: assigns.label_function.(item), id: item.id}
+            %{label: assigns.label_function.(item), id: item.id, icon: selected_icon(assigns, item)}
         end
       else
         nil
@@ -231,9 +235,28 @@ defmodule MehungryWeb.SelectComponentDeep do
   end
 
   defp load_items(socket, search_term) do
-    socket.assigns.item_function.(search_term)
-    |> Enum.map(fn item ->
-      %{label: socket.assigns.label_function.(item), id: item.id}
+    items = socket.assigns.item_function.(search_term)
+    icons = icon_map(socket.assigns, items)
+
+    Enum.map(items, fn item ->
+      %{label: socket.assigns.label_function.(item), id: item.id, icon: Map.get(icons, item.id)}
     end)
+  end
+
+  # Optional per-item emoji. Callers that want icons pass an `icon_function`
+  # closure `items -> %{id => emoji}` (see `MehungryWeb.IngredientSearchFns`);
+  # other pickers (e.g. the unit select) pass none and render no icon.
+  defp icon_map(assigns, items) do
+    case Map.get(assigns, :icon_function) do
+      fun when is_function(fun, 1) -> fun.(items)
+      _ -> %{}
+    end
+  end
+
+  defp selected_icon(assigns, item) do
+    case Map.get(assigns, :icon_function) do
+      fun when is_function(fun, 1) -> Map.get(fun.([item]), item.id)
+      _ -> nil
+    end
   end
 end

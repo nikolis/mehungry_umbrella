@@ -5,8 +5,10 @@ defmodule Mehungry.Inventory do
 
   import Ecto.Query, warn: false
   alias Mehungry.Repo
+  alias Mehungry.Food.Ingredient
   alias Mehungry.Inventory.BasketItem
   alias Mehungry.Inventory.BasketParams
+  alias Mehungry.PublishedPlans.GroceryAisle
 
   def change_basket_params(%BasketParams{} = basket_params, attrs \\ %{}) do
     BasketParams.changeset(basket_params, attrs)
@@ -172,6 +174,49 @@ defmodule Mehungry.Inventory do
       {:ok, item} -> {:ok, Repo.preload(item, :measurement_unit)}
       {:error, problem} -> {:error, problem}
     end
+  end
+
+  @doc """
+  Resolves a grocery **aisle** key for each basket item, returning a
+  `%{item_id => aisle_key}` map. `BasketItem` carries no category, so — like the
+  published-plan weekly list (`PublishedPlans` `group_names_by_aisle`) — we
+  resolve the category back from the catalog: by `usda_fdc_id` for USDA items,
+  else by the name's normalized `search_name`, then classify with
+  `GroceryAisle`. Unmatched names (manual free-text) fall into `"other"`. Runs
+  at most two batch queries regardless of item count.
+  """
+  def aisle_for_items(items) when is_list(items) do
+    names =
+      items
+      |> Enum.map(& &1.name)
+      |> Enum.reject(&(is_nil(&1) or &1 == ""))
+
+    search_names = names |> Enum.map(&Ingredient.normalize_string/1) |> Enum.uniq()
+    fdc_ids = items |> Enum.map(& &1.usda_fdc_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+    by_search = category_lookup(:search_name, search_names)
+    by_fdc = category_lookup(:fdc_id, fdc_ids)
+
+    Map.new(items, fn item ->
+      category =
+        Map.get(by_fdc, item.usda_fdc_id) ||
+          Map.get(by_search, Ingredient.normalize_string(item.name))
+
+      {item.id, GroceryAisle.classify(category)}
+    end)
+  end
+
+  defp category_lookup(_field, []), do: %{}
+
+  defp category_lookup(field, values) do
+    Repo.all(
+      from(ing in Ingredient,
+        left_join: cat in assoc(ing, :category),
+        where: field(ing, ^field) in ^values,
+        select: {field(ing, ^field), cat.name}
+      )
+    )
+    |> Map.new()
   end
 
   @doc """

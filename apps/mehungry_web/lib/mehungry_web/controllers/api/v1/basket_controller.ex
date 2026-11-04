@@ -16,7 +16,7 @@ defmodule MehungryWeb.Api.V1.BasketController do
 
   def show(conn, _params) do
     basket = Inventory.get_or_create_basket_for_user(uid(conn))
-    json(conn, BasketJSON.basket(basket))
+    json(conn, render_basket(basket))
   end
 
   def add_item(conn, params) do
@@ -31,14 +31,14 @@ defmodule MehungryWeb.Api.V1.BasketController do
     }
 
     with {:ok, item} <- Inventory.add_item(basket.id, item_params) do
-      conn |> put_status(:created) |> json(data(BasketJSON.item(item)))
+      conn |> put_status(:created) |> json(data(BasketJSON.item(item, aisle_of(item))))
     end
   end
 
   def update_item(conn, %{"id" => id} = params) do
     with {:ok, item} <- fetch_owned_item(conn, id),
          {:ok, item} <- Inventory.update_basket_item(item, item_attrs(params)) do
-      json(conn, data(BasketJSON.item(item)))
+      json(conn, data(BasketJSON.item(item, aisle_of(item))))
     end
   end
 
@@ -55,7 +55,7 @@ defmodule MehungryWeb.Api.V1.BasketController do
 
     with {:ok, recipe} <- fetch_recipe(recipe_id),
          {:ok, _count} <- Inventory.add_items_from_recipe(basket.id, recipe, servings) do
-      json(conn, BasketJSON.basket(Inventory.get_shopping_basket!(basket.id)))
+      json(conn, render_basket(Inventory.get_shopping_basket!(basket.id)))
     end
   end
 
@@ -64,11 +64,24 @@ defmodule MehungryWeb.Api.V1.BasketController do
 
     with {:ok, meal} <- fetch_meal(conn, meal_id),
          {:ok, _count} <- Inventory.add_items_from_meal(basket.id, meal) do
-      json(conn, BasketJSON.basket(Inventory.get_shopping_basket!(basket.id)))
+      json(conn, render_basket(Inventory.get_shopping_basket!(basket.id)))
     end
   end
 
   # ── helpers ────────────────────────────────────────────────────────────
+
+  # Serializes a basket with a resolved grocery aisle per item (spec §10).
+  defp render_basket(basket) do
+    aisles = Inventory.aisle_for_items(loaded_items(basket))
+    BasketJSON.basket(basket, aisles)
+  end
+
+  defp aisle_of(item) do
+    [item] |> Inventory.aisle_for_items() |> Map.get(item.id, "other")
+  end
+
+  defp loaded_items(%{basket_items: items}) when is_list(items), do: items
+  defp loaded_items(_), do: []
 
   defp item_attrs(params) do
     Map.take(params, ["quantity", "in_storage", "name", "measurement_unit_id"])

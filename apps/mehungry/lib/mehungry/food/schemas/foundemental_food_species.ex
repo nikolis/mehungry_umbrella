@@ -17,6 +17,7 @@ defmodule Mehungry.Food.FoundementalFoodSpecies do
     field :alternative_name, :string
     field :scientific_name, :string
     field :family, :string
+    field :icon, :string
 
     has_many :foundemental_foods, Mehungry.Food.FoundementalFood,
       foreign_key: :foundemental_species_id
@@ -29,7 +30,7 @@ defmodule Mehungry.Food.FoundementalFoodSpecies do
 
   def changeset(species, attrs) do
     species
-    |> cast(attrs, [:name, :variety, :alternative_name, :scientific_name, :family])
+    |> cast(attrs, [:name, :variety, :alternative_name, :scientific_name, :family, :icon])
     |> cast_assoc(:translations,
       with: &Mehungry.Food.FoundementalFoodSpeciesTranslation.changeset/2,
       sort_param: :translations_sort,

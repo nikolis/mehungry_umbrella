@@ -709,7 +709,7 @@ defmodule MehungryWeb.LandingLive do
               aria-label="Meal planning preview"
             >
               <%= if @recipe do %>
-                <MehungryWeb.CalendarLive.Calendar.Widget.card_meal
+                <MehungryWeb.CalendarLive.Calendar.MealCore.card_meal
                   img_url={@recipe.image_url}
                   card_meal_text="text-parchment"
                   recipe={@recipe}
@@ -727,7 +727,7 @@ defmodule MehungryWeb.LandingLive do
                   myself="plan"
                   id="plan_meal"
                 />
-                {MehungryWeb.CalendarLive.Calendar.Widget.get_chart(
+                {MehungryWeb.CalendarLive.Calendar.MealCore.get_chart(
                   [
                     %{
                       start_dt: NaiveDateTime.local_now(),

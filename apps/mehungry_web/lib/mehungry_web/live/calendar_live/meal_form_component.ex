@@ -45,6 +45,12 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   @impl true
   def update(%{id: id, title: title, dates: dates, current_user: user} = assigns, socket) do
+    File.write!(
+      "/tmp/claude-1000/-home-nikolis-git-mehungry-umbrella/605a6c0a-06b3-4d18-9047-b20c463fb7f6/scratchpad/mfc_debug.log",
+      "MAIN update/2 (init) id=#{inspect(id)} assign_keys=#{inspect(Map.keys(assigns))}\n",
+      [:append]
+    )
+
     default_attrs = %{
       start_dt: dates.start,
       title: title,
@@ -229,6 +235,12 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   @impl true
   def handle_event("validate", %{"user_meal" => user_meal_params}, socket) do
+    File.write!(
+      "/tmp/claude-1000/-home-nikolis-git-mehungry-umbrella/605a6c0a-06b3-4d18-9047-b20c463fb7f6/scratchpad/mfc_debug.log",
+      "VALIDATE params=#{inspect(user_meal_params)}\n",
+      [:append]
+    )
+
     changeset =
       Map.get(socket.assigns, :user_meal, %UserMeal{})
       |> History.change_user_meal(user_meal_params)

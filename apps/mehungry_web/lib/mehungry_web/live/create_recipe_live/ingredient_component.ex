@@ -48,6 +48,7 @@ defmodule MehungryWeb.IngredientComponent do
     |> assign(:ingredient_item_fn, fns.item_fn)
     |> assign(:ingredient_label_fn, fns.label_fn)
     |> assign(:ingredient_get_by_id_fn, fns.get_by_id_fn)
+    |> assign(:ingredient_icon_fn, fns.icon_fn)
   end
 
   @impl true
@@ -83,6 +84,7 @@ defmodule MehungryWeb.IngredientComponent do
             form={@ingredient_form}
             item_function={@ingredient_item_fn}
             get_by_id_func={@ingredient_get_by_id_fn}
+            icon_function={@ingredient_icon_fn}
             input_variable="ingredient_id"
             label_function={@ingredient_label_fn}
             placeholder={gettext("Select an ingredient…")}

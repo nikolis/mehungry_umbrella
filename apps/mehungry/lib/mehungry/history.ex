@@ -193,8 +193,23 @@ defmodule Mehungry.History do
   one source of truth rather than re-deriving the shape per surface.
   """
   def format_user_meals(meals, locale \\ nil) when is_list(meals) do
-    ctx = translation_context(meals, locale)
+    ctx =
+      meals
+      |> translation_context(locale)
+      |> Map.put(:icons, ingredient_icon_map(meals))
+
     Enum.map(meals, &format_user_meal(&1, ctx))
+  end
+
+  # A batched `%{ingredient_id => emoji}` for every logged ingredient in the set,
+  # so the calendar cards show a species-aware icon without an N+1 (see
+  # `Mehungry.Food.ingredient_icons/1`). Locale-independent — the emoji derives
+  # from the English base name / species override, not the display title.
+  defp ingredient_icon_map(meals) do
+    ingredient_ids =
+      Enum.uniq(for m <- meals, ium <- m.ingredient_user_meals, do: ium.ingredient_id)
+
+    Mehungry.Food.ingredient_icons(ingredient_ids)
   end
 
   # Batched translation lookups for the whole meal set — ingredient display
@@ -250,6 +265,7 @@ defmodule Mehungry.History do
         Enum.map(meal.ingredient_user_meals, fn y ->
           %{
             title: Map.get(ctx.ingredients, y.ingredient_id) || y.ingredient.name,
+            icon: Map.get(ctx.icons, y.ingredient_id),
             portions: y.quantity,
             measurement_unit: localized_unit_label(y, ctx.units),
             primary_size: 6,

@@ -139,11 +139,15 @@ let liveSocket = new LiveSocket("/live", Socket, {
 	uploaders: Uploaders,
   dom: {
     onBeforeElUpdated(from, to) {
-    // Preserve Alpine component state
-      if (from.__x) {
-        // Prevent LiveView from removing Alpine-managed elements
-        return false
-      }    }
+      // Preserve Alpine v3 component state across LiveView DOM patches.
+      // (Alpine v3 marks managed elements with `_x_dataStack`, not the v2
+      // `__x`; without this, patches reset Alpine state and re-strip the
+      // x-cloak/display:none that keeps menus like the week-options
+      // dropdown hidden, so they flash open by default.)
+      if (from._x_dataStack) {
+        window.Alpine.clone(from, to)
+      }
+    }
   },
 	params: {
 		_csrf_token: csrfToken,

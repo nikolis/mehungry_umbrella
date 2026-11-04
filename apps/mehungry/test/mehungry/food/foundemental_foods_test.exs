@@ -26,6 +26,53 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
     %{species: species, spinach: spinach}
   end
 
+  describe "ingredient_icons/1" do
+    test "a curated ingredient resolves through its species", %{species: species, spinach: spinach} do
+      # Spinach species → 🥬 from the species name keyword.
+      assert Food.ingredient_icons([spinach.id]) == %{spinach.id => "🥬"}
+
+      # A curator override on the species wins for its curated ingredients.
+      {:ok, _} = Food.update_foundemental_species(species, %{"icon" => "🦄"})
+      assert Food.ingredient_icons([spinach.id]) == %{spinach.id => "🦄"}
+    end
+
+    test "a non-curated ingredient derives from its own name" do
+      tomato = ingredient_fixture(%{name: "Tomato, raw"})
+      assert Food.ingredient_icons([tomato.id]) == %{tomato.id => "🍅"}
+    end
+
+    test "an unmatched ingredient falls back to the generic default" do
+      blargh = ingredient_fixture(%{name: "Blarghium zzz"})
+      assert Food.ingredient_icons([blargh.id]) == %{blargh.id => "🥗"}
+    end
+
+    test "empty input returns an empty map" do
+      assert Food.ingredient_icons([]) == %{}
+    end
+
+    test "species_by_ingredient_ids/1 returns the species struct keyed by ingredient id",
+         %{species: species, spinach: spinach} do
+      map = Food.species_by_ingredient_ids([spinach.id])
+      assert map[spinach.id].id == species.id
+    end
+  end
+
+  describe "update_species/2 (icon override)" do
+    test "persists a curator's icon override", %{species: species} do
+      {:ok, updated} = Food.update_foundemental_species(species, %{"icon" => "🥗"})
+      assert updated.icon == "🥗"
+      assert Food.species_icon(updated) == "🥗"
+    end
+
+    test "clearing the override falls back to the derived default", %{species: species} do
+      {:ok, with_icon} = Food.update_foundemental_species(species, %{"icon" => "🥗"})
+      {:ok, cleared} = Food.update_foundemental_species(with_icon, %{"icon" => nil})
+      assert cleared.icon == nil
+      # Spinach derives 🥬 from its name.
+      assert Food.species_icon(cleared) == "🥬"
+    end
+  end
+
   describe "translations (cast_assoc through create_species)" do
     test "the translation is persisted and readable", %{species: species} do
       assert Food.find_species_translation("el", species.id) == ["Σπανάκι"]

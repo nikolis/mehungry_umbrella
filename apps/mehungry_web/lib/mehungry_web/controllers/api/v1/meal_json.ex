@@ -8,12 +8,14 @@ defmodule MehungryWeb.Api.V1.MealJSON do
 
   @doc "A weekly range grouped into days + the meal-type vocabulary."
   def range(meals, start_date, end_date) do
+    icons = icon_map(meals)
+
     days =
       meals
       |> Enum.group_by(&NaiveDateTime.to_date(&1.start_dt))
       |> Enum.sort_by(fn {date, _} -> date end, Date)
       |> Enum.map(fn {date, day_meals} ->
-        %{date: Date.to_iso8601(date), meals: Enum.map(day_meals, &meal/1)}
+        %{date: Date.to_iso8601(date), meals: Enum.map(day_meals, &meal(&1, icons))}
       end)
 
     data(%{
@@ -25,11 +27,14 @@ defmodule MehungryWeb.Api.V1.MealJSON do
 
   @doc "A single day's meals."
   def day(meals, date) do
-    data(%{date: date, meals: Enum.map(meals, &meal/1)})
+    icons = icon_map(meals)
+    data(%{date: date, meals: Enum.map(meals, &meal(&1, icons))})
   end
 
   @doc "A single meal."
-  def meal(user_meal) do
+  def meal(user_meal), do: meal(user_meal, icon_map([user_meal]))
+
+  def meal(user_meal, icons) do
     %{
       id: user_meal.id,
       title: user_meal.title,
@@ -37,9 +42,18 @@ defmodule MehungryWeb.Api.V1.MealJSON do
       start_dt: naive(user_meal.start_dt),
       end_dt: naive(user_meal.end_dt),
       recipes: user_meal.recipe_user_meals |> loaded() |> Enum.map(&recipe_entry/1),
-      ingredients: user_meal.ingredient_user_meals |> loaded() |> Enum.map(&ingredient_entry/1),
+      ingredients:
+        user_meal.ingredient_user_meals |> loaded() |> Enum.map(&ingredient_entry(&1, icons)),
       free_foods: user_meal.free_food_user_meals |> loaded() |> Enum.map(&free_food_entry/1)
     }
+  end
+
+  # One batched `%{ingredient_id => emoji}` for a whole response, so serializing
+  # a day/week of meals adds a bounded number of queries, not one per ingredient
+  # (see `Mehungry.Food.ingredient_icons/1`).
+  defp icon_map(meals) do
+    ids = for m <- meals, ium <- loaded(m.ingredient_user_meals), do: ium.ingredient_id
+    Mehungry.Food.ingredient_icons(ids)
   end
 
   def vocabulary do
@@ -60,13 +74,14 @@ defmodule MehungryWeb.Api.V1.MealJSON do
     }
   end
 
-  defp ingredient_entry(ium) do
+  defp ingredient_entry(ium, icons) do
     ingredient = assoc(ium.ingredient)
     mu = assoc(ium.measurement_unit)
 
     %{
       ingredient_id: ium.ingredient_id,
       name: ingredient && ingredient.name,
+      icon: Map.get(icons, ium.ingredient_id),
       quantity: ium.quantity,
       # FKs + the signed picker value, so the client can round-trip an edit (or
       # pre-select the right `units` option) exactly like the calendar form.

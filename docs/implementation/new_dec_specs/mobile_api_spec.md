@@ -457,6 +457,9 @@ session + query cache on success (`useDeleteAccount`).
 ### `GET /api/v1/me/ingredients` 🔒 / `POST` / `PUT /:id` / `DELETE /:id`
    — "my ingredients" (custom user ingredients from `/my_ingredients/*`). Accepts
    the optional `?blueprint_slug=` match enrichment (see §4 Blueprint matching).
+   Each row (and the `POST`/`PUT` response) carries an `icon` — a single emoji
+   (curator species `icon` override → else derived from the English base name,
+   `Food.ingredient_icons`; see §8).
 
 ---
 
@@ -500,18 +503,21 @@ language and are not translated.
 > web surfaces only. See `docs/legal/legal_review_2026-10.md`.
 
 ### `GET /api/v1/species` 🔓 `?q=apple&page=`
-Foods tab list. Each row: name, family/variety tag, slug.
+Foods tab list. Each row: name, family/variety tag, slug, `icon`.
 ```json
-{ "data": [ {"id":1,"name":"Acerola","slug":"acerola","variety":"west indian cherry","family":null,"scientific_name":"Malpighia emarginata"},
-             {"id":2,"name":"Agave","slug":"agave","family":"Asparagaceae"} ],
+{ "data": [ {"id":1,"name":"Acerola","slug":"acerola","icon":"🍒","variety":"west indian cherry","family":null,"scientific_name":"Malpighia emarginata"},
+             {"id":2,"name":"Agave","slug":"agave","icon":"🥗","family":"Asparagaceae"} ],
   "meta": { "total": 7 } }
 ```
+`icon` is a single emoji (always present, never null): a curator's per-species
+override if set, else derived from the species name/family by `Food.species_icon/1`
+(`Food.SpeciesIcons`). Present on both the list rows and the detail payload.
 ### `GET /api/v1/species/:slug` 🔓
 Species detail: description, nutrition facts, bioactive compounds (evidence
 summaries via `Food.EvidenceAggregation`), ingredients.
 ```json
 { "data": {
-  "id": 12, "name": "Spinach", "slug": "spinach", "scientific_name": "Spinacia oleracea",
+  "id": 12, "name": "Spinach", "slug": "spinach", "icon": "🥬", "scientific_name": "Spinacia oleracea",
   "family": "Amaranthaceae", "variety": null,
   "compounds": [ { "name": "Oxalate", "mean": 750.0, "unit": "mg/100g",
     "range": [600,900], "variance": 12.3, "evidence_score": 0.82, "study_count": 5 } ],
@@ -541,7 +547,7 @@ Unsorted, shown last). Backed by `History` + `History.UserMeal`.
       "id": 91, "title": "Lunch", "meal_type": "lunch",
       "start_dt": "2026-08-10T13:00:00", "end_dt": "2026-08-10T13:30:00",
       "recipes": [ {"recipe_id":149,"title":"…","servings":2,"image_url":"…","consumed":false} ],
-      "ingredients": [ {"ingredient_id":412,"name":"Eggplant","quantity":1.0,
+      "ingredients": [ {"ingredient_id":412,"name":"Eggplant","icon":"🍆","quantity":1.0,
         "measurement_unit_id":5,"ingredient_portion_id":null,"unit_selection":5,
         "measurement_unit":{"id":5,"name":"piece"}} ],
       "free_foods": [ {"id":7,"name":"Big Mac","grams":300.0,"portion_name":"burger","portion_grams":150.0,"portions":2.0,
@@ -658,9 +664,15 @@ One active basket per user with items (from recipes or manual). Backed by
   "id": 4, "title": "Groceries", "updated_at": "2026-08-10T…",
   "items": [ { "id": 55, "name": "Eggplant", "quantity": 2.0, "in_storage": false,
     "measurement_unit": {"id":5,"name":"piece"}, "recipe_id": 149,
-    "usda_fdc_id": 169228, "nutrition_data": {"energy":50} } ],
+    "usda_fdc_id": 169228, "nutrition_data": {"energy":50}, "aisle": "produce" } ],
   "items_count": 1 } }
 ```
+Each item carries an `aisle` key for grouping (same set + order as the web
+`GroceryAisle`): `produce`, `meat_seafood`, `dairy_eggs`, `bakery_grains`,
+`pantry`, `spices`, `beverages`, `other`. It is resolved server-side at read
+time — by `usda_fdc_id`, else the item name's catalog category — and classified
+with `GroceryAisle.classify/1`; unmatched manual/free-text items fall into
+`other`. The single-item responses from `POST`/`PUT /basket/items` carry it too.
 ### `POST /api/v1/basket/items` 🔒 `{ "name":"Eggplant","quantity":2.0,"measurement_unit_id":5,"usda_fdc_id":169228 }`
 ### `PUT /api/v1/basket/items/:id` 🔒 — edit qty / toggle `in_storage` (checkbox).
 ### `DELETE /api/v1/basket/items/:id` 🔒 → `204`.
@@ -670,20 +682,25 @@ One active basket per user with items (from recipes or manual). Backed by
 ### `GET /api/v1/ingredients/search?q=onion` 🔒 — ingredient search, two modes.
    - **default** (`q` only) — USDA-backed search for *creating* a new ingredient /
      basket item (`FoodData.Usda.SearchClient` via `FDC_API_KEY`):
-     `{ "data": [ {"fdc_id":169228,"description":"Onion","data_type":"…","brand":null} ] }`.
+     `{ "data": [ {"fdc_id":169228,"description":"Onion","icon":"🧅","data_type":"…","brand":null} ] }`.
+     `icon` is a single emoji derived from the USDA `description` (these aren't DB
+     ingredients yet, so there's no species link — see §8 / `Food.SpeciesIcons`).
    - **`&source=local`** — the app's **existing** ingredients (mirrors the calendar
      meal form's ingredient picker, `Food.IngredientSearch.search`), each carrying
      its unit/portion `units` so the client can build an `ingredient_user_meal`
      (§9) the same way the LiveView does:
      ```json
      { "data": [ {
-       "id": 412, "name": "Banana",
+       "id": 412, "name": "Banana", "icon": "🍌",
        "units": [
          {"unit_selection": -88, "measurement_unit_id": null, "ingredient_portion_id": 88, "label": "medium banana"},
          {"unit_selection": 5,   "measurement_unit_id": 5,    "ingredient_portion_id": null, "label": "cup, sliced"},
          {"unit_selection": 1,   "measurement_unit_id": 1,    "ingredient_portion_id": null, "label": "gram"}
        ] } ] }
      ```
+     `icon` is a single emoji for the ingredient (curator species `icon` override
+     → else derived from the English base name — `Food.ingredient_icons`), and is
+     **locale-independent** (identical whether `name` is English or Greek).
      `unit_selection` is the signed picker value (see §9 `ingredient_user_meals`):
      positive = `measurement_unit_id`, negative = `-ingredient_portion_id`; "gram"
      is always present as a fallback. `source=local` rows also accept the optional

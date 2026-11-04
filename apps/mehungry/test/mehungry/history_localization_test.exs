@@ -96,6 +96,11 @@ defmodule Mehungry.HistoryLocalizationTest do
     assert ingredient_title(el) == "Μπανάνα"
     assert ingredient_unit(el) == "γραμμάρια"
     assert recipe_title(el) == "Ζυμαρικά"
+
+    # The species-derived emoji is locale-independent — resolved from the English
+    # base name, so it is identical whether the viewer sees "Banana" or "Μπανάνα".
+    assert ingredient_icon(en) == "🍌"
+    assert ingredient_icon(el) == "🍌"
   end
 
   test "falls back to source names when no translation exists for the locale" do
@@ -112,6 +117,7 @@ defmodule Mehungry.HistoryLocalizationTest do
 
   defp ingredient_title(meals), do: meals |> all_ingredient_meals() |> hd() |> Map.get(:title)
   defp ingredient_unit(meals), do: meals |> all_ingredient_meals() |> hd() |> Map.get(:measurement_unit)
+  defp ingredient_icon(meals), do: meals |> all_ingredient_meals() |> hd() |> Map.get(:icon)
 
   defp recipe_title(meals) do
     meals

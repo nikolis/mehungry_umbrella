@@ -2,15 +2,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   @moduledoc """
   The consumer-facing meal-planner surface: a today-first *reader*.
 
-  Where `Calendar.Widget` is a stacked accordion (and still backs the
-  nutritionist's authoring view), the Reader is optimised for *reading* the plan:
-  it opens on the focus day (today by default), shows an always-on "on track"
-  status band, lays each meal-type group out flat (no nested accordion), and
-  renders the rest of the week as compact rows that expand inline. It reuses the
-  shared meal view-model (`History.format_user_meals/2`), the nutrient
-  aggregation in `Mehungry.NutrientUtils`, and the card / tag / day-note function
-  components defined on `Calendar.Widget` — only the information architecture is
-  new.
+  The Reader is optimised for *reading* the plan (the nutritionist's authoring
+  grid is `Calendar.Editor`): it opens on the focus day (today by default), shows
+  an always-on "on track" status band, lays each meal-type group out flat (no
+  nested accordion), and renders the rest of the week as compact rows that expand
+  inline. It reuses the shared meal view-model (`History.format_user_meals/2`),
+  the nutrient aggregation in `Mehungry.NutrientUtils`, and the card / tag /
+  day-note function components in `Calendar.MealCore` — only the information
+  architecture is new.
 
   Navigation + per-day add route to the parent `CalendarLive.Index` the same way
   the Widget does (`{:particular_date, …}` / `{:initial_modal, …}`), so no new
@@ -21,7 +20,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   alias MehungryWeb.SvgComponents
   alias MehungryWeb.BlueprintComponents
   alias MehungryWeb.CalendarLive.Calendar.Locale
-  alias MehungryWeb.CalendarLive.Calendar.Widget
+  alias MehungryWeb.CalendarLive.Calendar.MealCore
   alias Mehungry.NutrientUtils, as: Nu
   alias Mehungry.History.MealType
   alias Mehungry.AI.Agents.MealPlanAgent
@@ -99,14 +98,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
     <div class="bg-ink pb-24" id="calendar_reader">
       <!-- Week navigation -->
       <div class="flex items-center justify-center px-3 py-3 sm:px-4">
-        <div class="flex items-center gap-2 sm:gap-3 bg-ink-panel border border-ink-panel2 rounded-full px-3 py-2 shadow-lg">
+        <div class="flex items-center gap-1.5 sm:gap-3 bg-ink-panel border border-ink-panel2 rounded-full px-2.5 sm:px-3 py-2 shadow-lg max-w-full">
           <.nav_btn label={gettext("Previous week")} event="prev-week" myself={@myself}>
             <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5m-6 15L5.25 12l7.5-7.5" />
           </.nav_btn>
           <.nav_btn label={gettext("Previous day")} event="prev-day" myself={@myself}>
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </.nav_btn>
-          <h3 class="text-center text-base sm:text-lg font-display font-medium text-parchment min-w-[9rem]">
+          <h3 class="flex-1 min-w-0 text-center text-sm sm:text-lg font-display font-medium text-parchment whitespace-nowrap truncate px-1">
             {day_name(@focus, @current_language)}, {Calendar.strftime(@focus, "%d")} {month_short(@focus, @current_language)}
           </h3>
           <.nav_btn label={gettext("Next day")} event="next-day" myself={@myself}>
@@ -182,7 +181,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
             <.add_meal_button day={@focus} myself={@myself} current_language={@current_language} />
           </div>
         <% end %>
-        <Widget.day_note_form :if={@day_notes} day={@focus} body={Map.get(@day_notes, @focus)} />
+        <MealCore.day_note_form :if={@day_notes} day={@focus} body={Map.get(@day_notes, @focus)} />
       </div>
 
       <!-- Rest of the week: compact, expandable rows -->
@@ -250,7 +249,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
             </span>
           </div>
           <div class="flex flex-wrap gap-2 ml-auto">
-            <Widget.summary_tags
+            <MealCore.summary_tags
               meal_count={@week_summary.meal_count}
               total_items={@week_summary.total_items}
               energy_kcal={@week_summary.macro.energy_kcal}
@@ -289,7 +288,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
       type="button"
       title={@label}
       aria-label={@label}
-      class="text-parchment-dim hover:text-parchment transition-colors"
+      class="shrink-0 text-parchment-dim hover:text-parchment transition-colors"
       phx-target={@myself}
       phx-click={@event}
     >
@@ -373,7 +372,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   end
 
   # A day's flat meal-type groups: a lightweight label over its cards (no nested
-  # accordion). Reuses `Widget.card_meal/1` for every item type.
+  # accordion). Reuses `MealCore.card_meal/1` for every item type.
   attr :summary, :any, required: true
   attr :avoid_terms, :list, default: []
   attr :myself, :any, required: true
@@ -389,7 +388,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
         </p>
         <div class="space-y-2">
           <%= for meal <- group.meals do %>
-            <Widget.card_meal
+            <MealCore.card_meal
               :for={re_u_m <- meal.recipe_user_meals}
               card_meal_text="text-parchment"
               actual_meal={meal}
@@ -408,13 +407,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
                 id: "#{re_u_m.recipe_id}-#{meal.id}"
               }}
             />
-            <Widget.card_meal
+            <MealCore.card_meal
               :for={re_u_m <- meal.ingredient_user_meals}
               card_meal_text="text-parchment"
               myself={@myself}
               actual_meal={meal}
               avoid_terms={@avoid_terms}
               img_url={re_u_m.img_url}
+              icon={re_u_m.icon}
               title={re_u_m.title}
               cooking_portions={re_u_m.portions}
               consume_portions={nil}
@@ -425,7 +425,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
                 id: "#{re_u_m.recipe.id}-#{meal.id}"
               }}
             />
-            <Widget.card_meal
+            <MealCore.card_meal
               :for={ff_m <- Map.get(meal, :free_food_user_meals, [])}
               card_meal_text="text-parchment"
               myself={@myself}
@@ -549,7 +549,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   ## ------------------------------------ Aggregation ---------------------------
 
   # `date => %{meals, total_nutrients, macro, meal_count, total_items, type_summaries}`
-  # (macro/total_nutrients nil on empty days). Mirrors `Widget.build_day_summaries`.
+  # (macro/total_nutrients nil on empty days). Mirrors `MealCore.build_day_summaries`.
   defp build_day_summaries(user_meals, days, language) do
     Map.new(days, fn day ->
       meals = Enum.filter(user_meals, fn m -> NaiveDateTime.to_date(m.start_dt) == day end)
@@ -619,7 +619,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   end
 
   # Scales every nutrient amount by 1/divisor (week total → daily average),
-  # preserving the map shape the summary expects. (Same as Widget.scale_nutrients.)
+  # preserving the map shape the summary expects. (Same as MealCore.scale_nutrients.)
   defp scale_nutrients(total_nutrients, divisor) when divisor > 0 do
     Map.new(total_nutrients, fn
       {label, %{"amount" => amount} = nutrient} when is_number(amount) ->
@@ -684,7 +684,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
 
   # The goal/avoid coverage for one day, pulled from the week's `calendar_progress`
   # by that day's index (1..7 from `week_start`); falls back to week-level coverage
-  # when a per-day breakdown is absent. (Mirrors `Widget.day_progress`.)
+  # when a per-day breakdown is absent. (Mirrors `MealCore.day_progress`.)
   defp day_progress(progress, day) do
     day_index = Date.diff(day, progress.week_start) + 1
 

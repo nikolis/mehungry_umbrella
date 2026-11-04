@@ -1,16 +1,19 @@
-defmodule MehungryWeb.CalendarLive.Calendar.Widget do
-  use MehungryWeb, :live_component
+defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
+  @moduledoc """
+  Shared, stateless calendar rendering — the meal card, the per-day/weekly
+  nutrition summary card (+ its macro/micro pies), the nutrient badge row, and
+  the private day-note field. Used by the consumer `Reader`, the nutritionist
+  `Editor`, and the public `LandingLive` demo, so the exact same card + nutrition
+  presentation renders everywhere while each surface owns its own layout/IA.
+  (Extracted from the former `Calendar.Widget`.)
+  """
+  use MehungryWeb, :html
 
   alias MehungryWeb.SvgComponents
-  alias MehungryWeb.CalendarLive.Calendar.Locale
-
   alias Mehungry.NutrientUtils, as: Nu
-  alias Mehungry.History.MealType
 
-  # Public entry (used by `LandingLive` with raw meals): filters + aggregates,
-  # then renders. The widget itself renders from a per-day summary precomputed
-  # once in `update/2` via `render_day_chart/4` so it doesn't re-aggregate on
-  # every LiveView update.
+  # Public entry (used by `LandingLive` with raw meals): filters + aggregates a
+  # single day's meals and renders its summary card. Returns nil for an empty day.
   def get_chart(user_meals, day, current_date, calorie_target \\ nil) do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
 
@@ -29,10 +32,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   end
 
   # Renders a day's summary card from an already-aggregated summary
-  # (`%{meals: _, total_nutrients: _}`). Returns nil for a day with no meals.
-  defp render_day_chart(nil, _day, _current_date, _calorie_target), do: nil
-  defp render_day_chart(%{total_nutrients: nil}, _day, _current_date, _calorie_target), do: nil
-
+  # (`%{meals: _, total_nutrients: _}`). Only reached from `get_chart/4` for a
+  # populated day, so `total_nutrients` is always a map here.
   defp render_day_chart(
          %{meals: meals, total_nutrients: total_nutrients},
          day,
@@ -52,31 +53,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       # Day view defaults to the macro donut only; the micronutrient pie is
       # revealed on demand to cut visual noise.
       micro_hidden: true
-    })
-    |> summary_card()
-  end
-
-  # Weekly summary rendered once, below the day accordions. Shows the *daily
-  # average* consumption over the week: the week's total nutrients divided by the
-  # number of days in the range, then run through the same summary card as the
-  # per-day chart. The meal/item counts stay as week totals for context.
-  # Renders from a summary precomputed in `update/2`.
-  defp render_week_chart(nil, _first, _days, _calorie_target), do: nil
-
-  defp render_week_chart(
-         %{meals: meals, total_nutrients: total_nutrients},
-         first,
-         days,
-         calorie_target
-       ) do
-    total_nutrients
-    |> summary_assigns(meals, "week-#{Date.to_string(first)}", calorie_target)
-    |> Map.merge(%{
-      title: gettext("Weekly Summary"),
-      subtitle: gettext("Daily average over %{days} days", days: days),
-      foldable: true,
-      show_tags: true,
-      micro_hidden: false
     })
     |> summary_card()
   end
@@ -141,18 +117,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   defp target_kcal_class(_actual, _target), do: "text-basil"
 
-  # Scales every nutrient amount by `1 / divisor` (e.g. week total → daily
-  # average), preserving the map shape the summary card expects.
-  defp scale_nutrients(total_nutrients, divisor) when divisor > 0 do
-    Map.new(total_nutrients, fn
-      {label, %{"amount" => amount} = nutrient} when is_number(amount) ->
-        {label, Map.put(nutrient, "amount", amount / divisor)}
-
-      {label, nutrient} ->
-        {label, nutrient}
-    end)
-  end
-
   # The nutrient badge row (meals · items, kcal, protein, carbs, fat) shared by
   # the summary-card headers and each day's accordion header.
   def summary_tags(assigns) do
@@ -206,65 +170,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       )}
     </span>
     """
-  end
-
-  # Per-day nutrient tags for the accordion header. Renders nothing when the day
-  # has no meals (the collapsed body already shows the empty state). Reads the
-  # day's summary precomputed in `update/2` rather than re-aggregating.
-  def day_header_tags(assigns) do
-    assigns = assign_new(assigns, :calorie_target, fn -> nil end)
-
-    metrics =
-      case assigns.summary do
-        %{total_nutrients: tn, meals: meals} when not is_nil(tn) ->
-          summary_metrics(tn, meals, assigns.calorie_target)
-
-        _ ->
-          nil
-      end
-
-    assigns = assign(assigns, :metrics, metrics)
-
-    ~H"""
-    <div :if={@metrics} class="ml-auto flex flex-wrap gap-2 items-center justify-start">
-      <.summary_tags {@metrics} />
-    </div>
-    """
-  end
-
-  # The followed blueprint's Goals/Avoid targets, shown in the day header in place
-  # of the day's nutrient totals. Fed by the week's `calendar_progress` so each
-  # chip carries its current measure (caloric % or an absolute amount in the
-  # nutrient's unit); compounds show presence only. Preferred foods are shown
-  # separately in the "How your week measures up" panel, not here.
-  def blueprint_goals_tags(assigns) do
-    ~H"""
-    <div class="ml-auto flex flex-wrap gap-2 items-center justify-start">
-      <span :if={@progress.required != []} class="text-parchment-dim text-xs">Goals:</span>
-      <MehungryWeb.BlueprintComponents.goal_chips entries={@progress.required} />
-      <span :if={@progress.avoid != []} class="text-parchment-dim text-xs ml-1">Avoid:</span>
-      <MehungryWeb.BlueprintComponents.avoid_chips entries={@progress.avoid} />
-      <span
-        :if={@progress.required == [] and @progress.avoid == []}
-        class="text-parchment-dim/70 text-xs italic"
-      >
-        No goals or avoidances set
-      </span>
-    </div>
-    """
-  end
-
-  # The goal/avoid coverage for one calendar `day`, pulled from the week's
-  # `calendar_progress` by that day's index (1..7 from `week_start`). Each day
-  # shows *its own* measures; falls back to the week-level coverage if a day's
-  # breakdown is missing (older progress maps without `:days_progress`).
-  defp day_progress(progress, day) do
-    day_index = Date.diff(day, progress.week_start) + 1
-
-    case progress[:days_progress] && Map.get(progress.days_progress, day_index) do
-      %{required: _, avoid: _} = dp -> dp
-      _ -> %{required: progress.required, avoid: progress.avoid}
-    end
   end
 
   def summary_card(assigns) do
@@ -404,209 +309,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  @impl true
-  def render(assigns) do
-    case is_nil(assigns.device_width) do
-      true ->
-        SvgComponents.get_loading(assigns)
-
-      false ->
-        ~H"""
-        <div class="bg-ink pb-20" id="calendar_widget">
-          <div class="relative flex items-center px-3 py-3 sm:px-4">
-            <.button_add_meal current_date={@current_date} myself={@myself} />
-
-            <div class="flex items-center px-3 py-2 gap-2 sm:gap-3 bg-ink-panel justify-center border border-ink-panel2 rounded-full mx-auto w-fit shadow-lg">
-              <button
-                type="button"
-                title="Previous week"
-                aria-label="Previous week"
-                class="w-fit text-parchment-dim hover:text-parchment transition-colors"
-                phx-target={@myself}
-                phx-click="prev-week"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="2.5"
-                  stroke="currentColor"
-                  class="size-5"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M18.75 19.5 11.25 12l7.5-7.5m-6 15L5.25 12l7.5-7.5"
-                  />
-                </svg>
-              </button>
-              <button
-                type="button"
-                title="Previous day"
-                aria-label="Previous day"
-                class="w-fit text-parchment-dim hover:text-parchment transition-colors"
-                phx-target={@myself}
-                phx-click="prev-day"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="2.5"
-                  stroke="currentColor"
-                  class="size-5"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                </svg>
-              </button>
-
-              <h3 class="text-center text-lg font-display font-medium text-parchment">
-                <span>{day_name(@current_date, assigns[:current_language] || "en")},</span>
-                <span>{String.slice(Calendar.strftime(@current_date, "%d"), 0..2)}</span>
-                <span>{month_short(@current_date, assigns[:current_language] || "en")}</span>
-              </h3>
-
-              <button
-                type="button"
-                title="Next day"
-                aria-label="Next day"
-                class="w-fit text-end text-parchment-dim hover:text-parchment transition-colors font-medium"
-                phx-target={@myself}
-                phx-click="next-day"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="2.5"
-                  stroke="currentColor"
-                  class="size-5"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                title="Next week"
-                aria-label="Next week"
-                class="w-fit text-end text-parchment-dim hover:text-parchment transition-colors font-medium"
-                phx-target={@myself}
-                phx-click="next-week"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="2.5"
-                  stroke="currentColor"
-                  class="size-5"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-          <.table_week_calendar
-            week_rows={@week_rows}
-            first={@first}
-            day_summaries={@day_summaries}
-            week_summary={@week_summary}
-            days_in_week={@days_in_week}
-            current_date={@current_date}
-            selected_date={@selected_date}
-            myself={@myself}
-            current_language={@current_language}
-            calorie_target={@calorie_target}
-            active_blueprint={@active_blueprint}
-            blueprint_progress={@blueprint_progress}
-            day_notes={@day_notes}
-            avoid_terms={@avoid_terms}
-          />
-        </div>
-        """
-    end
-  end
-
-  @impl true
-  def mount(socket) do
-    {:ok, assign(socket, :current_language, "en")}
-  end
-
-  @impl true
-  def update(assigns, socket) do
-    current_date =
-      case assigns.particular_date do
-        nil ->
-          Date.utc_today()
-
-        date ->
-          {:ok, date} = Date.from_iso8601(date)
-          date
-      end
-
-    {first, last, rows} = get_full_week(current_date)
-    language = Map.get(assigns, :current_language, "en")
-
-    # calorie_target is resolved once in the parent LiveView's mount and passed
-    # in, so this component doesn't hit the DB for the profile on every re-render.
-    calorie_target = Map.get(assigns, :calorie_target)
-
-    # Aggregate each day's (and the week's) nutrients once here instead of inside
-    # the render functions, which used to re-summarize on every LiveView update
-    # (and re-summarize the current day twice — for its header tags and chart).
-    days_in_week = Date.diff(last, first) + 1
-    day_summaries = build_day_summaries(assigns.user_meals, first, last, language)
-    week_summary = build_week_summary(assigns.user_meals, first, last, days_in_week)
-
-    # Optional: when the user is following a blueprint, the parent calendar passes
-    # it in (plus the week's precomputed `calendar_progress`) so the day header can
-    # surface its Goals/Avoid targets — each with its current measure — instead of
-    # the day's nutrient totals. Absent (nil) on the nutritionist client calendar.
-    active_blueprint = Map.get(assigns, :active_blueprint)
-    blueprint_progress = Map.get(assigns, :blueprint_progress)
-
-    # Per-day private journal notes (`%{Date => body}`). Only the user's own
-    # calendar passes this; it's nil on the nutritionist client calendar, which
-    # switches the note UI off entirely (nothing to render, nowhere to save).
-    day_notes = Map.get(assigns, :day_notes)
-
-    # Normalized personal "foods I avoid" terms (from the user's profile). Each
-    # meal card checks its own title against these to flag an avoided food.
-    # Absent (nil → []) on the nutritionist client calendar.
-    avoid_terms = Map.get(assigns, :avoid_terms, [])
-
-    assigns = [
-      current_date: current_date,
-      selected_date: nil,
-      user_meals: assigns.user_meals,
-      selected_meal: nil,
-      week_rows: rows,
-      last: last,
-      first: first,
-      calendar_view: assigns.calendar_view,
-      device_width: assigns.device_width,
-      current_language: language,
-      calorie_target: calorie_target,
-      active_blueprint: active_blueprint,
-      blueprint_progress: blueprint_progress,
-      day_summaries: day_summaries,
-      week_summary: week_summary,
-      days_in_week: days_in_week,
-      day_notes: day_notes,
-      avoid_terms: avoid_terms
-    ]
-
-    {:ok,
-     socket
-     |> assign(assigns)}
-  end
-
-  ## ------------------------------------ Utility Functions  ---------------------------------------------------------------
-
   # Builds the macros pie from the aggregated `name => nutrient` map. Each of the
   # five macro buckets contributes at most one slice (`Nu.macro_totals/1` already
   # collapsed the messy USDA name variants). Carbs are shown *net* — carbs minus
@@ -694,170 +396,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     |> String.trim()
   end
 
-  # Precomputes a `date => %{meals, total_nutrients, type_summaries}` map for
-  # every day in the visible week. `total_nutrients` is nil for days with no
-  # meals; `type_summaries` is the ordered per-meal-type breakdown (see
-  # `build_meal_type_summaries/1`). Aggregating here (once per update) keeps the
-  # render functions from re-summarizing on every LiveView update.
-  defp build_day_summaries(user_meals, first, last, language) do
-    Map.new(Date.range(first, last), fn day ->
-      meals = Enum.filter(user_meals, fn m -> NaiveDateTime.to_date(m.start_dt) == day end)
-
-      total_nutrients =
-        case meals do
-          [] -> nil
-          _ -> Nu.summarize_meals_nutrients(meals)
-        end
-
-      {day,
-       %{
-         meals: meals,
-         total_nutrients: total_nutrients,
-         type_summaries: build_meal_type_summaries(meals, language)
-       }}
-    end)
-  end
-
-  # Groups a day's meals by `meal_type` and aggregates nutrients per group,
-  # returning an ordered list (`MealType.ordered()` then the nil/unsorted bucket
-  # last). Empty groups are dropped so only populated meal-type sections render.
-  # Uses `Map.get/2` defensively since synthetic meals (LandingLive) may omit the
-  # key — those paths don't call this, but it keeps grouping total.
-  defp build_meal_type_summaries(meals, language) do
-    by_type = Enum.group_by(meals, fn m -> Map.get(m, :meal_type) end)
-
-    for meal_type <- MealType.ordered() ++ [nil],
-        group = by_type[meal_type],
-        group not in [nil, []] do
-      %{
-        meal_type: meal_type,
-        label: MehungryWeb.MealTypeLabels.label(meal_type, language),
-        meals: group,
-        total_nutrients: Nu.summarize_meals_nutrients(group)
-      }
-    end
-  end
-
-  # Precomputes the weekly summary (daily-average nutrients over the range), or
-  # nil when the week has no meals.
-  defp build_week_summary(user_meals, first, last, days_in_week) do
-    meals =
-      Enum.filter(user_meals, fn m ->
-        d = NaiveDateTime.to_date(m.start_dt)
-        Date.compare(d, first) != :lt and Date.compare(d, last) != :gt
-      end)
-
-    case meals do
-      [] ->
-        nil
-
-      _ ->
-        total_nutrients =
-          meals
-          |> Nu.summarize_meals_nutrients()
-          |> scale_nutrients(days_in_week)
-
-        %{meals: meals, total_nutrients: total_nutrients}
-    end
-  end
-
-  defp get_full_week(current_date) do
-    days = 6
-    first = Date.beginning_of_week(current_date)
-
-    last = Date.add(first, days)
-
-    week_rows =
-      Date.range(first, last)
-      |> Enum.map(& &1)
-      |> Enum.chunk_every(7)
-
-    {first, last, week_rows}
-  end
-
-  ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
-
-  # Recomputes the week grid *and* the per-day/week nutrient summaries together
-  # so `week_rows` and `day_summaries` never disagree. Crossing into a new week
-  # used to leave `day_summaries` keyed to the old week's days, so the immediate
-  # re-render (before the `:particular_date` push_patch reloads meals) hit a nil
-  # summary and crashed with BadMapError. The push_patch that follows reloads the
-  # new week's meals and re-runs `update/2` with the correct data.
-  defp assign_week(socket, new_date) do
-    {first, last, rows} = get_full_week(new_date)
-    days_in_week = Date.diff(last, first) + 1
-    user_meals = socket.assigns.user_meals
-    language = Map.get(socket.assigns, :current_language, "en")
-
-    assign(socket,
-      current_date: new_date,
-      week_rows: rows,
-      last: last,
-      first: first,
-      days_in_week: days_in_week,
-      day_summaries: build_day_summaries(user_meals, first, last, language),
-      week_summary: build_week_summary(user_meals, first, last, days_in_week)
-    )
-  end
-
-  @impl true
-  def handle_event("prev-day", _, socket) do
-    new_date = Date.add(socket.assigns.current_date, -1)
-
-    send(self(), {:particular_date, %{"date" => new_date}})
-    {:noreply, assign_week(socket, new_date)}
-  end
-
-  def handle_event("next-day", _, socket) do
-    new_date = Date.add(socket.assigns.current_date, 1)
-
-    {first, _last, _rows} = get_full_week(new_date)
-
-    send(self(), {:particular_date, %{"date" => first}})
-    {:noreply, assign_week(socket, new_date)}
-  end
-
-  # Week navigation jumps a full 7 days and lands on the first day of the target
-  # week, so the visible grid re-anchors cleanly on the new week. Both parents
-  # (consumer `CalendarLive.Index` + nutritionist `ClientCalendar`) handle the
-  # `:particular_date` message the same way.
-  def handle_event("prev-week", _, socket) do
-    {first, _last, _rows} = get_full_week(Date.add(socket.assigns.current_date, -7))
-
-    send(self(), {:particular_date, %{"date" => first}})
-    {:noreply, assign_week(socket, first)}
-  end
-
-  def handle_event("next-week", _, socket) do
-    {first, _last, _rows} = get_full_week(Date.add(socket.assigns.current_date, 7))
-
-    send(self(), {:particular_date, %{"date" => first}})
-    {:noreply, assign_week(socket, first)}
-  end
-
-  def handle_event("pick-date", %{"date" => date}, socket) do
-    current_date = date
-    send(self(), {:initial_modal, %{"date" => current_date, "title" => "r"}})
-
-    {:noreply, assign(socket, :selected_date, current_date)}
-  end
-
-  def handle_event("pick-date", %{"meal" => meal}, socket) do
-    current_date = socket.assigns.current_date
-    send(self(), {:initial_modal, %{"date" => current_date, "title" => meal}})
-
-    {:noreply,
-     assign(socket, :selected_date, current_date)
-     |> assign(:selected_meal, meal)}
-  end
-
-  def handle_event("date-details", %{"date" => date}, socket) do
-    send(self(), {:date_details, %{"date" => date}})
-
-    {:noreply, socket}
-  end
-
-  ## ------------------------------------ UI Elements ---------------------------------------------------------------
   # A private, condition-agnostic journal line for one day (symptoms / how I
   # felt / energy). No `phx-target`, so the submit routes to the parent calendar
   # LiveView (`save_day_note`); a blank body clears the note. Pre-filled with the
@@ -899,281 +437,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  def table_week_calendar(assigns) do
-    ~H"""
-    <div
-      :for={week <- @week_rows}
-      class="px-3 sm:px-4 pt-2"
-    >
-      <div :for={day <- week} class="mb-2">
-        <div
-          class={[
-            "bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden day_of_week",
-            day == @current_date && "copen"
-          ]}
-          id={"dat_" <> Date.to_string(day)}
-        >
-          <div class="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2">
-            <%!-- Expand/collapse toggle. A real <button> so it's keyboard-operable
-                  (Enter/Space fire the click, running the JS commands), with
-                  aria-expanded kept in sync client-side via toggle_attribute. The
-                  current day renders open (`copen` + aria-expanded="true"). --%>
-            <button
-              type="button"
-              aria-expanded={if day == @current_date, do: "true", else: "false"}
-              aria-controls={"daybody-" <> Date.to_string(day)}
-              class="flex-1 min-w-0 flex flex-wrap items-center gap-2 text-left cursor-pointer select-none"
-              phx-click={
-                Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
-                |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
-                |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
-              }
-            >
-              <span class="flex items-center gap-2 text-parchment font-semibold text-sm sm:text-base">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-4 text-parchment-dim flex-shrink-0"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                  />
-                </svg>
-                {day_name(day, assigns[:current_language] || "en")}
-              </span>
-              <span class="text-parchment-dim text-xs sm:text-sm">
-                {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
-              </span>
-              <%!-- Following a blueprint swaps the day's nutrient totals for the
-                    blueprint's Goals/Avoid targets (each with its current measure);
-                    otherwise every day shows its consumed-nutrient badges so the
-                    collapsed week is scannable at a glance (empty days render none). --%>
-              <.blueprint_goals_tags
-                :if={@active_blueprint && @blueprint_progress}
-                progress={day_progress(@blueprint_progress, day)}
-              />
-              <.day_header_tags
-                :if={is_nil(@active_blueprint)}
-                summary={@day_summaries[day]}
-                calorie_target={@calorie_target}
-              />
-              <span class="ml-auto text-parchment-dim p-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class={["size-5 widget_day", day == @current_date && "copen"]}
-                  id={"widget" <> Date.to_string(day)}
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
-              </span>
-            </button>
-            <%!-- Add a meal to *this* day. A sibling of the toggle (not nested
-                  inside it), routing through the same `pick-date` → `:initial_modal`
-                  flow both parents handle (incl. the nutritionist past-date guard). --%>
-            <button
-              type="button"
-              phx-target={@myself}
-              phx-click="pick-date"
-              phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
-              aria-label={gettext("Add a meal on %{day}", day: day_name(day, assigns[:current_language] || "en"))}
-              class="shrink-0 p-1.5 rounded-full text-paprika-soft hover:bg-ink-panel2 transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2"
-                stroke="currentColor"
-                class="size-4"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-            </button>
-          </div>
-
-          <div id={"daybody-" <> Date.to_string(day)}>
-            <% day_meals = @day_summaries[day].meals %>
-            <%= if day_meals == [] do %>
-              <div class="flex flex-col items-center gap-3 py-8 px-4">
-                <div class="w-14 h-14 rounded-full bg-ink-panel2/60 border border-ink-panel2/50 flex items-center justify-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.2"
-                    stroke="currentColor"
-                    class="size-7 text-parchment-dim"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-1.5-.75M3 13.5l1.5.75a3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 1.5-.75M3 13.5v6.75a.75.75 0 0 0 .75.75h16.5a.75.75 0 0 0 .75-.75V13.5"
-                    />
-                  </svg>
-                </div>
-                <div class="text-center">
-                  <p class="text-parchment-dim text-sm font-medium">No meals planned</p>
-                  <p class="text-parchment-dim/70 text-xs mt-0.5">
-                    Tap <span class="text-paprika-soft font-semibold">+</span> to add one
-                  </p>
-                </div>
-              </div>
-            <% else %>
-              <div class="p-2 sm:p-3 space-y-6">
-                <%!-- Meals grouped by type (breakfast … dinner, unsorted last), each
-                      with its own nutrition summary; the combined Daily Summary
-                      follows all sections. Groups are already day-scoped in
-                      `build_day_summaries`, so no per-card date guard is needed. --%>
-                <%= for group <- @day_summaries[day].type_summaries do %>
-                  <% type_slug = group.meal_type || "unsorted" %>
-                  <% section_key = "meal-type-#{Date.to_string(day)}-#{type_slug}" %>
-                  <%!-- Each meal type is its own accordion: the header button shows the
-                        label + summary badges; the cards and nutrition breakdown live in a
-                        body that stays hidden until the header is tapped. --%>
-                  <section class="rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel/60">
-                    <button
-                      type="button"
-                      aria-expanded={if day == @current_date, do: "true", else: "false"}
-                      aria-controls={section_key <> "-body"}
-                      class="w-full flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 bg-black/20 hover:bg-black/30 transition-colors text-left cursor-pointer select-none"
-                      phx-click={
-                        Phoenix.LiveView.JS.toggle(
-                          to: "#" <> section_key <> "-body",
-                          in:
-                            {"transition-all duration-300 ease-out", "opacity-0 -translate-y-2",
-                             "opacity-100 translate-y-0"},
-                          out:
-                            {"transition-all duration-200 ease-in", "opacity-100 translate-y-0",
-                             "opacity-0 -translate-y-2"}
-                        )
-                        |> Phoenix.LiveView.JS.toggle_class("rotate-180",
-                          to: "#" <> section_key <> "-chevron"
-                        )
-                        |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
-                      }
-                    >
-                      <span class="font-display font-medium text-parchment text-sm">
-                        {group.label}
-                      </span>
-                      <div class="flex flex-wrap gap-2 items-center ml-auto">
-                        <svg
-                          id={section_key <> "-chevron"}
-                          class={[
-                            "w-5 h-5 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0",
-                            day == @current_date && "rotate-180"
-                          ]}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </button>
-                    <div
-                      id={section_key <> "-body"}
-                      class={["p-2 sm:p-3 space-y-2", day != @current_date && "hidden"]}
-                    >
-                      <%= for meal <- group.meals do %>
-                        <%= for re_u_m <- meal.recipe_user_meals do %>
-                          <.card_meal
-                            card_meal_text="text-parchment"
-                            actual_meal={meal}
-                            avoid_terms={@avoid_terms}
-                            img_url={re_u_m.img_url}
-                            title={re_u_m.title}
-                            nutrients={re_u_m.recipe_nutrients}
-                            cooking_portions={re_u_m.cooking_portions}
-                            consume_portions={re_u_m.consume_portions}
-                            myself={@myself}
-                            recipe_id={re_u_m.recipe_id}
-                            recipe={
-                              %{
-                                nutrients: re_u_m.recipe_nutrients,
-                                primary_size: re_u_m.primary_size,
-                                servings: re_u_m.servings,
-                                id: "#{re_u_m.recipe_id}-#{meal.id}"
-                              }
-                            }
-                          />
-                        <% end %>
-                        <%= for re_u_m <- meal.ingredient_user_meals do %>
-                          <.card_meal
-                            card_meal_text="text-parchment"
-                            myself={@myself}
-                            actual_meal={meal}
-                            avoid_terms={@avoid_terms}
-                            img_url={re_u_m.img_url}
-                            title={re_u_m.title}
-                            cooking_portions={re_u_m.portions}
-                            consume_portions={nil}
-                            recipe={
-                              %{
-                                nutrients: re_u_m.recipe.nutrients,
-                                primary_size: re_u_m.primary_size,
-                                servings: re_u_m.portions,
-                                id: "#{re_u_m.recipe.id}-#{meal.id}"
-                              }
-                            }
-                          />
-                        <% end %>
-                        <%= for ff_m <- Map.get(meal, :free_food_user_meals, []) do %>
-                          <.card_meal
-                            card_meal_text="text-parchment"
-                            myself={@myself}
-                            actual_meal={meal}
-                            avoid_terms={@avoid_terms}
-                            img_url={ff_m.img_url}
-                            title={ff_m.title}
-                            cooking_portions={"#{round(ff_m.grams)} g"}
-                            consume_portions={nil}
-                            recipe={
-                              %{
-                                nutrients: ff_m.recipe.nutrients,
-                                primary_size: ff_m.primary_size,
-                                servings: nil,
-                                id: "freefood-#{ff_m.id}-#{meal.id}"
-                              }
-                            }
-                          />
-                        <% end %>
-                      <% end %>
-                    </div>
-                  </section>
-                <% end %>
-                {render_day_chart(@day_summaries[day], day, @current_date, @calorie_target)}
-              </div>
-            <% end %>
-            <.day_note_form :if={@day_notes} day={day} body={Map.get(@day_notes, day)} />
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-4 mb-2">
-        {render_week_chart(@week_summary, @first, @days_in_week, @calorie_target)}
-      </div>
-    </div>
-    """
-  end
-
   def card_meal(assigns) do
     # `recipe_id` is the numeric recipe id for recipe cards (nil for ingredient
     # cards); it gates the "View recipe" button that opens the details modal.
     assigns = assign_new(assigns, :recipe_id, fn -> nil end)
+
+    # Species-derived emoji for ingredient cards (nil for recipe/landing cards,
+    # which don't pass it) — rendered inline before the title.
+    assigns = assign_new(assigns, :icon, fn -> nil end)
 
     # The user's personal avoid terms this food's title matches (reusing the
     # meal-plan enforcement engine's substring match). Empty list = not flagged;
@@ -1237,7 +508,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         </div>
         <div class="flex-1 min-w-0">
           <h3 class={"font-display font-medium text-base leading-snug mb-1 " <> @card_meal_text}>
-            {@title}
+            <span :if={@icon} class="mr-1" aria-hidden="true">{@icon}</span>{@title}
           </h3>
           <div
             :if={@avoided != []}
@@ -1306,42 +577,4 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  defp button_add_meal(assigns) do
-    current_date = Date.to_string(assigns.current_date) <> " 00:00:00"
-    {:ok, current_date} = NaiveDateTime.from_iso8601(current_date)
-
-    assigns =
-      assigns
-      |> Map.put(:day, current_date)
-      |> Map.put(:meal, "El diablo")
-
-    ~H"""
-    <button
-      class="absolute right-3 sm:right-4 flex items-center gap-1.5 px-3 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-xs sm:text-sm font-bold transition-colors shadow-md"
-      type="button"
-      id="button_calendar"
-      phx-target={@myself}
-      phx-click="pick-date"
-      phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")}
-      phx-value-meal={@meal}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="2"
-        stroke="currentColor"
-        class="size-4 flex-shrink-0"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-      </svg>
-      <span class="hidden sm:inline">Add Meal</span>
-    </button>
-    """
-  end
-
-  # Locale-aware day/month names live in `Calendar.Locale` (single source for
-  # i18n). These thin wrappers keep the template call sites terse.
-  defp day_name(%Date{} = date, lang), do: Locale.day_name(date, lang)
-  defp month_short(%Date{} = date, lang), do: Locale.month_short(date, lang)
 end

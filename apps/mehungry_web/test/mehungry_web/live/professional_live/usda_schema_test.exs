@@ -61,6 +61,38 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
     assert expanded =~ "Apple, raw"
   end
 
+  test "a species renders its derived emoji and the override round-trips", %{conn: conn} do
+    {:ok, species} =
+      Food.create_foundemental_species(%{"name" => "Apple", "family" => "Rosaceae"})
+
+    {:ok, view, _html} = live(conn, ~p"/professional/usda-schema")
+    html = render(view)
+
+    # Derived default emoji for "Apple" shows beside the label.
+    assert html =~ "🍎"
+
+    # Expand the species to reveal the override form, then save a custom emoji.
+    view
+    |> element(~s|button[phx-value-key="species:#{species.id}"]|)
+    |> render_click()
+
+    render_submit(view, "update_species_icon", %{
+      "species_id" => Integer.to_string(species.id),
+      "icon" => "🦄"
+    })
+
+    assert Food.get_foundemental_species!(species.id).icon == "🦄"
+    assert render(view) =~ "🦄"
+
+    # Clearing it reverts to the derived default.
+    render_submit(view, "update_species_icon", %{
+      "species_id" => Integer.to_string(species.id),
+      "icon" => "  "
+    })
+
+    assert Food.get_foundemental_species!(species.id).icon == nil
+  end
+
   test "assigning a streamed row removes it from the open panel", %{conn: conn} do
     # Sorts first (within the 100-row cap) and matches a real schema.
     name = "Aaaatest, raw"

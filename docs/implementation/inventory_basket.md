@@ -88,6 +88,12 @@ that retheme — layout + the mobile Lists drawer are Tailwind utilities).
   and `/basket/import/meal/:id`, specified in
   [`new_dec_specs/mobile_api_spec.md`](new_dec_specs/mobile_api_spec.md) §10. The
   ingredient search that feeds it (`?source=local`) reuses `Food.IngredientSearch`.
+  Each serialized item also carries an `aisle` key so the mobile client can group
+  by grocery aisle exactly like this LiveView. Because `BasketItem` has no category
+  association, the aisle is resolved at read time (`Inventory.aisle_for_items/1`):
+  the category is looked up from the catalog by `usda_fdc_id` or the name's
+  `search_name`, then classified with `GroceryAisle` — the same approach the
+  published-plan list uses. Unmatched manual lines → `"other"`.
 
 ## Related
 

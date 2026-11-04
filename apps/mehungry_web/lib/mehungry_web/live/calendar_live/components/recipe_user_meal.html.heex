@@ -12,6 +12,15 @@
           module={MehungryWeb.SelectComponent}
           form={@f}
           items={Enum.map(@recipes, fn x -> {Integer.to_string(x.id), x.title} end)}
+          item_meta={
+            Map.new(@recipes, fn x ->
+              {Integer.to_string(x.id),
+               %{
+                 image_url: x.list_image_url || x.image_url,
+                 subtitle: MehungryWeb.CalendarLive.Components.recipe_subtitle(x)
+               }}
+            end)
+          }
           input_variable={:recipe_id}
           id={"recipe_search_component" <> Integer.to_string(@f.index)}
         />

@@ -74,6 +74,17 @@ same food inside a recipe — one aggregation path, no divergent copies (the RES
 parity rule). `format_user_meals/1` is the shared shaping step both the calendar
 LiveView and the mobile API (`GET /meals/day/:date/nutrition`) call.
 
+Each logged-ingredient entry in the view-model also carries an `:icon` — a
+species-aware emoji resolved **once per week, batched** via
+`Mehungry.Food.ingredient_icons/1` (a curator's `FoundementalFoodSpecies.icon`
+override when the ingredient is curated onto a species, else derived from the
+ingredient's English base name — see `Mehungry.Food.SpeciesIcons`). It is
+locale-independent (derived from the English name, not the localized title) and
+rendered inline before the name on the consumer calendar card
+(`calendar/meal_core.ex` `card_meal/1`). The nutrition API consumes this
+view-model only to sum nutrients, so `:icon` never reaches the JSON response —
+no mobile-contract change.
+
 ## Week-scoped loading (performance)
 
 The calendar loads **only the viewed week**, not a user's whole history:

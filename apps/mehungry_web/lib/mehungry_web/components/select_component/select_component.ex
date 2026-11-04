@@ -33,6 +33,32 @@ defmodule MehungryWeb.SelectComponent do
 
     existing_selected = Map.get(assigns.form.source.data, assigns.input_variable)
 
+    # The user has explicitly cleared this select when the changeset carries the
+    # field with a nil value. In that case we must not fall back to the persisted
+    # value below — doing so snapped the widget back to the previous selection
+    # (and hid the search box) instead of letting the user pick a replacement.
+    changes = assigns.form.source.changes
+
+    changeset_cleared? =
+      is_map(changes) and Map.has_key?(changes, assigns.input_variable) and
+        is_nil(Map.get(changes, assigns.input_variable))
+
+    changeset_has_value? =
+      is_map(changes) and Map.has_key?(changes, assigns.input_variable) and
+        not is_nil(Map.get(changes, assigns.input_variable))
+
+    # Sticky clear. The changeset-carried nil above is driven by a JS hook that
+    # writes the hidden input then re-validates the form; that round-trip can lag
+    # or race the very next keystroke in the search box. When it does, the
+    # re-validate produces a changeset with NO change for this field, and
+    # `get_selected_items/5` resurrects the persisted value straight from
+    # `form.data` — snapping the widget back to the old selection on the first
+    # character typed. So we also remember the clear in the component's own
+    # socket and treat it as authoritative until a genuine new value appears.
+    cleared? =
+      changeset_cleared? or
+        (Map.get(socket.assigns, :user_cleared, false) and not changeset_has_value?)
+
     selected_items =
       case is_map(selected_items) do
         true ->
@@ -45,7 +71,7 @@ defmodule MehungryWeb.SelectComponent do
     selected_items =
       case selected_items do
         [] ->
-          if !is_nil(existing_selected) do
+          if !cleared? and !is_nil(existing_selected) do
             Enum.filter(assigns.items, fn x ->
               elem(x, 0) == Integer.to_string(existing_selected)
             end)
@@ -67,16 +93,12 @@ defmodule MehungryWeb.SelectComponent do
           other
       end
 
-    _selected_items_vals =
-      Enum.reduce(Enum.map(selected_items, fn {x, _y} -> x end), "", fn acc, x ->
-        case String.length(acc) == 0 do
-          true ->
-            x
-
-          false ->
-            acc <> "," <> x
-        end
-      end)
+    # Covers the resurrection path the `[] ->` branch guard cannot: when the
+    # changeset has no change for this field, `get_selected_items/5` returns the
+    # persisted value from `form.data` directly (a non-empty list), so the guard
+    # above never runs. Forcing empty here when cleared is what actually keeps a
+    # deliberately-cleared single-select empty while the user types a search.
+    selected_items = if cleared?, do: [], else: selected_items
 
     items = Enum.map(assigns.items, fn x -> {elem(x, 0), label_function.(x)} end)
 
@@ -90,11 +112,33 @@ defmodule MehungryWeb.SelectComponent do
     socket =
       socket
       |> assign(:items, items)
+      # The full, unfiltered option list. `:items` gets overwritten with the
+      # filtered subset while searching, so searches must run against this stable
+      # copy — otherwise each keystroke narrows an already-narrowed list (and a
+      # single non-matching character empties it for good).
+      |> assign(:all_items, items)
       |> assign(:mode, Map.get(assigns, :mode, :single))
       |> assign(:index, Map.get(assigns, :index, 0))
       |> assign(:presenting_items, presenting_items)
-      |> assign(:listing_open, Map.get(assigns, :initial_open, false))
+      # Preserve the dropdown's open/closed state across parent re-renders. The
+      # form's `phx-change="validate"` fires update/2 on every keystroke; forcing
+      # it back to `initial_open` here would race the `search` event and slam the
+      # results dropdown shut mid-search. The component's own events
+      # (search/toggle/close/select) are the source of truth once mounted.
+      |> assign(
+        :listing_open,
+        Map.get(socket.assigns, :listing_open, Map.get(assigns, :initial_open, false))
+      )
       |> assign(:selected_items, selected_items)
+      # Optional rich presentation: a map of `id => %{image_url, subtitle}` the
+      # caller can pass (e.g. recipes) so options/the chosen chip render a
+      # thumbnail + subtitle. Absent (default `%{}`) → plain-name rendering, so
+      # the unit/nutrient/ingredient call sites are unaffected.
+      |> assign(:item_meta, Map.get(assigns, :item_meta, %{}))
+      # Persist the sticky-clear intent (see `cleared?` above). Once a real value
+      # is present again (the user picked a replacement) we drop it so a later
+      # edit of the same row isn't wrongly held empty.
+      |> assign(:user_cleared, cleared? and not changeset_has_value?)
       |> assign(:form, assigns.form)
       |> assign(:input_variable, assigns.input_variable)
       # The caller-supplied component `id` is unique per page (LiveView requires
@@ -111,7 +155,7 @@ defmodule MehungryWeb.SelectComponent do
   end
 
   def handle_event("search", %{"key" => _key, "value" => value}, socket) do
-    items = fuzzy_match(value, socket.assigns.items)
+    items = search_items(value, socket.assigns.all_items)
 
     socket =
       socket
@@ -130,6 +174,8 @@ defmodule MehungryWeb.SelectComponent do
       socket
       |> assign(:listing_open, false)
       |> assign(:selected_items, selected_items)
+      # A real selection ends any sticky-clear state (see update/2).
+      |> assign(:user_cleared, false)
 
     # Pushes the message that the SelectComponent Hook is waiting for int he JS side
     selected_items =
@@ -152,6 +198,9 @@ defmodule MehungryWeb.SelectComponent do
       socket
       |> assign(:selected_items, selected_items)
       |> assign(:listing_open, false)
+      # Remember an explicit clear so a mid-search re-validate can't resurrect
+      # the persisted selection from form.data (see update/2 `cleared?`).
+      |> assign(:user_cleared, selected_items == [])
 
     selected_items = Enum.map(selected_items, fn x -> elem(x, 0) end)
 
@@ -228,6 +277,38 @@ defmodule MehungryWeb.SelectComponent do
     Map.get(lookup, normalize(query))
   end
 
+  # Search used by the live search box. Prefix/substring matches come first (so
+  # typing "chi" surfaces "Chicken soup" on the very first characters, which a
+  # pure jaro-distance threshold never does for short queries), then typo-tolerant
+  # fuzzy matches fill in. Both are accent/case-insensitive via `normalize/1`.
+  def search_items(query, terms) do
+    normalized_query = normalize(query)
+
+    case normalized_query do
+      "" ->
+        Enum.slice(terms, 0..10)
+
+      nq ->
+        terms
+        |> Enum.map(fn {_id, term} = item ->
+          nt = normalize(term)
+
+          score =
+            cond do
+              String.starts_with?(nt, nq) -> 3.0
+              String.contains?(nt, nq) -> 2.0
+              true -> String.jaro_distance(nt, nq)
+            end
+
+          {item, score}
+        end)
+        |> Enum.filter(fn {_item, score} -> score >= 0.40 end)
+        |> Enum.sort_by(fn {_item, score} -> -score end)
+        |> Enum.map(fn {item, _score} -> item end)
+        |> Enum.slice(0..10)
+    end
+  end
+
   def fuzzy_match(query, terms, threshold \\ 0.40) do
     normalized_query = normalize(query)
 
@@ -274,6 +355,12 @@ defmodule MehungryWeb.SelectComponent do
 
     assigns = Map.put(assigns, :index, index)
 
+    # Derive the submitted hidden value from the authoritative local selection
+    # (not the possibly-stale `@form` field) so a deliberate clear stays cleared
+    # and the parent form never resubmits the old id mid-search.
+    assigns =
+      Map.put(assigns, :hidden_value, Enum.map_join(assigns.selected_items, ",", &elem(&1, 0)))
+
     ~H"""
     <div
       class="w-full h-full"
@@ -282,7 +369,7 @@ defmodule MehungryWeb.SelectComponent do
       phx-hook="SelectComponent"
       id={"select_component_" <> @sc_id}
     >
-      <.input field={@form[@input_variable]} type="hidden" />
+      <.input field={@form[@input_variable]} type="hidden" value={@hidden_value} />
       <div
         class="h-full w-full max-w-lg "
         phx-click-away="close-listing"
@@ -297,6 +384,7 @@ defmodule MehungryWeb.SelectComponent do
             myself={@myself}
             form={@form}
             input_variable={@input_variable}
+            item_meta={@item_meta}
           />
           <.list_search_result
             myself={@myself}
@@ -304,6 +392,7 @@ defmodule MehungryWeb.SelectComponent do
             items={@items}
             selected_items={@selected_items}
             mode={@mode}
+            item_meta={@item_meta}
           />
         </div>
         <!-- End Component -->
@@ -341,7 +430,13 @@ defmodule MehungryWeb.SelectComponent do
     <div class="text-white">
       <!-- Tags (Selected) -->
       <%= for x <- @selected_items do %>
-        <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
+        <.selected_item
+          id={elem(x, 0)}
+          myself={@myself}
+          mode={@mode}
+          name={elem(x, 1)}
+          meta={Map.get(@item_meta, elem(x, 0))}
+        />
       <% end %>
 
       <!-- Search Input -->
@@ -382,11 +477,9 @@ defmodule MehungryWeb.SelectComponent do
         phx-value-id={@id}
         phx-target={@myself}
         tabindex="0"
-        class="rounded-lg px-3 py-2 h-full text-left cursor-pointer flex items-center pr-6"
+        class="rounded-lg px-2 py-2 h-full text-left cursor-pointer flex items-center gap-2 pr-7 text-white"
       >
-        <div class="text-white text-sm truncate">
-          {@name}
-        </div>
+        <.item_content name={@name} meta={@meta} />
         <.icon
           name="hero-x-mark"
           class="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-slate-400 hover:text-red-400 h-3.5 w-3.5"
@@ -449,7 +542,7 @@ defmodule MehungryWeb.SelectComponent do
 
     ~H"""
     <div class="max-h-50 overflow-y-auto pr-2 w-fit">
-      <ul class="text-white absolute left-0 bg-[var(--sc-dropdown-bg,#334155)] max-h-40 overflow-y-scroll min-w-40 z-50">
+      <ul class="text-white absolute left-0 right-0 bg-[var(--sc-dropdown-bg,#334155)] rounded-lg shadow-lg max-h-60 overflow-y-auto min-w-52 z-50">
         <%= if @listing_open do %>
           <%= for x <- @items do %>
             <.option_item
@@ -457,6 +550,7 @@ defmodule MehungryWeb.SelectComponent do
               x={x}
               selected={MapSet.member?(@selected_ids, elem(x, 0))}
               mode={@mode}
+              meta={Map.get(@item_meta, elem(x, 0))}
             />
           <% end %>
         <% end %>
@@ -474,7 +568,7 @@ defmodule MehungryWeb.SelectComponent do
       phx-target={@myself}
     >
       <.icon name="hero-check" class="h-4 w-4 text-primary-400 flex-shrink-0" />
-      {elem(@x, 1)}
+      <.item_content name={elem(@x, 1)} meta={@meta} />
     </li>
     """
   end
@@ -482,13 +576,48 @@ defmodule MehungryWeb.SelectComponent do
   defp option_item(%{selected: false} = assigns) do
     ~H"""
     <li
-      class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-[var(--sc-option-bg,#334155)] hover:bg-[var(--sc-option-hover,#64748b)] pl-9 relative z-50"
+      class={
+        "flex items-center gap-2 cursor-pointer px-3 py-2 bg-[var(--sc-option-bg,#334155)] hover:bg-[var(--sc-option-hover,#64748b)] relative z-50 " <>
+          if(is_nil(@meta), do: "pl-9", else: "")
+      }
       phx-click="handle-item-click"
       phx-value-id={elem(@x, 0)}
       phx-target={@myself}
     >
-      {elem(@x, 1)}
+      <.item_content name={elem(@x, 1)} meta={@meta} />
     </li>
+    """
+  end
+
+  # Shared option/chip content: a thumbnail + title + subtitle when the caller
+  # supplied `meta` for this item (recipes), else just the plain name (units,
+  # nutrients, ingredients). `meta` is nil for items without metadata.
+  defp item_content(%{meta: meta} = assigns) when is_map(meta) do
+    ~H"""
+    <%= if @meta[:image_url] do %>
+      <img
+        src={@meta.image_url}
+        alt=""
+        loading="lazy"
+        class="h-9 w-9 rounded-md object-cover flex-shrink-0 bg-black/20"
+      />
+    <% else %>
+      <div class="h-9 w-9 rounded-md bg-black/20 flex-shrink-0 flex items-center justify-center text-sm">
+        🍽
+      </div>
+    <% end %>
+    <div class="min-w-0 flex-1 text-left">
+      <div class="truncate text-sm">{@name}</div>
+      <div :if={@meta[:subtitle] not in [nil, ""]} class="truncate text-xs text-slate-400">
+        {@meta.subtitle}
+      </div>
+    </div>
+    """
+  end
+
+  defp item_content(assigns) do
+    ~H"""
+    <span class="truncate text-sm">{@name}</span>
     """
   end
 
