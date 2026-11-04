@@ -8,6 +8,12 @@
 # configurations or dependencies per app, it is best to
 # move said applications out of the umbrellause Mix.Config
 import Config
+
+# Resolve IANA timezones (e.g. the professional's profile.timezone) so
+# DateTime.from_naive!/3 and DateTime.shift_zone/2 work. tzdata is already a
+# transitive dep (via timex); this makes it the project-wide tz database.
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
 # Configure Mix tasks and generators
 config :mehungry,
   ecto_repos: [Mehungry.Repo]

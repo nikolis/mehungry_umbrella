@@ -44,6 +44,7 @@ defmodule Mehungry.MixProject do
   defp deps do
     [
       {:excoveralls, "~> 0.18", only: :test},
+      {:tzdata, "~> 1.1"},
       {:bcrypt_elixir, "~> 3.0"},
       {:poison, "~> 5.0"},
       {:numexy, "~> 0.1.9"},

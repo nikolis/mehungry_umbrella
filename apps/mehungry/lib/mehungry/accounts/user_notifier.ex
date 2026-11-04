@@ -476,7 +476,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   """
   def deliver_appointment_requested(appointment, client_name, cta_url, locale \\ "en") do
     prof = appointment.professional
-    when_str = format_dt(appointment.scheduled_at, locale)
+    when_str = format_dt(appointment.scheduled_at, appt_tz(appointment), locale)
 
     text =
       tr(
@@ -541,7 +541,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   """
   def deliver_appointment_accepted(appointment, professional_name, cta_url, locale \\ "en") do
     client = appointment.client
-    when_str = format_dt(appointment.scheduled_at, locale)
+    when_str = format_dt(appointment.scheduled_at, appt_tz(appointment), locale)
     meeting = appointment.meeting_url
 
     ics =
@@ -622,7 +622,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   @doc "Notify the client that the nutritionist declined the request."
   def deliver_appointment_declined(appointment, professional_name, cta_url, locale \\ "en") do
     client = appointment.client
-    when_str = format_dt(appointment.scheduled_at, locale)
+    when_str = format_dt(appointment.scheduled_at, appt_tz(appointment), locale)
 
     text =
       tr(
@@ -670,7 +670,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   @doc "Notify the nutritionist that the client cancelled their appointment."
   def deliver_appointment_cancelled_by_client(appointment, client_name, cta_url, locale \\ "en") do
     prof = appointment.professional
-    when_str = format_dt(appointment.scheduled_at, locale)
+    when_str = format_dt(appointment.scheduled_at, appt_tz(appointment), locale)
 
     text =
       tr(
@@ -731,7 +731,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   """
   def deliver_appointment_cancelled_by_professional(appointment, professional_name, cta_url, locale \\ "en") do
     client = appointment.client
-    when_str = format_dt(appointment.scheduled_at, locale)
+    when_str = format_dt(appointment.scheduled_at, appt_tz(appointment), locale)
 
     text =
       tr(
@@ -806,16 +806,30 @@ defmodule Mehungry.Accounts.UserNotifier do
   @el_months {"Ιανουαρίου", "Φεβρουαρίου", "Μαρτίου", "Απριλίου", "Μαΐου", "Ιουνίου", "Ιουλίου",
               "Αυγούστου", "Σεπτεμβρίου", "Οκτωβρίου", "Νοεμβρίου", "Δεκεμβρίου"}
 
-  defp format_dt(%NaiveDateTime{} = ndt, "el") do
-    Calendar.strftime(ndt, "%A %-d %B %Y, %H:%M UTC",
+  # Appointment times are stored as UTC; render them in the professional's
+  # timezone with the matching zone abbreviation (e.g. EET/EEST), falling back to
+  # UTC when the professional has no declared timezone.
+  defp format_dt(%NaiveDateTime{} = utc, tz, "el") do
+    dt = Mehungry.Time.to_local_dt(utc, tz)
+
+    Calendar.strftime(dt, "%A %-d %B %Y, %H:%M ",
       day_of_week_names: fn d -> elem(@el_days, d - 1) end,
       month_names: fn m -> elem(@el_months, m - 1) end
-    )
+    ) <> dt.zone_abbr
   end
 
-  defp format_dt(%NaiveDateTime{} = ndt, _locale) do
-    Calendar.strftime(ndt, "%A %-d %B %Y, %H:%M UTC")
+  defp format_dt(%NaiveDateTime{} = utc, tz, _locale) do
+    dt = Mehungry.Time.to_local_dt(utc, tz)
+    Calendar.strftime(dt, "%A %-d %B %Y, %H:%M ") <> dt.zone_abbr
   end
+
+  # The professional's IANA timezone for an appointment (defaults to UTC when the
+  # professional is unknown or has no declared timezone).
+  defp appt_tz(%{professional_id: pid}) when is_integer(pid) do
+    Mehungry.Time.tz(Mehungry.Professionals.get_professional_profile(pid))
+  end
+
+  defp appt_tz(_), do: Mehungry.Time.tz(nil)
 
   defp deliver_with_ics(recipient, subject, text, html, ics_string) do
     email =
