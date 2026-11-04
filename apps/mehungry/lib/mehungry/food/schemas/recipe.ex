@@ -61,7 +61,7 @@ defmodule Mehungry.Food.Recipe do
     has_many :annotations, Mehungry.Food.Annotation
     has_many :comments, Mehungry.Posts.Comment
 
-    embeds_many :steps, Mehungry.Food.Step
+    embeds_many :steps, Mehungry.Food.Step, on_replace: :delete
 
     timestamps()
   end
