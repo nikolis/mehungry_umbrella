@@ -140,6 +140,31 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
     assert Repo.aggregate(Professionals.Appointment, :count) == before
   end
 
+  test "editing a requested appointment surfaces Accept, which transitions it", %{
+    conn: conn,
+    attacker: attacker
+  } do
+    client = Mehungry.AccountsFixtures.user_fixture()
+
+    {:ok, pending} =
+      Professionals.create_appointment(%{
+        professional_id: attacker.id,
+        client_id: client.id,
+        scheduled_at: ~N[2099-04-01 10:00:00],
+        ends_at: ~N[2099-04-01 11:00:00],
+        title: "Pending one",
+        status: "requested"
+      })
+
+    {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+
+    html = render_click(view, "edit_appointment", %{"id" => to_string(pending.id)})
+    assert html =~ "This is a pending request."
+
+    render_click(view, "accept_appointment", %{"appointment_id" => to_string(pending.id)})
+    assert Repo.get(Professionals.Appointment, pending.id).status == "accepted"
+  end
+
   describe "log measurement" do
     setup %{attacker: attacker} do
       client = Mehungry.AccountsFixtures.user_fixture()

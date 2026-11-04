@@ -57,6 +57,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> assign(:measurement_form, nil)
       |> assign(:measurement_record_id, nil)
       |> assign(:measurement_appointment_id, nil)
+      |> assign(:measurement_context, nil)
       |> assign(:editing_appointment, nil)
       |> assign(:modal_client_id, preselected_client_id)
       |> assign(
@@ -179,6 +180,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
        |> assign(:show_measurement_modal, true)
        |> assign(:measurement_record_id, record.id)
        |> assign(:measurement_appointment_id, appt.id)
+       |> assign(:measurement_context, %{
+         client: client_display(user),
+         date: appt.scheduled_at |> Mehungry.Time.to_local(socket.assigns.tz) |> NaiveDateTime.to_date()
+       })
        |> assign(:measurement_form, to_form(Professionals.change_consultation_note(note)))}
     else
       _ -> {:noreply, appointment_not_found(socket)}
@@ -192,7 +197,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
        show_measurement_modal: false,
        measurement_form: nil,
        measurement_record_id: nil,
-       measurement_appointment_id: nil
+       measurement_appointment_id: nil,
+       measurement_context: nil
      )}
   end
 
@@ -214,7 +220,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
            show_measurement_modal: false,
            measurement_form: nil,
            measurement_record_id: nil,
-           measurement_appointment_id: nil
+           measurement_appointment_id: nil,
+           measurement_context: nil
          )
          |> put_flash(:info, gettext("Measurement logged."))}
 
@@ -284,6 +291,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
             {:noreply,
              socket
              |> refresh()
+             |> assign(:show_modal, false)
+             |> assign(:editing_appointment, nil)
              |> put_flash(
                :info,
                gettext("Appointment accepted — the client has been emailed a calendar invite.")
@@ -312,6 +321,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
             {:noreply,
              socket
              |> refresh()
+             |> assign(:show_modal, false)
+             |> assign(:editing_appointment, nil)
              |> put_flash(:info, gettext("Request declined — the client has been notified."))}
 
           {:error, _changeset} ->
@@ -1215,6 +1226,32 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
             />
           </div>
 
+          <!-- Pending request: accept / decline inline (consistent with the triage card) -->
+          <%= if @editing_appointment && @editing_appointment.status == "requested" do %>
+            <div class="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-1">
+              <p class="text-amber-200 text-xs flex-1">{gettext("This is a pending request.")}</p>
+              <.action
+                type="button"
+                variant={:primary}
+                size={:sm}
+                phx-click="accept_appointment"
+                phx-value-appointment_id={@editing_appointment.id}
+              >
+                {gettext("Accept")}
+              </.action>
+              <.action
+                type="button"
+                variant={:ghost}
+                size={:sm}
+                phx-click="decline_appointment"
+                phx-value-id={@editing_appointment.id}
+                data-confirm={gettext("Decline this request?")}
+              >
+                {gettext("Decline")}
+              </.action>
+            </div>
+          <% end %>
+
           <!-- Footer actions -->
           <div class="pt-2 flex flex-wrap gap-3">
             <.action
@@ -1271,9 +1308,16 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
         show
         on_cancel={JS.push("close_measurement_modal")}
       >
-        <h3 id="measurement-modal-title" class="text-parchment font-display font-semibold mb-4">
-          {gettext("Log measurement")}
-        </h3>
+        <div class="mb-4">
+          <h3 id="measurement-modal-title" class="text-parchment font-display font-semibold">
+            {gettext("Log measurement")}
+          </h3>
+          <%= if @measurement_context do %>
+            <p class="text-parchment-dim text-xs mt-0.5">
+              {@measurement_context.client} · {Calendar.strftime(@measurement_context.date, "%b %-d, %Y")}
+            </p>
+          <% end %>
+        </div>
 
         <.form
           for={@measurement_form}
