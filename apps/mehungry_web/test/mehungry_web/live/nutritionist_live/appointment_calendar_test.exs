@@ -81,9 +81,13 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
     assert render(view) =~ "Appointment not found."
   end
 
-  test "clicking a day opens the hourly day-agenda modal (not the create form)",
+  test "the day agenda is an always-visible pane; selecting a day updates it",
        %{conn: conn} do
-    {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+    {:ok, view, html} = live(conn, "/nutritionist/appointments")
+
+    # The console always shows the triage rail and the agenda — no modal needed.
+    assert html =~ "Needs you"
+    assert html =~ "06:00"
 
     html =
       render_click(view, "select_date", %{"date" => Date.to_iso8601(Date.add(Date.utc_today(), 3))})
@@ -110,7 +114,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
       })
 
     {:ok, _view, html} = live(conn, "/nutritionist/appointments")
-    assert html =~ "Google Calendar connected"
+    assert html =~ "Google Calendar synced"
   end
 
   test "cannot manually create an appointment for a user who is not your client",
