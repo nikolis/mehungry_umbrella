@@ -24,14 +24,6 @@ defmodule MehungryWeb.SelectComponentUtils do
     selected_items = Map.get(assigns, :selected_items)
     input_variable_form_data = Map.get(assigns.form.data, input_variable)
 
-    if input_variable in [:unit_selection, "unit_selection"] do
-      File.write!(
-        "/tmp/claude-1000/-home-nikolis-git-mehungry-umbrella/605a6c0a-06b3-4d18-9047-b20c463fb7f6/scratchpad/sc_debug.log",
-        "IV=#{inspect(input_variable)} changes=#{inspect(changes)} has_key=#{is_map(changes) and Map.has_key?(changes, input_variable)} items=#{inspect(assigns.items)} form_data=#{inspect(input_variable_form_data)}\n",
-        [:append]
-      )
-    end
-
     # A field is "touched" the moment the changeset carries an entry for it —
     # which happens as soon as the user picks *or clears* a value (the JS hook
     # writes the id, or an empty string, into the hidden input and the form

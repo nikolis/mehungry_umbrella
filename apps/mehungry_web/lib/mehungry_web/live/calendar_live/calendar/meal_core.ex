@@ -446,6 +446,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
     # which don't pass it) — rendered inline before the title.
     assigns = assign_new(assigns, :icon, fn -> nil end)
 
+    # `ingredient_user_meal_id` is the logged ingredient entry's row id (nil for
+    # recipe/landing cards); it gates the "View ingredient" button that opens the
+    # ingredient details modal — the ingredient-side mirror of "View recipe".
+    assigns = assign_new(assigns, :ingredient_user_meal_id, fn -> nil end)
+
     # The user's personal avoid terms this food's title matches (reusing the
     # meal-plan enforcement engine's substring match). Empty list = not flagged;
     # defaulted so landing/demo cards that don't pass the assign render clean.
@@ -464,12 +469,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
     ]}>
       <div class="flex gap-4 items-center">
         <div class="relative flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 rounded-xl overflow-hidden">
-          <%= if is_nil(@img_url) do %>
-            <div class="h-full w-full bg-ink-panel2 flex items-center justify-center">
-              {SvgComponents.get_default_recipe_image(assigns)}
-            </div>
-          <% else %>
-            <img src={@img_url} class="h-full w-full object-cover" />
+          <%= cond do %>
+            <% not is_nil(@img_url) -> %>
+              <img src={@img_url} class="h-full w-full object-cover" />
+            <% not is_nil(@icon) -> %>
+              <div class="h-full w-full bg-ink-panel2 flex items-center justify-center text-4xl sm:text-5xl" aria-hidden="true">
+                {@icon}
+              </div>
+            <% true -> %>
+              <div class="h-full w-full bg-ink-panel2 flex items-center justify-center">
+                {SvgComponents.get_default_recipe_image(assigns)}
+              </div>
           <% end %>
           <%= if @actual_meal.id != "landing_id" do %>
             <button
@@ -508,7 +518,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
         </div>
         <div class="flex-1 min-w-0">
           <h3 class={"font-display font-medium text-base leading-snug mb-1 " <> @card_meal_text}>
-            <span :if={@icon} class="mr-1" aria-hidden="true">{@icon}</span>{@title}
+            {@title}
           </h3>
           <div
             :if={@avoided != []}
@@ -569,6 +579,35 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
                 />
               </svg>
               View recipe
+            </button>
+          <% end %>
+          <%= if @ingredient_user_meal_id do %>
+            <button
+              type="button"
+              phx-click="show_ingredient_details"
+              phx-value-id={@ingredient_user_meal_id}
+              class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-basil/40 text-xs font-medium transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+                class="size-3.5 flex-shrink-0"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                />
+              </svg>
+              {gettext("View ingredient")}
             </button>
           <% end %>
         </div>

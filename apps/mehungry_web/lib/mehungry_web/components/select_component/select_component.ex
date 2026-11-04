@@ -130,6 +130,13 @@ defmodule MehungryWeb.SelectComponent do
         Map.get(socket.assigns, :listing_open, Map.get(assigns, :initial_open, false))
       )
       |> assign(:selected_items, selected_items)
+      # The submitted hidden value, derived from the authoritative local selection.
+      # Computed here (not with `Map.put` in `render/1`) so it lands in
+      # `__changed__` and LiveView's diff actually patches the hidden `<input>`'s
+      # `value` on later renders. A `Map.put` assign is invisible to change
+      # tracking, so the value would stick at its first-render value ("") and the
+      # user's pick (e.g. a measurement unit) would never reach the submitted form.
+      |> assign(:hidden_value, Enum.map_join(selected_items, ",", &elem(&1, 0)))
       # Optional rich presentation: a map of `id => %{image_url, subtitle}` the
       # caller can pass (e.g. recipes) so options/the chosen chip render a
       # thumbnail + subtitle. Absent (default `%{}`) → plain-name rendering, so
@@ -354,12 +361,6 @@ defmodule MehungryWeb.SelectComponent do
       end
 
     assigns = Map.put(assigns, :index, index)
-
-    # Derive the submitted hidden value from the authoritative local selection
-    # (not the possibly-stale `@form` field) so a deliberate clear stays cleared
-    # and the parent form never resubmits the old id mid-search.
-    assigns =
-      Map.put(assigns, :hidden_value, Enum.map_join(assigns.selected_items, ",", &elem(&1, 0)))
 
     ~H"""
     <div

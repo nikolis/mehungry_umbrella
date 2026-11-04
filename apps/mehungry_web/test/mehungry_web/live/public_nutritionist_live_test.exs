@@ -135,15 +135,15 @@ defmodule MehungryWeb.PublicNutritionistLiveTest do
     end
 
     test "a logged-out visitor is prompted to log in", %{conn: conn, profile: profile} do
-      {:ok, view, html} = live(conn, ~p"/nutritionists/#{profile.slug}")
+      {:ok, _view, html} = live(conn, ~p"/nutritionists/#{profile.slug}")
 
       assert html =~ "Request an appointment"
       # ("You'll be asked to log in to confirm." — apostrophe is HTML-escaped)
       assert html =~ "asked to log in to confirm"
 
-      # Confirming without a session is refused and routed to the login page.
-      assert {:error, {:redirect, %{to: "/users/log_in"}}} =
-               render_click(view, "confirm_booking", %{"notes" => ""})
+      # The booking wizard offers a log-in CTA rather than a confirm form.
+      assert html =~ "Log in to continue"
+      assert html =~ ~r/href="[^"]*\/users\/log_in"/
     end
 
     test "a logged-in visitor can request an open slot", %{conn: conn, profile: profile} do
@@ -155,12 +155,9 @@ defmodule MehungryWeb.PublicNutritionistLiveTest do
       today = Date.utc_today()
       [slot | _] = Professionals.available_slots(profile.user_id, today, Date.add(today, 30))
 
-      render_click(view, "select_booking_date", %{
-        "date" => slot |> NaiveDateTime.to_date() |> Date.to_iso8601()
-      })
-
-      render_click(view, "select_booking_slot", %{"at" => NaiveDateTime.to_iso8601(slot)})
-      html = render_submit(view, "confirm_booking", %{"notes" => "Looking forward to it"})
+      select_date(view, slot)
+      select_slot(view, slot)
+      html = confirm_booking(view, "Looking forward to it")
 
       assert html =~ "Request sent!"
 
@@ -204,16 +201,18 @@ defmodule MehungryWeb.PublicNutritionistLiveTest do
       {:ok, view, _html} = live(conn, ~p"/nutritionists/#{profile.slug}")
 
       service = hd(Professionals.list_active_services(profile.user_id))
-      render_click(view, "select_booking_service", %{"id" => to_string(service.id)})
+
+      view
+      |> element(
+        ~s|button[phx-click="select_booking_service"][phx-value-id="#{service.id}"]|
+      )
+      |> render_click()
 
       today = Date.utc_today()
       [slot | _] = Professionals.available_slots(profile.user_id, today, Date.add(today, 30))
 
-      render_click(view, "select_booking_date", %{
-        "date" => slot |> NaiveDateTime.to_date() |> Date.to_iso8601()
-      })
-
-      html = render_click(view, "select_booking_slot", %{"at" => NaiveDateTime.to_iso8601(slot)})
+      select_date(view, slot)
+      html = select_slot(view, slot)
 
       assert html =~ "authorised now"
       assert html =~ "cancellation"
@@ -231,19 +230,40 @@ defmodule MehungryWeb.PublicNutritionistLiveTest do
       today = Date.utc_today()
       [slot | _] = Professionals.available_slots(profile.user_id, today, Date.add(today, 30))
 
-      render_click(view, "select_booking_date", %{
-        "date" => slot |> NaiveDateTime.to_date() |> Date.to_iso8601()
-      })
-
-      render_click(view, "select_booking_slot", %{"at" => NaiveDateTime.to_iso8601(slot)})
+      select_date(view, slot)
+      select_slot(view, slot)
 
       # A concurrent visitor grabs the same slot before this one confirms.
       other = Mehungry.AccountsFixtures.user_fixture()
       {:ok, _} = Professionals.request_appointment(profile.user_id, other.id, slot, title: "C")
 
-      html = render_submit(view, "confirm_booking", %{"notes" => ""})
+      html = confirm_booking(view, "")
 
       assert html =~ "just taken"
+    end
+
+    # The booking wizard is a LiveComponent, so events must be driven through the
+    # DOM (so `phx-target` routes them to the component, not the root LiveView).
+    defp select_date(view, slot) do
+      date = slot |> NaiveDateTime.to_date() |> Date.to_iso8601()
+
+      view
+      |> element(~s|button[phx-click="select_booking_date"][phx-value-date="#{date}"]|)
+      |> render_click()
+    end
+
+    defp select_slot(view, slot) do
+      at = NaiveDateTime.to_iso8601(slot)
+
+      view
+      |> element(~s|button[phx-click="select_booking_slot"][phx-value-at="#{at}"]|)
+      |> render_click()
+    end
+
+    defp confirm_booking(view, notes) do
+      view
+      |> element(~s|form[phx-submit="confirm_booking"]|)
+      |> render_submit(%{"notes" => notes})
     end
   end
 end

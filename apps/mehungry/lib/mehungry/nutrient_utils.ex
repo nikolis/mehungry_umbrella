@@ -512,11 +512,25 @@ defmodule Mehungry.NutrientUtils do
       protein_g: amount.(:protein),
       fat_g: amount.(:fat),
       carbs_g: amount.(:carbs),
-      sugars_g: amount.(:sugars),
-      fiber_g: amount.(:fiber),
+      # Total Sugars and Fiber are nested *under* Total Carbohydrates in the
+      # hierarchy (Total Carbs -> Total Sugars; Total Carbs -> Complex Carbs ->
+      # Fiber), so they're never top-level keys `macro_totals/1` can see — it
+      # would always report 0. Resolve them by walking the tree (`nutrient_grams`,
+      # child-descending), exactly like sodium/saturated fat below, falling back
+      # to the top-level bucket only on the off chance one is hoisted.
+      sugars_g: macro_nested_g(total_nutrients, "Total Sugars", amount.(:sugars)),
+      fiber_g: macro_nested_g(total_nutrients, "Fiber", amount.(:fiber)),
       sodium_mg: nutrient_grams(total_nutrients, "Sodium") |> Kernel.*(1000) |> round(),
       saturated_fat_g: nutrient_grams(total_nutrients, "Saturated Fat") |> Float.round(1)
     }
+  end
+
+  # Prefer the top-level macro bucket value when present (> 0), else fall back to
+  # the child-walking tree lookup for nutrients the hierarchy nests under carbs.
+  defp macro_nested_g(_total_nutrients, _canonical_name, top) when top > 0, do: top
+
+  defp macro_nested_g(total_nutrients, canonical_name, _top) do
+    nutrient_grams(total_nutrients, canonical_name) |> Float.round(1)
   end
 
   defp macro_scalar(n) when is_number(n), do: n * 1.0

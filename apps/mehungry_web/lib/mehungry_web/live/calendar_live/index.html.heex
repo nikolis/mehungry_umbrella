@@ -379,6 +379,175 @@
     </div>
   </MehungryWeb.RecipeComponents.recipe_modal>
 
+  <MehungryWeb.RecipeComponents.ingredient_modal
+    :if={@live_action in [:show_ingredient] and @ingredient}
+    on_cancel={JS.patch(~p"/calendar")}
+    id="calendar_ingredient_details_modal"
+    show
+  >
+    <% ing = @ingredient %>
+    <% logged_label =
+      "#{fmt_amount(ing.logged_qty)}#{if ing.logged_unit, do: " " <> ing.logged_unit, else: ""}" %>
+    <% selected_tree =
+      if @ingredient_basis == :per_100g, do: ing.per_100g_tree, else: ing.as_logged_tree %>
+    <% macros =
+      if @ingredient_basis == :per_100g, do: ing.per_100g_macros, else: ing.as_logged_macros %>
+    <% basis_label = if @ingredient_basis == :per_100g, do: gettext("per 100 g"), else: logged_label %>
+    <div class="w-full max-w-xl mx-auto p-4 sm:p-2" style="min-height: 40vh;">
+      <%!-- Header: emoji hero (no photo for ingredients), name, species, as-logged badge.
+           On mobile, indent clear of the absolutely-positioned back button (top-5 left-5,
+           w-12) so it doesn't overlap the emoji; reset at sm where the button is hidden. --%>
+      <div class="flex gap-4 items-center mb-6 pl-16 sm:pl-0">
+        <div
+          class="flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-ink-panel2 flex items-center justify-center text-5xl sm:text-6xl"
+          aria-hidden="true"
+        >
+          {ing.icon}
+        </div>
+        <div class="min-w-0">
+          <h2 class="font-display font-medium text-2xl text-parchment leading-tight">{ing.name}</h2>
+          <div :if={ing.species} class="flex flex-wrap gap-1.5 mt-2">
+            <span
+              :if={ing.species.scientific_name && ing.species.scientific_name != ""}
+              class="px-2 py-0.5 rounded-full text-xs italic bg-ink-panel2 text-parchment-dim"
+            >
+              {ing.species.scientific_name}
+            </span>
+            <span
+              :if={ing.species.variety && ing.species.variety != ""}
+              class="px-2 py-0.5 rounded-full text-xs bg-ink-panel2 text-parchment-dim"
+            >
+              {ing.species.variety}
+            </span>
+            <span
+              :if={ing.species.family && ing.species.family != ""}
+              class="px-2 py-0.5 rounded-full text-xs bg-ink-panel2 text-parchment-dim"
+            >
+              {ing.species.family}
+            </span>
+          </div>
+          <div class="mt-2 text-sm text-parchment-dim">
+            {gettext("As logged")}:
+            <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{logged_label}</span>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Basis toggle: as-logged (default) ⇄ per 100 g --%>
+      <div class="inline-flex rounded-lg bg-ink-panel2 p-1 mb-5 text-xs font-medium">
+        <button
+          type="button"
+          phx-click="set_ingredient_basis"
+          phx-value-basis="as_logged"
+          class={[
+            "px-3 py-1.5 rounded-md transition-colors",
+            if(@ingredient_basis == :as_logged,
+              do: "bg-ink-panel text-parchment",
+              else: "text-parchment-dim hover:text-parchment"
+            )
+          ]}
+        >
+          {gettext("As logged · %{amount}", amount: logged_label)}
+        </button>
+        <button
+          type="button"
+          phx-click="set_ingredient_basis"
+          phx-value-basis="per_100g"
+          class={[
+            "px-3 py-1.5 rounded-md transition-colors",
+            if(@ingredient_basis == :per_100g,
+              do: "bg-ink-panel text-parchment",
+              else: "text-parchment-dim hover:text-parchment"
+            )
+          ]}
+        >
+          {gettext("Per 100 g")}
+        </button>
+      </div>
+
+      <%= if map_size(selected_tree) == 0 do %>
+        <p class="text-parchment-dim text-sm mb-6">
+          {gettext("No nutrition data for this ingredient yet.")}
+        </p>
+      <% else %>
+        <%!-- Macro highlights for the selected basis --%>
+        <div class="grid grid-cols-5 gap-2 mb-5">
+          <div
+            :for={
+              {label, value, unit} <- [
+                {gettext("Cal"), macros.energy_kcal, "kcal"},
+                {gettext("Protein"), macros.protein_g, "g"},
+                {gettext("Fat"), macros.fat_g, "g"},
+                {gettext("Carbs"), macros.carbs_g, "g"},
+                {gettext("Fiber"), macros.fiber_g, "g"}
+              ]
+            }
+            class="bg-ink-panel rounded-xl p-3 text-center border border-ink-panel2"
+          >
+            <div class="text-lg font-bold text-basil [font-variant-numeric:tabular-nums]">
+              {fmt_amount(value)}
+            </div>
+            <div class="text-[0.65rem] text-parchment-dim">{unit}</div>
+            <div class="text-xs font-medium text-parchment-dim mt-0.5">{label}</div>
+          </div>
+        </div>
+
+        <%!-- Full breakdown — reuses the shared Nutrition Facts accordion --%>
+        <div class="text-xs uppercase tracking-wide text-parchment-dim mb-1">
+          {gettext("Full breakdown")} · {basis_label}
+        </div>
+        {MehungryWeb.RecipeComponents.recipe_nutrients(
+          %{
+            id: "ingredient-#{ing.id}-#{@ingredient_basis}",
+            nutrients: selected_tree,
+            primary_size: 5,
+            servings: 1,
+            locale: @current_language
+          },
+          @current_language
+        )}
+      <% end %>
+
+      <%!-- Common portion sizes — logged portion highlighted --%>
+      <div :if={ing.portions != []} class="mb-6">
+        <h3 class="text-xs uppercase tracking-wide text-parchment-dim mb-2">
+          {gettext("Common portion sizes")}
+        </h3>
+        <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
+          <table class="w-full">
+            <tbody>
+              <%= for {portion, idx} <- Enum.with_index(ing.portions) do %>
+                <% pname = Mehungry.Food.IngredientPortion.display_name(portion) %>
+                <tr class={[
+                  if(rem(idx, 2) == 0, do: "bg-ink-panel", else: "bg-ink-panel/50"),
+                  if(pname && pname == ing.logged_unit, do: "border-l-2 border-paprika")
+                ]}>
+                  <td class="px-4 py-2 text-sm text-parchment-dim">{pname || "—"}</td>
+                  <td class="px-4 py-2 text-sm font-bold text-basil text-right [font-variant-numeric:tabular-nums]">
+                    {fmt_amount(portion.amount)}
+                  </td>
+                  <td class="px-4 py-2 text-sm font-bold text-basil text-right [font-variant-numeric:tabular-nums]">
+                    {fmt_amount(portion.gram_weight)}g
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <%!-- One quiet link out to the full species food page --%>
+      <div :if={ing.species_slug} class="text-right">
+        <.link
+          navigate={~p"/foods/#{ing.species_slug}"}
+          class="text-sm text-parchment-dim hover:text-parchment transition-colors"
+        >
+          {gettext("See full food page")} →
+        </.link>
+      </div>
+    </div>
+  </MehungryWeb.RecipeComponents.ingredient_modal>
+
   <.modal id="share_week_modal" show={false} on_cancel={JS.push("reset_share")}>
     <div class="w-full">
       <h3 class="font-display font-medium text-parchment text-lg mb-1 flex items-center gap-2">

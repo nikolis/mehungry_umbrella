@@ -8,6 +8,8 @@ defmodule MehungryWeb.Api.V1.UploadController do
   """
   use MehungryWeb, :controller
 
+  require Logger
+
   import MehungryWeb.Api.V1.JSON.Helpers
 
   alias Mehungry.Storage
@@ -23,7 +25,7 @@ defmodule MehungryWeb.Api.V1.UploadController do
     with :ok <- validate_kind(kind),
          :ok <- ensure_configured(),
          key <- object_key(kind, content_type),
-         {:ok, upload} <- Storage.signed_upload(key, content_type: content_type) do
+         {:ok, upload} <- signed_upload(key, content_type) do
       json(
         conn,
         data(%{
@@ -43,8 +45,8 @@ defmodule MehungryWeb.Api.V1.UploadController do
     with :ok <- validate_kind(kind),
          :ok <- ensure_configured(),
          key <- object_key(kind, content_type),
-         {:ok, %{url: url, key: key}} <-
-           Storage.put_file(key, upload.path, content_type: content_type) do
+         {:ok, binary} <- read_upload(upload),
+         {:ok, %{url: url, key: key}} <- put_object(key, binary, content_type) do
       json(conn, data(%{upload_id: key, url: url}))
     end
   end
@@ -52,6 +54,45 @@ defmodule MehungryWeb.Api.V1.UploadController do
   def create(conn, _params), do: {:error, :bad_request}
 
   # ── helpers ────────────────────────────────────────────────────────────
+
+  # Storage backends return `{:error, {:http_error, _, _}}` /
+  # `{:error, {:transport_error, _}}` on upstream failure. Collapse those to the
+  # `:upstream_error` the fallback controller maps to a clean 502 — a raw tuple
+  # would otherwise match no fallback clause and crash into a 500.
+  defp signed_upload(key, content_type) do
+    case Storage.signed_upload(key, content_type: content_type) do
+      {:ok, upload} ->
+        {:ok, upload}
+
+      {:error, reason} ->
+        Logger.error("Upload presign failed for #{key}: #{inspect(reason)}")
+        {:error, :upstream_error}
+    end
+  end
+
+  # Read the multipart temp file without raising — the file may be gone or
+  # unreadable, and `File.read!/1` would crash into a 500.
+  defp read_upload(%Plug.Upload{path: path}) do
+    case File.read(path) do
+      {:ok, binary} ->
+        {:ok, binary}
+
+      {:error, reason} ->
+        Logger.error("Upload temp file unreadable (#{inspect(reason)}): #{inspect(path)}")
+        {:error, :upstream_error}
+    end
+  end
+
+  defp put_object(key, binary, content_type) do
+    case Storage.put(key, binary, content_type: content_type) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} ->
+        Logger.error("Upload store failed for #{key}: #{inspect(reason)}")
+        {:error, :upstream_error}
+    end
+  end
 
   defp validate_kind(kind) when kind in @valid_kinds, do: :ok
   defp validate_kind(_), do: {:error, :bad_request}

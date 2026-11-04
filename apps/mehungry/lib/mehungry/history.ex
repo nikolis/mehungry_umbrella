@@ -264,6 +264,10 @@ defmodule Mehungry.History do
       ingredient_user_meals:
         Enum.map(meal.ingredient_user_meals, fn y ->
           %{
+            # The `IngredientUserMeal` row id — routes the "View ingredient"
+            # detail modal. Distinct from `recipe.id` (the ingredient id) and
+            # from the mangled `"#{id}-#{meal.id}"` DOM id below.
+            user_meal_id: y.id,
             title: Map.get(ctx.ingredients, y.ingredient_id) || y.ingredient.name,
             icon: Map.get(ctx.icons, y.ingredient_id),
             portions: y.quantity,
@@ -449,6 +453,17 @@ defmodule Mehungry.History do
         ]
       ]
     )
+  end
+
+  @doc """
+  Gets a single `IngredientUserMeal` by id with its ingredient + measurement
+  unit preloaded — backs the calendar "View ingredient" detail modal, which
+  needs the as-logged quantity/nutrients plus the ingredient id to load the
+  per-100g reference.
+  """
+  def get_ingredient_user_meal!(id) do
+    Repo.get!(IngredientUserMeal, id)
+    |> Repo.preload([:ingredient, :measurement_unit])
   end
 
   @doc """

@@ -6829,3 +6829,84 @@ msgstr "Δημιουργία από εβδομάδα ημερολογίου"
 
 msgid "Build list"
 msgstr "Δημιουργία λίστας"
+
+msgid "My nutritionist"
+msgstr "Ο διατροφολόγος μου"
+
+msgid "Find a nutritionist"
+msgstr "Βρες διατροφολόγο"
+
+msgid "%{name} invited you to connect."
+msgstr "Ο/Η %{name} σε προσκάλεσε να συνδεθείτε."
+
+msgid "View full profile"
+msgstr "Δες το πλήρες προφίλ"
+
+msgid "Message"
+msgstr "Μήνυμα"
+
+msgid "You're not connected to a nutritionist yet. Find one below or browse the full directory."
+msgstr "Δεν έχεις συνδεθεί ακόμα με διατροφολόγο. Βρες έναν παρακάτω ή δες όλο τον κατάλογο."
+
+msgid "All cities"
+msgstr "Όλες οι πόλεις"
+
+msgid "Search name or specialization"
+msgstr "Αναζήτηση με όνομα ή ειδικότητα"
+
+msgid "No nutritionists found. Try a different city or search."
+msgstr "Δεν βρέθηκαν διατροφολόγοι. Δοκίμασε άλλη πόλη ή αναζήτηση."
+
+msgid "Browse the full directory"
+msgstr "Δες όλο τον κατάλογο"
+
+msgid "You have no appointments yet."
+msgstr "Δεν έχεις ραντεβού ακόμα."
+
+msgid "Appointment cancelled. No refund applies for this cancellation time."
+msgstr "Το ραντεβού ακυρώθηκε. Δεν ισχύει επιστροφή χρημάτων για αυτόν τον χρόνο ακύρωσης."
+
+msgid "Appointment cancelled. A refund of %{amount} is on its way to your card."
+msgstr "Το ραντεβού ακυρώθηκε. Επιστροφή %{amount} είναι καθ' οδόν προς την κάρτα σου."
+
+msgid "A nutritionist"
+msgstr "Ένας διατροφολόγος"
+
+msgid "Cancel this appointment?"
+msgstr "Ακύρωση αυτού του ραντεβού;"
+
+msgid "Cancel this appointment? You'll be refunded %{amount}."
+msgstr "Ακύρωση αυτού του ραντεβού; Θα σου επιστραφούν %{amount}."
+
+msgid "Nutritionist"
+msgstr "Διατροφολόγος"
+
+msgid "Awaiting confirmation"
+msgstr "Σε αναμονή επιβεβαίωσης"
+
+msgid "Confirmed"
+msgstr "Επιβεβαιωμένο"
+
+msgid "Declined"
+msgstr "Απορρίφθηκε"
+
+msgid "Cancelled"
+msgstr "Ακυρώθηκε"
+
+msgid "No-show"
+msgstr "Μη εμφάνιση"
+
+msgid "Paid %{amount}"
+msgstr "Πληρώθηκε %{amount}"
+
+msgid "%{amount} on hold (captured when accepted)"
+msgstr "%{amount} σε δέσμευση (χρεώνεται με την αποδοχή)"
+
+msgid "Partially refunded %{amount}"
+msgstr "Μερική επιστροφή %{amount}"
+
+msgid "Hold released"
+msgstr "Η δέσμευση αποδεσμεύτηκε"
+
+msgid "%{amount} / session"
+msgstr "%{amount} / συνεδρία"

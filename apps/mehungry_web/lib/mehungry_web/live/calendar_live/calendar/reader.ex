@@ -415,6 +415,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
               avoid_terms={@avoid_terms}
               img_url={re_u_m.img_url}
               icon={re_u_m.icon}
+              ingredient_user_meal_id={re_u_m.user_meal_id}
               title={re_u_m.title}
               cooking_portions={re_u_m.portions}
               consume_portions={nil}

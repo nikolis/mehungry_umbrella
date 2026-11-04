@@ -95,6 +95,16 @@
       <.icon name="hero-shopping-cart" class="h-7 w-7" />
     </.link>
 
+    <!-- My nutritionist -->
+    <.link
+      navigate={"/#{@current_language}/my-nutritionist"}
+      class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
+      title={gettext("My nutritionist")}
+      aria-label={gettext("My nutritionist")}
+    >
+      <.icon name="hero-user-circle" class="h-7 w-7" />
+    </.link>
+
     <!-- Your practice workspace (pro/nutritionist) -->
     <%= if show_workspace do %>
       <a

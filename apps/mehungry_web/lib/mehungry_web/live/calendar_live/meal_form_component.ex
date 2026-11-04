@@ -43,14 +43,28 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     {:ok, socket}
   end
 
+  # The modal keeps this component mounted for the whole edit session, and the
+  # parent LiveView re-renders it on unrelated state changes (navigation bumps
+  # `invocations`, recipe reloads, presence/pubsub ticks). Rebuilding the
+  # changeset from the base struct on each of those renders would wipe the user's
+  # in-progress meal (ingredient, quantity, chosen portion/unit) mid-edit. So
+  # initialize the form exactly once per open — keyed on the edited meal `id` —
+  # and on later re-renders only refresh display-only assigns, preserving the
+  # live form. (Re-opening the modal re-mounts the component, so `:init_id`
+  # starts nil again and a fresh meal initializes normally.)
   @impl true
   def update(%{id: id, title: title, dates: dates, current_user: user} = assigns, socket) do
-    File.write!(
-      "/tmp/claude-1000/-home-nikolis-git-mehungry-umbrella/605a6c0a-06b3-4d18-9047-b20c463fb7f6/scratchpad/mfc_debug.log",
-      "MAIN update/2 (init) id=#{inspect(id)} assign_keys=#{inspect(Map.keys(assigns))}\n",
-      [:append]
-    )
+    if Map.has_key?(socket.assigns, :form) and socket.assigns[:init_id] == id do
+      # Already initialized for this meal — keep the in-progress form; only
+      # refresh display-only assigns (never the component `:id`, which the
+      # `<.form>` uses as a stable DOM id).
+      {:ok, assign(socket, Map.drop(assigns, [:id]))}
+    else
+      init_form(assigns, socket, id, title, dates, user)
+    end
+  end
 
+  defp init_form(assigns, socket, id, title, dates, user) do
     default_attrs = %{
       start_dt: dates.start,
       title: title,
@@ -102,6 +116,9 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
       |> assign(:user_meal, base_user_meal)
       |> assign(:recipe_ids, recipe_ids)
       |> assign(:mode, initial_mode(id, base_user_meal))
+      # Marks the form as initialized for this meal so subsequent parent
+      # re-renders preserve it (see update/2) instead of rebuilding from base.
+      |> assign(:init_id, id)
 
     {:ok, init(socket, base_user_meal, default_attrs)}
   end
@@ -235,12 +252,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   @impl true
   def handle_event("validate", %{"user_meal" => user_meal_params}, socket) do
-    File.write!(
-      "/tmp/claude-1000/-home-nikolis-git-mehungry-umbrella/605a6c0a-06b3-4d18-9047-b20c463fb7f6/scratchpad/mfc_debug.log",
-      "VALIDATE params=#{inspect(user_meal_params)}\n",
-      [:append]
-    )
-
     changeset =
       Map.get(socket.assigns, :user_meal, %UserMeal{})
       |> History.change_user_meal(user_meal_params)

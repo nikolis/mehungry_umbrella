@@ -102,10 +102,12 @@ defmodule MehungryWeb.Api.V1.RecipeController do
   end
 
   defp update_attrs(params) do
-    Map.take(params, ~w(title description servings difficulty cousine private original_url
-                        preperation_time_lower_limit preperation_time_upper_limit
-                        cooking_time_lower_limit cooking_time_upper_limit
-                        recipe_ingredients steps image_url))
+    params
+    |> Map.take(~w(title description servings difficulty cousine private original_url
+                   preperation_time_lower_limit preperation_time_upper_limit
+                   cooking_time_lower_limit cooking_time_upper_limit
+                   recipe_ingredients steps image_url))
+    |> put_image_from_upload(params)
   end
 
   # image_upload_id is the S3 key returned by the presign step (spec §11). When

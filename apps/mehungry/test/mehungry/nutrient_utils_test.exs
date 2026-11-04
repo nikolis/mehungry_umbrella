@@ -346,6 +346,43 @@ defmodule Mehungry.NutrientUtilsTest do
     end
   end
 
+  describe "macro_summary/1" do
+    test "extracts fiber and sugars even when nested under Total Carbohydrates" do
+      # Mirrors the real hierarchy (NutrientHierarchyBuilder): Fiber lives two
+      # levels under Total Carbs (via Complex Carbs) and Total Sugars one level
+      # under — neither is a top-level key, so the headline macros must walk the
+      # tree to find them (regression: they used to report 0 g).
+      tree = %{
+        "Protein" => %{"name" => "Protein", "amount" => 2.0, "measurement_unit" => "g"},
+        "Total Fat" => %{"name" => "Total Fat", "amount" => 15.0, "measurement_unit" => "g"},
+        "Total Carbohydrates" => %{
+          "name" => "Total Carbohydrates",
+          "amount" => 9.0,
+          "measurement_unit" => "g",
+          "children" => [
+            %{
+              "name" => "Complex Carbohydrates",
+              "amount" => 6.7,
+              "measurement_unit" => "g",
+              "children" => [
+                %{"name" => "Fiber", "amount" => 6.7, "measurement_unit" => "g", "children" => []}
+              ]
+            },
+            %{"name" => "Total Sugars", "amount" => 1.2, "measurement_unit" => "g", "children" => []}
+          ]
+        }
+      }
+
+      summary = Nu.macro_summary(tree)
+
+      assert summary.fiber_g == 6.7
+      assert summary.sugars_g == 1.2
+      assert summary.carbs_g == 9.0
+      assert summary.fat_g == 15.0
+      assert summary.protein_g == 2.0
+    end
+  end
+
   describe "sort_nutrients_for_display/1" do
     test "orders by display priority, then alphabetically" do
       map = %{

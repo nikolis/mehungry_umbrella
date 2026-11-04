@@ -115,32 +115,7 @@ defmodule MehungryWeb.PublicNutritionistLive.Index do
         <p class="text-parchment-dim">No nutritionists found. Try a different city or search.</p>
       <% else %>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <a
-            :for={p <- @profiles}
-            href={~p"/nutritionists/#{p.slug}"}
-            class="block bg-ink-panel border border-ink-panel2 rounded-xl p-5 hover:border-paprika/40 transition"
-          >
-            <div class="flex items-center gap-3 mb-3">
-              <img
-                :if={p.photo_url}
-                src={p.photo_url}
-                alt={p.display_name}
-                class="w-14 h-14 rounded-full object-cover"
-              />
-              <div
-                :if={is_nil(p.photo_url)}
-                class="w-14 h-14 rounded-full bg-paprika/10 text-paprika flex items-center justify-center font-bold text-lg"
-              >
-                {String.first(p.display_name || "N")}
-              </div>
-              <div class="min-w-0">
-                <p class="font-semibold text-parchment truncate">{p.display_name}</p>
-                <p class="text-sm text-parchment-dim truncate">{p.specialization}</p>
-              </div>
-            </div>
-            <p :if={p.city} class="text-sm text-parchment-dim">📍 {p.city}</p>
-            <p :if={p.bio} class="text-sm text-parchment-dim mt-2 line-clamp-3">{p.bio}</p>
-          </a>
+          <.nutritionist_card :for={p <- @profiles} profile={p} variant={:directory_link} />
         </div>
       <% end %>
     </div>

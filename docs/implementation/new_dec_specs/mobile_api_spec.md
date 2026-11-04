@@ -732,6 +732,11 @@ Recipe / avatar images go to S3 (existing `Mehungry.S3`). Two supported flows:
 - **Direct multipart** (fallback): `POST /api/v1/uploads` `multipart/form-data`
   → `{ "data": { "upload_id": "…", "url": "https://…" } }`.
 
+`upload_id` is accepted as `image_upload_id` by **both** `POST /recipes` and
+`PUT /recipes/:id` (map it onto an edited recipe to swap its image). An upstream
+storage failure on either upload flow returns **`502`** with the standard
+`{ "errors": … }` envelope (retryable) — never a raw `500`.
+
 ---
 
 ## 12. Subscriptions & upgrade
