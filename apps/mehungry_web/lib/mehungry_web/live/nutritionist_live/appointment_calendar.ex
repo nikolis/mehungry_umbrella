@@ -17,19 +17,17 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     user = socket.assigns.current_user
     professional_id = user.id
 
-    today = Date.utc_today()
-    month_start = %{today | day: 1}
-    month_end = Date.end_of_month(today)
+    # Appointment times are stored as UTC; this view works in the professional's
+    # local wall-clock, so everything is localized on load and converted back to
+    # UTC on save.
+    profile = Professionals.get_professional_profile(professional_id)
+    tz = Mehungry.Time.tz(profile)
+    today = Mehungry.Time.local_today(tz)
 
-    start_dt = NaiveDateTime.new!(month_start, ~T[00:00:00])
-    end_dt = NaiveDateTime.new!(month_end, ~T[23:59:59])
-
-    appointments =
-      Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
+    appointments = month_appointments(professional_id, today, tz)
 
     clients = Professionals.list_clients(professional_id)
-    profile = Professionals.get_professional_profile(professional_id)
-    pending = Professionals.list_pending_requests(professional_id)
+    pending = localize_appts(Professionals.list_pending_requests(professional_id), tz)
     availabilities = Professionals.list_availabilities(professional_id)
     google_connected = Professionals.google_calendar_connected?(professional_id)
 
@@ -49,6 +47,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> assign(:professional_name, professional_name(profile, user))
       |> assign(:public_url, public_url(profile))
       |> assign(:page_title, gettext("Appointments"))
+      |> assign(:tz, tz)
       |> assign(:today, today)
       |> assign(:current_month, today)
       |> assign(:selected_date, today)
@@ -81,8 +80,11 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
     day_busy =
       if socket.assigns.google_connected do
-        day_start = NaiveDateTime.new!(date, ~T[00:00:00])
-        day_end = NaiveDateTime.new!(date, ~T[23:59:59])
+        # The selected date is local; query the Google busy cache (stored UTC)
+        # over the matching UTC window.
+        tz = socket.assigns.tz
+        day_start = Mehungry.Time.to_utc(NaiveDateTime.new!(date, ~T[00:00:00]), tz)
+        day_end = Mehungry.Time.to_utc(NaiveDateTime.new!(date, ~T[23:59:59]), tz)
         Professionals.list_calendar_busy(professional_id, day_start, day_end)
       else
         []
@@ -140,7 +142,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       appt ->
         changeset = Professionals.change_appointment(appt)
 
-        {form_date, start_h, start_m, end_h, end_m} = decompose_appointment(appt)
+        {form_date, start_h, start_m, end_h, end_m} =
+          decompose_appointment(appt, socket.assigns.tz)
 
         {:noreply,
          socket
@@ -236,7 +239,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     attrs =
       params
       |> Map.put("professional_id", professional_id)
-      |> build_datetimes()
+      |> build_datetimes(socket.assigns.tz)
 
     # Keep the raw date/time inputs in sync so a validation error re-renders the
     # form with what the user actually submitted. These fields are bound to
@@ -378,26 +381,38 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   end
 
   defp load_month_appointments(socket, month_date) do
-    professional_id = socket.assigns.current_user.id
-    month_start = %{month_date | day: 1}
-    month_end = Date.end_of_month(month_date)
-    start_dt = NaiveDateTime.new!(month_start, ~T[00:00:00])
-    end_dt = NaiveDateTime.new!(month_end, ~T[23:59:59])
-
-    appointments =
-      Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
-
-    assign(socket, :appointments, appointments)
+    appts = month_appointments(socket.assigns.current_user.id, month_date, socket.assigns.tz)
+    assign(socket, :appointments, appts)
   end
 
   defp reload_appointments(socket) do
-    professional_id = socket.assigns.current_user.id
-    month = socket.assigns.current_month
-    month_start = %{month | day: 1}
-    month_end = Date.end_of_month(month)
-    start_dt = NaiveDateTime.new!(month_start, ~T[00:00:00])
-    end_dt = NaiveDateTime.new!(month_end, ~T[23:59:59])
-    Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
+    month_appointments(socket.assigns.current_user.id, socket.assigns.current_month, socket.assigns.tz)
+  end
+
+  # Appointments for the local month, localized to the professional's tz. The
+  # query window is padded ±1 day because a local-month appointment near midnight
+  # can be stored on the adjacent UTC date; the month grid then buckets by local
+  # date, so the extra edge rows land in the right cells.
+  defp month_appointments(professional_id, month, tz) do
+    first = %{month | day: 1}
+    start_dt = NaiveDateTime.new!(Date.add(first, -1), ~T[00:00:00])
+    end_dt = NaiveDateTime.new!(Date.add(Date.end_of_month(first), 1), ~T[23:59:59])
+
+    professional_id
+    |> Professionals.list_appointments_for_professional(start_dt, end_dt)
+    |> localize_appts(tz)
+  end
+
+  defp localize_appts(appts, tz), do: Enum.map(appts, &localize_appt(&1, tz))
+
+  # Shift an appointment's stored UTC times into the professional's local
+  # wall-clock so the whole view can reason in local time.
+  defp localize_appt(%Appointment{} = appt, tz) do
+    %{
+      appt
+      | scheduled_at: Mehungry.Time.to_local(appt.scheduled_at, tz),
+        ends_at: appt.ends_at && Mehungry.Time.to_local(appt.ends_at, tz)
+    }
   end
 
   # Reload both the month grid and the pending-requests panel after a change.
@@ -406,7 +421,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
     socket
     |> assign(:appointments, reload_appointments(socket))
-    |> assign(:pending_requests, Professionals.list_pending_requests(professional_id))
+    |> assign(
+      :pending_requests,
+      localize_appts(Professionals.list_pending_requests(professional_id), socket.assigns.tz)
+    )
   end
 
   # Fetch an appointment by a client-supplied id, scoped to the current
@@ -501,7 +519,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     Professionals.change_appointment(%Appointment{}, attrs)
   end
 
-  defp build_datetimes(params) do
+  # Assemble the form's local date + hour/minute selects into UTC scheduled_at /
+  # ends_at for storage (times are entered in the professional's local tz).
+  defp build_datetimes(params, tz) do
     date_str = Map.get(params, "date", Date.to_iso8601(Date.utc_today()))
 
     with {:ok, date} <- Date.from_iso8601(date_str),
@@ -512,8 +532,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
          {:ok, scheduled_at} <- NaiveDateTime.new(date, Time.new!(start_h, start_m, 0)),
          {:ok, ends_at} <- NaiveDateTime.new(date, Time.new!(end_h, end_m, 0)) do
       params
-      |> Map.put("scheduled_at", scheduled_at)
-      |> Map.put("ends_at", ends_at)
+      |> Map.put("scheduled_at", Mehungry.Time.to_utc(scheduled_at, tz))
+      |> Map.put("ends_at", Mehungry.Time.to_utc(ends_at, tz))
       |> Map.drop(["date", "start_hour", "start_minute", "end_hour", "end_minute"])
     else
       _ -> params
@@ -539,10 +559,13 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     end
   end
 
-  defp decompose_appointment(%Appointment{scheduled_at: s, ends_at: e}) do
-    date_str = s |> NaiveDateTime.to_date() |> Date.to_iso8601()
-    end_dt = e || NaiveDateTime.add(s, 3600)
-    {date_str, s.hour, s.minute, end_dt.hour, end_dt.minute}
+  # The stored appointment is UTC; the edit form shows the professional's local
+  # time, so convert before splitting into date + hour/minute.
+  defp decompose_appointment(%Appointment{scheduled_at: s, ends_at: e}, tz) do
+    start_local = Mehungry.Time.to_local(s, tz)
+    end_local = Mehungry.Time.to_local(e || NaiveDateTime.add(s, 3600), tz)
+    date_str = start_local |> NaiveDateTime.to_date() |> Date.to_iso8601()
+    {date_str, start_local.hour, start_local.minute, end_local.hour, end_local.minute}
   end
 
   defp calendar_days(month_date) do
@@ -685,13 +708,14 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
   # Google busy intervals clipped to the selected date, as {start, end} Time
   # tuples. An interval that spills over the day boundary is clamped to the day.
-  defp busy_windows_for(day_busy, date) do
+  defp busy_windows_for(day_busy, date, tz) do
     day_start = NaiveDateTime.new!(date, ~T[00:00:00])
     day_end = NaiveDateTime.new!(date, ~T[23:59:59])
 
     Enum.map(day_busy, fn b ->
-      starts = b.starts_at |> DateTime.to_naive() |> clamp_naive(day_start, day_end)
-      ends = b.ends_at |> DateTime.to_naive() |> clamp_naive(day_start, day_end)
+      # Busy intervals are stored UTC; render them on the local agenda.
+      starts = b.starts_at |> DateTime.to_naive() |> Mehungry.Time.to_local(tz) |> clamp_naive(day_start, day_end)
+      ends = b.ends_at |> DateTime.to_naive() |> Mehungry.Time.to_local(tz) |> clamp_naive(day_start, day_end)
       {NaiveDateTime.to_time(starts), NaiveDateTime.to_time(ends)}
     end)
   end
@@ -906,7 +930,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       <.modal :if={@show_day_modal} id="day-agenda-modal" show on_cancel={JS.push("close_day_modal")}>
         <% appts = day_appointments(@appointments, @selected_date)
         windows = availability_windows_for(@availabilities, @selected_date)
-        busy_windows = busy_windows_for(@day_busy, @selected_date) %>
+        busy_windows = busy_windows_for(@day_busy, @selected_date, @tz) %>
         <!-- Header -->
         <div class="flex items-start justify-between gap-3 mb-4">
           <div>
