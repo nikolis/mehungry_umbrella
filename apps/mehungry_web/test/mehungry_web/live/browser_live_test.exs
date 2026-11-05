@@ -25,7 +25,7 @@ defmodule MehungryWeb.BrowserLiveTest do
     test "renders the browse header", %{conn: conn, user: user} do
       complete_onboarding(user)
       {:ok, _view, html} = live(conn, ~p"/browse")
-      assert html =~ "Discover Recipes"
+      assert html =~ "Recipes worth saving"
     end
 
     test "shows existing recipes on load", %{conn: conn, user: user} do
@@ -39,7 +39,7 @@ defmodule MehungryWeb.BrowserLiveTest do
     test "shows no-results message when no recipes match", %{conn: conn, user: user} do
       complete_onboarding(user)
       {:ok, _view, html} = live(conn, ~p"/search/xyznonexistentquery123")
-      assert html =~ "We were not able to find a recipe"
+      assert html =~ "Nothing matches that yet."
     end
 
     test "shows onboarding modal when profile is not complete", %{conn: conn} do
@@ -61,7 +61,7 @@ defmodule MehungryWeb.BrowserLiveTest do
   describe "unauthenticated access" do
     test "browse page loads without login", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/browse")
-      assert html =~ "Discover Recipes"
+      assert html =~ "Recipes worth saving"
     end
 
     test "unauthenticated user sees recipes", %{conn: conn} do
@@ -120,9 +120,8 @@ defmodule MehungryWeb.BrowserLiveTest do
         |> render_click()
 
       assert html =~ recipe.title
-      assert html =~ "Steps"
+      assert html =~ "Method"
       assert html =~ "Ingredients"
-      assert html =~ "Nutrients"
     end
 
     test "navigating directly to /browse/:id renders recipe detail", %{conn: conn, user: user} do
@@ -131,7 +130,7 @@ defmodule MehungryWeb.BrowserLiveTest do
       {:ok, _view, html} = live(conn, ~p"/browse/#{recipe.id}")
       assert html =~ recipe.title
       assert html =~ "Ingredients"
-      assert html =~ "Nutrients"
+      assert html =~ "Method"
     end
 
     test "recipe detail renders clickable hashtag links (Rule 3)", %{conn: conn, user: user} do
@@ -394,7 +393,7 @@ defmodule MehungryWeb.BrowserLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/browse")
       html = render_hook(view, "load-more", %{})
-      assert html =~ "Discover Recipes"
+      assert html =~ "Recipes worth saving"
     end
 
     test "data-page attribute increments after load-more", %{conn: conn, user: user} do
@@ -425,7 +424,7 @@ defmodule MehungryWeb.BrowserLiveTest do
         |> form(".form-search", recipe_search_item: %{query_string: "pasta"})
         |> render_change()
 
-      assert html =~ "Discover Recipes"
+      assert html =~ "Recipes worth saving"
     end
   end
 

@@ -439,7 +439,7 @@ skipped). Backed by `Mehungry.Notifications` + `PushNotificationWorker` → Expo
 When a bearer token is sent, `following` reflects whether the viewer follows this
 user (always `false` for anonymous requests or when viewing yourself-unfollowed).
 ### `GET /api/v1/users/:id/recipes` 🔓 `?type=created|saved` — grid for a profile.
-### `GET /api/v1/me/recipes` 🔒 `?tab=saved|created|my_ingredients|friends_ingredients`
+### `GET /api/v1/me/recipes` 🔒 `?tab=saved|created`
    — powers the Profile tab's sub-tabs seen in the web app.
 ### `PUT /api/v1/me/profile` 🔒 — edit profile
 ```json

@@ -1,6 +1,6 @@
 defmodule Mehungry.Food.IngredientScope do
   @moduledoc """
-  Shared Ecto query scopes for ingredient search — owner/friends visibility, USDA
+  Shared Ecto query scopes for ingredient search — owner visibility, USDA
   food-class filtering, and hiding the composite/prepared "second layer" categories.
 
   Both search paths compose these so the rules stay identical everywhere:
@@ -61,31 +61,20 @@ defmodule Mehungry.Food.IngredientScope do
   end
 
   def exclude_secondary_categories(query, secondary_ids, owner_id) do
-    ids = visible_owner_ids(owner_id)
-
     from(i in query,
-      where: i.category_id not in ^secondary_ids or i.user_id in ^ids
+      where: i.category_id not in ^secondary_ids or i.user_id == ^owner_id
     )
   end
 
   @doc """
   Visibility filter: global rows (`user_id IS NULL`) are always returned; when a
-  viewer id is given, their own private rows and their friends' are included too.
-  Branches on nil because Ecto forbids `== nil` comparisons.
+  viewer id is given, their own private rows are included too. Branches on nil
+  because Ecto forbids `== nil` comparisons.
   """
   def filter_by_owner(query, nil), do: from(i in query, where: is_nil(i.user_id))
 
   def filter_by_owner(query, owner_id) do
-    ids = visible_owner_ids(owner_id)
-    from(i in query, where: is_nil(i.user_id) or i.user_id in ^ids)
-  end
-
-  @doc """
-  The set of user ids whose private ingredients `owner_id` may see: themselves
-  plus their friends (blanket sharing via `Mehungry.Friends`).
-  """
-  def visible_owner_ids(owner_id) do
-    [owner_id | Mehungry.Friends.friend_ids(owner_id)]
+    from(i in query, where: is_nil(i.user_id) or i.user_id == ^owner_id)
   end
 
   @doc "Restrict a query to the given USDA food classes; no-op for nil/empty."

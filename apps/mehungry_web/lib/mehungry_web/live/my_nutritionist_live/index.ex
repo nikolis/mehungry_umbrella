@@ -9,9 +9,12 @@ defmodule MehungryWeb.MyNutritionistLive.Index do
     * **Connected** — leads with a preview of the connected nutritionist's public
       profile (`get_professional_profile/1`) and CTAs to **book an appointment**
       (the shared `MehungryWeb.AppointmentBookingComponent`, so a connected client
-      books without leaving this screen), view the full profile, message, jump
-      to appointments, or **disconnect** (`unlink_nutritionist` →
-      `unassign_nutritionist/1`, confirm-gated — a client can end the link itself).
+      books without leaving this screen), view the full profile, jump to the
+      embedded **message thread** (`MessagesComponent`) or the appointments
+      section, or **disconnect** (`unlink_nutritionist` → `unassign_nutritionist/1`,
+      confirm-gated — a client can end the link itself). Messaging has no
+      standalone page: the thread is only meaningful once connected, so it is
+      embedded here as a component (this LiveView owns its PubSub subscription).
     * **Unconnected** — a plain empty state (icon + "not connected yet") plus a
       link to the full `/nutritionists` directory. No inline search or list is
       shown here — discovery lives in the directory.
@@ -33,6 +36,15 @@ defmodule MehungryWeb.MyNutritionistLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    # Subscribe for the embedded message thread (MessagesComponent). The thread
+    # has no standalone page — it lives on this hub — so this LiveView owns the
+    # PubSub subscription and forwards messages into the component. Subscribe for
+    # every connected client (harmless without a thread) so a mid-session
+    # accept_invitation also receives live messages.
+    if connected?(socket) do
+      Professionals.subscribe_to_messages(socket.assigns.current_user.id)
+    end
+
     {:ok,
      socket
      |> assign(:page_title, gettext("My nutritionist"))
@@ -63,6 +75,24 @@ defmodule MehungryWeb.MyNutritionistLive.Index do
   @impl true
   def handle_info({:appointment_booked, _appt}, socket) do
     {:noreply, load_appointments(socket)}
+  end
+
+  # A new message arrived on this client's thread — forward it into the embedded
+  # MessagesComponent (LiveComponents can't receive PubSub info directly).
+  def handle_info({:assignment_message, message}, socket) do
+    if message.client_id == socket.assigns.current_user.id do
+      send_update(MehungryWeb.MyNutritionistLive.MessagesComponent,
+        id: "my-nutritionist-messages",
+        new_message: message
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  # The MessagesComponent asks the host to surface a flash (components can't).
+  def handle_info({:put_flash, type, msg}, socket) do
+    {:noreply, put_flash(socket, type, msg)}
   end
 
   # ── Loaders ──────────────────────────────────────────────────────────────────
@@ -243,12 +273,12 @@ defmodule MehungryWeb.MyNutritionistLive.Index do
               >
                 {gettext("View full profile")}
               </.link>
-              <.link
-                navigate={~p"/messages"}
+              <a
+                href="#messages"
                 class="px-3 py-1.5 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition inline-flex items-center gap-1.5"
               >
                 <.icon name="hero-chat-bubble-left-right" class="h-4 w-4" /> {gettext("Message")}
-              </.link>
+              </a>
               <a
                 href="#appointments"
                 class="px-3 py-1.5 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment text-sm transition"
@@ -289,12 +319,12 @@ defmodule MehungryWeb.MyNutritionistLive.Index do
                 </p>
               </div>
               <div class="flex flex-wrap gap-2 mt-4">
-                <.link
-                  navigate={~p"/messages"}
+                <a
+                  href="#messages"
                   class="px-3 py-1.5 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition inline-flex items-center gap-1.5"
                 >
                   <.icon name="hero-chat-bubble-left-right" class="h-4 w-4" /> {gettext("Message")}
-                </.link>
+                </a>
                 <a
                   href="#appointments"
                   class="px-3 py-1.5 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment text-sm transition"
@@ -337,6 +367,18 @@ defmodule MehungryWeb.MyNutritionistLive.Index do
             </.link>
           </section>
       <% end %>
+
+      <%!-- Messages — the client↔nutritionist thread, embedded here (no standalone
+           page): messaging is only meaningful once a client is connected. --%>
+      <section :if={@assignment} id="messages" class="mb-10">
+        <h2 class="text-xl font-display font-bold text-parchment mb-4">{gettext("Messages")}</h2>
+        <.live_component
+          module={MehungryWeb.MyNutritionistLive.MessagesComponent}
+          id="my-nutritionist-messages"
+          assignment={@assignment}
+          current_user={@current_user}
+        />
+      </section>
 
       <%!-- Appointments — secondary section --%>
       <section id="appointments">

@@ -134,7 +134,7 @@ Severity scale (higher = more urgent): **3 = problem · 2 = watch · 1 = ok · �
 | calendar/index (+widget 1305) | `/calendar` (priv) | 844 | 3 | 3 | 2 | 2 | – | ~10 queries unguarded ×2; `Repo.` in web; widget god-module. Verify not regress ([[project_calendar_performance]]) |
 | recipe_browser/index | `/browse`,`/search` (pub) | 946 | 2 | 3 | 2 | 2 | 1 | owns `build_recipe_jsonld/1`; `get_user_essentials`+`get_address_agent` every mount; size; JSON-LD macro parity to verify |
 | recipe_details_component (LiveComponent, reused in browse/home/profile/calendar modal) | — (modal) | 715 | 2 | 3 | 2 | 2 | – | `update/3` re-fetches user profile + `ingredient_display_names` on every parent re-render (unguarded; async comments ARE guarded); mixed concerns (comments/social/graphic/replies/nutrition); nutrient display → verify shared macro path. Modal → not in dead render |
-| profile/index | `/profile[/:id]` (pub/priv) | 884 | 2 | 3 | 1 | 2 | 2 | mixes profile+recipe-detail+friends; double `get_user_essentials` in `:show_recipe`; authed tabs need `connected?` guard |
+| profile/index | `/profile[/:id]` (pub/priv) | 884 | 2 | 3 | 1 | 2 | 2 | mixes profile+recipe-detail; double `get_user_essentials` in `:show_recipe`; authed tabs need `connected?` guard |
 | meal_blueprint/index (+editor 854) | `/blueprints`-mgmt (priv) | 1014 | 2 | 3 | 1 | 2 | – | god-modules; `load_plans`/`load_client_targets` unguarded |
 | create_recipe/index | `/create_recipe` (priv) | 895 | 2 | 2 | 1 | 1 | – | mount unguarded (quota + profile + unit); size; dead Spoonacular assigns |
 | meal_plan/show | `/meal-plans/:slug` (pub) | 922 | 1 | 2 | 1 | 1 | 1 | well-built, synchronous, SEO-correct; size only (mostly render) |
@@ -143,10 +143,9 @@ Severity scale (higher = more urgent): **3 = problem · 2 = watch · 1 = ok · �
 | foods/index | `/foods` (pub) | 233 | 2 | 1 | 1 | 1 | 1 | species list correctly sync; `list_linked_compounds`+map build (filter UI) could defer behind `connected?` |
 | species_detail/index | `/foods/:slug` (pub) | 477 | 1 | 1 | 1 | 1 | 1 | already has `connected?/1` split for sidecars — reference impl |
 | home/index | `/home` (pub/priv) | 326 | 1 | 1 | 1 | 1 | 1 | `connected?`+3 streams; good shape |
-| messages/index | `/messages` (priv) | 124 | 1 | 1 | 1 | 1 | – | 4× `connected?`; well guarded |
 | blueprint/show | `/blueprints/:slug` (pub) | 324 | 1 | 1 | 1 | 1 | 1 | synchronous, SEO-ready (per seo.md) |
 | meal_plan/index | `/meal-plans` (pub) | 132 | 1 | 1 | 1 | 1 | 1 | synchronous crawl hub; fine |
-| friends, upgrade, trial, feedback, my_ingredient, user_invitations, public_nutritionist/{index,article} | various | <250 | 1 | 1 | 1 | 1 | 1 | small forms/lists; no action |
+| upgrade, trial, feedback, my_ingredient, user_invitations, public_nutritionist/{index,article} | various | <250 | 1 | 1 | 1 | 1 | 1 | small forms/lists; no action |
 
 > ⚠️ `food_detail_live/index.ex` is **dead code** (not routed; superseded by `species_detail`, per seo.md). Don't optimize — candidate for deletion in a cleanup.
 

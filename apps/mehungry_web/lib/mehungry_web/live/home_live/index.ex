@@ -301,6 +301,15 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply, socket}
   end
 
+  # Difficulty is stored as an integer (1/2/3); tolerate legacy string values.
+  # Returns {localized label, tailwind dot color} for the card eyebrow — mirrors
+  # the same helper on RecipeDetailsComponent so the feed card and detail page
+  # read difficulty identically.
+  defp difficulty_label(d) when d in [1, "1", "Easy"], do: {gettext("Easy"), "bg-green-500"}
+  defp difficulty_label(d) when d in [2, "2", "Medium"], do: {gettext("Medium"), "bg-yellow-500"}
+  defp difficulty_label(d) when d in [3, "3", "Hard"], do: {gettext("Hard"), "bg-red-500"}
+  defp difficulty_label(_), do: {gettext("Easy"), "bg-green-500"}
+
   # Keeps only posts whose referenced recipe carries the diet-mode hashtag.
   defp filter_by_diet(posts, nil), do: posts
 

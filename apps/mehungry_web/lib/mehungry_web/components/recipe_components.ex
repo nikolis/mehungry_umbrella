@@ -205,28 +205,22 @@ defmodule MehungryWeb.RecipeComponents do
       |> assign(:ingredient_groups, group_by_part(recipe_ingredients, & &1.component_name))
 
     ~H"""
-    <div class=" my-4 ">
-      <div class="px-4">
-        <div class="bg-ink-panel border border-ink-panel2 divide-y custom-scrollbar divide-ink-panel2 overflow-auto max-h-72">
-          <%= for {part, ingredients} <- @ingredient_groups do %>
-            <.part_header :if={part} name={part} />
-            <%= for ingredient <- ingredients do %>
-              <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
-              <% name =
-                Map.get(display_names, ingredient.ingredient_id) ||
-                  Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
-              <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
-                <span class="text-parchment">
-                  {name}
-                </span>
-                <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                  {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
-                </span>
-              </div>
-            <% end %>
-          <% end %>
-        </div>
-      </div>
+    <div class="mt-4">
+      <%= for {part, ingredients} <- @ingredient_groups do %>
+        <.part_header :if={part} name={part} />
+        <%= for ingredient <- ingredients do %>
+          <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
+          <% name =
+            Map.get(display_names, ingredient.ingredient_id) ||
+              Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
+          <div class="flex gap-3 items-baseline py-2 border-b border-dotted border-ink-panel2 last:border-b-0 text-[0.95rem]">
+            <span class="font-mono text-xs text-basil whitespace-nowrap min-w-[84px] flex-none [font-variant-numeric:tabular-nums]">
+              {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
+            </span>
+            <span class="text-parchment">{name}</span>
+          </div>
+        <% end %>
+      <% end %>
     </div>
     """
   end
@@ -241,34 +235,30 @@ defmodule MehungryWeb.RecipeComponents do
       |> assign(:source_license, Map.get(assigns, :license))
 
     ~H"""
-    <div class=" my-4 ">
-      <div class="px-4">
-        <div class="overflow-auto text-base custom-scrollbar bg-ink-panel border border-ink-panel2 max-h-72 px-4   ">
-          <%= for {part, steps} <- @step_groups do %>
-            <.part_header :if={part} name={part} />
-            <%!--
-              Number steps per part (1..n within each component), not one
-              continuous count across parts — components are often prepared in
-              parallel, so a global 1..N would imply a false ordering.
-            --%>
-            <div
-              :for={{step, display_index} <- Enum.with_index(steps, 1)}
-              class="step_details_container p-4 border-b border-ink-panel2 "
-            >
-              <div class="w-8 h-8 rounded-full bg-paprika/20 text-paprika flex items-center justify-center font-bold flex-shrink-0 [font-variant-numeric:tabular-nums] ">
-                {display_index}
-              </div>
-              <div class="text-parchment">{step.description}</div>
-            </div>
-          <% end %>
+    <div class="mt-4">
+      <%= for {part, steps} <- @step_groups do %>
+        <.part_header :if={part} name={part} />
+        <%!--
+          Number steps per part (1..n within each component), not one
+          continuous count across parts — components are often prepared in
+          parallel, so a global 1..N would imply a false ordering.
+        --%>
+        <div
+          :for={{step, display_index} <- Enum.with_index(steps, 1)}
+          class="flex gap-4 pb-5 last:pb-0 text-[0.97rem]"
+        >
+          <div class="flex-none w-[1.95rem] h-[1.95rem] rounded-full border border-ink-panel2 text-basil font-mono text-sm flex items-center justify-center [font-variant-numeric:tabular-nums]">
+            {display_index}
+          </div>
+          <div class="text-parchment pt-0.5">{step.description}</div>
         </div>
-        <.recipe_source
-          :if={@source_url}
-          url={@source_url}
-          author={@source_author}
-          license={@source_license}
-        />
-      </div>
+      <% end %>
+      <.recipe_source
+        :if={@source_url}
+        url={@source_url}
+        author={@source_author}
+        license={@source_license}
+      />
     </div>
     """
   end
@@ -281,8 +271,20 @@ defmodule MehungryWeb.RecipeComponents do
   attr :license, :string, default: nil
 
   defp recipe_source(assigns) do
+    # The stored `author` credit often already ends with the licence in parens
+    # (e.g. "UniTools — theunitools.com (CC BY-SA 4.0)"), so only append the
+    # separate "Licensed under …" clause when it isn't already shown — otherwise
+    # the licence prints twice.
+    assigns =
+      assign(
+        assigns,
+        :show_license,
+        is_binary(assigns.license) and assigns.license != "" and
+          not (is_binary(assigns.author) and String.contains?(assigns.author, assigns.license))
+      )
+
     ~H"""
-    <p class="px-4 py-3 text-xs text-parchment-dim">
+    <p class="mt-4 pt-3 border-t border-ink-panel2 text-xs text-parchment-dim">
       {gettext("Source")}:
       <a
         href={@url}
@@ -294,8 +296,9 @@ defmodule MehungryWeb.RecipeComponents do
       </a>
       <%!-- License notice for sources that carry a reuse obligation (e.g.
             UniTools CC BY-SA 4.0). ShareAlike requires the license to travel
-            with the adapted recipe. --%>
-      <span :if={@license} class="ml-1">· {gettext("Licensed under")} {@license}</span>
+            with the adapted recipe — but only once (the author credit may
+            already carry it). --%>
+      <span :if={@show_license} class="ml-1">· {gettext("Licensed under")} {@license}</span>
     </p>
     """
   end
@@ -307,7 +310,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   defp part_header(assigns) do
     ~H"""
-    <div class="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-basil">
+    <div class="pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-basil first:pt-0">
       {@name}
     </div>
     """
@@ -351,7 +354,7 @@ defmodule MehungryWeb.RecipeComponents do
     assigns = assign(assigns, :tags, loaded_hashtags(assigns.recipe))
 
     ~H"""
-    <div :if={@tags != []} class=" m-auto px-4 flex gap-2 my-2 flex-wrap">
+    <div :if={@tags != []} class="flex gap-2 my-3 flex-wrap">
       <%= for tag <- @tags do %>
         <.recipe_tag hashtag={tag.hashtag} />
       <% end %>
@@ -384,12 +387,10 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <a
       href={@uri}
-      class=" inline cursor-pointer w-fit border-2 border-red border-solid rounded-full  border-primary-400 bg-primary-400 px-2"
+      class="inline-flex items-center w-fit cursor-pointer rounded-full border border-ink-panel2 bg-ink-panel2 hover:border-paprika text-parchment hover:text-paprika-soft text-sm font-medium px-3 py-1 transition-colors"
       id={Integer.to_string(@hashtag.id)}
     >
-      <div class="inline bg-primary-400 rounded-full text-white text-base font-semibold">
-        {"#" <> @hashtag.title}
-      </div>
+      <span class="text-paprika mr-0.5">#</span>{@hashtag.title}
     </a>
     """
   end
@@ -450,8 +451,7 @@ defmodule MehungryWeb.RecipeComponents do
       <div class="flex items-center justify-between gap-2 px-4 pt-4">
         <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-parchment-dim">
           <span class="relative flex h-2 w-2">
-            <span class="absolute inline-flex h-full w-full rounded-full bg-basil/60 animate-ping motion-reduce:hidden">
-            </span>
+            <span class="absolute inline-flex h-full w-full rounded-full bg-basil/60 animate-ping motion-reduce:hidden"></span>
             <span class="relative inline-flex h-2 w-2 rounded-full bg-basil"></span>
           </span>
           {gettext("Live preview")}
@@ -652,208 +652,158 @@ defmodule MehungryWeb.RecipeComponents do
     |> Enum.take(limit)
   end
 
+  @doc """
+  Difficulty → `{localized label, tailwind dot color}` for the recipe card's
+  eyebrow — the same `{label, dot}` shape the home feed (`post_card`) and the
+  recipe-detail page use, so the three surfaces never drift. Tolerates the
+  integer column and legacy string values.
+  """
+  def card_difficulty(d) when d in [1, "1", "Easy"], do: {gettext("Easy"), "bg-green-500"}
+  def card_difficulty(d) when d in [2, "2", "Medium"], do: {gettext("Medium"), "bg-yellow-500"}
+  def card_difficulty(d) when d in [3, "3", "Hard"], do: {gettext("Hard"), "bg-red-500"}
+  def card_difficulty(_), do: {gettext("Easy"), "bg-green-500"}
+
   def recipe_card(assigns) do
     # Opt-in full live navigation (e.g. cross-LiveView to /browse/:id) instead of
     # the default same-LiveView patch. Existing callers keep patch behavior.
+    {diff_label, diff_dot} = card_difficulty(assigns.recipe.difficulty)
+
     assigns =
       assigns
       |> assign_new(:navigate_details, fn -> false end)
       # Owner-only per-recipe "regenerate cover image" affordance (profile created
       # tab). Off by default so every other call site keeps the plain card.
       |> assign_new(:allow_image_regen, fn -> false end)
-      |> assign(:nutrient_badges, high_badges(assigns.recipe))
+      # Nutrition-first card data, reused from the same helpers the home feed uses
+      # (never re-derived) so the card and feed stay in lockstep.
+      |> assign(:claims, high_badges(assigns.recipe))
+      |> assign(:macros, Mehungry.AI.RecipeInsight.macros(assigns.recipe))
+      |> assign(:diff_label, diff_label)
+      |> assign(:diff_dot, diff_dot)
+      |> assign(:saved?, assigns.recipe.id in (Map.get(assigns, :user_recipes) || []))
 
     ~H"""
-    <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="py-2 relative">
-      <div
-        :if={@nutrient_badges != []}
-        class="absolute top-3 left-3 z-10 flex flex-col items-start gap-1"
-      >
-        <span
-          :for={badge <- @nutrient_badges}
-          class="rounded-full bg-paprika/90 text-white text-[10px] font-semibold px-2 py-0.5 shadow-sm backdrop-blur-sm"
-        >
-          {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])} · {badge["percent_nrv"]}% NRV
-        </span>
-      </div>
+    <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="relative group">
       <.link
-        phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
         id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
         navigate={if @navigate_details, do: @path_to_details}
         patch={unless @navigate_details, do: @path_to_details}
+        class="block bg-ink-panel rounded-2xl overflow-hidden border border-ink-panel2 hover:border-paprika/50 transition-colors duration-200"
       >
-        <div class="bg-ink-panel rounded-xl overflow-hidden border border-ink-panel2 hover:border-paprika/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1 relative">
-          <!-- Image Container -->
-          <div class="aspect-video overflow-hidden bg-ink-panel2 w-full ">
-            <%= if @recipe.image_url do %>
-              <img
-                src={@recipe.image_url}
-                alt={@recipe.title}
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-            <% else %>
-              <div class="w-full h-full flex items-center justify-center">
-                <svg
-                  class="w-12 h-12 text-parchment-dim"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-            <% end %>
-          </div>
-          <!-- Content -->
-          <div class="p-4">
-            <h3 class="recipe_title text-parchment font-semibold text-lg line-clamp-1 group-hover:text-paprika transition">
-              {@recipe.title}
-            </h3>
-            <p class="text-parchment-dim text-sm mt-1 line-clamp-2">
-              {@recipe.description || "No description available"}
-            </p>
-
-            <!-- Recipe Stats -->
-            <div class="flex items-center justify-between mt-4 pt-3 border-t border-ink-panel2">
-              <div class="flex items-center gap-3">
-                <!-- Cooking Time -->
-                <div class="flex items-center gap-1">
-                  <svg
-                    class="w-4 h-4 text-parchment-dim"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span class="text-parchment-dim text-xs">
-                    <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.cooking_time_lower_limit}</span>
-                    min
-                  </span>
-                </div>
-
-                <!-- Difficulty -->
-                <div class="flex items-center gap-1">
-                  <%= case @recipe.difficulty do %>
-                    <% 1 -> %>
-                      <svg
-                        class="w-4 h-4 text-green-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    <% 2 -> %>
-                      <svg
-                        class="w-4 h-4 text-yellow-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    <% 3 -> %>
-                      <svg
-                        class="w-4 h-4 text-red-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    <% _ -> %>
-                  <% end %>
-                  <span class="text-basil text-xs font-bold capitalize [font-variant-numeric:tabular-nums]">{@recipe.difficulty}</span>
-                </div>
-
-                <!-- Servings -->
-                <div class="flex items-center gap-1">
-                  <svg
-                    class="w-4 h-4 text-parchment-dim"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                    />
-                  </svg>
-                  <span class="text-basil text-xs font-bold [font-variant-numeric:tabular-nums]">{@recipe.servings}</span>
-                </div>
-              </div>
-
-              <!-- Save Count -->
-              <div class="flex items-center gap-1">
-                <svg
-                  class="w-4 h-4 text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
-                <span class="text-basil text-xs font-bold [font-variant-numeric:tabular-nums]">{0}</span>
-              </div>
+        <!-- Image -->
+        <div class="relative aspect-video overflow-hidden bg-ink-panel2 w-full">
+          <%= if @recipe.image_url do %>
+            <img
+              src={@recipe.image_url}
+              alt={@recipe.title}
+              class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            />
+          <% else %>
+            <div class="w-full h-full flex items-center justify-center">
+              <svg
+                class="w-12 h-12 text-parchment-dim"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
             </div>
+          <% end %>
+        </div>
+        <!-- Body -->
+        <div class="p-4">
+          <!-- Eyebrow: cuisine · difficulty -->
+          <p class="font-mono text-[0.64rem] tracking-[0.14em] uppercase text-basil flex items-center gap-2 mb-2 flex-wrap">
+            <span :if={@recipe.cousine not in [nil, ""]}>{@recipe.cousine}</span>
+            <span
+              :if={@recipe.cousine not in [nil, ""]}
+              class="w-1 h-1 rounded-full bg-parchment-dim/60"
+            ></span>
+            <span class="inline-flex items-center gap-1.5">
+              <span class={["w-1.5 h-1.5 rounded-full", @diff_dot]}></span>{@diff_label}
+            </span>
+          </p>
+
+          <h3 class="recipe_title font-display font-medium text-lg leading-tight text-parchment group-hover:text-paprika-soft transition-colors line-clamp-2 mb-1.5">
+            {@recipe.title}
+          </h3>
+
+          <p
+            :if={@recipe.description not in [nil, ""]}
+            class="text-parchment-dim text-sm line-clamp-2 mb-3"
+          >
+            {@recipe.description}
+          </p>
+          <!-- Nutrient-claim badges lead the nutrition block (basil = nutrition truth). -->
+          <div :if={@claims != []} class="flex flex-wrap gap-1.5 mb-2.5">
+            <span
+              :for={badge <- @claims}
+              class="font-mono text-[0.62rem] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-basil/15 text-basil-soft border border-basil/30 whitespace-nowrap"
+              title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+            >
+              {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])}<span :if={
+                badge["percent_nrv"]
+              }> · {badge["percent_nrv"]}%</span>
+            </span>
+          </div>
+          <!-- Compact per-serving macro line — quiet nutrition backup under the badges. -->
+          <div
+            :if={@macros.calories > 0}
+            class="flex items-baseline flex-wrap gap-x-2.5 gap-y-0.5 text-sm [font-variant-numeric:tabular-nums]"
+          >
+            <span class="text-parchment font-semibold">
+              {round(@macros.calories)}<span class="text-parchment-dim text-xs font-normal"> kcal</span>
+            </span>
+            <span class="text-parchment-dim">
+              <b class="text-parchment font-semibold">{round(@macros.protein_g)}</b>g {gettext(
+                "protein"
+              )}
+            </span>
+            <span class="text-parchment-dim">
+              <b class="text-parchment font-semibold">{round(@macros.carbs_g)}</b>g {gettext("carbs")}
+            </span>
+            <span class="text-parchment-dim">
+              <b class="text-parchment font-semibold">{round(@macros.fat_g)}</b>g {gettext("fat")}
+            </span>
+            <span class="font-mono text-[0.56rem] tracking-[0.09em] uppercase text-parchment-dim">
+              {gettext("per serving")}
+            </span>
           </div>
         </div>
       </.link>
-      <%!-- Buttons outside the link so browser clicks reach phx-click, not the link --%>
+      <%!-- Save control is a sibling of the link (not nested) so a save tap never
+            triggers card navigation. Bookmark (collection-building), not a heart. --%>
       <%= if @type != "created" do %>
         <button
           id={"button_save_recipe#{@recipe.id}"}
           phx-click="save_user_recipe"
           phx-value-recipe_id={@recipe.id}
-          class="absolute top-5 right-5 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
           type="button"
+          aria-label={
+            if @saved?, do: gettext("Saved to my recipes"), else: gettext("Save to my recipes")
+          }
+          class={[
+            "absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-ink/55 backdrop-blur hover:bg-ink/80 transition-colors",
+            (@saved? && "text-paprika") || "text-parchment hover:text-paprika-soft"
+          ]}
         >
           <svg
             class="w-5 h-5"
-            fill={
-              get_color(Enum.any?(Map.get(assigns, :user_recipes, []), fn x -> x == @recipe.id end))
-            }
-            stroke="#eb4034"
+            fill={if @saved?, do: "currentColor", else: "none"}
+            stroke="currentColor"
+            stroke-width="2"
             viewBox="0 0 24 24"
           >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              stroke-width="2"
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
             />
           </svg>
         </button>

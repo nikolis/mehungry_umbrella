@@ -76,7 +76,15 @@ plain cover (see [`ai/recipe_insight_graphics.md`](ai/recipe_insight_graphics.md
 
 - **Home feed** — `HomeLive` (`/home`): paginated `Post` stream (recipe cards + weekly-plan
   share cards), diet-mode filtered from the profile, infinite "load more". Vote/open/
-  comment inline.
+  comment inline. The card (`home_live/components/post_card.html.heex`) is styled as a
+  **"mini `RecipeDetails`"** — same warm-dark tokens, `font-mono` basil eyebrow
+  (`CUISINE · ● difficulty`), serif `font-display` title, nutrient-claim badges
+  (`RecipeComponents.high_badges/2`, basil pills) **leading** a compact per-serving macro
+  line (`AI.RecipeInsight.macros/1` → kcal·P·C·F), and reused hashtag pills
+  (`RecipeComponents.recipe_tags`). **Icon semantics are split by action**: recipe cards use
+  a **bookmark** over the image for "save to my recipes" (`save_user_recipe`, collection-building
+  intent); the **heart** is reserved for genuine social likes on weekly-plan cards
+  (`react`/`upvote`). Follow (`save_user_follow`) sits in the "RECIPE BY" author strip.
 - **Recipe detail** — `RecipeDetailsComponent`: comments + answers + votes, live.
 - **Mobile API** — `/api/v1/feed`, `/recipes/:id/comments`, the like/comment/vote
   endpoints (spec §4–§5). Controllers stay thin and delegate here.

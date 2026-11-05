@@ -6,9 +6,24 @@ nav + top bar), `/basket`, `/calendar`, `/create_recipe` + `/stepper`,
 `/browse` + `/search`, `/home` (feed and post cards), `/foods` +
 `/foods/:slug`, recipe detail (`/home/:id`, `/browse/:id`, `/show_recipe/:id`,
 including the social-media share flow), `/feedback`, `/upgrade`, `/welcome`
-(landing), and the login/register pages. `recipe_card` and the sidebar/root
-layout's DOM structure were deliberately left alone per the original scope
-notes below (only their colors changed where they inherited from the shell).
+(landing), and the login/register pages. The sidebar/root layout's DOM
+structure was deliberately left alone per the original scope notes below (only
+its colors changed where it inherited from the shell).
+
+**`recipe_card` + `/browse` redesigned (2026-11-05):** `RecipeComponents.recipe_card`
+and the `/browse` discovery chrome were brought into the shipped "mini-dossier"
+card language of the home feed (`post_card`) and the recipe-detail page — a mono
+`cuisine · ●difficulty` eyebrow, serif title, basil per-serving nutrient-claim
+badges over a tabular-nums macro line, a bookmark save (replacing the red heart),
+and the dropped social furniture (author strip, comment/share bar, the fabricated
+saves count). `/browse`'s signature is the **Nutrition Lens** — the crawlable
+`/search/nutrient/:slug` chip rail reframed as a framed basil instrument that
+narrows the grid to proven "high in X, per serving" recipes (a left-hairline marks
+the results when a lens is engaged). Token semantics held the line: **basil =
+nutrition truth (claim badges + the lens only); paprika = action/brand** (mode
+switch, search focus, saved bookmark, links). The shared `card_difficulty/1`
+helper and `high_badges/2` + `AI.RecipeInsight.macros/1` are reused so the card
+never drifts from the feed.
 
 **Nutritionist surfaces are now migrated** (2026-08-27): the whole
 `/nutritionist/**` workspace (dashboard, profile editor, appointment calendar,
@@ -98,6 +113,14 @@ or tooltip.** `overflow` on an ancestor clips absolutely-positioned
 descendants regardless of z-index. If a list is realistically short, let it
 flow with the page instead of boxing it in `max-h-*/overflow-y-auto`.
 
+**Scrollbars are themed app-wide.** A universal `*` / `*::-webkit-scrollbar`
+rule in `apps/mehungry_web/assets/css/app.css` styles every scroll container to
+the warm-charcoal theme: a muted `parchment-dim` (`rgba(169,160,140,0.35)`)
+thumb on a transparent track, **paprika** (`#E8622C`) on hover, `thin` width.
+`.custom-scrollbar` and `.m3-scrollbar` are explicit opt-in classes kept in sync
+with the same look (they predate the universal rule). Don't reintroduce the old
+emerald/gray-800 browser-ish scrollbar — it reads as unthemed.
+
 ## Retheming a shared component without breaking its other call sites
 
 `SelectComponent` (`apps/mehungry_web/lib/mehungry_web/components/select_component/select_component.ex`)
@@ -136,8 +159,8 @@ only used on one page (like `FormCategoryComponent`, `ProfileLive.Show`,
 
 ## What's deliberately unchanged
 
-- `RecipeComponents.recipe_card` (shared with `/browse`) — the photography
-  and card layout already work; not touched.
+- `RecipeComponents.recipe_card` — **redesigned 2026-11-05** into the
+  "mini-dossier" grammar (see the status note at the top); no longer unchanged.
 - `SelectComponent`'s DOM structure, JS hook (`Hooks.SelectComponent`), and
   event handlers — colors only, via the CSS variable seam above.
 - The admin (`admin_root.heex`/`admin_live.heex`) and nutritionist
@@ -154,7 +177,12 @@ only used on one page (like `FormCategoryComponent`, `ProfileLive.Show`,
 `/search`, `/home`, `/foods` + `/foods/:slug`, recipe detail (the "168
 nutrients" panel now lives in `NutritionAccordion`/`AccordionComponent`, using
 the `basil` token as originally intended), `/feedback`, `/upgrade`,
-`/welcome`, and the login/register pages are all migrated. The nav shell
+`/welcome`, and the login/register pages are all migrated. The **recipe detail
+page** (`RecipeDetailsComponent`) was further redesigned into the nutritionist
+"Dark Chart" layout (2026-11-05): un-tabbed sections (hero → at-a-glance macro
+tiles → regulated nutrient-claim %NRV panel → ingredients + method → full
+`NutritionAccordion` → comments), evidence foregrounded in `basil`/`paprika`.
+See `docs/implementation/food/nutrient_badges.md` (Recipe detail). The nav shell
 (`live.html.heex`, `main_menu.html.heex`, `mobile_menu.html.heex`) went first
 so every subsequent page picked up a consistent shell immediately, instead of
 last as originally suggested — this worked fine because the nav shell's own

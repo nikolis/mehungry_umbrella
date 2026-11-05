@@ -1,16 +1,25 @@
-<div id={@id} class="bg-ink-panel rounded-xl border border-ink-panel2">
+<div id={@id} class="bg-ink-panel rounded-2xl border border-ink-panel2 overflow-hidden">
   <%= if @post.type_ == "WEEKLY_PLAN" do %>
     <%!-- Weekly-plan post: a reference-less post whose media is the generated
-          share card. Author + caption + like/share only (no recipe to open, and
-          comments are recipe-keyed so they're not offered here). --%>
-    <div class="flex items-center gap-2 px-4 pt-4 pb-3">
-      <a
-        href={"/profile/#{@post.user_id}"}
-        class="text-parchment font-semibold text-sm hover:text-paprika-soft transition"
-      >
-        {@post.user.name}
-      </a>
-      <span class="text-parchment-dim text-xs">· shared a weekly plan</span>
+          share card. The heart here is a genuine social like/upvote (not a save),
+          so it stays a heart — unlike recipe cards, which use a bookmark. --%>
+    <div class="flex items-center gap-3 px-4 py-3.5">
+      <img
+        src={@post.user.profile_pic}
+        alt={@post.user.name}
+        class="w-10 h-10 rounded-full object-cover flex-none bg-ink-panel2"
+      />
+      <div class="min-w-0">
+        <p class="font-mono text-[0.6rem] tracking-[0.13em] uppercase text-parchment-dim">
+          {gettext("Shared a weekly plan")}
+        </p>
+        <a
+          href={"/profile/#{@post.user_id}"}
+          class="block truncate text-parchment font-semibold text-sm hover:text-paprika-soft transition"
+        >
+          {@post.user.name}
+        </a>
+      </div>
     </div>
     <%!-- The card opens the full day-by-day plan (/meal-plans/:slug) when the
           post is linked to a published plan; older posts fall back to the image. --%>
@@ -20,9 +29,6 @@
       class="block overflow-hidden bg-ink-panel2 group"
     >
       <img src={@post.md_media_url} alt={@post.title} class="w-full object-contain" />
-      <span class="block px-4 py-2 text-sm font-semibold text-paprika-soft group-hover:text-paprika transition">
-        View full plan — recipes, grocery list &amp; nutrition →
-      </span>
     </.link>
     <a
       :if={is_nil(@post.published_meal_plan)}
@@ -33,257 +39,34 @@
     >
       <img src={@post.md_media_url} alt={@post.title} class="w-full object-contain" />
     </a>
-    <div class="p-3">
-      <div class="flex items-center gap-4">
-        <!-- Like Button (post upvote) -->
-        <button
-          phx-click="react"
-          phx-value-type_="upvote"
-          phx-value-id={@post.id}
-          class="group flex items-center gap-1 transition"
-          aria-label="Like"
-        >
-          <svg
-            class={[
-              "w-7 h-7 transition",
-              if(@user && Enum.any?(@post.upvotes, &(&1.user_id == @user.id)),
-                do: "text-red-500",
-                else: "text-parchment-dim group-hover:text-red-400"
-              )
-            ]}
-            fill={
-              if @user && Enum.any?(@post.upvotes, &(&1.user_id == @user.id)),
-                do: "currentColor",
-                else: "none"
-            }
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-            />
-          </svg>
-          <span class="text-sm font-bold text-basil [font-variant-numeric:tabular-nums]">
-            {length(@post.upvotes)}
-          </span>
-        </button>
 
-        <!-- Comment Button → opens the plan details page where the thread lives -->
-        <.link
-          :if={@post.published_meal_plan}
-          navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}?#{[from: "home"]}"}
-          class="group flex items-center gap-1 transition"
-          aria-label="Comments"
-        >
-          <svg
-            class="w-6 h-6 text-parchment-dim group-hover:text-paprika transition"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-          <span class="text-sm font-bold text-basil [font-variant-numeric:tabular-nums]">
-            {length(@post.comments)}
-          </span>
-        </.link>
-
-        <!-- Share Button — mirrors the recipe card: copy link / Facebook / Pinterest -->
-        <%= if @post.published_meal_plan do %>
-          <div class="relative">
-            <button
-              phx-click={
-                Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
-                  to: "#share_items_list" <> Integer.to_string(@post.id)
-                )
-              }
-              class="group p-1 transition"
-              aria-label="Share"
-            >
-              <svg
-                class="w-5 h-5 text-parchment-dim group-hover:text-paprika transition"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-            </button>
-
-            <div
-              class="drop_down_home absolute left-0 mt-2 bg-ink-panel2 rounded-lg shadow-lg border border-ink-panel2 z-10"
-              id={"share_items_list" <> Integer.to_string(@post.id)}
-              phx-click-away={
-                Phoenix.LiveView.JS.remove_class("drop_down_visible ",
-                  to: "#share_items_list" <> Integer.to_string(@post.id)
-                )
-              }
-            >
-              <div class="py-2">
-                <button
-                  id={"web-share-plan-#{@post.id}"}
-                  phx-hook="WebShare"
-                  data-url={"#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"}
-                  data-title={@post.title}
-                  class="w-full px-4 py-2 text-left text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                    />
-                  </svg>
-                  <span>Share</span>
-                </button>
-                <a
-                  href={
-                    "https://www.facebook.com/sharer/sharer.php?u=" <>
-                      URI.encode_www_form(
-                        "#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"
-                      )
-                  }
-                  target="_blank"
-                  rel="noopener"
-                  class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
-                >
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  Facebook
-                </a>
-                <a
-                  href={
-                    "https://www.pinterest.com/pin/create/button/?url=" <>
-                      URI.encode_www_form(
-                        "#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"
-                      ) <>
-                      "&media=" <> URI.encode_www_form(@post.md_media_url || "") <>
-                      "&description=" <> URI.encode_www_form(@post.title || "")
-                  }
-                  target="_blank"
-                  rel="noopener"
-                  class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
-                >
-                  <svg class="w-4 h-4" fill="#E60023" viewBox="0 0 24 24">
-                    <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
-                  </svg>
-                  Pinterest
-                </a>
-              </div>
-            </div>
-          </div>
-        <% else %>
-          <%!-- Older plan posts have no public page to link to; keep a plain
-                native/copy share of the card image. --%>
-          <button
-            id={"web-share-plan-#{@post.id}"}
-            phx-hook="WebShare"
-            data-url={@post.md_media_url}
-            data-title={@post.title}
-            class="group flex items-center gap-1 text-parchment-dim hover:text-paprika transition"
-            aria-label="Share"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-              />
-            </svg>
-            <span class="text-sm">Share</span>
-          </button>
-        <% end %>
-      </div>
-      <div class="flex flex-wrap items-baseline gap-1 mt-3">
-        <a
-          href={"/profile/#{@post.user_id}"}
-          class="text-parchment font-semibold text-sm hover:text-paprika-soft transition"
-        >
-          {@post.user.name}
-        </a>
-        <span class="text-parchment-dim text-sm">{@post.description}</span>
-      </div>
-    </div>
-  <% else %>
-  <%= if ! is_nil(@post.reference) do %>
-    <.user_overview_card
-      user={@post.reference.user}
-      post={@post}
-      total_recipes={Map.get(@recipe_counts_by_user, @post.user_id, 0)}
-      user_follows={@user_follows}
-      current_user={@user}
-    />
-  <% end %>
-  <!-- Recipe Image -->
-  <div class="overflow-hidden rounded-t-xl" id={Integer.to_string(@post.id)}>
     <.link
-      id={"card-link-to-recipe-#{@post.reference_id}"}
-      patch={~p"/home/#{@post.reference_id}"}
-      phx-click={Phoenix.LiveView.JS.dispatch("mehungry:recipe-open")}
+      :if={@post.published_meal_plan}
+      navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}?#{[from: "home"]}"}
+      class="block px-4 py-3 font-semibold text-sm text-paprika-soft hover:text-paprika border-y border-ink-panel2 bg-paprika/[0.06] transition"
     >
-      <div class="aspect-video bg-ink-panel2 overflow-hidden">
-        <%= if @post.md_media_url do %>
-          <img
-            src={@post.md_media_url}
-            alt={@post.title}
-            class="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
-        <% else %>
-          <div class="w-full h-full flex items-center justify-center">
-            <svg
-              class="w-16 h-16 text-parchment-dim"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-        <% end %>
-      </div>
+      {gettext("View full plan — recipes, grocery list & nutrition")} →
     </.link>
-  </div>
 
-  <!-- Action Buttons -->
-  <div class="p-3">
-    <div class="flex items-center gap-4">
-      <!-- Like Button -->
+    <div class="flex items-center gap-1 px-2 pt-2.5 pb-1">
+      <!-- Like Button (post upvote) -->
       <button
-        phx-click="save_user_recipe"
-        phx-value-post-id={@post.id}
-        phx-value-recipe_id={@post.reference.id}
-        phx-value-dom_id={@id}
-        class="group flex items-center gap-1 transition"
+        phx-click="react"
+        phx-value-type_="upvote"
+        phx-value-id={@post.id}
+        class="group inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition"
+        aria-label={gettext("Like")}
       >
         <svg
           class={[
-            "w-7 h-7 transition",
-            (false && "text-red-500 fill-red-500") ||
-              "text-parchment-dim group-hover:text-red-400"
+            "w-6 h-6 transition",
+            if(@user && Enum.any?(@post.upvotes, &(&1.user_id == @user.id)),
+              do: "text-red-500",
+              else: "text-parchment-dim group-hover:text-red-400"
+            )
           ]}
           fill={
-            if Enum.any?(@current_user_recipes, fn x -> x == @post.reference.id end),
+            if @user && Enum.any?(@post.upvotes, &(&1.user_id == @user.id)),
               do: "currentColor",
               else: "none"
           }
@@ -298,16 +81,16 @@
           />
         </svg>
         <span class="text-sm font-bold text-basil [font-variant-numeric:tabular-nums]">
-          {length(@post.reference.user_recipes)}
+          {length(@post.upvotes)}
         </span>
       </button>
 
-      <!-- Comment Button -->
+      <!-- Comment Button → opens the plan details page where the thread lives -->
       <.link
-        id={"card-link2-to-recipe-#{@post.reference_id}"}
-        patch={~p"/home/#{@post.reference_id}"}
-        phx-click={Phoenix.LiveView.JS.dispatch("mehungry:recipe-open")}
-        class="group flex items-center gap-1 transition"
+        :if={@post.published_meal_plan}
+        navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}?#{[from: "home"]}"}
+        class="group inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition"
+        aria-label={gettext("Comments")}
       >
         <svg
           class="w-6 h-6 text-parchment-dim group-hover:text-paprika transition"
@@ -323,26 +106,191 @@
           />
         </svg>
         <span class="text-sm font-bold text-basil [font-variant-numeric:tabular-nums]">
-          {length(@post.reference.comments)}
+          {length(@post.comments)}
         </span>
       </.link>
 
-      <!-- Share Button -->
-      <div class="relative">
+      <!-- Share Button — mirrors the recipe card: copy link / Facebook / Pinterest -->
+      <div class="relative ml-auto">
+        <%= if @post.published_meal_plan do %>
+          <button
+            phx-click={
+              Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+                to: "#share_items_list" <> Integer.to_string(@post.id)
+              )
+            }
+            class="group inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-white/5 transition"
+            aria-label={gettext("Share")}
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+              />
+            </svg>
+          </button>
+
+          <div
+            class="drop_down_home absolute right-0 mt-2 bg-ink-panel2 rounded-lg shadow-lg border border-ink-panel2 z-10"
+            id={"share_items_list" <> Integer.to_string(@post.id)}
+            phx-click-away={
+              Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+                to: "#share_items_list" <> Integer.to_string(@post.id)
+              )
+            }
+          >
+            <div class="py-2">
+              <button
+                id={"web-share-plan-#{@post.id}"}
+                phx-hook="WebShare"
+                data-url={"#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"}
+                data-title={@post.title}
+                class="w-full px-4 py-2 text-left text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+                <span>{gettext("Share")}</span>
+              </button>
+              <a
+                href={
+                  "https://www.facebook.com/sharer/sharer.php?u=" <>
+                    URI.encode_www_form(
+                      "#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"
+                    )
+                }
+                target="_blank"
+                rel="noopener"
+                class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+                Facebook
+              </a>
+              <a
+                href={
+                  "https://www.pinterest.com/pin/create/button/?url=" <>
+                    URI.encode_www_form(
+                      "#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"
+                    ) <>
+                    "&media=" <> URI.encode_www_form(@post.md_media_url || "") <>
+                    "&description=" <> URI.encode_www_form(@post.title || "")
+                }
+                target="_blank"
+                rel="noopener"
+                class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="#E60023" viewBox="0 0 24 24">
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
+                </svg>
+                Pinterest
+              </a>
+            </div>
+          </div>
+        <% else %>
+          <%!-- Older plan posts have no public page to link to; keep a plain
+                native/copy share of the card image. --%>
+          <button
+            id={"web-share-plan-#{@post.id}"}
+            phx-hook="WebShare"
+            data-url={@post.md_media_url}
+            data-title={@post.title}
+            class="group inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-white/5 transition"
+            aria-label={gettext("Share")}
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+              />
+            </svg>
+          </button>
+        <% end %>
+      </div>
+    </div>
+    <div class="px-4 pb-4 pt-1 flex flex-wrap items-baseline gap-1">
+      <a
+        href={"/profile/#{@post.user_id}"}
+        class="text-parchment font-semibold text-sm hover:text-paprika-soft transition"
+      >
+        {@post.user.name}
+      </a>
+      <span class="text-parchment-dim text-sm">{@post.description}</span>
+    </div>
+  <% else %>
+    <%!-- Recipe post: a "mini RecipeDetails" card — same eyebrow/serif-title/claim
+          language as the detail page. The save action is a BOOKMARK (save to my
+          recipes / collection-building), distinct from the weekly-plan heart. --%>
+    <% recipe = @post.reference %>
+    <% {diff_label, diff_dot} = difficulty_label(recipe.difficulty) %>
+    <% macros = Mehungry.AI.RecipeInsight.macros(recipe) %>
+    <% has_macros = macros.calories > 0 %>
+    <% claims = MehungryWeb.RecipeComponents.high_badges(recipe, 2) %>
+    <% saved? = recipe.id in @current_user_recipes %>
+    <% following? = not is_nil(@user) and recipe.user.id in @user_follows %>
+    <!-- Author strip: RECIPE BY eyebrow + follow -->
+    <div class="flex items-center gap-3 px-4 py-3.5">
+      <img
+        src={recipe.user.profile_pic}
+        alt={recipe.user.name}
+        class="w-10 h-10 rounded-full object-cover flex-none bg-ink-panel2"
+      />
+      <div class="min-w-0 flex-1">
+        <p class="font-mono text-[0.6rem] tracking-[0.13em] uppercase text-parchment-dim">
+          {gettext("Recipe by")}
+        </p>
+        <a
+          href={"/profile/#{recipe.user_id}"}
+          class="block truncate text-parchment font-semibold text-sm hover:text-paprika-soft transition"
+        >
+          {recipe.user.name}
+        </a>
+      </div>
+      <%= if !is_nil(@user) and recipe.user.id != @user.id do %>
+        <button
+          phx-click="save_user_follow"
+          phx-value-follow_id={recipe.user.id}
+          class={[
+            "flex-none px-4 py-1.5 rounded-lg font-bold text-sm transition",
+            (following? && "text-parchment-dim hover:text-parchment") ||
+              "bg-paprika hover:bg-paprika-soft text-ink"
+          ]}
+        >
+          {if following?, do: gettext("Following"), else: gettext("Follow")}
+        </button>
+      <% end %>
+      <!-- Share — moved out of the image overlay into the header action slot.
+           phx-click-away lives on this wrapper (not the panel) so a click on the
+           button counts as "inside" and only the toggle runs — re-clicking the
+           button while open closes it instead of racing the click-away. -->
+      <div
+        class="relative flex-none"
+        phx-click-away={
+          Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+            to: "#share_items_list" <> Integer.to_string(@post.id)
+          )
+        }
+      >
         <button
           phx-click={
             Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
               to: "#share_items_list" <> Integer.to_string(@post.id)
             )
           }
-          class="group p-1 transition"
+          class="w-9 h-9 rounded-full flex items-center justify-center text-parchment-dim hover:text-paprika-soft hover:bg-white/5 transition"
+          aria-label={gettext("Share")}
         >
-          <svg
-            class="w-5 h-5 text-parchment-dim group-hover:text-paprika transition"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -352,21 +300,18 @@
           </svg>
         </button>
 
+        <%!-- z-30 keeps the open list above the image's bookmark-save (z-10),
+              which otherwise paints over the lower menu items. --%>
         <div
-          class=" drop_down_home absolute left-0 mt-2   bg-ink-panel2 rounded-lg shadow-lg border border-ink-panel2 z-10"
+          class="drop_down_home absolute right-0 mt-2 bg-ink-panel2 rounded-lg shadow-lg border border-ink-panel2 z-30"
           id={"share_items_list" <> Integer.to_string(@post.id)}
-          phx-click-away={
-            Phoenix.LiveView.JS.remove_class("drop_down_visible ",
-              to: "#share_items_list" <> Integer.to_string(@post.id)
-            )
-          }
         >
           <div class="py-2">
             <button
               id={"web-share-btn-#{@post.id}"}
               phx-hook="WebShare"
-              data-url={"#{MehungryWeb.Endpoint.url()}/home/#{@post.reference.id}"}
-              data-title={@post.reference.title}
+              data-url={"#{MehungryWeb.Endpoint.url()}/home/#{recipe.id}"}
+              data-title={recipe.title}
               class="w-full px-4 py-2 text-left text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,10 +322,10 @@
                   d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
                 />
               </svg>
-              <span>Share</span>
+              <span>{gettext("Share")}</span>
             </button>
             <a
-              href={"/share_social_media/#{@post.reference.id}/facebook"}
+              href={"/share_social_media/#{recipe.id}/facebook"}
               class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
             >
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -390,7 +335,7 @@
             </a>
             <a
               :if={Mehungry.Social.platform_enabled?("pinterest")}
-              href={"/share_social_media/#{@post.reference.id}/pinterest"}
+              href={"/share_social_media/#{recipe.id}/pinterest"}
               class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
             >
               <svg class="w-4 h-4" fill="#E60023" viewBox="0 0 24 24">
@@ -400,7 +345,7 @@
             </a>
             <a
               :if={Mehungry.Social.platform_enabled?("instagram")}
-              href={"/share_social_media/#{@post.reference.id}/instagram"}
+              href={"/share_social_media/#{recipe.id}/instagram"}
               class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
             >
               <img src="/images/instagram-svgrepo-com.svg" class="w-4 h-4 brightness-0 invert" />
@@ -409,119 +354,201 @@
           </div>
         </div>
       </div>
-
-      <!-- Nutrient-claim badges — right-aligned in the action row, beside
-           like/comment/share (not over the image). -->
-      <% nutrient_badges = MehungryWeb.RecipeComponents.high_badges(@post.reference, 2) %>
-      <div
-        :if={nutrient_badges != []}
-        class="ml-auto flex flex-wrap items-center justify-end gap-1"
-      >
+    </div>
+    <!-- Recipe Image + top-right action cluster (share + bookmark save) -->
+    <div class="relative">
+      <div class="aspect-video bg-ink-panel2 overflow-hidden">
+        <.link
+          id={"card-link-to-recipe-#{@post.reference_id}"}
+          patch={~p"/home/#{@post.reference_id}"}
+          phx-click={Phoenix.LiveView.JS.dispatch("mehungry:recipe-open")}
+          class="block w-full h-full"
+        >
+          <%= if @post.md_media_url do %>
+            <img
+              src={@post.md_media_url}
+              alt={@post.title}
+              class="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            />
+          <% else %>
+            <div class="w-full h-full flex items-center justify-center">
+              <svg
+                class="w-16 h-16 text-parchment-dim"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+          <% end %>
+        </.link>
+      </div>
+      <%!-- Overlay cluster, upper-right over the photo. Share moved to the
+            author strip header; only the bookmark save lives over the image now. --%>
+      <div class="absolute top-3 right-3 flex items-center gap-2 z-10">
+        <!-- Bookmark save -->
+        <button
+          phx-click="save_user_recipe"
+          phx-value-recipe_id={recipe.id}
+          class={[
+            "w-10 h-10 rounded-full flex items-center justify-center",
+            "bg-ink/55 backdrop-blur hover:bg-ink/80 transition",
+            (saved? && "text-paprika") || "text-parchment hover:text-paprika-soft"
+          ]}
+          aria-label={
+            if saved?, do: gettext("Saved to my recipes"), else: gettext("Save to my recipes")
+          }
+        >
+          <svg
+            class="w-5 h-5"
+            fill={if saved?, do: "currentColor", else: "none"}
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <!-- Body: eyebrow · title · description · claims · macros · tags -->
+    <div class="px-4 pt-4 pb-1">
+      <p class="font-mono text-[0.66rem] tracking-[0.14em] uppercase text-basil flex items-center gap-2 mb-2 flex-wrap">
+        <span :if={recipe.cousine not in [nil, ""]}>{recipe.cousine}</span>
         <span
-          :for={badge <- nutrient_badges}
-          class="rounded-full bg-paprika/15 text-paprika-soft border border-paprika/30 text-[10px] font-semibold px-2 py-0.5 whitespace-nowrap"
+          :if={recipe.cousine not in [nil, ""]}
+          class="w-1 h-1 rounded-full bg-parchment-dim/60"
+        ></span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class={["w-1.5 h-1.5 rounded-full", diff_dot]}></span>{diff_label}
+        </span>
+      </p>
+
+      <.link
+        id={"card-title-to-recipe-#{@post.reference_id}"}
+        patch={~p"/home/#{@post.reference_id}"}
+        phx-click={Phoenix.LiveView.JS.dispatch("mehungry:recipe-open")}
+        class="block font-display font-medium text-xl leading-tight text-parchment hover:text-paprika-soft transition mb-1.5"
+      >
+        {recipe.title}
+      </.link>
+
+      <p
+        :if={recipe.description not in [nil, ""]}
+        class="text-parchment-dim text-sm mb-3 line-clamp-2"
+      >
+        {recipe.description}
+      </p>
+      <!-- Nutrient-claim badges lead the nutrition block (benefit-framed,
+           regulated per-serving claims from Food.NutrientClaims). -->
+      <div :if={claims != []} class="flex flex-wrap gap-1.5 mb-2.5">
+        <span
+          :for={badge <- claims}
+          class="font-mono text-[0.62rem] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-basil/15 text-basil-soft border border-basil/30 whitespace-nowrap"
           title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
         >
-          {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])}
+          {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])}<span :if={
+            badge["percent_nrv"]
+          }> · {badge["percent_nrv"]}%</span>
         </span>
       </div>
-    </div>
-  </div>
-
-  <!-- Likes Count -->
-  <div class="px-4 pb-2">
-    <span class="text-sm font-semibold">
-      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-        {length(@post.reference.user_recipes)}
-      </span>
-      <span class="text-parchment">
-        {if length(@post.reference.user_recipes) == 1, do: "like", else: "likes"}
-      </span>
-    </span>
-  </div>
-
-  <!-- Recipe Caption -->
-  <div class="px-4 pb-3">
-    <div class="flex flex-wrap items-baseline gap-1">
-      <a
-        href={"/profile/#{@post.reference.user_id}"}
-        class="text-parchment font-semibold text-sm hover:text-paprika-soft transition"
+      <!-- Compact per-serving macro line — quiet nutrition backup under the badges. -->
+      <div
+        :if={has_macros}
+        class="flex items-baseline flex-wrap gap-x-2.5 gap-y-0.5 text-sm mb-3 [font-variant-numeric:tabular-nums]"
       >
-        {@post.reference.user.name}
-      </a>
-      <span class="text-parchment-dim text-sm">{if String.length(
-                                                     @post.reference.description || ""
-                                                   ) >
-                                                     150,
-                                                   do:
-                                                     String.slice(
-                                                       @post.reference.description,
-                                                       0,
-                                                       150
-                                                     ) <>
-                                                       "…",
-                                                   else: @post.reference.description}</span>
+        <span class="text-parchment font-semibold">
+          {round(macros.calories)}<span class="text-parchment-dim text-xs font-normal"> kcal</span>
+        </span>
+        <span class="text-parchment-dim">
+          <b class="text-parchment font-semibold">{round(macros.protein_g)}</b>g {gettext(
+            "protein"
+          )}
+        </span>
+        <span class="text-parchment-dim">
+          <b class="text-parchment font-semibold">{round(macros.carbs_g)}</b>g {gettext("carbs")}
+        </span>
+        <span class="text-parchment-dim">
+          <b class="text-parchment font-semibold">{round(macros.fat_g)}</b>g {gettext("fat")}
+        </span>
+        <span class="font-mono text-[0.56rem] tracking-[0.09em] uppercase text-parchment-dim">
+          {gettext("per serving")}
+        </span>
+      </div>
+
+      <%!-- Hashtags rendered inline (not via RecipeComponents.recipe_tag, which
+            sets a DOM id of the hashtag id — the same tag across several streamed
+            cards would collide on a duplicate id). --%>
+      <% hashtags =
+        Enum.filter(recipe.recipe_hashtags || [], fn rh ->
+          is_map(rh.hashtag) and is_binary(Map.get(rh.hashtag, :title))
+        end) %>
+      <div :if={hashtags != []} class="flex flex-wrap gap-2 mt-0.5 mb-1">
+        <a
+          :for={rh <- hashtags}
+          href={"/search/hashtag/#{rh.hashtag.title}"}
+          class="inline-flex items-center w-fit rounded-full border border-ink-panel2 bg-ink-panel2 hover:border-paprika text-parchment hover:text-paprika-soft text-sm font-medium px-3 py-1 transition-colors"
+        >
+          <span class="text-paprika mr-0.5">#</span>{rh.hashtag.title}
+        </a>
+      </div>
+    </div>
+    <!-- Action bar: comment count + saves metric (the save action is the image
+         bookmark; share lives in the author-strip header). px-2 + the comment
+         button's px-2 lands the glyph at the px-4 content column. -->
+    <div class="flex items-center gap-3 px-2 pt-2 pb-3">
+      <.link
+        id={"card-link2-to-recipe-#{@post.reference_id}"}
+        patch={~p"/home/#{@post.reference_id}"}
+        phx-click={Phoenix.LiveView.JS.dispatch("mehungry:recipe-open")}
+        class="group inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-white/5 transition"
+        aria-label={gettext("Comments")}
+      >
+        <svg
+          class="w-6 h-6 text-parchment-dim group-hover:text-paprika transition"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+        <span class="text-sm font-bold text-basil [font-variant-numeric:tabular-nums]">
+          {length(recipe.comments)}
+        </span>
+      </.link>
+
+      <%!-- Saves metric sits beside the comment count; the save ACTION is the
+            bookmark over the image. --%>
+      <span class="text-sm text-parchment-dim [font-variant-numeric:tabular-nums]">
+        {ngettext("%{count} save", "%{count} saves", length(recipe.user_recipes),
+          count: length(recipe.user_recipes)
+        )}
+      </span>
     </div>
 
-    <!-- Hashtags -->
-    <%= if @post.reference.recipe_hashtags != [] do %>
-      <div class="flex flex-wrap gap-1 mt-1">
-        <%= for hashtag <- @post.reference.recipe_hashtags do %>
-          <a
-            href={"/search/hashtag/#{hashtag.hashtag.title}"}
-            class="text-paprika-soft text-sm hover:text-paprika transition"
-          >
-            #{hashtag.hashtag.title}
-          </a>
-        <% end %>
-      </div>
-    <% end %>
-
-    <!-- View Comments Link -->
     <.link
+      :if={length(recipe.comments) > 0}
       id={"card-link-to-recipe-comments-#{@post.reference_id}"}
-      patch={~p"/home/#{@post.reference.id}"}
+      patch={~p"/home/#{@post.reference_id}"}
       phx-click={Phoenix.LiveView.JS.dispatch("mehungry:recipe-open")}
-      class="block text-parchment-dim text-sm mt-2 hover:text-parchment transition"
+      class="block px-4 pb-4 text-parchment-dim text-sm hover:text-parchment transition"
     >
-      View all {length(@post.reference.comments)} comments
+      {gettext("View all %{count} comments", count: length(recipe.comments))}
     </.link>
-  </div>
   <% end %>
 </div>
-<!--
-<div class="m-auto relative">
-    <div class="relative flex gap-2 py-1">
-      <.recipe_like_container2
-        type="browse"
-        user_recipes={@current_user_recipes}
-        recipe={@post.reference}
-        id={@id}
-        myself={@self()}
-      />
-      <div class="my-auto">
-        <.icon name="hero-chat-bubble-oval-left" class="h-7 w-7 flex-none text-black		" />
-      </div>
-      <div class="my-auto realtive">
-        <.share_button post={@post}></.share_button>
-      </div>
-    </div>
-    <%= if ! is_nil(@post.reference) do %>
-      <div class="font-semibold">{length(@post.reference.user_recipes)} likes</div>
-    <% end %>
-    <div>
-      <span class="text-base font-bold text-center">
-        <%= if ! is_nil(@post.reference) do %>
-          {@post.reference.title}
-        <% end %>
-      </span>
-      <span>
-        <%= if ! is_nil(@post.reference) do %>
-          <.get_recipe_description
-            description={@post.reference.description}
-            recipe={@post.reference}
-          />
-        <% end %>
-      </span>
-    </div>
-  </div> -->

@@ -97,7 +97,7 @@ Both paths compose `Food.IngredientScope` (`food/ingredient_scope.ex`) so visibi
 and filtering stay identical everywhere:
 
 - `filter_by_owner/2` — global rows (`user_id IS NULL`) always; plus the viewer's
-  own private rows and their friends' (`visible_owner_ids/1` via `Mehungry.Friends`).
+  own private rows (`i.user_id == owner_id`). Private ingredients are owner-only.
 - `maybe_filter_by_classes/2` — restrict to USDA food classes.
 - `second_layer_category_ids/0` + `exclude_secondary_categories/3` — hide the
   composite/prepared "second layer" USDA categories (Snacks, Beverages,

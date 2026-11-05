@@ -253,11 +253,9 @@ defmodule Mehungry.Food.IngredientSearch do
           )
 
         id ->
-          ids = IngredientScope.visible_owner_ids(id)
-
           from([_t, i] in base,
-            where: is_nil(i.user_id) or i.user_id in ^ids,
-            where: i.category_id not in ^secondary_ids or i.user_id in ^ids
+            where: is_nil(i.user_id) or i.user_id == ^id,
+            where: i.category_id not in ^secondary_ids or i.user_id == ^id
           )
       end
 

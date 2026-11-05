@@ -270,21 +270,24 @@ helper every HTML surface uses:
   clean; top 2. Here the pill shows **the label only** (`"High in X"`, no `· N% NRV`
   suffix) — the compact action-row slot can't fit the longer string, and a high
   `percent_nrv` (e.g. liver's 1606%) would otherwise overflow the card frame.
-- **Recipe detail** (`RecipeDetailsComponent`) — the full high-badge list below the
-  title, each rendered `"High in X · N% NRV"`. **Collapsed to the top 4** (stored
-  strongest-first) with a **"Show N more" / "Show less"** toggle so a
-  micronutrient-rich recipe doesn't render a wall of ~15 pills. The toggle is a
-  client-only `Phoenix.LiveView.JS.toggle_class("hidden", …)` (no server round-trip):
-  the extra pills and the "Show less" label start with `hidden`, and the button flips
-  `hidden` on the extras + both labels. (Deliberately **not** Alpine — Alpine doesn't
-  reliably initialize this dynamically patched-in modal subtree, so the extras + both
-  labels all rendered at once.)
+- **Recipe detail** (`RecipeDetailsComponent`) — a dedicated **"Claims & reference
+  intakes"** panel (the nutritionist "Dark Chart" redesign, 2026-11-05), **not** a pill
+  list. It reads `recipe.badges` directly (local `claim_rows/1`, not `high_badges/2`) so
+  it shows **both** the `"high"` and `"source"` tiers, ordered high-before-source then by
+  descending `percent_nrv`. Each nutrient renders as a labelled **%NRV bar** with the EU
+  **15% ("source of") / 30% ("high in")** thresholds marked on the track, plus a
+  `High · N%` / `Source · N%` tag — **basil** for high, **paprika** for source (the fill
+  follows the tier too) — and a footnote citing **EU Reg. 1169/2011 & 1924/2006**. The
+  nutrient name is localized via `NutrientLabels.translate_name/1` (the bare vocabulary
+  term), **not** `claim_label/1` (which hard-codes "High in" and so can't label a
+  "source" row). The panel renders only when at least one claim exists. (This replaced the
+  earlier flat high-only pill list + client-side "Show N more" toggle.)
 
-The detail/card pills carry the `· N% NRV` — the % is the auditable proof that keeps
-the claim on the label side of the line (the feed drops it only for layout, see
-above). One consistent color app-wide (**paprika**, the brand accent) so the badge is
-recognizable as the same element everywhere: solid/opaque over the photo on the
-browse card, subtle `/15` tint on the panel surfaces (home, detail).
+The **card** pills carry the `· N% NRV` — the % is the auditable proof that keeps the
+claim on the label side of the line (the feed drops it only for layout, see above),
+rendered in **paprika** (the brand accent): solid/opaque over the photo on the browse
+card, subtle `/15` tint in the home feed. On the **detail panel** the same proof lives in
+the per-nutrient `· N%` tag, tier-colored (basil/paprika) rather than one flat accent.
 
 ### Mobile API
 

@@ -113,7 +113,20 @@ defmodule MehungryWeb.FoodsLiveTest do
 
       html =
         view
-        |> element("button[phx-click='add_compound'][phx-value-id='#{vitc.id}']")
+        |> element("#compound-suggestions button[phx-value-id='#{vitc.id}']")
+        |> render_click()
+
+      assert html =~ "Apple"
+      refute html =~ "Spinach"
+      assert html =~ "filtered species"
+    end
+
+    test "a quick-pick compound chip filters the grid in one click", %{conn: conn, vitc: vitc} do
+      {:ok, view, _html} = live(conn, ~p"/foods")
+
+      html =
+        view
+        |> element("[role='group'] button[phx-value-id='#{vitc.id}']")
         |> render_click()
 
       assert html =~ "Apple"
@@ -125,7 +138,7 @@ defmodule MehungryWeb.FoodsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/foods")
 
       render_change(element(view, "form[phx-change='search_compounds']"), %{"q" => "Vitamin"})
-      render_click(element(view, "button[phx-click='add_compound'][phx-value-id='#{vitc.id}']"))
+      render_click(element(view, "#compound-suggestions button[phx-value-id='#{vitc.id}']"))
 
       html =
         view

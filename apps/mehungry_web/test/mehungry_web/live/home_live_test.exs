@@ -166,7 +166,7 @@ defmodule MehungryWeb.HomeLiveTest do
 
       {:ok, _view, html} = live(conn, ~p"/home")
 
-      assert html =~ "shared a weekly plan"
+      assert html =~ "Shared a weekly plan"
       assert html =~ "https://example.com/weekly-card.png"
       assert html =~ "112 g protein avg"
     end
@@ -263,7 +263,7 @@ defmodule MehungryWeb.HomeLiveTest do
       {:ok, _view, html} = live(conn, ~p"/home/#{recipe.id}")
       assert html =~ recipe.title
       assert html =~ "Ingredients"
-      assert html =~ "Nutrients"
+      assert html =~ "Method"
     end
 
     test "clicking post card link opens recipe detail modal", %{conn: conn, user: user} do
@@ -278,9 +278,8 @@ defmodule MehungryWeb.HomeLiveTest do
         |> render_click()
 
       assert html =~ recipe.title
-      assert html =~ "Steps"
+      assert html =~ "Method"
       assert html =~ "Ingredients"
-      assert html =~ "Nutrients"
     end
 
     test "recipe modal shows the title in the page title", %{conn: conn, user: user} do
@@ -441,9 +440,10 @@ defmodule MehungryWeb.HomeLiveTest do
   describe "optimistic like" do
     setup [:register_and_log_in_user]
 
-    # The like count span (and comment-count span) carry the `text-basil` class;
-    # after liking, a count of 1 must appear where none did before.
-    @count_one ~r/text-basil[^>]*>\s*1\s*</
+    # Saving a recipe bumps the saves metric beside the comment count. ngettext
+    # renders "0 saves" at rest and "1 save" once this viewer has saved it, so a
+    # live "1 save" must appear where none did before.
+    @count_one ~r/>\s*1 save\s*</
 
     test "clicking like bumps the count live without a reload", %{conn: conn, user: user} do
       complete_onboarding(user)

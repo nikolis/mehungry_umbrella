@@ -1,10 +1,27 @@
 <div class="foods-page min-h-screen bg-ink text-parchment pb-16">
   <div class="container max-w-4xl mx-auto px-4 py-8">
-    <div class="mb-8">
+    <div class="mb-6">
       <h1 class="text-3xl font-display font-medium text-parchment mb-2">Foods & Nutrition</h1>
-      <p class="text-parchment-dim">
+      <p class="text-parchment-dim max-w-[60ch]">
         Browse food species for nutrition facts, the research behind them, and the bioactive compounds they carry.
       </p>
+
+      <%!-- Professional rail — frames the database as the working tool of the
+            platform's nutritionists and sends the demand side into the marketplace. --%>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-5 px-4 py-3 rounded-2xl border border-basil/30 bg-gradient-to-r from-basil/10 to-transparent">
+        <span class="h-2.5 w-2.5 rounded-full bg-basil shadow-[0_0_0_4px_rgba(69,196,174,0.18)] shrink-0"></span>
+        <p class="text-sm text-parchment m-0">
+          {gettext("The USDA-backed database nutritionists use to build evidence-based client meal plans.")}
+        </p>
+        <a
+          href={"/#{@language}/nutritionists"}
+          class="ml-auto inline-flex items-center gap-1 text-sm font-semibold text-basil-soft hover:text-basil whitespace-nowrap transition-colors"
+        >
+          {gettext("Find your nutritionist")}
+          <.icon name="hero-arrow-right" class="h-4 w-4" />
+        </a>
+      </div>
+
       <.nutritionist_recruit_cta current_user={assigns[:current_user]} variant={:inline} class="mt-3" />
     </div>
 
@@ -63,6 +80,32 @@
       </button>
     </div>
 
+    <%!-- Always-visible one-click compound facet chips — the shortcut into the
+          same filter the panel's search drives, so the feature is discoverable
+          without opening Filters. A pressed chip appears selected here and in
+          the panel's chip row (shared `selected_compound_ids`). --%>
+    <div
+      :if={@quick_compounds != []}
+      role="group"
+      aria-label={gettext("Filter by compound")}
+      class="flex flex-wrap gap-2 mb-4"
+    >
+      <button
+        :for={compound <- @quick_compounds}
+        type="button"
+        phx-click={
+          if compound_selected?(@selected_compound_ids, compound.id),
+            do: "remove_compound",
+            else: "add_compound"
+        }
+        phx-value-id={compound.id}
+        aria-pressed={compound_selected?(@selected_compound_ids, compound.id)}
+        class={pill_class(compound_selected?(@selected_compound_ids, compound.id))}
+      >
+        {compound.name}
+      </button>
+    </div>
+
     <div class={[
       "transition-all duration-300 ease-in-out",
       (@show_filters && "max-h-[900px] opacity-100 mb-6 overflow-visible") ||
@@ -96,7 +139,7 @@
           </div>
 
           <div class="relative">
-            <form phx-change="search_compounds" phx-submit="search_compounds" autocomplete="off">
+            <form id="compound-search-form" phx-change="search_compounds" phx-submit="search_compounds" autocomplete="off">
               <input
                 type="text"
                 name="q"
@@ -110,6 +153,7 @@
             <!-- Suggestions dropdown -->
             <div
               :if={@compound_query != ""}
+              id="compound-suggestions"
               class="m3-scrollbar absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-ink-panel2 border border-ink-panel2 rounded-xl shadow-lg"
             >
               <div :if={@compound_results == []} class="px-4 py-3 text-sm text-parchment-dim">
@@ -185,31 +229,53 @@
         <% end %>
       </div>
     <% else %>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        <%= for species <- @species do %>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <%= for {species, idx} <- Enum.with_index(@species) do %>
+          <%!-- Marketplace nudge woven into the collection at the 9th slot. --%>
+          <%= if spotlight?(assigns) and idx == 8 do %>
+            <a
+              href={"/#{@language}/nutritionists"}
+              class="col-span-2 group flex flex-col justify-between rounded-2xl border border-basil/35 p-5 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(69,196,174,0.18),transparent_60%)] bg-ink-panel hover:border-basil/60 transition-colors"
+            >
+              <div>
+                <span class="text-xs font-semibold uppercase tracking-[0.14em] text-basil-soft">
+                  {gettext("For your goals")}
+                </span>
+                <h3 class="font-display text-xl text-parchment mt-2 mb-1">
+                  {gettext("Turn this data into a plan")}
+                </h3>
+                <p class="text-sm text-parchment-dim m-0">
+                  {gettext(
+                    "Browsing is the start. A nutritionist on the platform builds it around your body, conditions, and week."
+                  )}
+                </p>
+              </div>
+              <span class="mt-4 self-start inline-flex items-center gap-1 rounded-lg bg-basil-soft px-3 py-1.5 text-sm font-bold text-ink group-hover:bg-basil transition-colors">
+                {gettext("Browse nutritionists")}
+                <.icon name="hero-arrow-right" class="h-4 w-4" />
+              </span>
+            </a>
+          <% end %>
+
           <a
             href={"/foods/#{species_slug(species)}"}
-            class="group block bg-ink-panel border border-ink-panel2 rounded-xl p-4 hover:border-paprika/50 hover:bg-ink-panel2/80 transition-colors"
+            class="group flex flex-col bg-ink-panel border border-ink-panel2 rounded-2xl p-4 hover:border-paprika/50 hover:bg-ink-panel2/80 hover:-translate-y-0.5 transition-all"
           >
-            <div class="flex items-start justify-between gap-2">
-              <h2 class="text-sm font-semibold text-parchment group-hover:text-paprika-soft transition-colors leading-snug">
-                {species_label(species)}
-              </h2>
-              <svg
-                class="w-4 h-4 text-parchment-dim/50 group-hover:text-parchment-dim flex-shrink-0 mt-0.5 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-            <%= if sub = species_sublabel(species) do %>
-              <span class="mt-2 inline-block text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim group-hover:text-parchment transition-colors">
-                {sub}
+            <span class="block text-[2.5rem] leading-none" aria-hidden="true">
+              {Mehungry.Food.species_icon(species)}
+            </span>
+            <h2 class="mt-3 font-display text-lg text-parchment group-hover:text-paprika-soft transition-colors leading-snug">
+              {species_label(species)}
+            </h2>
+            <div class="mt-3 pt-3 flex items-center justify-between gap-2 border-t border-ink-panel2 text-xs text-parchment-dim">
+              <span class="italic truncate">{species_sublabel(species) || gettext("Species")}</span>
+              <span class="inline-flex items-center gap-1 shrink-0 text-parchment-dim/60 group-hover:text-paprika-soft transition-colors">
+                {gettext("Nutrition")}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
               </span>
-            <% end %>
+            </div>
           </a>
         <% end %>
       </div>

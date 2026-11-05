@@ -116,9 +116,8 @@ defmodule MehungryWeb.ProfileLiveTest do
       |> render_click()
 
     assert view =~ recipe.title
-    assert view =~ "Steps"
+    assert view =~ "Method"
     assert view =~ "Ingredients"
-    assert view =~ "Nutrients"
   end
 
   test "Test Own Profile Remove Recipe From Likes ", %{conn: conn, user: user} do
@@ -185,9 +184,8 @@ defmodule MehungryWeb.ProfileLiveTest do
       |> render_click()
 
     assert view =~ recipe_user2.title
-    assert view =~ "Steps"
+    assert view =~ "Method"
     assert view =~ "Ingredients"
-    assert view =~ "Nutrients"
   end
 
   test "Test Visit Other Profile Page Like Recipe from Listing ", %{conn: conn, user: user} do
@@ -272,14 +270,13 @@ defmodule MehungryWeb.ProfileLiveTest do
     refute html =~ "Blueprints"
   end
 
-  test "ingredients tab shows both my and friends' ingredients", %{conn: conn, user: user} do
+  test "ingredients tab shows the user's own ingredients", %{conn: conn, user: user} do
     onboard(user)
 
     {:ok, _index_live, html} =
       live(conn, Routes.profile_index_path(conn, :index) <> "?tab=ingredients")
 
     assert html =~ "My Ingredients"
-    assert html =~ "Friends&#39; Ingredients"
     assert html =~ "+ Create ingredient"
   end
 

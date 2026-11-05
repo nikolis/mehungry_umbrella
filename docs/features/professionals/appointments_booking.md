@@ -102,8 +102,10 @@ section. Two states, driven by `Professionals.get_assignment_for_client/1` (one 
   `User`, not the `ProfessionalProfile`). Rendered with the shared `nutritionist_card/1` component
   (`variant: :preview`, in `core_components`) with CTAs: **Book an appointment** (the shared
   `AppointmentBookingComponent`, `variant: :button` — a connected client books right here without
-  leaving the hub), **View full profile** (`/nutritionists/:slug`), **Message** (`/messages`), an
-  anchor to the appointments section, and **Disconnect** (`unlink_nutritionist` →
+  leaving the hub), **View full profile** (`/nutritionists/:slug`), a **Message** anchor that
+  scrolls to the **embedded chat thread** on the same hub (`MessagesComponent` — there is no
+  standalone `/messages` page), an anchor to the appointments section, and **Disconnect**
+  (`unlink_nutritionist` →
   `Professionals.unassign_nutritionist/1`, confirm-gated — a client can end the link themselves; the
   hub then falls back to the unconnected empty state).
 - **Unconnected** — a plain **empty state**: a people icon + "You're not connected to a nutritionist

@@ -55,7 +55,7 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
   # single-segment routes in `MehungryWeb.Router`.
   @reserved_handles ~w(
     admin api auth professional nutritionist nutritionists foods browse home
-    profile welcome search basket calendar upgrade trial messages friends
+    profile welcome search basket calendar upgrade trial messages
     notifications privacy_policy terms legal cookies conditions health sitemap
     meal-plans meal_plans blueprints dashboard oban metrics beam_scope dev
     webhooks test-accounts en el

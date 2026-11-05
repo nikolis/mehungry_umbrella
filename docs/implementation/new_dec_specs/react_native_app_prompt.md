@@ -186,7 +186,7 @@ Segmented header: **Recipes · Foods · Conditions**.
   Following**.
 - Language toggle (EN / ΕΛ → `PUT /me/language`).
 - **Upgrade to M3Hungry Plus** button → Upgrade screen (hide if already premium).
-- Sub-tabs (segmented): **Saved · Created · My Ingredients · Friends' Ingredients
+- Sub-tabs (segmented): **Saved · Created · My Ingredients
   · Edit Profile · Connected Accounts** (`GET /me/recipes?tab=…`,
   `GET /me/ingredients`, `PUT /me/profile`, `GET/DELETE /me/connected_accounts`).
 - **Notifications / Invitations** entry (`user:<id>` channel + invitations API) —

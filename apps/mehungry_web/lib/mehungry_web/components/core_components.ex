@@ -1962,6 +1962,10 @@ defmodule MehungryWeb.CoreComponents do
   attr :placeholder, :string, default: "Write a message…"
   attr :height_class, :string, default: "max-h-96"
 
+  attr :target, :any,
+    default: nil,
+    doc: "phx-target for `send_message` (e.g. a `@myself`); nil routes to the host LiveView"
+
   def message_thread(assigns) do
     ~H"""
     <div>
@@ -1989,7 +1993,7 @@ defmodule MehungryWeb.CoreComponents do
         <% end %>
       </div>
 
-      <form phx-submit="send_message" class="mt-3 flex items-end gap-2">
+      <form phx-submit="send_message" phx-target={@target} class="mt-3 flex items-end gap-2">
         <textarea
           id="message-compose"
           phx-hook="EnterToSend"

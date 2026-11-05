@@ -1,39 +1,15 @@
 defmodule MehungryWeb.ProfileLive.Show do
   use MehungryWeb, :live_component
 
-  alias Mehungry.Friends
   alias Mehungry.Subscriptions
 
   @impl true
-  # Targeted refresh from the parent's "add_friend" handler — just swap the
-  # button state, no re-fetch of the rest of the profile.
-  def update(%{friend_status: status}, socket) do
-    {:ok, assign(socket, :friend_status, status)}
-  end
-
   def update(%{user_profile: user_profile, user_follows: user_follows} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:user_profile, user_profile)
-     |> assign(:user_follows, user_follows)
-     |> assign_friend_status()}
-  end
-
-  # Relationship between the signed-in user and the profile being viewed, used to
-  # decide whether to offer the "Add Friend" button on someone else's profile.
-  defp assign_friend_status(socket) do
-    current_user = socket.assigns[:current_user]
-    user = socket.assigns[:user]
-
-    status =
-      if is_nil(current_user) or is_nil(user) do
-        :none
-      else
-        Friends.relationship_status(current_user.id, user.id)
-      end
-
-    assign(socket, :friend_status, status)
+     |> assign(:user_follows, user_follows)}
   end
 
   # Profile-local hero. Replaces the shared `user_details_card` for this page so
@@ -47,7 +23,6 @@ defmodule MehungryWeb.ProfileLive.Show do
   attr :user_profile, :map, required: true
   attr :current_user, :map, default: nil
   attr :user_follows, :list, default: []
-  attr :friend_status, :atom, default: :none
   attr :myself, :any, default: nil
   attr :socket, :any, required: true
 
@@ -108,14 +83,14 @@ defmodule MehungryWeb.ProfileLive.Show do
               <.stat_number value={count_user_created_recipes(@user.id)} />
               <span class="text-sm text-parchment-dim">Posted</span>
             </.link>
-            <.link navigate={~p"/friends"} class="flex flex-col items-center leading-tight sm:items-start rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika">
+            <span class="flex flex-col items-center leading-tight sm:items-start rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika">
               <.stat_number value={count_user_followers(@user.id)} />
               <span class="text-sm text-parchment-dim">Followers</span>
-            </.link>
-            <.link navigate={~p"/friends"} class="flex flex-col items-center leading-tight sm:items-start rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika">
+            </span>
+            <span class="flex flex-col items-center leading-tight sm:items-start rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika">
               <.stat_number value={count_user_following(@user.id)} />
               <span class="text-sm text-parchment-dim">Following</span>
-            </.link>
+            </span>
           <% else %>
             <span class="flex flex-col items-center leading-tight sm:items-start rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika">
               <.stat_number value={count_user_created_recipes(@user.id)} />
@@ -132,36 +107,8 @@ defmodule MehungryWeb.ProfileLive.Show do
           <% end %>
         </div>
 
-        <%!-- Relationship actions on someone else's profile: one paprika primary
-              (Add Friend / Respond), with Follow kept as a quiet companion. --%>
+        <%!-- Relationship action on someone else's profile: Follow. --%>
         <div :if={@mode == :show and @viewing_other} class="mt-4 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-          <%= case @friend_status do %>
-            <% :friends -> %>
-              <span class="inline-flex items-center gap-1.5 py-2 px-5 rounded-full bg-ink-panel2 text-parchment-dim text-sm font-medium">
-                <.icon name="hero-check" class="w-4 h-4 flex-none" /> Friends
-              </span>
-            <% :request_sent -> %>
-              <span class="inline-flex items-center gap-1.5 py-2 px-5 rounded-full bg-ink-panel2 text-parchment-dim text-sm font-medium">
-                <.icon name="hero-clock" class="w-4 h-4 flex-none" /> Request sent
-              </span>
-            <% :request_received -> %>
-              <.link
-                navigate={~p"/friends"}
-                class="inline-flex items-center gap-1.5 py-2 px-5 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors motion-reduce:transition-none"
-              >
-                <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Respond to request
-              </.link>
-            <% _ -> %>
-              <button
-                type="button"
-                phx-click="add_friend"
-                phx-value-id={@user.id}
-                class="inline-flex items-center gap-1.5 py-2 px-5 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors motion-reduce:transition-none"
-              >
-                <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Add Friend
-              </button>
-          <% end %>
-
           <button
             type="button"
             id={"toggle_user_follow#{@user.id}"}

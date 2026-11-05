@@ -7,7 +7,7 @@ under `apps/mehungry/lib/mehungry/food/`:
 |---|---|---|
 | `Food.IngredientSearch` | `food/ingredient_search.ex` | Ranked **prefix + fuzzy** search over the local USDA DB. The **single path for all user-facing name search**. |
 | `Food.IngredientQueries` | `food/ingredient_queries.ex` | The `search_ingredient*` family (FTS / trigram / **admin** / translated variants) plus recipe & hashtag search. |
-| `Food.IngredientScope` | `food/ingredient_scope.ex` | **Shared query scopes** both paths compose — owner/friends visibility (`filter_by_owner/2`, `visible_owner_ids/1`), USDA food-class filtering (`maybe_filter_by_classes/2`), and second-layer category hiding (`second_layer_category_ids/0`, `exclude_secondary_categories/3`). |
+| `Food.IngredientScope` | `food/ingredient_scope.ex` | **Shared query scopes** both paths compose — owner visibility (`filter_by_owner/2`), USDA food-class filtering (`maybe_filter_by_classes/2`), and second-layer category hiding (`second_layer_category_ids/0`, `exclude_secondary_categories/3`). |
 
 Both are reachable through the permanent `Mehungry.Food` defdelegate facade. Entity
 schemas (`Ingredient`, `IngredientTranslation`, `search_name`, …) are the canonical
@@ -51,10 +51,10 @@ search(search_term, classes \\ [], owner_id \\ nil)
 ### Visibility & filtering
 
 - `IngredientScope.filter_by_owner/2` — global rows (`user_id IS NULL`) always;
-  plus the viewer's own private rows **and their friends'**
-  (`visible_owner_ids/1` = `[owner_id | Mehungry.Friends.friend_ids(owner_id)]`)
-  when an id is passed. `owner_id = nil` → global only, so private ingredients
-  never leak.
+  plus the viewer's own private rows (`i.user_id == owner_id`) when an id is
+  passed. `owner_id = nil` → global only, so private ingredients never leak.
+  (Private ingredients are **owner-only**; the former friends-sharing boundary
+  was removed with the Friends concept.)
 - `IngredientScope.maybe_filter_by_classes/2` — restrict to given USDA food classes.
 - Excludes USDA **Branded** rows (`food_class IS DISTINCT FROM 'Branded'`, which
   also lets the planner use the partial `ingredients_*_active_idx` indexes).
@@ -105,7 +105,7 @@ resolution to **`IngredientSearch.search`**), `search_hashtag/1`,
 | Ranking | 5-tier (exact → word_similarity → length → food-class → alpha) | `ts_rank_cd` desc |
 | Category hiding | `IngredientScope.exclude_secondary_categories/3` (shared) | `IngredientScope.exclude_secondary_categories/3` (shared) |
 | Branded exclusion | Built into every query | Admin variants keep Branded (so admins can filter to it) |
-| Owner/friends visibility | Yes (shared `IngredientScope`) | Yes (shared `IngredientScope`) |
+| Owner visibility | Yes (shared `IngredientScope`) | Yes (shared `IngredientScope`) |
 | Result shape | Full `Ingredient` structs (or `%{id,name}` via `_for_select`) | `{query, page, count}` |
 | Return on empty term | `[]` (guards) | Runs the query anyway |
 | Role | **All user-facing name search** | **Admin** listing (pagination/count/data-types) + recipe/hashtag search |
@@ -122,8 +122,8 @@ the FTS engine is now admin-only. With no callers left, the user-facing FTS wrap
 **removed** (along with the facade delegate); the admin `search_ingredient_alt_admin/3`
 keeps the FTS builder alive.
 
-**Shared scopes (post-consolidation):** the owner/friends visibility helpers
-(`filter_by_owner/2`, `visible_owner_ids/1`), `maybe_filter_by_classes/2`, and the
+**Shared scopes (post-consolidation):** the owner visibility helper
+(`filter_by_owner/2`), `maybe_filter_by_classes/2`, and the
 second-layer category helpers (`second_layer_category_ids/0`,
 `exclude_secondary_categories/3`) used to be copy-pasted into both modules. They now
 live once in `Food.IngredientScope` and both paths compose it. `IngredientQueries`
@@ -151,7 +151,7 @@ exclusions, zero callers) were removed with their facade delegates.
 | `mehungry/ai/agent.ex:26` | `search(name)` (the `search_ingredient` tool) |
 | `mehungry/food_data/spoonacular_importer.ex:244` | `search(name)` (dedupe on import) |
 | `mehungry/food/ingredient_queries.ex:50` | `search(ingredient_name)` inside `search_recipes_by_ingredient/1` |
-| Tests | `friends_test.exs`, `user_ingredients_test.exs`, `ingredient_search_branded_test.exs` |
+| Tests | `user_ingredients_test.exs`, `ingredient_search_branded_test.exs` |
 
 ### `search_ingredient*` family (via `Mehungry.Food` facade)
 

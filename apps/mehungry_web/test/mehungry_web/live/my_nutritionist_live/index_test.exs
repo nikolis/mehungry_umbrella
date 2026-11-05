@@ -127,6 +127,37 @@ defmodule MehungryWeb.MyNutritionistLive.IndexTest do
     refute html =~ "Browse the full directory"
   end
 
+  test "connected: the message thread is embedded on the hub — opening reads the nutritionist's messages, and the client can reply",
+       %{conn: conn, user: client} do
+    professional = Mehungry.AccountsFixtures.user_fixture()
+    professional = Repo.update!(Ecto.Changeset.change(professional, name: "Dr. Nutri"))
+    assign_nutritionist(client, professional)
+
+    {:ok, _} = Professionals.send_message(professional.id, client.id, professional.id, "Welcome!")
+    assert Professionals.count_unread_messages_for(client.id) == 1
+
+    {:ok, view, html} = live(conn, "/en/my-nutritionist")
+
+    # The thread is embedded here (no standalone /messages page); opening the hub
+    # shows the nutritionist's message and marks it read.
+    assert html =~ "Welcome!"
+    assert Professionals.count_unread_messages_for(client.id) == 0
+
+    html =
+      view
+      |> form("form[phx-submit='send_message']", %{body: "Thanks, I have a question"})
+      |> render_submit()
+
+    assert html =~ "Thanks, I have a question"
+    assert [_welcome, reply] = Professionals.list_messages(professional.id, client.id)
+    assert reply.sender_user_id == client.id
+  end
+
+  test "unconnected: no message thread is shown", %{conn: conn} do
+    {:ok, _view, html} = live(conn, "/en/my-nutritionist")
+    refute html =~ "send_message"
+  end
+
   test "connected client can disconnect from their nutritionist",
        %{conn: conn, user: client} do
     professional = Mehungry.AccountsFixtures.user_fixture()

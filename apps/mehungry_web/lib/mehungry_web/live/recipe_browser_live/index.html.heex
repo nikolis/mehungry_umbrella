@@ -1,26 +1,20 @@
 <div class="browse-page min-h-screen bg-ink text-parchment p-4">
-  <div class="mx-auto md:pt-4 md:pl-8">
+  <div class="max-w-7xl mx-auto md:pt-4">
     <!-- Header -->
     <div class="mb-2">
-      <h1 class="text-3xl font-display font-medium text-parchment flex items-center gap-3">
-        <svg
-          class="w-8 h-8 text-paprika"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-        Discover Recipes
+      <p class="font-mono text-[0.62rem] tracking-[0.14em] uppercase text-basil mb-1">
+        {gettext("Discover")}
+      </p>
+      <h1 class="text-3xl font-display font-medium text-parchment">
+        {gettext("Recipes worth saving")}
       </h1>
-      <p class="text-parchment-dim mt-1">Explore recipes from our community</p>
+      <p class="text-parchment-dim text-sm mt-1 max-w-xl">
+        {gettext("Browse the community kitchen — filtered by the nutrition that matters to you.")}
+      </p>
 
-      <div :if={@diet_mode_available} class="mt-2">
+      <%!-- Diet mode is a quiet user-setting status, not a nutrition claim, so it
+            stays off basil (basil is reserved for nutrition truth + the lens). --%>
+      <div :if={@diet_mode_available} class="mt-3">
         <button
           type="button"
           phx-click="toggle_diet_mode"
@@ -30,18 +24,18 @@
               else: "Click to filter to ##{@diet_mode_available} recipes"
           }
           class={[
-            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border transition",
+            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-[0.7rem] tracking-[0.08em] lowercase border transition-colors",
             if(@diet_mode,
-              do: "bg-basil/20 text-basil border-basil/40",
+              do: "bg-ink-panel2 text-parchment border-ink-panel2",
               else: "bg-ink-panel text-parchment-dim border-ink-panel2 hover:text-parchment"
             )
           ]}
         >
           <span class={[
             "w-2 h-2 rounded-full",
-            if(@diet_mode, do: "bg-basil", else: "bg-parchment-dim")
+            if(@diet_mode, do: "bg-parchment", else: "border border-parchment-dim")
           ]}></span>
-          #{@diet_mode_available} mode {if @diet_mode, do: "on", else: "off"}
+          #{@diet_mode_available} mode {if @diet_mode, do: gettext("on"), else: gettext("off")}
         </button>
       </div>
     </div>
@@ -69,7 +63,7 @@
         class={[
           "px-4 py-1.5 rounded-full text-sm font-semibold transition",
           if(@browse_mode == :blueprints,
-            do: "bg-basil text-ink",
+            do: "bg-paprika text-ink",
             else: "text-parchment-dim hover:text-parchment"
           )
         ]}
@@ -142,34 +136,51 @@
         query_string={@query_string}
       />
     </div>
-    <!-- Nutrient-claim filter chips (EU per-serving "High in X" claims). Each is a
-         real crawlable link to /search/nutrient/:slug, not a client-only toggle. -->
+    <!-- Nutrition Lens — the signature filter, framed as a distinct instrument.
+         Each chip is a real crawlable /search/nutrient/:slug link (not a client-only
+         toggle), styled in the basil "nutrition truth" system so filter and result
+         read as the same object. -->
     <div
       :if={@browse_mode == :recipes}
-      class="flex gap-2 overflow-x-auto mt-2 pb-1 -mx-1 px-1"
-      aria-label={gettext("Filter recipes by nutrient")}
+      class="mt-4 rounded-2xl border border-basil/20 bg-ink-panel p-4"
     >
-      <.link
-        :for={label <- MehungryWeb.RecipeBrowserLive.Index.chip_nutrients()}
-        navigate={
-          if @active_nutrient == label,
-            do: ~p"/browse",
-            else: ~p"/search/nutrient/#{Mehungry.Food.claim_slug(label)}"
-        }
-        class={[
-          "whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium border transition-colors",
-          if(@active_nutrient == label,
-            do: "bg-basil text-white border-basil",
-            else: "bg-parchment-dim text-ink border-ink-panel2 hover:border-basil"
-          )
-        ]}
-      >
-        {MehungryWeb.NutrientLabels.claim_label(label)}
-      </.link>
+      <p class="font-mono text-[0.62rem] tracking-[0.14em] uppercase text-basil">
+        {gettext("Nutrition lens")}
+      </p>
+      <p class="text-parchment-dim text-xs mt-1 mb-3">
+        {gettext("Show recipes proven high in a nutrient — per serving, EU-regulated.")}
+      </p>
+      <%!-- Right-edge fade mask makes the scrolling rail read as a designed
+            instrument, not an overflow accident. --%>
+      <div style="-webkit-mask-image:linear-gradient(to right,#000 88%,transparent 100%);mask-image:linear-gradient(to right,#000 88%,transparent 100%);">
+        <div
+          class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+          aria-label={gettext("Filter recipes by nutrient")}
+        >
+          <.link
+            :for={label <- MehungryWeb.RecipeBrowserLive.Index.chip_nutrients()}
+            navigate={
+              if @active_nutrient == label,
+                do: ~p"/browse",
+                else: ~p"/search/nutrient/#{Mehungry.Food.claim_slug(label)}"
+            }
+            class={[
+              "whitespace-nowrap inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono tracking-wide border transition-colors",
+              if(@active_nutrient == label,
+                do: "bg-basil text-ink border-basil font-semibold",
+                else: "bg-basil/10 text-basil-soft border-basil/30 hover:bg-basil/20"
+              )
+            ]}
+          >
+            <span :if={@active_nutrient == label} class="w-1.5 h-1.5 rounded-full bg-ink/70"></span>
+            {MehungryWeb.NutrientLabels.claim_label(label)}
+          </.link>
+        </div>
+      </div>
+      <p :if={@active_nutrient} class="text-parchment-dim text-[0.7rem] mt-3">
+        {gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+      </p>
     </div>
-    <p :if={@active_nutrient} class="text-parchment-dim text-xs mt-1">
-      {gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
-    </p>
     <%= if !is_nil(@must_be_loged_in) do %>
       <.modal
         id="browse_index_must_be_login"
@@ -213,7 +224,7 @@
           value={@blueprint_query}
           placeholder="Search blueprints by title…"
           phx-debounce="300"
-          class="w-full bg-ink-panel text-parchment rounded-xl px-4 py-3 text-sm border border-ink-panel2 focus:border-basil focus:outline-none"
+          class="w-full bg-ink-panel text-parchment rounded-xl px-4 py-3 text-sm border border-ink-panel2 focus:border-paprika focus:outline-none"
         />
       </form>
 
@@ -263,7 +274,12 @@
          removing it from the DOM (via :if) and re-adding it leaves it empty.
          We hide it with CSS instead when Blueprints is active. -->
     <div class={[@browse_mode != :recipes && "hidden"]}>
-      <div :if={@not_empty} class="">
+      <%!-- When the Nutrition Lens is engaged the results region gets a quiet basil
+            left-hairline — the one place the "lens is on" signal becomes spatial. --%>
+      <div
+        :if={@not_empty}
+        class={[@active_nutrient && "border-l-2 border-basil/40 pl-4 md:pl-6"]}
+      >
         <div
           class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 "
           id="recipes_container"
@@ -287,10 +303,30 @@
           <input type="hidden" id="page_is_dirty" name="page_is_dirty" value="0" />
         </form>
       </div>
-      <div :if={!@not_empty} style="height: 20vh">
-        <h3 class="text-center p-10 font-display text-parchment-dim">
-          We were not able to find a recipe according to your search
+      <div :if={!@not_empty} class="text-center py-20 flex flex-col items-center gap-3">
+        <div class="w-14 h-14 rounded-full bg-ink-panel border border-ink-panel2 flex items-center justify-center text-basil">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+        <h3 class="font-display text-xl text-parchment">
+          {gettext("Nothing matches that yet.")}
         </h3>
+        <p class="text-parchment-dim text-sm max-w-sm">
+          {gettext("Try a different search, or clear the nutrition lens to see everything.")}
+        </p>
+        <.link
+          :if={@active_nutrient}
+          navigate={~p"/browse"}
+          class="text-paprika hover:underline text-sm font-semibold"
+        >
+          {gettext("Clear lens")}
+        </.link>
       </div>
     </div>
     <MehungryWeb.RecipeComponents.recipe_modal

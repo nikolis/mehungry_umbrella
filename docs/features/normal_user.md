@@ -51,18 +51,20 @@ category rules that drive diet-mode filtering app-wide.
 ### Navigation (`main_menu` desktop rail / `mobile_menu` bottom bar)
 
 The consumer's primary nav, top to bottom: **Browse · Foods · Create Recipe ·
-Calendar · Basket · Give Feedback**, then conditional badges (Tutor Invitations,
-Messages, Friends) and a **"Manage subscriptions"** (upgrade) link, with
-language toggle (EN/ΕΛ) + Profile/Login at the bottom. The "Your practice" block
+Calendar · Basket · Give Feedback**, then a conditional **Tutor Invitations**
+badge and a **"Manage subscriptions"** (upgrade) link, with
+language toggle (EN/ΕΛ) + Profile/Login at the bottom. There is **no standalone
+"Messages" menu entry** — the client↔nutritionist thread is embedded on the
+**My nutritionist** hub (see below), since it is only meaningful once connected. The "Your practice" block
 and "Admin Panel" link are gated off for this user.
 
 ### Discover & browse
 
 | Feature | What the user does | Entry point |
 |---|---|---|
-| **Home feed** | Scroll a paginated post feed (recipe cards + weekly-plan share cards), upvote/downvote, open a recipe, infinite "load more"; feed is diet-mode filtered from the saved profile | `HomeLive.Index` (`/home`) |
+| **Home feed** | Scroll a paginated post feed of "mini-RecipeDetails" cards (serif title, cuisine·difficulty eyebrow, nutrient-claim badges + per-serving macro line — the nutrition proof surfaced inline) + weekly-plan share cards; **bookmark** to save a recipe, like/comment/share, open a recipe, infinite "load more"; feed is diet-mode filtered from the saved profile | `HomeLive.Index` (`/home`) |
 | **Browse / search** | One search box over recipes with facets: hashtag (`/search/hashtag/:h`), ingredient (`/search/ingredient/:i`), nutrient-claim chips (Iron/Calcium/Vit C/Potassium/Magnesium), free text, and condition-prioritized browse; toggles into blueprint / meal-plan search modes | `RecipeBrowserLive.Index` (`/browse`, `/search/*`) |
-| **Foods nutrition DB** (the proof engine) | Browse/search USDA-backed food **species**, filter by bioactive compound, cursor-paginated; localized (EL names) | `FoodsLive.Index` (`/foods`) |
+| **Foods nutrition DB** (the proof engine) | Browse/search USDA-backed food **species**, filter by bioactive compound (always-visible one-click **quick-pick chips** above the grid + a searchable multi-select in the Filters panel, sharing the same `selected_compound_ids` state), cursor-paginated; localized (EL names). Emoji-forward "specimen" cards (each leads with its `Food.species_icon/1` emoji), a basil **professional rail** ("the database nutritionists use → Find your nutritionist") and an in-grid **marketplace spotlight** card both deep-link the directory (`/:locale/nutritionists`) | `FoodsLive.Index` (`/foods`) |
 | **Species detail** | Full per-100g nutrition table per ingredient of a species, macro highlights, bioactive **compounds** (async), research/studies, sample recipes; SEO JSON-LD on the dead render | `SpeciesDetailLive.Index` (`/foods/:slug`) |
 | **Public nutritionist directory** | Browse/search public nutritionist profiles + their articles; request a booking | `PublicNutritionistLive.{Index,Show,Article}` (`/nutritionists`) |
 | **Public meal plans & blueprints** | SEO-indexed weekly meal plans + meal blueprints with full nutrition | `MealPlanLive`, `BlueprintLive.Show` (`/meal-plans`, `/blueprints/:slug`) |
@@ -89,8 +91,7 @@ breakdown per serving + nutrient-claim badges ("High in Iron") are shown — the
 | Feature | What the user does | Entry point |
 |---|---|---|
 | **Profile** | Tabbed: **Saved · Created · Meal Plans**; hero links to edit, connections, ingredients; unsave/delete recipes, delete meal plans, disconnect social, unlink nutritionist, regenerate recipe images | `ProfileLive.Index` (`/profile`) |
-| **Friends** | Send/accept friend requests (badge counts pending) | `FriendsLive.Index` (`/friends`) |
-| **Messages** | Chat line with *their* nutritionist (only shown if they have an assignment) | `MessagesLive.Index` (`/messages`) |
+| **My nutritionist** | Connect with / disconnect from a nutritionist, accept invitations, book + cancel appointments, and an **embedded chat thread** with *their* nutritionist (`MessagesComponent`, shown once assigned) | `MyNutritionistLive.Index` (`/my-nutritionist`) |
 | **Tutor invitations** | Accept/decline a nutritionist's invitation (badge) | `NutritionistLive.UserInvitations` (`/notifications/invitations`) |
 | **Upgrade / billing** | See quota usage, pick Plus/Pro monthly/yearly, Stripe checkout + billing portal | `UpgradeLive.Index` (`/upgrade`) |
 | **Feedback** | Submit product feedback | `FeedbackLive` (`/feedback`) |
@@ -156,12 +157,14 @@ Grounded against the [foundation's principles and "what it is not"](product_foun
    user with nothing to manage, the primary monetization link reads like account
    settings, not "get Plus." Consider value-first copy ("Go Plus" / "Unlock AI
    planning").
-5. **Overlapping "social" surfaces dilute focus.** Friends, the post feed, comments,
-   and social-sharing coexist with the client↔nutritionist Messages line. For the
-   second-ring *client*, the relationship with their nutritionist is the point; the
-   friend graph is the cold-start consumer-social idea the foundation calls
-   [dead](product_foundation.md#how-we-got-here). Worth asking which of these earn
-   their nav slot.
+5. **Overlapping "social" surfaces dilute focus.** The post feed, comments, and
+   social-sharing coexist with the client↔nutritionist message thread (now
+   embedded on the My nutritionist hub rather than a standalone page). For the
+   second-ring *client*, the relationship with their nutritionist is the point.
+   The consumer **friend graph was removed entirely** — it was the cold-start
+   consumer-social idea the foundation calls
+   [dead](product_foundation.md#how-we-got-here). Worth asking which of the
+   remaining social surfaces earn their nav slot.
 6. **Condition/health advice is correctly absent** — condition pages are
    nutritionist-gated and the old public ones now 410. The consumer surface stays
    inside the [YMYL line](product_foundation.md#principles--non-negotiables). ✔
@@ -176,7 +179,7 @@ Grounded against the [foundation's principles and "what it is not"](product_foun
 | Exact over approximate | ✔ 168-nutrient + NRV badges everywhere |
 | Stay inside the YMYL line | ✔ Condition pages gated/410, off the sitemap |
 | No fabricated metrics | ✔ Honest landing fallback |
-| Proof engine funnels to the nutritionist | ⚠️ `/foods` is strong, but the consumer path to a nutritionist (the directory) is low in the nav and not the dominant CTA |
+| Proof engine funnels to the nutritionist | ✔ `/foods` now carries a prominent professional rail + an in-grid marketplace spotlight, both deep-linking the directory; the global-nav path is still a secondary gap |
 
 ---
 

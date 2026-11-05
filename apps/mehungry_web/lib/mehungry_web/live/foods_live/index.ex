@@ -6,6 +6,14 @@ defmodule MehungryWeb.FoodsLive.Index do
   # How many compound suggestions to surface in the multi-select dropdown.
   @compound_suggestions 12
 
+  # How many always-visible one-click facet chips to show above the grid.
+  @quick_compound_count 10
+
+  # Recognizable compounds we'd rather lead the quick-pick row with when the
+  # catalog carries them; any gaps are filled alphabetically from the linked set,
+  # so the row is useful no matter what's curated.
+  @quick_compound_priority ~w(Quercetin Anthocyanin Oxalate Lutein Lycopene Resveratrol Catechin Curcumin Capsaicin Caffeine)
+
   @impl true
   def mount(_params, _session, socket) do
     language = socket.assigns[:current_language] || "en"
@@ -15,12 +23,14 @@ defmodule MehungryWeb.FoodsLive.Index do
     {:ok,
      socket
      |> assign(:species, species)
+     |> assign(:language, language)
      |> assign(:cursor_after, cursor_after)
      |> assign(:query, "")
      |> assign(:show_filters, false)
      |> assign(:selected_compound_ids, MapSet.new())
      |> assign(:all_compounds, all_compounds)
      |> assign(:compounds_by_id, Map.new(all_compounds, &{&1.id, &1}))
+     |> assign(:quick_compounds, quick_compounds(all_compounds))
      |> assign(:compound_query, "")
      |> assign(:compound_results, [])
      |> assign(:page_title, "Foods & Nutrition Database")
@@ -97,6 +107,18 @@ defmodule MehungryWeb.FoodsLive.Index do
 
   def filters_active?(assigns), do: MapSet.size(assigns.selected_compound_ids) > 0
 
+  # Whether to weave the "find a nutritionist" spotlight into the species grid —
+  # only in the default browse state (no search, no filter) and once there are
+  # enough cards that it reads as part of the collection, not a lonely banner.
+  def spotlight?(assigns) do
+    assigns.query == "" and MapSet.size(assigns.selected_compound_ids) == 0 and
+      length(assigns.species) > 8
+  end
+
+  # Whether a compound is in the active filter set — drives the quick-pick chip
+  # pressed state and which toggle event it fires.
+  def compound_selected?(selected_ids, id), do: MapSet.member?(selected_ids, id)
+
   # The compound structs currently selected, name-ordered — for the chip row.
   def selected_compounds(assigns) do
     assigns.selected_compound_ids
@@ -133,6 +155,22 @@ defmodule MehungryWeb.FoodsLive.Index do
   end
 
   ###################################################################### PRIVATE ###############################################################
+
+  # The quick-pick facet chips: recognizable compounds first (in the priority
+  # order), then an alphabetical fill from the remaining linked compounds, capped.
+  defp quick_compounds(all_compounds) do
+    by_down = Map.new(all_compounds, &{String.downcase(&1.name), &1})
+
+    preferred =
+      @quick_compound_priority
+      |> Enum.map(&Map.get(by_down, String.downcase(&1)))
+      |> Enum.reject(&is_nil/1)
+
+    preferred_ids = MapSet.new(preferred, & &1.id)
+    fill = Enum.reject(all_compounds, &MapSet.member?(preferred_ids, &1.id))
+
+    Enum.take(preferred ++ fill, @quick_compound_count)
+  end
 
   defp compound_suggestions(socket, query) do
     term = String.trim(query)
