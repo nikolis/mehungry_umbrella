@@ -194,5 +194,35 @@ defmodule Mehungry.OnboardingTest do
       assert :ok = Onboarding.seed_defaults()
       assert length(Onboarding.list_questions("client_default")) == count
     end
+
+    test "seeds Greek prompts (prompt_el is the Greek label, not the English one)" do
+      assert :ok = Onboarding.seed_defaults()
+
+      by_key =
+        Onboarding.list_questions("client_default")
+        |> Map.new(&{&1.source_key, &1})
+
+      for {key, en, el} <- Fields.detail_entries() do
+        q = by_key[key]
+        assert q.prompt_en == en
+        assert q.prompt_el == el
+        assert q.prompt_el != q.prompt_en
+      end
+    end
+
+    test "heals a client/client_default prompt_el left as the English label" do
+      {:ok, stale} =
+        Onboarding.create_question(%{
+          "scope" => "client_default",
+          "prompt_en" => "Allergies",
+          "prompt_el" => "Allergies",
+          "question_type" => "value",
+          "source_key" => "allergies"
+        })
+
+      assert :ok = Onboarding.seed_defaults()
+
+      assert Onboarding.get_question!(stale.id).prompt_el == "Αλλεργίες"
+    end
   end
 end

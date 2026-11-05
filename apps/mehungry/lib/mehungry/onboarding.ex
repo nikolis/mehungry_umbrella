@@ -238,13 +238,13 @@ defmodule Mehungry.Onboarding do
   """
   def seed_defaults do
     if list_questions("client_default") == [] do
-      Fields.detail_labels()
+      Fields.detail_entries()
       |> Enum.with_index()
-      |> Enum.each(fn {{key, label}, idx} ->
+      |> Enum.each(fn {{key, en, el}, idx} ->
         create_question(%{
           scope: "client_default",
-          prompt_en: label,
-          prompt_el: label,
+          prompt_en: en,
+          prompt_el: el,
           question_type: "value",
           value_kind: "text",
           position: idx,
@@ -254,7 +254,30 @@ defmodule Mehungry.Onboarding do
       end)
     end
 
+    heal_default_prompts_el()
     :ok
+  end
+
+  # Earlier seeds set `prompt_el` to the English label, so the client onboarding
+  # questionnaire rendered English even in `el`. Backfill the real Greek — on the
+  # `"client_default"` template *and* every nutritionist's `"client"` snapshot —
+  # from `Fields` by `source_key`, but only where the Greek prompt is still blank
+  # or identical to the English one, so a prompt a nutritionist actually
+  # translated is never clobbered. Idempotent (a no-op once healed).
+  defp heal_default_prompts_el do
+    el_by_key = Map.new(Fields.detail_entries(), fn {k, _en, el} -> {k, el} end)
+
+    Question
+    |> where([q], q.scope in ["client_default", "client"])
+    |> Repo.all()
+    |> Enum.each(fn q ->
+      el = Map.get(el_by_key, q.source_key)
+
+      if is_binary(el) and el != "" and q.prompt_el in [nil, "", q.prompt_en] and
+           q.prompt_el != el do
+        update_question(q, %{prompt_el: el})
+      end
+    end)
   end
 
   @doc false
