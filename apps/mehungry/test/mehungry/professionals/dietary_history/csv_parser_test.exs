@@ -25,6 +25,11 @@ defmodule Mehungry.Professionals.DietaryHistory.CsvParserTest do
       assert parsed.intake.tdee_kcal == 1995
     end
 
+    test "parses age into the typed column, not a questionnaire detail", %{parsed: parsed} do
+      assert parsed.intake.age == 34
+      refute Map.has_key?(parsed.intake.details, "age")
+    end
+
     test "parses the Greek assessment date", %{parsed: parsed} do
       assert parsed.intake.assessed_on == ~D[2025-09-15]
     end

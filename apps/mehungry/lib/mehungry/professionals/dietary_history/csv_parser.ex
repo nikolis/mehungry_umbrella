@@ -31,7 +31,11 @@ defmodule Mehungry.Professionals.DietaryHistory.CsvParser do
   #   {:recall, key}           → intake.details.recall_24h[key]
   @intake_fields %{
     "ΟΝΟΜΑΤΕΠΩΝΥΜΟ:" => {:client, :full_name},
-    "ΗΛΙΚΙΑ:" => {:details, "age"},
+    # Age is a structured anthropometric column (feeds BMR/TDEE via
+    # `ClientIntake.maybe_fill_energy`), not a free-text questionnaire field —
+    # routing it into `details["age"]` duplicated it against the typed `:age`
+    # column in the client record view. Keep it typed.
+    "ΗΛΙΚΙΑ:" => {:int, :age},
     "ΗΜΕΡ/ΝΙΑ ΓΕΝΝΗΣΗΣ:" => {:client_date, :date_of_birth},
     "ΔΙΕΥΘΥΝΣΗ:" => {:client, :address},
     "Τ.Κ.:" => {:client, :postal_code},

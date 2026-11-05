@@ -11,9 +11,11 @@ defmodule Mehungry.Professionals.DietaryHistory.Fields do
   """
 
   # `details[<key>]` questionnaire fields → label, in display order.
+  # NB: `age` is intentionally NOT here — it is a structured `ClientIntake.age`
+  # column (shown in the intake metrics and used for BMR/TDEE), so listing it as
+  # a questionnaire detail rendered it twice in the client view.
   @detail_labels [
     {"reason_for_visit", "Reason for visit"},
-    {"age", "Age"},
     {"marital_status", "Marital status"},
     {"weight_fluctuations", "Weight fluctuations"},
     {"milestone_events", "Milestone events"},
