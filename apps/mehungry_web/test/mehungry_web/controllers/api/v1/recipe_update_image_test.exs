@@ -15,8 +15,12 @@ defmodule MehungryWeb.Api.V1.RecipeUpdateImageTest do
       })
 
     assert %{"data" => %{"image_url" => image_url}} = json_response(conn, 200)
-    # The newly uploaded image must be reflected on the recipe.
+    # The newly uploaded image must be reflected on the recipe as a fully-qualified
+    # public URL the client can render — not the bare storage key (which would make
+    # the <img> fail to load: the "uploaded but never shows up" bug).
     assert image_url =~ "recipe_images/tmp/"
+    assert image_url =~ "/storage/v1/object/public/"
+    assert String.starts_with?(image_url, "http")
   end
 
   test "update own recipe with a new image via literal image_url", %{conn: conn, user: user} do

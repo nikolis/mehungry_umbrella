@@ -20,7 +20,10 @@ defmodule MehungryWeb.Api.V1.RecipeUpdateAddImageTest do
       })
 
     assert %{"data" => %{"image_url" => image_url}} = json_response(conn, 200)
+    # Stored as a fully-qualified public URL, not the bare storage key.
     assert image_url =~ "recipe_images/tmp/"
+    assert image_url =~ "/storage/v1/object/public/"
+    assert String.starts_with?(image_url, "http")
   end
 
   test "add image via literal image_url to a recipe that had none", %{conn: conn, user: user} do

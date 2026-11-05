@@ -733,8 +733,12 @@ Recipe / avatar images go to S3 (existing `Mehungry.S3`). Two supported flows:
   → `{ "data": { "upload_id": "…", "url": "https://…" } }`.
 
 `upload_id` is accepted as `image_upload_id` by **both** `POST /recipes` and
-`PUT /recipes/:id` (map it onto an edited recipe to swap its image). An upstream
-storage failure on either upload flow returns **`502`** with the standard
+`PUT /recipes/:id` (map it onto an edited recipe to swap its image). The server
+resolves the storage object key to a **fully-qualified public URL** before
+persisting it as the recipe's `image_url`, so the create/update response (and all
+later reads) carries a directly-renderable `https://…` URL — never the bare key.
+(An explicit `image_url` in the body is honored as-is.) An upstream storage
+failure on either upload flow returns **`502`** with the standard
 `{ "errors": … }` envelope (retryable) — never a raw `500`.
 
 ---

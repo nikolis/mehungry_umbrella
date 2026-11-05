@@ -9,6 +9,7 @@ defmodule MehungryWeb.Api.V1.RecipeController do
   alias Mehungry.Accounts.UserContent
   alias Mehungry.Food
   alias Mehungry.Posts
+  alias Mehungry.Storage
   alias Mehungry.Users
   alias MehungryWeb.Api.V1.BlueprintMatch
   alias MehungryWeb.Api.V1.RecipeJSON
@@ -110,13 +111,19 @@ defmodule MehungryWeb.Api.V1.RecipeController do
     |> put_image_from_upload(params)
   end
 
-  # image_upload_id is the S3 key returned by the presign step (spec §11). When
-  # given (and no explicit image_url), treat it as the stored object key.
+  # image_upload_id is the storage object key returned by the presign/upload step
+  # (spec §11). The recipe's `image_url` column must hold a fully-qualified URL so
+  # clients can render it directly — storing the bare key makes the <img> fail to
+  # load (the "image uploaded but never shows up" bug). Resolve the key to its
+  # public URL. A client that already passes a full URL is honored as-is.
   defp put_image_from_upload(attrs, %{"image_upload_id" => key}) when is_binary(key) and key != "" do
-    Map.put_new(attrs, "image_url", key)
+    Map.put_new(attrs, "image_url", upload_key_to_url(key))
   end
 
   defp put_image_from_upload(attrs, _params), do: attrs
+
+  defp upload_key_to_url("http" <> _ = url), do: url
+  defp upload_key_to_url(key), do: Storage.public_url(key)
 
   # Mirror the web create flow (create_recipe_live/index.ex): the base recipe is
   # stored as "En" and only overridden for a non-English locale (translations use
