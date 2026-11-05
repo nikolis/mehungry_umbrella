@@ -38,6 +38,30 @@ defmodule Mehungry.Release do
     :ok
   end
 
+  @doc """
+  Seeds the admin `"client_default"` onboarding questionnaire template — the
+  nutritionist client-intake "default questions" — inside a prod release, where
+  `mix run priv/repo/seeds.exs` is unavailable. These live in the DB (scope
+  `"client_default"`, snapshotted per nutritionist by
+  `Onboarding.ensure_client_questions/1`), so without this seed a fresh prod DB
+  shows no default questions. `Onboarding.seed_defaults/0` is idempotent (a
+  no-op once the template exists), so it is safe to re-run:
+
+      bin/mehungry_umbrella eval "Mehungry.Release.seed_onboarding_defaults"
+  """
+  def seed_onboarding_defaults do
+    Application.load(@app)
+
+    {:ok, count, _} =
+      Ecto.Migrator.with_repo(Mehungry.Repo, fn _repo ->
+        :ok = Mehungry.Onboarding.seed_defaults()
+        length(Mehungry.Onboarding.list_questions("client_default"))
+      end)
+
+    IO.puts("Onboarding client-default questions present: #{count}.")
+    :ok
+  end
+
   def load_fdc_ingredients(file_path) do
     SeedFileParser.get_ingredients_from_food_data_central_json_file(file_path)
   end
