@@ -6526,9 +6526,9 @@ msgid "Choice (Greek)"
 msgstr "Επιλογή (Ελληνικά)"
 
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:53
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Choices"
-msgstr "Χολίνη"
+msgstr "Επιλογές"
 
 #: lib/mehungry_web/live/onboarding_question_live/shared.ex:78
 #, elixir-autogen, elixir-format
@@ -6541,9 +6541,9 @@ msgid "Edit question"
 msgstr "Επεξεργασία ερώτησης"
 
 #: lib/mehungry_web/live/onboarding_question_live/shared.ex:100
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Free text"
-msgstr "Δωρεάν"
+msgstr "Ελεύθερο κείμενο"
 
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:38
 #, elixir-autogen, elixir-format
@@ -6622,9 +6622,9 @@ msgid "Save question"
 msgstr "Αποθήκευση ερώτησης"
 
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:49
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Text"
-msgstr "Επόμενο"
+msgstr "Κείμενο"
 
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:48
 #, elixir-autogen, elixir-format
