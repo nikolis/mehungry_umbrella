@@ -15,6 +15,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   alias Mehungry.Professionals.{ClientIntake, ConsultationNote}
   alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
+  alias MehungryWeb.DietaryHistory.Labels
   alias Mehungry.Health
 
   @energy_source_fields ~w(height_m weight_kg sex age activity_level)
@@ -392,7 +393,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("Questionnaire")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- @detail_labels do %>
-          <.labeled label={label}>
+          <.labeled label={Labels.translate(label)}>
             <textarea
               name={"intake[details][#{key}]"}
               rows="2"
@@ -405,7 +406,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- @recall_labels do %>
-          <.labeled label={label}>
+          <.labeled label={Labels.translate(label)}>
             <input
               type="text"
               name={"intake[details][recall_24h][#{key}]"}

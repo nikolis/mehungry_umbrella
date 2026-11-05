@@ -6910,3 +6910,99 @@ msgstr "Η δέσμευση αποδεσμεύτηκε"
 
 msgid "%{amount} / session"
 msgstr "%{amount} / συνεδρία"
+
+# Dietary-history questionnaire field labels (nutritionist client file).
+# "Notes", "Breakfast", "Lunch", "Dinner" are translated elsewhere in this file.
+msgid "Reason for visit"
+msgstr "Αιτία προσέλευσης"
+
+msgid "Marital status"
+msgstr "Οικογενειακή κατάσταση"
+
+msgid "Weight fluctuations"
+msgstr "Διακυμάνσεις βάρους"
+
+msgid "Milestone events"
+msgstr "Γεγονότα-σταθμοί"
+
+msgid "Past attempts"
+msgstr "Προηγούμενες προσπάθειες"
+
+msgid "Family weight history"
+msgstr "Οικογενειακό ιστορικό βάρους"
+
+msgid "Hereditary conditions"
+msgstr "Κληρονομικά νοσήματα"
+
+msgid "GI function"
+msgstr "Γαστρεντερική λειτουργία"
+
+msgid "Blood biochemistry"
+msgstr "Βιοχημική αίματος"
+
+msgid "Thyroid tests"
+msgstr "Εξετάσεις θυρεοειδούς"
+
+msgid "Gynecological history"
+msgstr "Γυναικολογικό ιστορικό"
+
+msgid "Allergies"
+msgstr "Αλλεργίες"
+
+msgid "Alcohol"
+msgstr "Αλκοόλ"
+
+msgid "Fluids"
+msgstr "Υγρά"
+
+msgid "Smoking"
+msgstr "Κάπνισμα"
+
+msgid "Sleep"
+msgstr "Ύπνος"
+
+msgid "Physical activity"
+msgstr "Φυσική δραστηριότητα"
+
+msgid "Food intolerances"
+msgstr "Τροφικές δυσανεξίες"
+
+msgid "Food aversions"
+msgstr "Τροφικές απέχθειες"
+
+msgid "Special eating habits"
+msgstr "Ιδιαίτερες διατροφικές συνήθειες"
+
+msgid "Unconscious eating"
+msgstr "Ασυνείδητη κατανάλωση"
+
+msgid "Emotional overeating"
+msgstr "Συναισθηματική υπερφαγία"
+
+msgid "Overconsumption"
+msgstr "Υπερκατανάλωση"
+
+msgid "Expectations assessment"
+msgstr "Αξιολόγηση προσδοκιών"
+
+msgid "Reason justification"
+msgstr "Αιτιολόγηση προσέλευσης"
+
+msgid "Observations"
+msgstr "Παρατηρήσεις"
+
+msgid "Medications"
+msgstr "Φάρμακα"
+
+# 24-hour recall labels ("Breakfast"/"Lunch"/"Dinner" translated elsewhere).
+msgid "Mid-morning"
+msgstr "Δεκατιανό"
+
+msgid "Afternoon"
+msgstr "Απογευματινό"
+
+msgid "Vegetable intake"
+msgstr "Κατανάλωση λαχανικών"
+
+msgid "Fruit intake"
+msgstr "Κατανάλωση φρούτων"

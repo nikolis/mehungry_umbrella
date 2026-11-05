@@ -9,6 +9,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
   alias Mehungry.Professionals
   alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
+  alias MehungryWeb.DietaryHistory.Labels
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -120,7 +121,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
           <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
             <%= for {key, label} <- @detail_labels, val = @intake.details[key], present?(val) do %>
               <div>
-                <dt class="text-parchment-dim text-xs">{label}</dt>
+                <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
                 <dd class="text-parchment whitespace-pre-line">{val}</dd>
               </div>
             <% end %>
@@ -131,7 +132,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
               <%= for {key, label} <- @recall_labels, val = recall[key], present?(val) do %>
                 <div>
-                  <dt class="text-parchment-dim text-xs">{label}</dt>
+                  <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
                   <dd class="text-parchment">{val}</dd>
                 </div>
               <% end %>

@@ -18,6 +18,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
   alias Phoenix.LiveView.JS
   alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
+  alias MehungryWeb.DietaryHistory.Labels
   alias MehungryWeb.MeasurementChart
 
   # ── Zone 0: header ──────────────────────────────────────────────────────────────
@@ -296,7 +297,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <%= for {key, label} <- Fields.detail_labels(), val = @intake.details[key], present?(val) do %>
           <div>
-            <dt class="text-parchment-dim text-xs">{label}</dt>
+            <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
             <dd class="text-parchment whitespace-pre-line">{val}</dd>
           </div>
         <% end %>
@@ -307,7 +308,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
           <%= for {key, label} <- Fields.recall_labels(), val = recall[key], present?(val) do %>
             <div>
-              <dt class="text-parchment-dim text-xs">{label}</dt>
+              <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
               <dd class="text-parchment whitespace-pre-line">{val}</dd>
             </div>
           <% end %>
@@ -388,7 +389,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("Questionnaire")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- Fields.detail_labels() do %>
-          <.labeled label={label}>
+          <.labeled label={Labels.translate(label)}>
             <textarea
               name={"intake[details][#{key}]"}
               rows="2"
@@ -401,7 +402,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         <%= for {key, label} <- Fields.recall_labels() do %>
-          <.labeled label={label}>
+          <.labeled label={Labels.translate(label)}>
             <input
               type="text"
               name={"intake[details][recall_24h][#{key}]"}
