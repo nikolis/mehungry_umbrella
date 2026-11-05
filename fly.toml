@@ -13,10 +13,12 @@ swap_size_mb = 512
   dockerfile = "Dockerfile"
 
 # Run DB migrations on every deploy, in a one-off machine, before the new
-# release goes live. Uses the umbrella release's eval + the existing
-# MehungryWeb.Release.migrate/0 task (which runs with a tiny 2-connection pool).
+# release goes live, then idempotently seed/refresh the onboarding
+# "default questions" (template + Greek prompts). Uses the umbrella release's
+# eval + MehungryWeb.Release.migrate_and_seed/0 (migrations run with a tiny
+# 2-connection pool; the seed is a no-op once data is current).
 [deploy]
-  release_command = "/app/bin/mehungry_umbrella eval MehungryWeb.Release.migrate"
+  release_command = "/app/bin/mehungry_umbrella eval MehungryWeb.Release.migrate_and_seed"
   # Rolling deploys for zero downtime: Fly boots the new machine, waits for its
   # /health check to pass, then drains the old one — no outage window. Safe now
   # that the Supabase session pooler Pool Size is raised to 25, giving room for

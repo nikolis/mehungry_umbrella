@@ -5,6 +5,20 @@ defmodule MehungryWeb.Release do
   """
   @app :mehungry_web
 
+  @doc """
+  Deploy entry point (wired into `fly.toml`'s `release_command`): run pending
+  migrations, then idempotently ensure the onboarding "default questions"
+  template is seeded **and** its Greek prompts are present
+  (`Mehungry.Release.seed_onboarding_defaults/0` → `Onboarding.seed_defaults/0`,
+  which also heals any prompt_el left as the English label). Keeping the seed in
+  the release step means every `fly deploy` brings both schema and this bootstrap
+  data current with no manual console step.
+  """
+  def migrate_and_seed do
+    migrate()
+    Mehungry.Release.seed_onboarding_defaults()
+  end
+
   def migrate do
     load_app()
 
