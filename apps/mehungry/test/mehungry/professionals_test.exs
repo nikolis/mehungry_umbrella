@@ -276,6 +276,42 @@ defmodule Mehungry.ProfessionalsTest do
       assert {:ok, _} = Professionals.create_appointment(Map.put(base, :status, "requested"))
     end
 
+    test "an overlapping off-grid appointment blocks every slot it spans", %{
+      professional: professional,
+      client: client
+    } do
+      today = Date.utc_today()
+      date = Date.add(today, 2)
+
+      # An off-grid 09:30–10:30 booking (e.g. created in the nutritionist
+      # calendar) overlaps both the 09:00 and 10:00 grid slots, so neither may
+      # be offered or requested — conflict detection is interval overlap, not
+      # exact start equality.
+      at = NaiveDateTime.new!(date, ~T[09:30:00])
+
+      {:ok, _} =
+        Professionals.create_appointment(%{
+          professional_id: professional.id,
+          client_id: client.id,
+          scheduled_at: at,
+          ends_at: NaiveDateTime.add(at, 3600),
+          title: "Off-grid",
+          status: "accepted"
+        })
+
+      slots = Professionals.available_slots(professional.id, today, Date.add(today, 7))
+
+      refute Enum.any?(slots, &(NaiveDateTime.compare(&1, NaiveDateTime.new!(date, ~T[09:00:00])) == :eq))
+      refute Enum.any?(slots, &(NaiveDateTime.compare(&1, NaiveDateTime.new!(date, ~T[10:00:00])) == :eq))
+
+      assert {:error, :slot_unavailable} =
+               Professionals.request_appointment(
+                 professional.id,
+                 client.id,
+                 NaiveDateTime.new!(date, ~T[10:00:00])
+               )
+    end
+
     test "rejects a slot outside availability", %{professional: professional, client: client} do
       # 03:00 is never inside the 09:00–11:00 window.
       at = NaiveDateTime.new!(Date.add(Date.utc_today(), 3), ~T[03:00:00])

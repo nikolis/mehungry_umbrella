@@ -160,11 +160,15 @@ config :ex_aws,
 # Object storage backend. Supabase Storage is the default (and the only backend
 # used in production); STORAGE_BACKEND=s3 selects the legacy AWS S3 path. The
 # Supabase service_role key is a server-only secret — never exposed to clients.
-config :mehungry, :storage,
-  backend: String.to_atom(System.get_env("STORAGE_BACKEND", "supabase")),
-  supabase_url: System.get_env("SUPABASE_URL"),
-  service_role_key: System.get_env("SUPABASE_SERVICE_ROLE_KEY"),
-  bucket: System.get_env("SUPABASE_STORAGE_BUCKET", "media")
+# Skipped in :test so the deterministic config/test.exs storage values stand
+# (this file would otherwise clobber them with nil env vars at boot).
+if config_env() != :test do
+  config :mehungry, :storage,
+    backend: String.to_atom(System.get_env("STORAGE_BACKEND", "supabase")),
+    supabase_url: System.get_env("SUPABASE_URL"),
+    service_role_key: System.get_env("SUPABASE_SERVICE_ROLE_KEY"),
+    bucket: System.get_env("SUPABASE_STORAGE_BUCKET", "media")
+end
 
 # Android closed-testing opt-in invite (admin panel). Falls back to the
 # config.exs defaults when the env vars are unset.

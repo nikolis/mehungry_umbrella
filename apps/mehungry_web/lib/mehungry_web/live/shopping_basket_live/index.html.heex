@@ -1,358 +1,298 @@
-<div
-  class="basket-page h-full pb-4 sm:min-h-screen bg-ink text-parchment "
-  id="shopping_basket_index"
->
-  <div class="h-full mx-auto px-4 py-8 overflow-hidden">
+<div class="basket-page h-full pb-4 sm:min-h-screen bg-ink text-parchment" id="shopping_basket_index">
+  <div class="h-full max-w-6xl mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-3xl font-display font-medium text-parchment flex items-center gap-3">
-        <svg
-          class="w-8 h-8 text-parchment-dim"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 1.5M17 13l1.5 1.5M9 21h6M12 21v-8"
-          />
+    <div class="mb-6 flex items-end justify-between gap-3">
+      <div>
+        <h1 class="text-3xl font-display font-medium text-parchment flex items-center gap-3">
+          <svg class="w-8 h-8 text-parchment-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 1.5M17 13l1.5 1.5M9 21h6M12 21v-8"
+            />
+          </svg>
+          {gettext("Shopping Lists")}
+        </h1>
+        <p class="text-parchment-dim mt-1">{gettext("Plan your groceries and tick items off as you shop")}</p>
+      </div>
+      <!-- Mobile: show/hide the lists drawer -->
+      <button
+        type="button"
+        class="sm:hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment transition"
+        phx-click={JS.toggle(to: "#basket-sidebar")}
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
-        Shopping Lists
-      </h1>
-      <p class="text-parchment-dim mt-1">Manage your grocery lists and track items</p>
+        {gettext("Lists")}
+      </button>
     </div>
 
-    <!-- Two Column Layout -->
-    <div
-      class="h-full flex flex-col sm:flex-row gap-6 relative"
-      style="height: 100%; overflow:hidden; "
-    >
-      <!-- Sidebar - Shopping Lists -->
-      <div
-        class="lg:w-80 flex-shrink-0 bakset-side-nav-hidden bg-black-400  bd-black-400"
-        id="basket-side-navbar"
-      >
+    <!-- Two-column layout -->
+    <div class="flex flex-col sm:flex-row gap-6">
+      <!-- Sidebar -->
+      <div class="sm:w-80 flex-shrink-0 hidden sm:block" id="basket-sidebar">
         <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
-          <!-- Header with New List Button -->
           <div class="p-4 border-b border-ink-panel2 flex justify-between items-center">
-            <h2 class="font-display font-medium text-parchment">My Lists</h2>
+            <h2 class="font-display font-medium text-parchment">{gettext("My Lists")}</h2>
             <button
-              phx-click={
-                case @live_action in ["index"] do
-                  true ->
-                    ""
-
-                  false ->
-                    JS.remove_class("active", to: "#basket-basic-form.active")
-                    |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
-                end
-              }
+              phx-click="new_basket_form"
               class="p-1.5 rounded-lg text-parchment-dim hover:text-parchment transition-colors"
+              title={gettext("New list")}
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
             </button>
           </div>
-          <.live_component
-            module={MehungryWeb.ShoppingBasketLive.BasicFormComponent}
-            id={@processing_basket.id || :new}
-            action={@live_action}
-            shopping_basket={@processing_basket}
-            user={@current_user}
-            page_title="Create"
-            patch={~p"/basket"}
-          />
+
+          <%= if @basket_form do %>
+            <.live_component
+              module={MehungryWeb.ShoppingBasketLive.BasicFormComponent}
+              id="basket-basic-form"
+              action={@basket_form.action}
+              shopping_basket={@basket_form.basket}
+              user={@current_user}
+            />
+          <% end %>
+
           <.render_basket_titles
             shopping_baskets={@shopping_baskets}
             shopping_basket={@shopping_basket}
           />
+
+          <%= if @shopping_baskets == [] do %>
+            <p class="p-4 text-sm text-parchment-dim">{gettext("No lists yet — create one to get started.")}</p>
+          <% end %>
         </div>
       </div>
-      <div class="item-list-container w-full  sm:p-6">
-        <%= if @shopping_basket do %>
-          <.render_basket_items
-            shopping_basket={@shopping_basket}
-            current_language={@current_language}
-          />
-        <% end %>
-        <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
-          <h4 class="text-center text-base font-display font-medium text-parchment-dim">Empty</h4>
-        <% end %>
+
+      <!-- Main panel -->
+      <div class="w-full">
+        <.render_basket_items
+          shopping_basket={@shopping_basket}
+          current_language={@current_language}
+          editing_item={@editing_item}
+        />
       </div>
     </div>
   </div>
-  <!-- Add Item Modal -->
-  <%= if @show_add_item_modal do %>
-    <div
-      id={@id}
-      phx-mounted={show_modal(@id)}
-      phx-remove={hide_modal(@id)}
-      data-cancel={JS.exec(JS.patch(~p"/basket"), "phx-remove")}
-      class="relative z-50 hidden"
-    >
-      <div
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-        phx-click=""
-      >
-        <div
-          class="bg-ink-panel border border-ink-panel2 rounded-xl max-w-lg w-full mx-4"
-          phx-click-away="close_add_item_modal"
-        >
-          <!-- Modal Header -->
-          <div class="flex justify-between items-center p-4 border-b border-ink-panel2">
-            <h2 class="text-xl font-display font-medium text-parchment">Add Item to List</h2>
+
+  <!-- Add-item modal -->
+  <.modal
+    :if={@show_add_item_modal}
+    id={@id}
+    show
+    on_cancel={JS.push("close_add_item_modal")}
+  >
+    <h2 id={"#{@id}-title"} class="text-xl font-display font-medium text-parchment mb-4">
+      {gettext("Add item to list")}
+    </h2>
+
+    <%= if @selected_usda_item do %>
+      <!-- Confirm a selected USDA / custom ingredient -->
+      <div>
+        <h3 class="font-display font-medium text-parchment mb-2">
+          {@selected_usda_item["description"]}
+        </h3>
+        <div class="border border-ink-panel2 bg-black/20 rounded-lg p-3 mb-4">
+          <p class="text-parchment-dim text-sm mb-2">{gettext("Nutrition per 100g")}:</p>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-parchment-dim">{gettext("Calories")}:</span>
+              <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                {get_nutrition_value(@selected_usda_item, "Energy")} kcal
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-parchment-dim">{gettext("Protein")}:</span>
+              <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                {get_nutrition_value(@selected_usda_item, "Protein")} g
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-parchment-dim">{gettext("Fat")}:</span>
+              <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                {get_nutrition_value(@selected_usda_item, "Total Fat")} g
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-parchment-dim">{gettext("Carbs")}:</span>
+              <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                {get_nutrition_value(@selected_usda_item, "Carbohydrates")} g
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <form phx-submit="add_usda_item">
+          <div class="flex gap-3 mb-4">
+            <div class="flex-1">
+              <label for="usda-quantity" class="block text-parchment-dim text-sm mb-1">
+                {gettext("Quantity")}
+              </label>
+              <input
+                type="number"
+                id="usda-quantity"
+                name="quantity"
+                value="100"
+                step="any"
+                min="0"
+                class="w-full px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment"
+              />
+            </div>
+            <div class="flex-1">
+              <label for="usda-unit" class="block text-parchment-dim text-sm mb-1">
+                {gettext("Unit")}
+              </label>
+              <select
+                id="usda-unit"
+                name="unit"
+                class="w-full px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment"
+              >
+                <option value="g">{gettext("grams (g)")}</option>
+                <option value="kg">{gettext("kilograms (kg)")}</option>
+                <option value="pcs">{gettext("pieces (pcs)")}</option>
+                <option value="cup">{gettext("cups")}</option>
+                <option value="tbsp">{gettext("tablespoons (tbsp)")}</option>
+                <option value="tsp">{gettext("teaspoons (tsp)")}</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-3">
             <button
-              phx-click="close_add_item_modal"
-              class="text-parchment-dim hover:text-parchment"
+              type="submit"
+              class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-bold py-2 rounded-lg transition"
             >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              {gettext("Add with nutrition")}
+            </button>
+            <button
+              type="button"
+              phx-click="cancel_usda_selection"
+              class="flex-1 text-parchment-dim hover:text-parchment py-2 rounded-lg transition"
+            >
+              {gettext("Back")}
             </button>
           </div>
+        </form>
+      </div>
+    <% else %>
+      <!-- Search -->
+      <div class="mb-4">
+        <label for="basket-search" class="block text-parchment-dim text-sm mb-1">
+          {gettext("Search for an item")}
+        </label>
+        <input
+          type="text"
+          id="basket-search"
+          placeholder={gettext("e.g. avocado, or one of your own ingredients…")}
+          value={@search_query}
+          phx-keyup="search_usda"
+          phx-debounce="300"
+          autocomplete="off"
+          class="w-full px-4 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment focus:outline-none focus:border-paprika"
+        />
 
-          <!-- Modal Body -->
-          <div class="p-4 overflow-visible ">
-            <%= if @selected_usda_item do %>
-              <!-- USDA Item Selected - Show nutrition preview -->
-              <div class="mb-4">
-                <h3 class="font-display font-medium text-parchment mb-2">
-                  {@selected_usda_item["description"]}
-                </h3>
-                <div class="border border-ink-panel2 bg-black/20 rounded-lg p-3 mb-4">
-                  <p class="text-parchment-dim text-sm mb-2">Nutrition per 100g:</p>
-                  <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div class="flex justify-between">
-                      <span class="text-parchment-dim">Calories:</span>
-                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                        {get_nutrition_value(@selected_usda_item, "Energy")} kcal
-                      </span>
-                    </div>
-                    <div class="flex justify-between">
-                      <span class="text-parchment-dim">Protein:</span>
-                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                        {get_nutrition_value(@selected_usda_item, "Protein")} g
-                      </span>
-                    </div>
-                    <div class="flex justify-between">
-                      <span class="text-parchment-dim">Fat:</span>
-                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                        {get_nutrition_value(@selected_usda_item, "Total Fat")} g
-                      </span>
-                    </div>
-                    <div class="flex justify-between">
-                      <span class="text-parchment-dim">Carbs:</span>
-                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                        {get_nutrition_value(@selected_usda_item, "Carbohydrates")} g
-                      </span>
-                    </div>
-                  </div>
-                </div>
+        <%= if @searching do %>
+          <div class="text-center py-4">
+            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-paprika"></div>
+            <p class="text-parchment-dim text-sm mt-2">{gettext("Searching the USDA database…")}</p>
+          </div>
+        <% end %>
 
-                <!-- Quantity and Unit -->
-                <div class="flex gap-3 mb-4  overflow-visible  ">
-                  <div class="flex-1">
-                    <label class="block text-parchment-dim text-sm mb-1">Quantity</label>
-                    <input
-                      type="number"
-                      id="quantity"
-                      value={@custom_quantity}
-                      phx-keyup="update_quantity"
-                      class="w-full px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment"
-                    />
-                  </div>
-                  <div class="flex-1 overflow-auto  ">
-                    <label class="block text-parchment-dim text-sm mb-1">Unit</label>
-
-                    <select
-                      id="unit"
-                      phx-change="update_unit"
-                      class="w-full px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment overflow-auto"
-                    >
-                      <option value="g">grams (g)</option>
-                      <option value="kg">kilograms (kg)</option>
-                      <option value="pcs">pieces (pcs)</option>
-                      <option value="cup">cups</option>
-                      <option value="tbsp">tablespoons (tbsp)</option>
-                      <option value="tsp">teaspoons (tsp)</option>
-                    </select>
-                  </div>
+        <%= if @custom_results != [] do %>
+          <div class="mt-3 space-y-2">
+            <p class="text-parchment-dim text-xs uppercase tracking-wide">{gettext("Your ingredients")}</p>
+            <%= for ingredient <- @custom_results do %>
+              <div
+                class="flex justify-between items-center p-3 border border-paprika/40 bg-black/20 hover:bg-black/30 rounded-lg cursor-pointer transition"
+                phx-click="select_custom_ingredient"
+                phx-value-ingredient_id={ingredient.id}
+              >
+                <div>
+                  <div class="text-parchment font-medium">{ingredient.name}</div>
+                  <div class="text-paprika text-xs">{gettext("Custom")}</div>
                 </div>
-
-                <div class="flex gap-3">
-                  <button
-                    phx-click="add_usda_item"
-                    phx-value-quantity={@custom_quantity}
-                    phx-value-unit={@custom_unit}
-                    class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-bold py-2 rounded-lg transition"
-                  >
-                    Add with Nutrition
-                  </button>
-                  <button
-                    phx-click="cancel_usda_selection"
-                    class="flex-1 text-parchment-dim hover:text-parchment py-2 rounded-lg transition"
-                  >
-                    Back
-                  </button>
-                </div>
-              </div>
-            <% else %>
-              <!-- Search for item -->
-              <div class="mb-4">
-                <label class="block text-parchment-dim text-sm mb-1">Search for item</label>
-                <input
-                  type="text"
-                  placeholder="e.g., avocado, or one of your own ingredients..."
-                  value={@search_query}
-                  phx-keyup="search_usda"
-                  phx-debounce="300"
-                  class="w-full px-4 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment focus:outline-none focus:border-paprika"
-                /> <!-- Search Results -->
-                <!--
-                <%= if @searching do %>
-                  <div class="text-center py-4">
-                  <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500">
-                  </div>
-                  <p class="text-slate-400 text-sm mt-2">Searching USDA database...</p>
-                  </div>
-                <% end %>
-                -->
-                <%= if @custom_results != [] do %>
-                  <div class="mt-3 space-y-2">
-                    <p class="text-parchment-dim text-xs uppercase tracking-wide">
-                      Your ingredients
-                    </p>
-                    <%= for ingredient <- @custom_results do %>
-                      <div
-                        class="flex justify-between items-center p-3 border border-paprika/40 bg-black/20 hover:bg-black/30 rounded-lg cursor-pointer transition"
-                        phx-click="select_custom_ingredient"
-                        phx-value-ingredient_id={ingredient.id}
-                      >
-                        <div>
-                          <div class="text-parchment font-medium">{ingredient.name}</div>
-                          <div class="text-paprika text-xs">Custom</div>
-                        </div>
-                        <svg
-                          class="w-5 h-5 text-parchment-dim"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </div>
-                    <% end %>
-                  </div>
-                <% end %>
-                <%= if @search_results != [] do %>
-                  <div class="mt-3 space-y-2 max-h-64 overflow-y-auto">
-                    <%= for result <- @search_results do %>
-                      <div
-                        class="flex justify-between items-center p-3 border border-ink-panel2 bg-black/20 hover:bg-black/30 rounded-lg cursor-pointer transition"
-                        phx-click="select_usda_item"
-                        phx-value-fdc_id={result.fdc_id}
-                      >
-                        <div>
-                          <div class="text-parchment font-medium">{result.description}</div>
-                          <div class="text-parchment-dim text-xs">{result.data_type}</div>
-                        </div>
-                        <svg
-                          class="w-5 h-5 text-parchment-dim"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </div>
-                    <% end %>
-                  </div>
-                <% end %>
-              </div>
-
-              <!-- Divider -->
-<!-- 
-              <div class="relative my-4">
-                <div class="absolute inset-0 flex items-center">
-                  <div class="w-full border-t border-slate-700"></div>
-                </div>
-                <div class="relative flex justify-center text-sm">
-                  <span class="px-2 bg-slate-800 text-slate-400">or</span>
-                </div>
-              </div>
--->
-              <!-- Manual entry -->
-              <div>
-                <label class="block text-parchment-dim text-sm mb-1">Add manually</label>
-                <.simple_form
-                  :let={f}
-                  for={@change_basket}
-                  phx-submit="add_plain_item"
-                  class="space-y-3"
-                >
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Item name"
-                    required
-                    class="w-full px-4 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment focus:outline-none focus:border-paprika"
-                  />
-                  <div class="flex gap-3 overflow-visible">
-                    <input
-                      type="number"
-                      name="quantity"
-                      placeholder="Quantity"
-                      value="1"
-                      step="0.25"
-                      class="w-1/2 px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment"
-                    />
-                    <.live_component
-                      module={MehungryWeb.SelectComponent}
-                      items={
-                        Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)
-                      }
-                      form={f}
-                      id="measurement_unit select"
-                      input_variable={:measurement_unit_id}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    class="w-full bg-paprika hover:bg-paprika-soft text-ink font-bold py-2 rounded-lg transition"
-                  >
-                    Add to List
-                  </button>
-                </.simple_form>
+                <svg class="w-5 h-5 text-parchment-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             <% end %>
           </div>
-        </div>
+        <% end %>
+
+        <%= if @search_results != [] do %>
+          <div class="mt-3 space-y-2 max-h-64 overflow-y-auto">
+            <%= for result <- @search_results do %>
+              <div
+                class="flex justify-between items-center p-3 border border-ink-panel2 bg-black/20 hover:bg-black/30 rounded-lg cursor-pointer transition"
+                phx-click="select_usda_item"
+                phx-value-fdc_id={result.fdc_id}
+              >
+                <div>
+                  <div class="text-parchment font-medium">{result.description}</div>
+                  <div class="text-parchment-dim text-xs">{result.data_type}</div>
+                </div>
+                <svg class="w-5 h-5 text-parchment-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= if not @searching and byte_size(@search_query) >= 2 and @search_results == [] and @custom_results == [] do %>
+          <p class="mt-3 text-sm text-parchment-dim">{gettext("No matches — add it manually below.")}</p>
+        <% end %>
       </div>
-    </div>
-  <% end %>
+
+      <!-- Manual entry -->
+      <div class="pt-2 border-t border-ink-panel2">
+        <label class="block text-parchment-dim text-sm mb-2 mt-3">{gettext("Add manually")}</label>
+        <.simple_form
+          :let={f}
+          for={@change_basket}
+          phx-submit="add_plain_item"
+          class="space-y-3"
+        >
+          <input
+            type="text"
+            name="name"
+            placeholder={gettext("Item name")}
+            required
+            class="w-full px-4 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment focus:outline-none focus:border-paprika"
+          />
+          <div class="flex gap-3 overflow-visible">
+            <input
+              type="number"
+              name="quantity"
+              placeholder={gettext("Quantity")}
+              value="1"
+              step="0.25"
+              min="0"
+              class="w-1/2 px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment"
+            />
+            <.live_component
+              module={MehungryWeb.SelectComponent}
+              items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
+              form={f}
+              id="measurement_unit select"
+              input_variable={:measurement_unit_id}
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-paprika hover:bg-paprika-soft text-ink font-bold py-2 rounded-lg transition"
+          >
+            {gettext("Add to list")}
+          </button>
+        </.simple_form>
+      </div>
+    <% end %>
+  </.modal>
+
+  <!-- Import-from-calendar modal -->
   <.modal
     :if={@live_action in [:import_items]}
     on_cancel={JS.patch(~p"/basket")}
@@ -362,20 +302,11 @@
     <.live_component
       module={MehungryWeb.ShoppingBasketLive.FormComponent}
       id={@processing_basket.id || :new}
-      title="Alter Basket"
+      title={gettext("Build from a calendar week")}
       action={@live_action}
       shopping_basket={@processing_basket}
       user={@current_user}
       patch={~p"/basket"}
     />
   </.modal>
-  <button
-    class="basket-side-button"
-    phx-click={
-      JS.remove_class("active", to: "#basket-side-navbar.active")
-      |> JS.add_class("active", to: "#basket-side-navbar:not(.active)")
-    }
-  >
-    <.icon name="hero-arrow-down-circle" class="md:hidden h-10 w-10 text-parchment-dim" />
-  </button>
 </div>

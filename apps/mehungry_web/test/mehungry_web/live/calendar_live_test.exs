@@ -191,10 +191,10 @@ defmodule MehungryWeb.CalendarLiveTest do
         |> put_connect_params(%{"viewport" => %{"width" => 1200}})
         |> live(~p"/calendar")
 
-      # The current day has a meal, so its precomputed summary must render both
-      # the accordion header tags and the daily summary card.
-      assert html =~ "Daily Summary"
-      assert html =~ "protein"
+      # The focus (current) day renders its status band + the meal card.
+      assert html =~ "Today"
+      assert html =~ "Nutrition detail"
+      assert html =~ "View recipe"
     end
 
     test "navigating to another week loads that week's meals from the DB", %{
@@ -269,11 +269,11 @@ defmodule MehungryWeb.CalendarLiveTest do
         |> put_connect_params(%{"viewport" => %{"width" => 1200}})
         |> live(~p"/calendar")
 
-      # The free-food card renders (name + grams) and the day roll-up is present,
-      # which means the entry flowed through the shared summariser.
+      # The free-food card renders (name + grams) on the focus day, and the weekly
+      # roll-up is present — which means the entry flowed through the shared summariser.
       assert html =~ "Street Gyros"
       assert html =~ "300 g"
-      assert html =~ "Daily Summary"
+      assert html =~ "Weekly average"
     end
 
     test "View recipe button opens the recipe details modal", %{conn: conn, user: user} do
@@ -307,7 +307,7 @@ defmodule MehungryWeb.CalendarLiveTest do
       assert render(index_live) =~ recipe.title
     end
 
-    test "day meals are grouped into per-type sections plus a combined Daily Summary",
+    test "the focus day lays its meal types out as flat labels (no nested accordion)",
          %{conn: conn, user: user} do
       recipe = recipe_fixture(user)
       now = NaiveDateTime.utc_now()
@@ -337,25 +337,62 @@ defmodule MehungryWeb.CalendarLiveTest do
         |> put_connect_params(%{"viewport" => %{"width" => 1200}})
         |> live(~p"/calendar")
 
-      # Per-type section headers, ordered with unsorted last. Each section is a
-      # bare collapsible label (no per-type badges or summary card) — the
-      # nutrition roll-up lives only in the combined Daily Summary below.
+      # The focus day shows each meal type as a flat label (ordered, unsorted last)
+      # — no nested per-type accordion and no per-day "Daily Summary" card (the
+      # status band carries the roll-up now).
       assert html =~ "Breakfast"
       assert html =~ "Dinner"
       assert html =~ "Unsorted"
-      refute html =~ "Breakfast Summary"
-      refute html =~ "Dinner Summary"
-      refute html =~ "Unsorted Summary"
-      # The combined day roll-up is still present below the sections.
-      assert html =~ "Daily Summary"
+      refute html =~ "Daily Summary"
 
-      # Each meal type is a collapsible accordion: its details body is hidden by
-      # default and only the header button (with the toggle) is expanded on tap.
       today = Date.utc_today() |> Date.to_string()
+      refute html =~ "meal-type-#{today}-breakfast-body"
+    end
 
-      assert html =~ ~s(id="meal-type-#{today}-breakfast-body" class="hidden)
-      assert html =~ ~s(id="meal-type-#{today}-dinner-body" class="hidden)
-      assert html =~ ~s(id="meal-type-#{today}-unsorted-body" class="hidden)
+    test "reader opens on the focus day with a status band, flat meals, and expandable other-day rows",
+         %{conn: conn, user: user} do
+      recipe = recipe_fixture(user)
+      today = Date.utc_today()
+      week_start = Date.beginning_of_week(today)
+      # A different day inside the same visible week as today.
+      other = if today == week_start, do: Date.add(week_start, 1), else: week_start
+
+      for {day, meal_type} <- [{today, "breakfast"}, {other, "lunch"}] do
+        dt = NaiveDateTime.new!(day, ~T[12:00:00])
+
+        {:ok, _} =
+          History.create_user_meal(%{
+            start_dt: dt,
+            end_dt: dt,
+            user_id: user.id,
+            title: "Meal",
+            meal_type: meal_type,
+            recipe_user_meals: [
+              %{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 2}
+            ]
+          })
+      end
+
+      {:ok, view, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      other_s = Date.to_string(other)
+
+      # Focus day = today: the status band + that day's meals shown flat.
+      assert html =~ "Today"
+      assert html =~ "kcal"
+      assert html =~ "Breakfast"
+
+      # The rest of the week renders as compact, keyboard-operable expandable rows.
+      assert html =~ "Rest of the week"
+      assert html =~ ~s(aria-controls="rowbody-#{other_s}")
+      assert has_element?(view, ~s(button[aria-controls="rowbody-#{other_s}"]))
+
+      # The week strip focuses a day, and a per-day add control is present.
+      assert html =~ "Add a meal"
+      assert has_element?(view, ~s(button[phx-click="focus-day"][phx-value-date="#{other_s}"]))
     end
 
     test "the meal-type picker updates the form's meal_type", %{conn: conn} do

@@ -15,13 +15,10 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
 
   alias Mehungry.MealBlueprints
   alias Mehungry.Professionals
-  alias Mehungry.ObanWorkers.AppointmentMailerWorker
   alias Mehungry.Users
   alias MehungryWeb.RecipeComponents
 
   import MehungryWeb.BlueprintComponents, only: [blueprint_card: 1]
-
-  @booking_window_days 30
 
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
@@ -35,7 +32,6 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
          # Logged-out visitors have no :current_user assigned by MaybeUserAuthLive.
          |> assign_new(:current_user, fn -> nil end)
          |> assign(:profile, profile)
-         |> assign(:booking_window_days, @booking_window_days)
          |> assign(:must_be_loged_in, nil)
          |> assign(:created_recipes, Users.list_user_created_recipes(profile.user))
          |> assign(:articles, Professionals.list_published_articles_for_profile(profile.id))
@@ -46,9 +42,6 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
            |> MealBlueprints.localize_blueprints(Gettext.get_locale(MehungryWeb.Gettext))
          )
          |> assign_viewer_recipe_state()
-         |> reset_booking_state()
-         |> load_slots()
-         |> load_services()
          |> assign(:payments_enabled, Professionals.consultation_payments_enabled?())
          |> assign_seo(profile)}
     end
@@ -95,165 +88,10 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
-  # ── Booking wizard: pick a day → pick a time → confirm → done ────────────────
-
+  # The booking component fires this after a request-only booking succeeds; it
+  # reloads its own slots, so nothing further is needed on the public page.
   @impl true
-  def handle_event("select_booking_date", %{"date" => iso}, socket) do
-    case Date.from_iso8601(iso) do
-      {:ok, date} ->
-        {:noreply, socket |> assign(:booking_date, date) |> assign(:booking_slot, nil)}
-
-      _ ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_event("select_booking_slot", %{"at" => iso}, socket) do
-    case NaiveDateTime.from_iso8601(iso) do
-      {:ok, at} -> {:noreply, assign(socket, :booking_slot, at)}
-      _ -> {:noreply, socket}
-    end
-  end
-
-  def handle_event("select_booking_service", %{"id" => id}, socket) do
-    case Integer.parse(id) do
-      {service_id, ""} -> {:noreply, assign(socket, :booking_service_id, service_id)}
-      _ -> {:noreply, socket}
-    end
-  end
-
-  def handle_event("reset_booking", _params, socket) do
-    {:noreply, reset_booking_state(socket)}
-  end
-
-  # Confirm: request the selected slot (the nutritionist must accept before it's
-  # booked). Feedback stays inside the modal (a success screen) rather than a
-  # flash the modal overlay would hide.
-  def handle_event("confirm_booking", params, socket) do
-    profile = socket.assigns.profile
-    user = socket.assigns.current_user
-    slot = socket.assigns.booking_slot
-
-    cond do
-      is_nil(user) ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Please log in to request an appointment.")
-         |> redirect(to: ~p"/users/log_in")}
-
-      is_nil(slot) ->
-        {:noreply, socket}
-
-      true ->
-        opts = [
-          professional_service_id: socket.assigns.booking_service_id,
-          title: "Consultation with #{display_name(profile)}",
-          notes: params["notes"],
-          success_url: url(~p"/nutritionists/#{profile.slug}?booking=success"),
-          cancel_url: url(~p"/nutritionists/#{profile.slug}?booking=cancelled")
-        ]
-
-        case Professionals.request_appointment(profile.user_id, user.id, slot, opts) do
-          # Paid booking: redirect the client to Stripe Checkout to authorize their card.
-          {:ok, _appt, checkout_url} ->
-            {:noreply, redirect(socket, external: checkout_url)}
-
-          {:ok, appt} ->
-            AppointmentMailerWorker.enqueue("requested", appt.id, %{
-              professional_name: display_name(profile),
-              client_name: user.name || user.email,
-              cta_url: url(~p"/nutritionist/appointments")
-            })
-
-            {:noreply,
-             socket
-             |> assign(:booking_status, :done)
-             |> assign(:booked_slot, slot)
-             |> assign(:booking_date, nil)
-             |> assign(:booking_slot, nil)
-             |> load_slots()}
-
-          {:error, :slot_unavailable} ->
-            {:noreply,
-             socket
-             |> assign(:booking_slot, nil)
-             |> load_slots()
-             |> put_flash(:error, "That slot was just taken — please pick another.")}
-
-          _ ->
-            {:noreply,
-             put_flash(socket, :error, "Could not send your request. Please try again.")}
-        end
-    end
-  end
-
-  defp reset_booking_state(socket) do
-    socket
-    |> assign(:booking_date, nil)
-    |> assign(:booking_slot, nil)
-    |> assign(:booking_status, :idle)
-    |> assign(:booked_slot, nil)
-  end
-
-  # Active services (intro first) + the default selection (the free intro, or the
-  # first service). Empty for a nutritionist who never set up services → the
-  # wizard falls back to a plain, serviceless request.
-  defp load_services(socket) do
-    services = Professionals.list_active_services(socket.assigns.profile.user_id)
-
-    socket
-    |> assign(:services, services)
-    |> assign(:booking_service_id, default_service_id(services))
-  end
-
-  defp default_service_id([]), do: nil
-
-  defp default_service_id([first | _] = services) do
-    intro = Enum.find(services, &(&1.kind == "intro"))
-    (intro || first).id
-  end
-
-  defp service_price_label(%{kind: "intro"}), do: "Free · 15 min"
-
-  defp service_price_label(%{price_cents: cents} = service)
-       when is_integer(cents) and cents > 0 do
-    euros = :erlang.float_to_binary(cents / 100, decimals: 2)
-    suffix = if service.kind == "package", do: " · #{service.session_count} sessions", else: ""
-    "€#{euros}#{suffix}"
-  end
-
-  defp service_price_label(_), do: "Free"
-
-  # The selected service if it carries a real price (drives the paid-booking
-  # cancellation-policy notice). nil for the free intro or when none is selected.
-  defp selected_paid_service(services, id) do
-    Enum.find(services, fn s ->
-      s.id == id and is_integer(s.price_cents) and s.price_cents > 0
-    end)
-  end
-
-  defp load_slots(socket) do
-    profile = socket.assigns.profile
-    today = Date.utc_today()
-
-    slots_by_date =
-      profile.user_id
-      |> Professionals.available_slots(today, Date.add(today, @booking_window_days))
-      |> Enum.group_by(&NaiveDateTime.to_date/1)
-      |> Enum.sort_by(fn {date, _} -> date end, Date)
-
-    assign(socket, :slots_by_date, slots_by_date)
-  end
-
-  # Slots for the currently selected day (from the grouped {date, slots} list).
-  defp slots_for(_slots_by_date, nil), do: []
-
-  defp slots_for(slots_by_date, date) do
-    case List.keyfind(slots_by_date, date, 0) do
-      {_date, slots} -> slots
-      nil -> []
-    end
-  end
+  def handle_info({:appointment_booked, _appt}, socket), do: {:noreply, socket}
 
   defp display_name(profile), do: profile.display_name || profile.specialization || "Nutritionist"
 
@@ -328,8 +166,6 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :day_slots, slots_for(assigns.slots_by_date, assigns.booking_date))
-
     ~H"""
     <div class="max-w-4xl mx-auto px-4 py-8">
       <!-- Header -->
@@ -394,28 +230,15 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
 
         <!-- Booking -->
         <div class="lg:col-span-1">
-          <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 sticky top-4">
-            <h2 class="font-display font-semibold text-parchment mb-1">Book a consultation</h2>
-            <%= if @slots_by_date == [] do %>
-              <p class="text-sm text-parchment-dim mt-2">
-                No open times in the next {@booking_window_days} days. Please check back soon.
-              </p>
-            <% else %>
-              <p class="text-xs text-parchment-dim mb-4">
-                {display_name(@profile)} will confirm by email before it's booked.
-              </p>
-              <button
-                type="button"
-                phx-click={show_modal("book-appointment-modal")}
-                class="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-medium text-sm transition"
-              >
-                <.icon name="hero-calendar-days" class="w-4 h-4 flex-none" /> Request an appointment
-              </button>
-              <p :if={is_nil(@current_user)} class="text-xs text-parchment-dim mt-3">
-                You'll be asked to log in to confirm.
-              </p>
-            <% end %>
-          </div>
+          <.live_component
+            module={MehungryWeb.AppointmentBookingComponent}
+            id="public-profile-booking"
+            variant={:card}
+            profile={@profile}
+            current_user={@current_user}
+            payments_enabled={@payments_enabled}
+            return_path={~p"/nutritionists/#{@profile.slug}"}
+          />
         </div>
       </div>
 
@@ -465,21 +288,6 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
         </div>
       </section>
 
-      <.booking_modal
-        profile={@profile}
-        slots_by_date={@slots_by_date}
-        day_slots={@day_slots}
-        services={@services}
-        booking_service_id={@booking_service_id}
-        booking_window_days={@booking_window_days}
-        booking_date={@booking_date}
-        booking_slot={@booking_slot}
-        booking_status={@booking_status}
-        booked_slot={@booked_slot}
-        current_user={@current_user}
-        payments_enabled={@payments_enabled}
-      />
-
       <.modal
         :if={!is_nil(@must_be_loged_in)}
         id="nutritionist_must_be_login"
@@ -491,212 +299,6 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
 
       <.nutritionist_recruit_cta current_user={@current_user} variant={:banner} />
     </div>
-    """
-  end
-
-  # ── Booking wizard modal ─────────────────────────────────────────────────────
-
-  attr :profile, :map, required: true
-  attr :slots_by_date, :list, required: true
-  attr :day_slots, :list, required: true
-  attr :services, :list, default: []
-  attr :booking_service_id, :any, default: nil
-  attr :booking_window_days, :integer, required: true
-  attr :booking_date, :any, default: nil
-  attr :booking_slot, :any, default: nil
-  attr :booking_status, :atom, default: :idle
-  attr :booked_slot, :any, default: nil
-  attr :current_user, :map, default: nil
-  attr :payments_enabled, :boolean, default: false
-
-  defp booking_modal(assigns) do
-    ~H"""
-    <.modal id="book-appointment-modal" show={false} on_cancel={JS.push("reset_booking")}>
-      <div class="sm:min-w-[26rem]">
-        <%= cond do %>
-          <% @booking_status == :done -> %>
-            <div class="text-center py-4">
-              <div class="mx-auto w-14 h-14 rounded-full bg-basil/15 text-basil flex items-center justify-center mb-4">
-                <.icon name="hero-check-circle" class="w-8 h-8" />
-              </div>
-              <h3 class="text-lg font-display font-semibold text-parchment mb-1">Request sent!</h3>
-              <p class="text-sm text-parchment-dim">
-                You asked to meet on <span class="text-parchment font-medium">
-                  {Calendar.strftime(@booked_slot, "%A %b %-d at %H:%M")}
-                </span>. {display_name(
-                  @profile
-                )} will confirm by email — nothing is charged or final until
-                they accept.
-              </p>
-              <div class="flex items-center justify-center gap-3 mt-6">
-                <button
-                  type="button"
-                  phx-click="reset_booking"
-                  class="px-4 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment text-sm transition"
-                >
-                  Book another time
-                </button>
-                <button
-                  type="button"
-                  phx-click={JS.push(hide_modal("book-appointment-modal"), "reset_booking")}
-                  class="px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-medium text-sm transition"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          <% is_nil(@current_user) -> %>
-            <h3 class="text-lg font-display font-semibold text-parchment mb-2">
-              Request an appointment
-            </h3>
-            <p class="text-sm text-parchment-dim mb-5">
-              Log in to request a time with {display_name(@profile)}.
-            </p>
-            <.link
-              navigate={~p"/users/log_in"}
-              class="inline-flex px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-medium text-sm transition"
-            >
-              Log in to continue
-            </.link>
-          <% true -> %>
-            <h3 class="text-lg font-display font-semibold text-parchment mb-1">
-              Request an appointment
-            </h3>
-            <p class="text-sm text-parchment-dim mb-5">
-              {display_name(@profile)} will confirm by email before it's booked.
-            </p>
-
-            <!-- Step 1 · service -->
-            <div :if={@services != []} class="mb-5">
-              <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
-                1 · Choose a service
-              </p>
-              <div class="space-y-2">
-                <button
-                  :for={service <- @services}
-                  type="button"
-                  phx-click="select_booking_service"
-                  phx-value-id={service.id}
-                  class={[
-                    "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-left transition",
-                    if(@booking_service_id == service.id,
-                      do: "border-paprika bg-paprika/10",
-                      else: "border-ink-panel2 hover:border-paprika/50"
-                    )
-                  ]}
-                >
-                  <span class="min-w-0">
-                    <span class="block text-sm text-parchment font-medium truncate">
-                      {service.name}
-                    </span>
-                    <span :if={service.description} class="block text-xs text-parchment-dim truncate">
-                      {service.description}
-                    </span>
-                  </span>
-                  <span class="flex-none text-sm text-paprika font-medium">
-                    {service_price_label(service)}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Step 2 · day -->
-            <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
-              {if @services != [], do: "2", else: "1"} · Choose a day
-            </p>
-            <div class="flex gap-2 overflow-x-auto pb-2 m3-scrollbar mb-5">
-              <button
-                :for={{date, _slots} <- @slots_by_date}
-                type="button"
-                phx-click="select_booking_date"
-                phx-value-date={Date.to_iso8601(date)}
-                class={[
-                  "flex-none w-16 py-2 rounded-lg border text-center transition",
-                  if(@booking_date == date,
-                    do: "border-paprika bg-paprika/10 text-paprika",
-                    else:
-                      "border-ink-panel2 text-parchment-dim hover:border-paprika/50 hover:text-parchment"
-                  )
-                ]}
-              >
-                <span class="block text-[10px] uppercase tracking-wide">
-                  {Calendar.strftime(date, "%a")}
-                </span>
-                <span class="block text-sm font-semibold">{Calendar.strftime(date, "%-d")}</span>
-                <span class="block text-[10px] text-parchment-dim">
-                  {Calendar.strftime(date, "%b")}
-                </span>
-              </button>
-            </div>
-
-            <!-- Step 2 · time -->
-            <div :if={@booking_date}>
-              <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
-                {if @services != [], do: "3", else: "2"} · Choose a time
-              </p>
-              <div class="flex flex-wrap gap-2 mb-5 max-h-40 overflow-y-auto m3-scrollbar">
-                <button
-                  :for={slot <- @day_slots}
-                  type="button"
-                  phx-click="select_booking_slot"
-                  phx-value-at={NaiveDateTime.to_iso8601(slot)}
-                  class={[
-                    "px-3 py-1.5 rounded-md border text-sm transition",
-                    if(@booking_slot == slot,
-                      do: "border-paprika bg-paprika text-ink font-medium",
-                      else: "border-paprika/40 text-paprika hover:bg-paprika/10"
-                    )
-                  ]}
-                >
-                  {Calendar.strftime(slot, "%H:%M")}
-                </button>
-              </div>
-            </div>
-
-            <!-- Step 3 · note + confirm -->
-            <form
-              :if={@booking_slot}
-              phx-submit="confirm_booking"
-              class="border-t border-ink-panel2 pt-4"
-            >
-              <label class="block text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
-                {if @services != [], do: "4", else: "3"} · Add a note (optional)
-              </label>
-              <textarea
-                name="notes"
-                rows="2"
-                class="w-full border border-ink-panel2 bg-ink-panel2 text-parchment rounded-lg px-2 py-1.5 text-sm mb-4 placeholder-parchment-dim focus:outline-none focus:border-paprika"
-                placeholder="What would you like to discuss?"
-              ></textarea>
-              <p
-                :if={@payments_enabled and selected_paid_service(@services, @booking_service_id)}
-                class="text-xs text-parchment-dim mb-4 leading-relaxed"
-              >
-                Your card is only <strong class="text-parchment">authorised now</strong>
-                — you're
-                charged once {display_name(@profile)} accepts. Paid bookings follow our cancellation
-                policy: full refund {Professionals.free_cancel_hours()}h+ before, 50% between {Professionals.partial_refund_hours()} and {Professionals.free_cancel_hours()}h before,
-                none under {Professionals.partial_refund_hours()}h or for a no-show. See our <.link
-                  navigate={~p"/terms"}
-                  class="text-paprika hover:underline"
-                >Terms</.link>.
-              </p>
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <p class="text-sm text-parchment flex items-center gap-1.5">
-                  <.icon name="hero-calendar-days" class="w-4 h-4 text-paprika flex-none" />
-                  {Calendar.strftime(@booking_slot, "%A %b %-d, %H:%M")}
-                </p>
-                <button
-                  type="submit"
-                  class="px-5 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-medium text-sm transition"
-                >
-                  Confirm request
-                </button>
-              </div>
-            </form>
-        <% end %>
-      </div>
-    </.modal>
     """
   end
 

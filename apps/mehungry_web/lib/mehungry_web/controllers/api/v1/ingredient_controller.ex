@@ -17,12 +17,13 @@ defmodule MehungryWeb.Api.V1.IngredientController do
     ingredients = Food.list_user_ingredients(conn.assigns.current_user)
     blueprint = BlueprintMatch.blueprint(conn, params)
     reports = BlueprintMatch.ingredient_reports(blueprint, ingredients)
+    icons = Food.ingredient_icons(Enum.map(ingredients, & &1.id))
 
     json(
       conn,
       data(
         Enum.map(ingredients, fn ing ->
-          ingredient_json(ing, BlueprintMatch.block(blueprint, reports, ing.id))
+          ingredient_json(ing, BlueprintMatch.block(blueprint, reports, ing.id), Map.get(icons, ing.id))
         end)
       )
     )
@@ -30,7 +31,9 @@ defmodule MehungryWeb.Api.V1.IngredientController do
 
   def create(conn, %{"ingredient" => attrs} = params) do
     with {:ok, ingredient} <- Food.create_user_ingredient(conn.assigns.current_user, attrs) do
-      conn |> put_status(:created) |> json(data(ingredient_json(ingredient, match(conn, params, ingredient))))
+      conn
+      |> put_status(:created)
+      |> json(data(ingredient_json(ingredient, match(conn, params, ingredient), icon_for(ingredient))))
     end
   end
 
@@ -41,7 +44,7 @@ defmodule MehungryWeb.Api.V1.IngredientController do
 
     with {:ok, ingredient} <- fetch_owned(conn, id),
          {:ok, ingredient} <- Food.update_ingredient(ingredient, attrs) do
-      json(conn, data(ingredient_json(ingredient, match(conn, params, ingredient))))
+      json(conn, data(ingredient_json(ingredient, match(conn, params, ingredient), icon_for(ingredient))))
     end
   end
 
@@ -65,10 +68,11 @@ defmodule MehungryWeb.Api.V1.IngredientController do
     BlueprintMatch.block(blueprint, reports, ingredient.id)
   end
 
-  defp ingredient_json(ingredient, blueprint_match \\ nil) do
+  defp ingredient_json(ingredient, blueprint_match \\ nil, icon \\ nil) do
     %{
       id: ingredient.id,
       name: ingredient.name,
+      icon: icon,
       description: ingredient.description,
       category_id: ingredient.category_id,
       measurement_unit_id: ingredient.measurement_unit_id,
@@ -76,6 +80,9 @@ defmodule MehungryWeb.Api.V1.IngredientController do
     }
     |> maybe_blueprint_match(blueprint_match)
   end
+
+  # Single-ingredient emoji (create/update responses) — one batched call of size 1.
+  defp icon_for(ingredient), do: Map.get(Food.ingredient_icons([ingredient.id]), ingredient.id)
 
   defp maybe_blueprint_match(map, nil), do: map
   defp maybe_blueprint_match(map, block), do: Map.put(map, :blueprint_match, block)

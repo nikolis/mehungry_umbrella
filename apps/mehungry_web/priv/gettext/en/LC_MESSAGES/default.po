@@ -3390,3 +3390,162 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "m3hungry"
 msgstr ""
+
+msgid "Shopping Lists"
+msgstr ""
+
+msgid "Plan your groceries and tick items off as you shop"
+msgstr ""
+
+msgid "Lists"
+msgstr ""
+
+msgid "My Lists"
+msgstr ""
+
+msgid "New list"
+msgstr ""
+
+msgid "No lists yet — create one to get started."
+msgstr ""
+
+msgid "List name…"
+msgstr ""
+
+msgid "Create"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Rename list"
+msgstr ""
+
+msgid "Delete list"
+msgstr ""
+
+msgid "Delete “%{title}” and all its items?"
+msgstr ""
+
+msgid "Import from a calendar week"
+msgstr ""
+
+msgid "List deleted"
+msgstr ""
+
+msgid "to buy"
+msgstr ""
+
+msgid "Add item"
+msgstr ""
+
+msgid "Add item to list"
+msgstr ""
+
+msgid "No items in this list yet"
+msgstr ""
+
+msgid "+ Add your first item"
+msgstr ""
+
+msgid "No shopping lists yet"
+msgstr ""
+
+msgid "Create a list to start adding groceries, or build one from a week on your calendar."
+msgstr ""
+
+msgid "Create your first list"
+msgstr ""
+
+msgid "From plan"
+msgstr ""
+
+msgid "Added"
+msgstr ""
+
+msgid "Edit item"
+msgstr ""
+
+msgid "Remove item"
+msgstr ""
+
+msgid "Remove this item?"
+msgstr ""
+
+msgid "Toggle acquired"
+msgstr ""
+
+msgid "Nutrition per 100g"
+msgstr ""
+
+msgid "grams (g)"
+msgstr ""
+
+msgid "kilograms (kg)"
+msgstr ""
+
+msgid "pieces (pcs)"
+msgstr ""
+
+msgid "cups"
+msgstr ""
+
+msgid "tablespoons (tbsp)"
+msgstr ""
+
+msgid "teaspoons (tsp)"
+msgstr ""
+
+msgid "Add with nutrition"
+msgstr ""
+
+msgid "Search for an item"
+msgstr ""
+
+msgid "e.g. avocado, or one of your own ingredients…"
+msgstr ""
+
+msgid "Searching the USDA database…"
+msgstr ""
+
+msgid "Your ingredients"
+msgstr ""
+
+msgid "Custom"
+msgstr ""
+
+msgid "No matches — add it manually below."
+msgstr ""
+
+msgid "Add manually"
+msgstr ""
+
+msgid "Item name"
+msgstr ""
+
+msgid "Add to list"
+msgstr ""
+
+msgid "Could not load that item"
+msgstr ""
+
+msgid "Could not update the item"
+msgstr ""
+
+msgid "Failed to add item"
+msgstr ""
+
+msgid "Item added with nutrition data"
+msgstr ""
+
+msgid "Item added to your list"
+msgstr ""
+
+msgid "Build from a calendar week"
+msgstr ""
+
+msgid "Build list"
+msgstr ""

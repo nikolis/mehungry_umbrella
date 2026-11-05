@@ -134,3 +134,12 @@ config :mehungry, reconcile_runs_on_boot: false
 # flaky pollution of the Meta tests. Default the aggregator's write OFF here; the
 # two tests that assert the end-to-end path flip it back on for themselves.
 config :mehungry, session_metrics_recording: false
+
+# Give the storage facade a base URL so `Storage.public_url/1` can resolve an
+# object key into a real public URL (the recipe-image upload path needs this).
+# `service_role_key` is deliberately left unset so `Storage.configured?/0` stays
+# false — the upload-not-configured endpoint behavior is still exercised.
+config :mehungry, :storage,
+  backend: :supabase,
+  supabase_url: "https://test.supabase.co",
+  bucket: "media"

@@ -225,6 +225,22 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
      |> assign(:pending_assignment, nil)}
   end
 
+  # Per-species emoji override. A blank value clears the override, so the row
+  # falls back to the name/family-derived default from `Food.species_icon/1`.
+  def handle_event("update_species_icon", %{"species_id" => id, "icon" => icon}, socket) do
+    icon = String.trim(icon)
+    icon = if icon == "", do: nil, else: icon
+    species = Food.get_foundemental_species!(id)
+
+    case Food.update_foundemental_species(species, %{"icon" => icon}) do
+      {:ok, _species} ->
+        {:noreply, reload_species(socket)}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not update icon")}
+    end
+  end
+
   # ── Loading / filtering ──────────────────────────────────────────────────────
 
   # Heavy: parses the whole corpus (full USDA parser over every ingredient), so

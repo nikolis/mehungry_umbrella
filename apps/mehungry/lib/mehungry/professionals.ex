@@ -911,11 +911,13 @@ defmodule Mehungry.Professionals do
   `to_date` (inclusive). Slices each weekly availability window into
   `appointment_slot_minutes` slots, drops slots in the past and slots already
   taken by a `requested`/`accepted` appointment. Returns a sorted list of
-  `NaiveDateTime`s (second precision).
+  **UTC** `NaiveDateTime`s (second precision) — the availability windows are the
+  professional's local wall-clock, converted to the canonical stored UTC.
   """
   def available_slots(professional_id, from_date, to_date) do
     profile = get_professional_profile(professional_id)
     slot_minutes = (profile && profile.appointment_slot_minutes) || 60
+    tz = Mehungry.Time.tz(profile)
 
     availabilities_by_dow =
       professional_id
@@ -923,7 +925,7 @@ defmodule Mehungry.Professionals do
       |> Enum.group_by(& &1.day_of_week)
 
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-    booked = booked_slots(professional_id, from_date, to_date)
+    booked = booked_intervals(professional_id, from_date, to_date, slot_minutes)
     busy = busy_intervals(professional_id, from_date, to_date)
 
     Date.range(from_date, to_date)
@@ -932,21 +934,23 @@ defmodule Mehungry.Professionals do
 
       availabilities_by_dow
       |> Map.get(dow, [])
-      |> Enum.flat_map(&window_slots(date, &1, slot_minutes))
+      |> Enum.flat_map(&window_slots(date, &1, slot_minutes, tz))
     end)
     |> Enum.filter(fn slot ->
       NaiveDateTime.compare(slot, now) == :gt and
-        not MapSet.member?(booked, slot) and
-        not slot_overlaps_busy?(slot, slot_minutes, busy)
+        not slot_overlaps?(slot, slot_minutes, booked) and
+        not slot_overlaps?(slot, slot_minutes, busy)
     end)
     |> Enum.sort(NaiveDateTime)
   end
 
-  # Cached Google busy intervals ({start_naive, end_naive}) within the window, so
-  # a slot that overlaps the nutritionist's personal calendar is never offered.
+  # Cached Google busy intervals ({start_naive, end_naive}, UTC) within the
+  # window, so a slot that overlaps the nutritionist's personal calendar is never
+  # offered. Window padded ±1 day because UTC slots for a local date can fall on
+  # the adjacent UTC date near midnight.
   defp busy_intervals(professional_id, from_date, to_date) do
-    start_naive = NaiveDateTime.new!(from_date, ~T[00:00:00])
-    end_naive = NaiveDateTime.new!(to_date, ~T[23:59:59])
+    start_naive = NaiveDateTime.new!(Date.add(from_date, -1), ~T[00:00:00])
+    end_naive = NaiveDateTime.new!(Date.add(to_date, 1), ~T[23:59:59])
 
     professional_id
     |> list_calendar_busy(start_naive, end_naive)
@@ -955,18 +959,26 @@ defmodule Mehungry.Professionals do
     end)
   end
 
-  defp slot_overlaps_busy?(slot_start, slot_minutes, busy) do
+  # True when the candidate slot [slot_start, slot_start + slot_minutes) overlaps
+  # any {start, end} interval in the list. Used for both existing appointments and
+  # Google busy times so a slot is blocked whenever it *overlaps* a commitment —
+  # not only when it shares its exact start (the old exact-equality check let an
+  # off-grid or differently-sized appointment leave overlapping slots bookable).
+  defp slot_overlaps?(slot_start, slot_minutes, intervals) do
     slot_end = NaiveDateTime.add(slot_start, slot_minutes * 60, :second)
 
-    Enum.any?(busy, fn {busy_start, busy_end} ->
-      NaiveDateTime.compare(slot_start, busy_end) == :lt and
-        NaiveDateTime.compare(slot_end, busy_start) == :gt
+    Enum.any?(intervals, fn {int_start, int_end} ->
+      NaiveDateTime.compare(slot_start, int_end) == :lt and
+        NaiveDateTime.compare(slot_end, int_start) == :gt
     end)
   end
 
-  defp booked_slots(professional_id, from_date, to_date) do
-    start_dt = NaiveDateTime.new!(from_date, ~T[00:00:00])
-    end_dt = NaiveDateTime.new!(to_date, ~T[23:59:59])
+  # Active appointments as {start, end} intervals. Padded ±1 day: stored
+  # scheduled_at is UTC, so a slot for a local date near midnight can land on the
+  # adjacent UTC date. A missing ends_at is coalesced to one slot after the start.
+  defp booked_intervals(professional_id, from_date, to_date, slot_minutes) do
+    start_dt = NaiveDateTime.new!(Date.add(from_date, -1), ~T[00:00:00])
+    end_dt = NaiveDateTime.new!(Date.add(to_date, 1), ~T[23:59:59])
 
     Repo.all(
       from a in Appointment,
@@ -974,14 +986,25 @@ defmodule Mehungry.Professionals do
           a.professional_id == ^professional_id and
             a.status in ["requested", "accepted"] and
             a.scheduled_at >= ^start_dt and a.scheduled_at <= ^end_dt,
-        select: a.scheduled_at
+        select: {a.scheduled_at, a.ends_at}
     )
-    |> Enum.map(&NaiveDateTime.truncate(&1, :second))
-    |> MapSet.new()
+    |> Enum.map(fn {starts_at, ends_at} ->
+      starts_at = NaiveDateTime.truncate(starts_at, :second)
+
+      ends_at =
+        if ends_at,
+          do: NaiveDateTime.truncate(ends_at, :second),
+          else: NaiveDateTime.add(starts_at, slot_minutes * 60, :second)
+
+      {starts_at, ends_at}
+    end)
   end
 
-  # Slice a single availability window on `date` into slot-start datetimes.
-  defp window_slots(date, %ProfessionalAvailability{start_time: st, end_time: et}, slot_minutes) do
+  # Slice a single availability window on `date` into slot-start datetimes. The
+  # window's start/end are the professional's local wall-clock, so iterate in
+  # local time and convert each kept start to the canonical UTC the rest of the
+  # engine (booked set, busy intervals, storage) works in.
+  defp window_slots(date, %ProfessionalAvailability{start_time: st, end_time: et}, slot_minutes, tz) do
     start_dt = NaiveDateTime.new!(date, st) |> NaiveDateTime.truncate(:second)
     end_dt = NaiveDateTime.new!(date, et) |> NaiveDateTime.truncate(:second)
 
@@ -990,7 +1013,7 @@ defmodule Mehungry.Professionals do
       NaiveDateTime.compare(NaiveDateTime.add(slot_start, slot_minutes * 60, :second), end_dt) !=
         :gt
     end)
-    |> Enum.to_list()
+    |> Enum.map(&Mehungry.Time.to_utc(&1, tz))
   end
 
   # ── Google Calendar integration ─────────────────────────────────────────────────
@@ -1220,10 +1243,12 @@ defmodule Mehungry.Professionals do
   defp chargeable_service?(_), do: false
 
   defp slot_open?(professional_id, scheduled_at) do
+    # scheduled_at is UTC; the local availability date that produced it can be the
+    # UTC date ±1 (offset near midnight), so widen the regenerated range.
     date = NaiveDateTime.to_date(scheduled_at)
 
     professional_id
-    |> available_slots(date, date)
+    |> available_slots(Date.add(date, -1), Date.add(date, 1))
     |> Enum.any?(&(NaiveDateTime.compare(&1, scheduled_at) == :eq))
   end
 

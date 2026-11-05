@@ -409,7 +409,9 @@ defmodule MehungryWeb.Router do
       on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.UserAuthLive, MehungryWeb.SessionMetrics] do
       localized_live("/notifications/invitations", NutritionistLive.UserInvitations, :index)
       localized_live("/messages", MessagesLive.Index, :index)
-      localized_live("/appointments", AppointmentsLive.Index, :index)
+      localized_live("/my-nutritionist", MyNutritionistLive.Index, :index)
+      # Backwards-compatible alias for old "/appointments" links (authed, so no SEO concern).
+      localized_live("/appointments", MyNutritionistLive.Index, :index)
       localized_live("/friends", FriendsLive.Index, :index)
       localized_live("/basket", ShoppingBasketLive.Index, :index)
       localized_live("/basket/import_items/:id", ShoppingBasketLive.Index, :import_items)
@@ -418,6 +420,7 @@ defmodule MehungryWeb.Router do
       localized_live("/calendar/ondate/:date", CalendarLive.Index, :particular)
       localized_live("/calendar/details/:date", CalendarLive.Index, :nutrition_details)
       localized_live("/calendar/recipe/:recipe_id", CalendarLive.Index, :show_recipe)
+      localized_live("/calendar/ingredient/:id", CalendarLive.Index, :show_ingredient)
 
       localized_live("/calendar/:start/:title", CalendarLive.Index, :new)
 

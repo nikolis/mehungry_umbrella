@@ -7,6 +7,7 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
       id: species.id,
       name: species.name,
       slug: slug(species.name),
+      icon: Mehungry.Food.species_icon(species),
       variety: species.variety,
       family: species.family,
       scientific_name: species.scientific_name,

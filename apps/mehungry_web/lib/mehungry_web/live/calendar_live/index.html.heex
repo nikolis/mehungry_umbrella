@@ -3,45 +3,7 @@
   class="calendar-page bg-ink text-parchment"
 >
   <div class="px-3 sm:px-4 pt-3">
-    <div class="flex justify-end gap-2 mb-2">
-      <button
-        type="button"
-        id="share-week-open"
-        phx-click={show_modal("share_week_modal")}
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-paprika/40 text-xs font-medium transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-          />
-        </svg>
-        {gettext("Share this week")}
-      </button>
-      <button
-        type="button"
-        id="avoid-foods-open"
-        phx-click={show_modal("avoid_foods_modal")}
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-amber-400/50 text-xs font-medium transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-          />
-        </svg>
-        {gettext("Foods I avoid")}
-        <span
-          :if={@avoid_foods != []}
-          class="ml-0.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-amber-500/20 text-amber-300 text-[0.65rem] font-bold"
-        >
-          {length(@avoid_foods)}
-        </span>
-      </button>
+    <div class="flex justify-end items-center gap-2 mb-2">
       <button
         type="button"
         id="create-week-basket"
@@ -60,50 +22,103 @@
       </button>
       <button
         type="button"
-        id="clear-week"
-        phx-click="clear_week_meals"
-        data-confirm={gettext("Delete every meal from the week you're viewing? This can't be undone.")}
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-red-300 hover:border-red-500/50 text-xs font-medium transition-colors"
+        id="share-week-open"
+        phx-click={show_modal("share_week_modal")}
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-paprika/40 text-xs font-medium transition-colors"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
           />
         </svg>
-        {gettext("Clear week")}
+        {gettext("Share this week")}
       </button>
-      <button
-        type="button"
-        id="ai-plan-toggle"
-        phx-click={
-          Phoenix.LiveView.JS.toggle(
-            to: "#ai-plan-panel",
-            in:
-              {"transition-all duration-300 ease-out", "opacity-0 -translate-y-2 scale-95",
-               "opacity-100 translate-y-0 scale-100"},
-            out:
-              {"transition-all duration-200 ease-in", "opacity-100 translate-y-0 scale-100",
-               "opacity-0 -translate-y-2 scale-95"}
-          )
-          |> Phoenix.LiveView.JS.toggle_class("bg-ink-panel2 border-basil/50",
-            to: "#ai-plan-toggle"
-          )
-        }
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-basil/40 text-xs font-medium transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 10V3L4 14h7v7l9-11h-7z"
-          />
-        </svg>
-        Plan with AI
-      </button>
+
+      <%!-- Secondary / destructive actions live under an overflow menu so they
+            don't compete with the plan content or risk a mistap on "Clear week". --%>
+      <div class="relative" x-data="{open: false}" @keydown.escape.window="open = false">
+        <button
+          type="button"
+          @click="open = !open"
+          aria-haspopup="true"
+          x-bind:aria-expanded="open ? 'true' : 'false'"
+          aria-label={gettext("Week options")}
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim text-xs font-medium transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01" />
+          </svg>
+          {gettext("Week options")}
+        </button>
+        <div
+          x-show="open"
+          x-transition
+          @click.outside="open = false"
+          x-cloak
+          class="absolute right-0 mt-1 z-30 w-60 bg-ink-panel border border-ink-panel2 rounded-xl shadow-xl p-1"
+          role="menu"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            @click="open = false"
+            phx-click={
+              Phoenix.LiveView.JS.toggle(
+                to: "#ai-plan-panel",
+                in:
+                  {"transition-all duration-300 ease-out", "opacity-0 -translate-y-2 scale-95",
+                   "opacity-100 translate-y-0 scale-100"},
+                out:
+                  {"transition-all duration-200 ease-in", "opacity-100 translate-y-0 scale-100",
+                   "opacity-0 -translate-y-2 scale-95"}
+              )
+            }
+            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 text-sm text-left transition-colors"
+          >
+            <svg class="w-4 h-4 flex-shrink-0 text-basil" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {gettext("Plan with AI")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            id="avoid-foods-open"
+            @click="open = false"
+            phx-click={show_modal("avoid_foods_modal")}
+            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 text-sm text-left transition-colors"
+          >
+            <svg class="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            {gettext("Foods I avoid")}
+            <span
+              :if={@avoid_foods != []}
+              class="ml-auto inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-amber-500/20 text-amber-300 text-[0.65rem] font-bold"
+            >
+              {length(@avoid_foods)}
+            </span>
+          </button>
+          <div class="my-1 border-t border-ink-panel2"></div>
+          <button
+            type="button"
+            role="menuitem"
+            id="clear-week"
+            @click="open = false"
+            phx-click="clear_week_meals"
+            data-confirm={gettext("Delete every meal from the week you're viewing? This can't be undone.")}
+            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-300 hover:bg-red-500/10 text-sm text-left transition-colors"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            {gettext("Clear week")}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div
@@ -338,6 +353,7 @@
         id={:details}
         current_user={@current_user}
         particular_date={@nutrition_details}
+        current_language={@current_language}
         return_to={@detail_return_to || ~p"/calendar"}
       />
     </div>
@@ -362,6 +378,175 @@
       />
     </div>
   </MehungryWeb.RecipeComponents.recipe_modal>
+
+  <MehungryWeb.RecipeComponents.ingredient_modal
+    :if={@live_action in [:show_ingredient] and @ingredient}
+    on_cancel={JS.patch(~p"/calendar")}
+    id="calendar_ingredient_details_modal"
+    show
+  >
+    <% ing = @ingredient %>
+    <% logged_label =
+      "#{fmt_amount(ing.logged_qty)}#{if ing.logged_unit, do: " " <> ing.logged_unit, else: ""}" %>
+    <% selected_tree =
+      if @ingredient_basis == :per_100g, do: ing.per_100g_tree, else: ing.as_logged_tree %>
+    <% macros =
+      if @ingredient_basis == :per_100g, do: ing.per_100g_macros, else: ing.as_logged_macros %>
+    <% basis_label = if @ingredient_basis == :per_100g, do: gettext("per 100 g"), else: logged_label %>
+    <div class="w-full max-w-xl mx-auto p-4 sm:p-2" style="min-height: 40vh;">
+      <%!-- Header: emoji hero (no photo for ingredients), name, species, as-logged badge.
+           On mobile, indent clear of the absolutely-positioned back button (top-5 left-5,
+           w-12) so it doesn't overlap the emoji; reset at sm where the button is hidden. --%>
+      <div class="flex gap-4 items-center mb-6 pl-16 sm:pl-0">
+        <div
+          class="flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-ink-panel2 flex items-center justify-center text-5xl sm:text-6xl"
+          aria-hidden="true"
+        >
+          {ing.icon}
+        </div>
+        <div class="min-w-0">
+          <h2 class="font-display font-medium text-2xl text-parchment leading-tight">{ing.name}</h2>
+          <div :if={ing.species} class="flex flex-wrap gap-1.5 mt-2">
+            <span
+              :if={ing.species.scientific_name && ing.species.scientific_name != ""}
+              class="px-2 py-0.5 rounded-full text-xs italic bg-ink-panel2 text-parchment-dim"
+            >
+              {ing.species.scientific_name}
+            </span>
+            <span
+              :if={ing.species.variety && ing.species.variety != ""}
+              class="px-2 py-0.5 rounded-full text-xs bg-ink-panel2 text-parchment-dim"
+            >
+              {ing.species.variety}
+            </span>
+            <span
+              :if={ing.species.family && ing.species.family != ""}
+              class="px-2 py-0.5 rounded-full text-xs bg-ink-panel2 text-parchment-dim"
+            >
+              {ing.species.family}
+            </span>
+          </div>
+          <div class="mt-2 text-sm text-parchment-dim">
+            {gettext("As logged")}:
+            <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{logged_label}</span>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Basis toggle: as-logged (default) ⇄ per 100 g --%>
+      <div class="inline-flex rounded-lg bg-ink-panel2 p-1 mb-5 text-xs font-medium">
+        <button
+          type="button"
+          phx-click="set_ingredient_basis"
+          phx-value-basis="as_logged"
+          class={[
+            "px-3 py-1.5 rounded-md transition-colors",
+            if(@ingredient_basis == :as_logged,
+              do: "bg-ink-panel text-parchment",
+              else: "text-parchment-dim hover:text-parchment"
+            )
+          ]}
+        >
+          {gettext("As logged · %{amount}", amount: logged_label)}
+        </button>
+        <button
+          type="button"
+          phx-click="set_ingredient_basis"
+          phx-value-basis="per_100g"
+          class={[
+            "px-3 py-1.5 rounded-md transition-colors",
+            if(@ingredient_basis == :per_100g,
+              do: "bg-ink-panel text-parchment",
+              else: "text-parchment-dim hover:text-parchment"
+            )
+          ]}
+        >
+          {gettext("Per 100 g")}
+        </button>
+      </div>
+
+      <%= if map_size(selected_tree) == 0 do %>
+        <p class="text-parchment-dim text-sm mb-6">
+          {gettext("No nutrition data for this ingredient yet.")}
+        </p>
+      <% else %>
+        <%!-- Macro highlights for the selected basis --%>
+        <div class="grid grid-cols-5 gap-2 mb-5">
+          <div
+            :for={
+              {label, value, unit} <- [
+                {gettext("Cal"), macros.energy_kcal, "kcal"},
+                {gettext("Protein"), macros.protein_g, "g"},
+                {gettext("Fat"), macros.fat_g, "g"},
+                {gettext("Carbs"), macros.carbs_g, "g"},
+                {gettext("Fiber"), macros.fiber_g, "g"}
+              ]
+            }
+            class="bg-ink-panel rounded-xl p-3 text-center border border-ink-panel2"
+          >
+            <div class="text-lg font-bold text-basil [font-variant-numeric:tabular-nums]">
+              {fmt_amount(value)}
+            </div>
+            <div class="text-[0.65rem] text-parchment-dim">{unit}</div>
+            <div class="text-xs font-medium text-parchment-dim mt-0.5">{label}</div>
+          </div>
+        </div>
+
+        <%!-- Full breakdown — reuses the shared Nutrition Facts accordion --%>
+        <div class="text-xs uppercase tracking-wide text-parchment-dim mb-1">
+          {gettext("Full breakdown")} · {basis_label}
+        </div>
+        {MehungryWeb.RecipeComponents.recipe_nutrients(
+          %{
+            id: "ingredient-#{ing.id}-#{@ingredient_basis}",
+            nutrients: selected_tree,
+            primary_size: 5,
+            servings: 1,
+            locale: @current_language
+          },
+          @current_language
+        )}
+      <% end %>
+
+      <%!-- Common portion sizes — logged portion highlighted --%>
+      <div :if={ing.portions != []} class="mb-6">
+        <h3 class="text-xs uppercase tracking-wide text-parchment-dim mb-2">
+          {gettext("Common portion sizes")}
+        </h3>
+        <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
+          <table class="w-full">
+            <tbody>
+              <%= for {portion, idx} <- Enum.with_index(ing.portions) do %>
+                <% pname = Mehungry.Food.IngredientPortion.display_name(portion) %>
+                <tr class={[
+                  if(rem(idx, 2) == 0, do: "bg-ink-panel", else: "bg-ink-panel/50"),
+                  if(pname && pname == ing.logged_unit, do: "border-l-2 border-paprika")
+                ]}>
+                  <td class="px-4 py-2 text-sm text-parchment-dim">{pname || "—"}</td>
+                  <td class="px-4 py-2 text-sm font-bold text-basil text-right [font-variant-numeric:tabular-nums]">
+                    {fmt_amount(portion.amount)}
+                  </td>
+                  <td class="px-4 py-2 text-sm font-bold text-basil text-right [font-variant-numeric:tabular-nums]">
+                    {fmt_amount(portion.gram_weight)}g
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <%!-- One quiet link out to the full species food page --%>
+      <div :if={ing.species_slug} class="text-right">
+        <.link
+          navigate={~p"/foods/#{ing.species_slug}"}
+          class="text-sm text-parchment-dim hover:text-parchment transition-colors"
+        >
+          {gettext("See full food page")} →
+        </.link>
+      </div>
+    </div>
+  </MehungryWeb.RecipeComponents.ingredient_modal>
 
   <.modal id="share_week_modal" show={false} on_cancel={JS.push("reset_share")}>
     <div class="w-full">
@@ -524,7 +709,7 @@
   </.modal>
 
   <.live_component
-    module={MehungryWeb.CalendarLive.Calendar.Widget}
+    module={MehungryWeb.CalendarLive.Calendar.Reader}
     id={:new}
     user_meals={@user_meals}
     day_notes={@day_notes}

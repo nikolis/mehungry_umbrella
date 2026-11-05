@@ -54,6 +54,8 @@ defmodule MehungryWeb.CalendarLive.Index do
       # Assigns the recipe-details modal (RecipeDetailsComponent via the shared
       # LiveHelpers hook) reads for save/follow toggles.
       |> assign(:recipe, nil)
+      |> assign(:ingredient, nil)
+      |> assign(:ingredient_basis, :as_logged)
       # Heavy per-user data (meals, blueprints, saved/follows, quota, share card)
       # is loaded once the socket connects — this is a private, noindex, JS-hydrated
       # page the user always upgrades to WS, so the disconnected render's queries
@@ -108,6 +110,18 @@ defmodule MehungryWeb.CalendarLive.Index do
     |> push_event("create_meals", %{meals: user_meals})
   end
 
+  # Renders a nutrient/quantity number compactly for the ingredient detail modal:
+  # whole floats drop the ".0", fractional ones keep one decimal.
+  def fmt_amount(nil), do: "—"
+
+  def fmt_amount(amount) when is_float(amount) do
+    if amount == Float.round(amount),
+      do: to_string(trunc(amount)),
+      else: :erlang.float_to_binary(amount, decimals: 1)
+  end
+
+  def fmt_amount(amount), do: to_string(amount)
+
   defp apply_action(socket, :index, params) do
     maybe_track_user(%{}, socket)
 
@@ -151,6 +165,53 @@ defmodule MehungryWeb.CalendarLive.Index do
     socket
     |> assign(:page_title, recipe.title)
     |> assign(:recipe, recipe)
+  end
+
+  defp apply_action(socket, :show_ingredient, %{"id" => id} = _params) do
+    maybe_track_user(%{}, socket)
+
+    locale = socket.assigns.current_language || "en"
+    ium = History.get_ingredient_user_meal!(id)
+    ingredient = Food.get_ingredient_details!(ium.ingredient_id)
+    species = Map.get(Food.species_by_ingredient_ids([ium.ingredient_id]), ium.ingredient_id)
+
+    name =
+      if locale == "el" do
+        case Food.find_ingredient_translation("el", ingredient.id) do
+          [greek | _] -> greek
+          _ -> ingredient.name
+        end
+      else
+        ingredient.name
+      end
+
+    as_logged_tree = ium.nutrients || %{}
+    # Same string-keyed hierarchical tree the "Nutrition Facts" accordion reads
+    # (gram_weight 100 => factor 1.0); the per-serving tree is already denormalized
+    # on the row (as_logged_tree).
+    per_100g_tree = Mehungry.Food.NutrientCalculation.ingredient_nutrient_tree(ingredient, 100)
+
+    ingredient_view = %{
+      id: ingredient.id,
+      name: name,
+      icon: Map.get(Food.ingredient_icons([ingredient.id]), ingredient.id),
+      species: species,
+      # /foods/:slug is species-keyed (SpeciesDetailLive); nil when the ingredient
+      # isn't curated onto a species, which hides the "full food page" link.
+      species_slug: if(species, do: String.replace(species.name || "", " ", "-")),
+      portions: ingredient.ingredient_portions,
+      logged_qty: ium.quantity,
+      logged_unit: if(ium.measurement_unit, do: ium.measurement_unit.name, else: nil),
+      as_logged_tree: as_logged_tree,
+      per_100g_tree: per_100g_tree,
+      as_logged_macros: Mehungry.NutrientUtils.macro_summary(as_logged_tree),
+      per_100g_macros: Mehungry.NutrientUtils.macro_summary(per_100g_tree)
+    }
+
+    socket
+    |> assign(:page_title, name)
+    |> assign(:ingredient, ingredient_view)
+    |> assign(:ingredient_basis, :as_logged)
   end
 
   defp apply_action(socket, :edit, %{"id" => id} = _params) do
@@ -615,6 +676,17 @@ defmodule MehungryWeb.CalendarLive.Index do
   @impl true
   def handle_event("show_recipe_details", %{"recipe_id" => recipe_id}, socket) do
     {:noreply, push_patch(socket, to: ~p"/calendar/recipe/#{recipe_id}", replace: true)}
+  end
+
+  @impl true
+  def handle_event("show_ingredient_details", %{"id" => id}, socket) do
+    {:noreply, push_patch(socket, to: ~p"/calendar/ingredient/#{id}", replace: true)}
+  end
+
+  @impl true
+  def handle_event("set_ingredient_basis", %{"basis" => basis}, socket)
+      when basis in ["as_logged", "per_100g"] do
+    {:noreply, assign(socket, :ingredient_basis, String.to_existing_atom(basis))}
   end
 
   @impl true

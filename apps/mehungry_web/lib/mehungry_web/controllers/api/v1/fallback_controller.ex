@@ -5,6 +5,8 @@ defmodule MehungryWeb.Api.V1.FallbackController do
   """
   use MehungryWeb, :controller
 
+  require Logger
+
   import MehungryWeb.Api.V1.JSON.Helpers
 
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
@@ -39,6 +41,15 @@ defmodule MehungryWeb.Api.V1.FallbackController do
     conn |> put_status(:bad_request) |> json(errors(gettext("Bad request")))
   end
 
+  # A failed call to an upstream service (e.g. object storage during an image
+  # upload). The specific reason is logged at the call site; the client gets a
+  # clean 502 so it can retry rather than a raw crash.
+  def call(conn, {:error, :upstream_error}) do
+    conn
+    |> put_status(:bad_gateway)
+    |> json(errors(gettext("Service temporarily unavailable. Please try again.")))
+  end
+
   def call(conn, {:error, message}) when is_binary(message) do
     conn |> put_status(:bad_request) |> json(errors(message))
   end
@@ -52,6 +63,17 @@ defmodule MehungryWeb.Api.V1.FallbackController do
     conn
     |> put_status(:unprocessable_entity)
     |> json(errors(Gettext.gettext(MehungryWeb.Gettext, detail)))
+  end
+
+  # Safety net: an unexpected error term (e.g. a `{:http_error, status, body}`
+  # tuple leaked from a lower layer) must never crash the fallback itself and
+  # become a raw 500 HTML page. Log it and return a clean JSON 500 envelope.
+  def call(conn, {:error, reason}) do
+    Logger.error("Unhandled API error term: #{inspect(reason)}")
+
+    conn
+    |> put_status(:internal_server_error)
+    |> json(errors(gettext("Something went wrong. Please try again.")))
   end
 
   # Changeset field errors are interpolated and then translated through the

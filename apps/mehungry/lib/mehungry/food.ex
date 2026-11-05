@@ -40,6 +40,7 @@ defmodule Mehungry.Food do
     ParserVocabulary,
     Recipes,
     SpeciesCompounds,
+    SpeciesIcons,
     Taxonomies,
     TaxonomyClassificationRuns
   }
@@ -496,6 +497,14 @@ defmodule Mehungry.Food do
     as: :change_species
 
   defdelegate create_foundemental_species(attrs), to: FoundementalFoods, as: :create_species
+
+  defdelegate update_foundemental_species(species, attrs),
+    to: FoundementalFoods,
+    as: :update_species
+
+  defdelegate species_icon(species), to: SpeciesIcons, as: :icon_for
+  defdelegate species_by_ingredient_ids(ingredient_ids), to: FoundementalFoods
+  defdelegate ingredient_icons(ingredient_ids), to: FoundementalFoods
   defdelegate create_foundemental_food(attrs), to: FoundementalFoods
 
   defdelegate assign_foundemental_ingredient(species_id, ingredient_id, usda_name),

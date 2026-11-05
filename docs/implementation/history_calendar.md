@@ -74,6 +74,31 @@ same food inside a recipe — one aggregation path, no divergent copies (the RES
 parity rule). `format_user_meals/1` is the shared shaping step both the calendar
 LiveView and the mobile API (`GET /meals/day/:date/nutrition`) call.
 
+Each logged-ingredient entry in the view-model also carries an `:icon` — a
+species-aware emoji resolved **once per week, batched** via
+`Mehungry.Food.ingredient_icons/1` (a curator's `FoundementalFoodSpecies.icon`
+override when the ingredient is curated onto a species, else derived from the
+ingredient's English base name — see `Mehungry.Food.SpeciesIcons`). It is
+locale-independent (derived from the English name, not the localized title) and
+rendered as the card's **hero image** (ingredients have no photo) — and, when the
+`img_url` is nil, inside the card's image box via `card_meal/1`
+(`calendar/meal_core.ex`). The nutrition API consumes this view-model only to sum
+nutrients, so `:icon` never reaches the JSON response — no mobile-contract change.
+
+Each ingredient card also carries its `IngredientUserMeal` row id
+(`:user_meal_id`), which gates a **"View ingredient"** button — the
+ingredient-side mirror of the recipe card's "View recipe". It `push_patch`es to
+`/calendar/ingredient/:id` (`:show_ingredient`), and `apply_action` loads the row
+(as-logged `nutrients` + quantity), the ingredient (`Food.get_ingredient_details!/1`,
+cached — for per-100g + portions), and its species, into an inline
+`RecipeComponents.ingredient_modal`. The modal **leads with the as-logged amount**
+(e.g. "200 g"), with a toggle to the per-100g reference — both nutrient trees are
+loaded up front so the toggle is a cheap flag flip. Macro highlight tiles come from
+the shared `NutrientUtils.macro_summary/1` (same source as every other calendar
+macro number), the full breakdown reuses `recipe_nutrients/2`, and a portion table
++ species chips + a quiet link to the species' `/foods/:slug` page round it out.
+Purely a web-layer detail surface — no schema or mobile-contract change.
+
 ## Week-scoped loading (performance)
 
 The calendar loads **only the viewed week**, not a user's whole history:

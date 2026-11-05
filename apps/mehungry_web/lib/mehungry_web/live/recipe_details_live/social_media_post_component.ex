@@ -281,7 +281,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   <p class="text-sm text-parchment-dim">Save this recipe to one of your boards</p>
                 </div>
               </div>
-              <%= if is_nil(@user.pinterest_token) or map_size(@user.pinterest_token) == 0 do %>
+              <%= if @user == nil or is_nil(@user.pinterest_token) or map_size(@user.pinterest_token) == 0 do %>
                 <div class="flex items-center gap-3 p-4 rounded-lg border border-ink-panel2 bg-black/20">
                   <.icon name="hero-exclamation-circle" class="h-5 w-5 text-parchment-dim flex-shrink-0" />
                   <p class="text-sm text-parchment-dim">
@@ -402,7 +402,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   <p class="text-sm text-parchment-dim">Post this recipe to your Instagram account</p>
                 </div>
               </div>
-              <%= if is_nil(@user.instagram_token) or map_size(@user.instagram_token) == 0 do %>
+              <%= if @user == nil or is_nil(@user.instagram_token) or map_size(@user.instagram_token) == 0 do %>
                 <div class="flex items-center gap-3 p-4 rounded-lg border border-ink-panel2 bg-black/20">
                   <.icon name="hero-exclamation-circle" class="h-5 w-5 text-parchment-dim flex-shrink-0" />
                   <p class="text-sm text-parchment-dim">
@@ -445,7 +445,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   <p class="text-sm text-parchment-dim">Post this recipe to your Facebook pages</p>
                 </div>
               </div>
-              <%= case Enum.empty?(@user.facebook_token) do %>
+              <%= case @user == nil or Enum.empty?(@user.facebook_token) do %>
                 <% true -> %>
                   <div class="flex items-center gap-3 p-4 rounded-lg border border-ink-panel2 bg-black/20">
                     <.icon name="hero-exclamation-circle" class="h-5 w-5 text-parchment-dim flex-shrink-0" />

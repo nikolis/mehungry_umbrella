@@ -122,6 +122,7 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
                 form={@add_form}
                 item_function={fn term -> Food.IngredientSearch.search(term, [], @current_user.id) end}
                 get_by_id_func={&Food.get_ingredient!/1}
+                icon_function={fn items -> Food.ingredient_icons(Enum.map(items, & &1.id)) end}
                 input_variable="ingredient_id"
                 label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
                 placeholder="Search an ingredient to add..."

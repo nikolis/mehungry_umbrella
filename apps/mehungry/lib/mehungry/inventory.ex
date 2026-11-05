@@ -5,8 +5,10 @@ defmodule Mehungry.Inventory do
 
   import Ecto.Query, warn: false
   alias Mehungry.Repo
+  alias Mehungry.Food.Ingredient
   alias Mehungry.Inventory.BasketItem
   alias Mehungry.Inventory.BasketParams
+  alias Mehungry.PublishedPlans.GroceryAisle
 
   def change_basket_params(%BasketParams{} = basket_params, attrs \\ %{}) do
     BasketParams.changeset(basket_params, attrs)
@@ -77,6 +79,34 @@ defmodule Mehungry.Inventory do
   end
 
   @doc """
+  Gets a basket by id **scoped to its owner**, or `nil` when it does not exist or
+  belongs to another user. Use this for any lookup driven by a user-supplied id
+  (LiveView events, route params) so one user cannot load another's basket.
+  """
+  def get_user_shopping_basket(user_id, id) do
+    from(s in ShoppingBasket, where: s.id == ^id and s.user_id == ^user_id)
+    |> Repo.one()
+    |> case do
+      nil ->
+        nil
+
+      basket ->
+        Repo.preload(basket,
+          basket_items: [
+            :measurement_unit
+          ],
+          basket_ingredients: [
+            :measurement_unit,
+            ingredient: [
+              :category,
+              :ingredient_translation
+            ]
+          ]
+        )
+    end
+  end
+
+  @doc """
   Creates a shopping_basket.
 
   ## Examples
@@ -115,34 +145,78 @@ defmodule Mehungry.Inventory do
     end
   end
 
+  @doc """
+  Adds a single `BasketItem` to a basket. `item_params` is a map that may carry
+  any of `:name`, `:quantity`, `:measurement_unit_id`, `:description` (a
+  free-text unit label, used by the USDA/manual paths that have no
+  `MeasurementUnit` row), `:nutrition` (stored into `nutrition_data`) and
+  `:usda_fdc_id`. Missing keys are tolerated — e.g. USDA items pass a free-text
+  unit via `:description` and no `:measurement_unit_id`.
+  """
+  def add_item(nil, _item_params), do: {:error, :nil_basket_id}
+
   def add_item(basket_id, item_params) do
-    if !is_nil(basket_id) do
-      basket = get_shopping_basket!(basket_id)
+    result =
+      %BasketItem{}
+      |> BasketItem.changeset(%{
+        name: Map.get(item_params, :name),
+        quantity: Map.get(item_params, :quantity),
+        shopping_basket_id: basket_id,
+        measurement_unit_id: Map.get(item_params, :measurement_unit_id),
+        description: Map.get(item_params, :description),
+        nutrition_data: Map.get(item_params, :nutrition),
+        usda_fdc_id: Map.get(item_params, :usda_fdc_id),
+        in_storage: false
+      })
+      |> Repo.insert()
 
-      result =
-        %BasketItem{}
-        |> BasketItem.changeset(%{
-          list_id: basket.id,
-          name: item_params.name,
-          quantity: item_params.quantity,
-          shopping_basket_id: basket_id,
-          measurement_unit_id: item_params.measurement_unit_id,
-          nutrition_data: item_params.nutrition,
-          usda_fdc_id: item_params.usda_fdc_id,
-          checked: false
-        })
-        |> Repo.insert()
-
-      case result do
-        {:ok, result} ->
-          {:ok, Repo.preload(result, :measurement_unit)}
-
-        {:eror, problem} ->
-          {:error, problem}
-      end
-    else
-      {:error, :nil_basket_id}
+    case result do
+      {:ok, item} -> {:ok, Repo.preload(item, :measurement_unit)}
+      {:error, problem} -> {:error, problem}
     end
+  end
+
+  @doc """
+  Resolves a grocery **aisle** key for each basket item, returning a
+  `%{item_id => aisle_key}` map. `BasketItem` carries no category, so — like the
+  published-plan weekly list (`PublishedPlans` `group_names_by_aisle`) — we
+  resolve the category back from the catalog: by `usda_fdc_id` for USDA items,
+  else by the name's normalized `search_name`, then classify with
+  `GroceryAisle`. Unmatched names (manual free-text) fall into `"other"`. Runs
+  at most two batch queries regardless of item count.
+  """
+  def aisle_for_items(items) when is_list(items) do
+    names =
+      items
+      |> Enum.map(& &1.name)
+      |> Enum.reject(&(is_nil(&1) or &1 == ""))
+
+    search_names = names |> Enum.map(&Ingredient.normalize_string/1) |> Enum.uniq()
+    fdc_ids = items |> Enum.map(& &1.usda_fdc_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+    by_search = category_lookup(:search_name, search_names)
+    by_fdc = category_lookup(:fdc_id, fdc_ids)
+
+    Map.new(items, fn item ->
+      category =
+        Map.get(by_fdc, item.usda_fdc_id) ||
+          Map.get(by_search, Ingredient.normalize_string(item.name))
+
+      {item.id, GroceryAisle.classify(category)}
+    end)
+  end
+
+  defp category_lookup(_field, []), do: %{}
+
+  defp category_lookup(field, values) do
+    Repo.all(
+      from(ing in Ingredient,
+        left_join: cat in assoc(ing, :category),
+        where: field(ing, ^field) in ^values,
+        select: {field(ing, ^field), cat.name}
+      )
+    )
+    |> Map.new()
   end
 
   @doc """

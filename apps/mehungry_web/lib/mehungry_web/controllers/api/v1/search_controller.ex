@@ -62,6 +62,7 @@ defmodule MehungryWeb.Api.V1.SearchController do
       end
 
     units_by_id = unit_options_by_id(ingredients, locale)
+    icons_by_id = Food.ingredient_icons(Enum.map(ingredients, & &1.id))
 
     blueprint = BlueprintMatch.blueprint(conn, params)
     reports = BlueprintMatch.ingredient_reports(blueprint, ingredients)
@@ -70,7 +71,12 @@ defmodule MehungryWeb.Api.V1.SearchController do
       conn,
       data(
         Enum.map(ingredients, fn ing ->
-          local_ingredient(ing, units_by_id, BlueprintMatch.block(blueprint, reports, ing.id))
+          local_ingredient(
+            ing,
+            units_by_id,
+            icons_by_id,
+            BlueprintMatch.block(blueprint, reports, ing.id)
+          )
         end)
       )
     )
@@ -102,10 +108,11 @@ defmodule MehungryWeb.Api.V1.SearchController do
     end)
   end
 
-  defp local_ingredient(ingredient, unit_options_by_id, blueprint_match \\ nil) do
+  defp local_ingredient(ingredient, unit_options_by_id, icons_by_id, blueprint_match) do
     %{
       id: ingredient.id,
       name: ingredient.name,
+      icon: Map.get(icons_by_id, ingredient.id),
       units: Enum.map(Map.get(unit_options_by_id, ingredient.id, []), &unit_option/1)
     }
     |> maybe_blueprint_match(blueprint_match)
@@ -128,9 +135,14 @@ defmodule MehungryWeb.Api.V1.SearchController do
   defp recipes_from(_), do: []
 
   defp usda_food(food) do
+    description = Map.get(food, :description) || food["description"]
+
     %{
       fdc_id: Map.get(food, :fdc_id) || food["fdc_id"],
-      description: Map.get(food, :description) || food["description"],
+      description: description,
+      # Not yet a DB ingredient (no species link), so the emoji is derived purely
+      # from the USDA description name — see `Mehungry.Food.SpeciesIcons`.
+      icon: Mehungry.Food.SpeciesIcons.default_icon(%{name: description}),
       data_type: Map.get(food, :data_type) || food["data_type"],
       brand: Map.get(food, :brand) || food["brand"]
     }

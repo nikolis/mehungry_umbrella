@@ -972,4 +972,16 @@ Hooks.NoteSelection = {
   }
 }
 
+// Submit a message composer on Enter; Shift+Enter inserts a newline.
+Hooks.EnterToSend = {
+  mounted() {
+    this.el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault()
+        if (this.el.form) this.el.form.requestSubmit()
+      }
+    })
+  }
+}
+
 export {Hooks}

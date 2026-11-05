@@ -19,11 +19,15 @@ calendar invite. Profile/discovery is in `professional_profiles.md`.
 ## Slot engine — `Professionals.available_slots/3`
 
 For a professional + date range: slices each weekly window into
-`profile.appointment_slot_minutes` slots, drops slots in the past, slots already taken by a
-`requested`/`accepted` appointment, **and slots overlapping a cached Google Calendar busy
-interval** (`professional_calendar_busy`, see Google Calendar sync below) — returns sorted
-`NaiveDateTime`s (UTC, second precision). `request_appointment/4` re-checks the slot is open
-(`slot_open?/2`) before inserting, returning `{:error, :slot_unavailable}` on a race.
+`profile.appointment_slot_minutes` slots, drops slots in the past, slots that **overlap** a
+`requested`/`accepted` appointment's `[scheduled_at, ends_at)` interval, **and slots overlapping a
+cached Google Calendar busy interval** (`professional_calendar_busy`, see Google Calendar sync
+below) — returns sorted `NaiveDateTime`s (UTC, second precision). Both booked appointments and
+busy times are tested with the same interval-overlap predicate (`slot_overlaps?/3`), so an
+off-grid or differently-sized appointment (e.g. a 09:30–10:30 slot created in the nutritionist
+calendar) blocks **every** grid slot it spans — not only one whose start matches exactly (a
+missing `ends_at` is coalesced to one slot after the start). `request_appointment/4` re-checks the
+slot is open (`slot_open?/2`) before inserting, returning `{:error, :slot_unavailable}` on a race.
 
 ## Nutritionist calendar view — `/nutritionist/appointments`
 
@@ -53,9 +57,17 @@ client-file **Progress trend** chart and the client's own **My progress** profil
 ## Flow
 
 1. **Request** — logged-in visitor picks a **service** (the booking modal lists the active
-   `ProfessionalService`s — free intro + paid session/package, with prices), then an open slot on
-   `/nutritionists/:slug` (`PublicNutritionistLive.Show`). Logged-out visitors are redirected to
-   log in. On success: an `AppointmentMailerWorker` "requested" email notifies the nutritionist.
+   `ProfessionalService`s — free intro + paid session/package, with prices), then an open slot. The
+   booking wizard (pick day → time → service → confirm) is the shared
+   **`MehungryWeb.AppointmentBookingComponent`** LiveComponent, reused on both the public profile
+   `/nutritionists/:slug` (`PublicNutritionistLive.Show`, `variant: :card`) **and** the client's
+   "My nutritionist" hub for an already-connected client (`MyNutritionistLive.Index`,
+   `variant: :button`) — so the slot engine, Stripe-authorise redirect, and "requested" mailer live
+   in exactly one place. The component owns its own slot/service loading and all booking events
+   (`phx-target`'d to itself), surfaces slot-contention errors inside the modal, and notifies its
+   parent with `{:appointment_booked, appt}` so the client's appointment list refreshes. Logged-out
+   visitors are redirected to log in. On success: an `AppointmentMailerWorker` "requested" email
+   notifies the nutritionist.
    The visitor sees "awaiting confirmation" — **nothing is confirmed yet**. For a **paid** service
    (when the consultation-payments flag is on and the nutritionist is Stripe-Connect-onboarded) the
    request instead opens a manual-capture Stripe Checkout and redirects the client to **authorize**
@@ -66,7 +78,8 @@ client-file **Progress trend** chart and the client's own **My progress** profil
    decline (`decline_appointment/1`) **releases** the hold. A `mark_no_show/1` action retains a
    captured payment in full. Both enqueue an `AppointmentMailerWorker` email.
 3. **Cancellation (two surfaces, two policies):**
-   - **Client** cancels from **`/appointments`** ("My appointments", `AppointmentsLive.Index`) —
+   - **Client** cancels from the **"My nutritionist" hub** (`/my-nutritionist`,
+     `MyNutritionistLive.Index` — see below), in its secondary appointments section —
      `cancel_appointment/1` applies the **tiered** refund (≥24h → 100%, 4–24h → 50%, <4h → 0%);
      the confirm dialog previews the amount via `client_cancellation_refund_cents/1`.
    - **Nutritionist** cancels an **accepted** appointment from the calendar edit modal
@@ -76,6 +89,33 @@ client-file **Progress trend** chart and the client's own **My progress** profil
 3. **Invite** — the acceptance email (`UserNotifier.deliver_appointment_accepted/4`) attaches an
    `.ics` built by `Mehungry.Professionals.ICS` (VCALENDAR/VEVENT, UTC, `meeting_url` as
    `LOCATION`/`URL`) so the client can add it to any calendar.
+
+## Client hub — "My nutritionist" (`MyNutritionistLive.Index`)
+
+The consumer-facing entry point for the client↔nutritionist relationship, at **`/my-nutritionist`**
+(menu label "My nutritionist", icon `hero-user-circle`; `/appointments` is kept as a backwards-compatible
+alias to the same LiveView). It is **not** primarily an appointment list — appointments are a secondary
+section. Two states, driven by `Professionals.get_assignment_for_client/1` (one connected nutritionist max):
+
+- **Connected** — leads with a **preview of the connected nutritionist's public profile** (resolved via
+  `get_professional_profile/1`, since `get_assignment_for_client/1` preloads only the `:professional`
+  `User`, not the `ProfessionalProfile`). Rendered with the shared `nutritionist_card/1` component
+  (`variant: :preview`, in `core_components`) with CTAs: **Book an appointment** (the shared
+  `AppointmentBookingComponent`, `variant: :button` — a connected client books right here without
+  leaving the hub), **View full profile** (`/nutritionists/:slug`), **Message** (`/messages`), an
+  anchor to the appointments section, and **Disconnect** (`unlink_nutritionist` →
+  `Professionals.unassign_nutritionist/1`, confirm-gated — a client can end the link themselves; the
+  hub then falls back to the unconnected empty state).
+- **Unconnected** — a plain **empty state**: a people icon + "You're not connected to a nutritionist
+  yet." + a link to the full `/nutritionists` directory. This hub deliberately shows **no inline
+  nutritionist search or list** — discovery happens in the directory, not here.
+
+**Pending invitations** from nutritionists surface as a top banner (unconnected state) with inline
+accept/decline (handlers lifted verbatim from `NutritionistLive.UserInvitations`, backed by
+`accept_invitation/2` / `decline_invitation/2`; `unassign_nutritionist/1` for unlink). The appointments
+section is wrapped in a **max-height scroll**, preserves the tiered-refund cancel flow, and renders times
+in the professional's timezone (§ below). Paid bookings started from this hub return via
+`/my-nutritionist?booking=success|cancelled`, flashed by its `handle_params`.
 
 ## Email delivery
 
@@ -135,7 +175,10 @@ drops the tokens + cached busy rows.
 ## Notes / future
 
 - Times are handled in UTC end-to-end; per-nutritionist timezone display uses the profile
-  `timezone` (not yet applied to the public calendar — future polish).
+  `timezone`. The client "My nutritionist" hub (`MyNutritionistLive.Index`) renders each
+  appointment in its **professional's** timezone with the zone abbreviation (e.g. `14:00 EET`)
+  via `Mehungry.Time`, so a client in another zone isn't misled. (Not yet applied to the
+  public booking calendar — future polish.)
 - Paid bookings are built (see `docs/implementation/professionals/payments/…`); auto-generated
   Meet links now ship via the Google Calendar sync above (see
   `docs/implementation/professionals/integrations/google_meet.md`).

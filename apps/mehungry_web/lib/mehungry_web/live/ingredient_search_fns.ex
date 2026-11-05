@@ -8,11 +8,14 @@ defmodule MehungryWeb.IngredientSearchFns do
   English base-name search. Keeping that swap in one place means a new picker is
   locale-aware for free rather than re-hardcoding the English search.
 
-  Returns `%{item_fn, label_fn, get_by_id_fn}`:
+  Returns `%{item_fn, label_fn, get_by_id_fn, icon_fn}`:
     * `item_fn.(term)` — search function feeding the dropdown
     * `label_fn.(item)` — how a result/selection is displayed
     * `get_by_id_fn.(id)` — resolves a selected id back to an item (name overlaid
       with its Greek translation in `"el"`)
+    * `icon_fn.(items)` — a `%{id => emoji}` map for the result set, species-aware
+      and locale-independent (derived from the English base name — see
+      `Mehungry.Food.ingredient_icons/1`)
   """
 
   alias Mehungry.Food
@@ -35,7 +38,8 @@ defmodule MehungryWeb.IngredientSearchFns do
           [greek_name | _] -> %{ingredient | name: greek_name}
           [] -> ingredient
         end
-      end
+      end,
+      icon_fn: &icon_map/1
     }
   end
 
@@ -43,7 +47,13 @@ defmodule MehungryWeb.IngredientSearchFns do
     %{
       item_fn: fn term -> IngredientSearch.search(term, [], owner_id) end,
       label_fn: fn item -> Mehungry.Utils.remove_parenthesis(item.name) end,
-      get_by_id_fn: &Food.get_ingredient!/1
+      get_by_id_fn: &Food.get_ingredient!/1,
+      icon_fn: &icon_map/1
     }
   end
+
+  # `%{ingredient_id => emoji}` for a result set. Works for both locales because
+  # the emoji is resolved from each ingredient's id (English base name / species
+  # override), not from the display label — see `Mehungry.Food.ingredient_icons/1`.
+  defp icon_map(items), do: Food.ingredient_icons(Enum.map(items, & &1.id))
 end

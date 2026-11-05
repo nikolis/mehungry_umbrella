@@ -224,6 +224,7 @@
           <span class="text-parchment-dim text-xs w-4">
             {if expanded?(@expanded, "species:#{species.id}"), do: "▾", else: "▸"}
           </span>
+          <span class="text-lg shrink-0" aria-hidden="true">{Mehungry.Food.species_icon(species)}</span>
           <div class="flex-1 min-w-0">
             <div class="text-parchment font-medium truncate">{species_label(species)}</div>
             <div class="text-parchment-dim text-xs mt-1 truncate">
@@ -241,6 +242,28 @@
           :if={expanded?(@expanded, "species:#{species.id}")}
           class="border-t border-ink-panel2"
         >
+          <form
+            phx-submit="update_species_icon"
+            class="flex items-center gap-2 px-4 py-3 border-b border-ink-panel2"
+          >
+            <input type="hidden" name="species_id" value={species.id} />
+            <label class="text-parchment-dim text-xs">Icon</label>
+            <input
+              type="text"
+              name="icon"
+              value={species.icon}
+              placeholder={Mehungry.Food.SpeciesIcons.default_icon(species)}
+              maxlength="8"
+              class="w-16 text-center bg-ink-panel2 text-parchment rounded border border-ink-panel2 px-2 py-1 text-base"
+            />
+            <button
+              type="submit"
+              class="text-parchment-dim text-xs hover:text-parchment px-2 py-1 rounded border border-ink-panel2"
+            >
+              Save
+            </button>
+            <span class="text-parchment-dim text-xs">Blank = auto ({Mehungry.Food.SpeciesIcons.default_icon(species)})</span>
+          </form>
           <p
             :if={species.foundemental_foods == []}
             class="px-4 py-3 text-parchment-dim text-sm"

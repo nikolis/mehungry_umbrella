@@ -45,10 +45,19 @@ Two changesets: `changeset/2` (user-editable copy + slug + publish gate) and `st
 
 `/nutritionist/profile` → `MehungryWeb.NutritionistLive.ProfileEdit` (in the authenticated,
 subscription-gated `:nutritionist` live_session). One form covers all fields, the publish
-toggle, the weekly availability grid, photo upload, and Stripe payout onboarding. Photo uploads
-reuse the external-S3 presign path (`MehungryWeb.SimpleS3Upload.meta_for/3`, prefix
-`profile_photos/`). The old inline profile form on the Dashboard was removed; the Dashboard now
-links here.
+toggle, the weekly availability grid, photo upload, and Stripe payout onboarding. The old inline
+profile form on the Dashboard was removed; the Dashboard now links here.
+
+**Profile photo.** The nutritionist chooses and uploads a professional headshot (JPG/PNG/WebP,
+≤5 MB) that renders on the public profile header, the directory cards, and the OG/JSON-LD `image`
+metadata. Uploads go direct-to-storage via the external presign path (`MehungryWeb.Uploads.meta/3`
+→ `Mehungry.Storage.signed_upload/2` on the Supabase backend; prefix `profile_photos/`), and the
+resulting `public_url` is stored on `photo_url` at save. The editor shows a live preview of the
+selected file before saving, per-entry upload progress + cancel, inline validation errors
+(too large / wrong type), and a **Remove photo** action (cleared on save). When a photo is replaced
+or removed, the previous object is deleted from storage (`Storage.delete_by_url/1`, a no-op for
+URLs we don't own) so swaps don't orphan files. The empty state falls back to the display-name
+initial.
 
 ## Public directory + profile (SEO)
 

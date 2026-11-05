@@ -15,7 +15,9 @@ defmodule Mehungry.Food.FoundementalFoods do
     FoundementalFood,
     FoundementalFoodSpecies,
     FoundementalFoodSpeciesTranslation,
-    SpeciesCompoundRelationship
+    Ingredient,
+    SpeciesCompoundRelationship,
+    SpeciesIcons
   }
 
   # ── Species ────────────────────────────────────────────────────────────────
@@ -236,6 +238,63 @@ defmodule Mehungry.Food.FoundementalFoods do
     %FoundementalFoodSpecies{}
     |> FoundementalFoodSpecies.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def update_species(%FoundementalFoodSpecies{} = species, attrs) do
+    species
+    |> FoundementalFoodSpecies.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Batch-resolves the species curated onto each of `ingredient_ids`, as a sparse
+  `%{ingredient_id => %FoundementalFoodSpecies{}}` map (only the ids that map to a
+  species appear — `ingredient_id` is unique in the join, so one species each).
+  """
+  def species_by_ingredient_ids(ingredient_ids) when is_list(ingredient_ids) do
+    from(f in FoundementalFood,
+      join: s in assoc(f, :species),
+      where: f.ingredient_id in ^ingredient_ids,
+      select: {f.ingredient_id, s}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  An emoji for each of `ingredient_ids`, as `%{ingredient_id => emoji}` (every id
+  present). Locale-independent: the emoji is derived from the **English base
+  name**, with a curator's species `icon` override winning when the ingredient is
+  curated onto a species. At most two queries regardless of input size — the
+  species join, then the base names of the ingredients not covered by a species.
+  See `Mehungry.Food.SpeciesIcons`.
+  """
+  def ingredient_icons(ingredient_ids) when is_list(ingredient_ids) do
+    ids = Enum.uniq(ingredient_ids)
+    species_map = species_by_ingredient_ids(ids)
+
+    name_map =
+      ids
+      |> Enum.reject(&Map.has_key?(species_map, &1))
+      |> ingredient_base_names()
+
+    Map.new(ids, fn id ->
+      icon =
+        case Map.get(species_map, id) do
+          nil -> SpeciesIcons.default_icon(%{name: Map.get(name_map, id)})
+          species -> SpeciesIcons.icon_for(species)
+        end
+
+      {id, icon}
+    end)
+  end
+
+  defp ingredient_base_names([]), do: %{}
+
+  defp ingredient_base_names(ingredient_ids) do
+    from(i in Ingredient, where: i.id in ^ingredient_ids, select: {i.id, i.name})
+    |> Repo.all()
+    |> Map.new()
   end
 
   # ── Foundemental foods (join rows) ───────────────────────────────────────────

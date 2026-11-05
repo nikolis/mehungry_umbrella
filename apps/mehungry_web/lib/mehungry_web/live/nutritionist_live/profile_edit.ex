@@ -9,6 +9,7 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
 
   alias Mehungry.Professionals
   alias Mehungry.Professionals.ProfessionalProfile
+  alias Mehungry.Storage
 
   # Rendered order (Mon → Sun) mapped to stored day_of_week (0 = Sunday).
   @weekdays [
@@ -45,10 +46,14 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
       |> assign(:availability, availability_model(user.id))
       |> assign(:weekdays, @weekdays)
       |> assign(:time_options, time_options())
+      |> assign(:remove_photo, false)
       |> allow_upload(:photo,
         accept: ~w(.jpg .jpeg .png .webp),
         max_entries: 1,
         max_file_size: 5_000_000,
+        # Upload to storage on selection (not on form submit) so the progress
+        # bar advances immediately and the preview is ready before Save.
+        auto_upload: true,
         external: &presign_upload/2
       )
 
@@ -68,6 +73,7 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
   @impl true
   def handle_event("save", %{"professional_profile" => params} = all, socket) do
     user = socket.assigns.current_user
+    old_photo_url = socket.assigns.profile.photo_url
     attrs = with_user_id(params, socket) |> maybe_put_photo(socket)
 
     result =
@@ -83,9 +89,12 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
           availability_rows(all["availability"] || %{})
         )
 
+        cleanup_replaced_photo(old_photo_url, profile.photo_url)
+
         {:noreply,
          socket
          |> assign(:profile, profile)
+         |> assign(:remove_photo, false)
          |> assign(:changeset, Professionals.change_professional_profile(profile))
          |> assign(:availability, availability_model(user.id))
          |> put_flash(:info, profile_saved_flash(profile))}
@@ -98,15 +107,58 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
     end
   end
 
+  @impl true
+  def handle_event("cancel-photo", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :photo, ref)}
+  end
+
+  @impl true
+  def handle_event("remove-photo", _params, socket) do
+    {:noreply, assign(socket, :remove_photo, true)}
+  end
+
+  @impl true
+  def handle_event("keep-photo", _params, socket) do
+    {:noreply, assign(socket, :remove_photo, false)}
+  end
+
   defp with_user_id(params, socket),
     do: Map.put(params, "user_id", socket.assigns.current_user.id)
 
+  # Resolve the photo for this save: a freshly uploaded file wins; otherwise, if
+  # the nutritionist asked to remove their current photo, clear it; else leave
+  # the stored value untouched (so it survives an unrelated field edit).
   defp maybe_put_photo(attrs, socket) do
     case consume_uploaded_entries(socket, :photo, fn %{public_url: public_url}, _entry ->
            {:ok, public_url}
          end) do
       [photo_url | _] -> Map.put(attrs, "photo_url", photo_url)
-      [] -> attrs
+      [] -> if socket.assigns.remove_photo, do: Map.put(attrs, "photo_url", nil), else: attrs
+    end
+  end
+
+  # Delete the previous object once the profile no longer points at it (replaced
+  # or removed), so swapping a photo doesn't orphan files in storage.
+  # `delete_by_url/1` is a no-op for URLs we don't own.
+  defp cleanup_replaced_photo(old_url, new_url)
+       when is_binary(old_url) and old_url != "" and old_url != new_url do
+    Storage.delete_by_url(old_url)
+    :ok
+  end
+
+  defp cleanup_replaced_photo(_old_url, _new_url), do: :ok
+
+  defp error_to_string(:too_large), do: gettext("That image is too large (max 5 MB).")
+  defp error_to_string(:not_accepted), do: gettext("Please choose a JPG, PNG or WebP image.")
+  defp error_to_string(:too_many_files), do: gettext("Please choose a single image.")
+  defp error_to_string(_), do: gettext("That file could not be uploaded.")
+
+  # Initial letter for the empty-photo avatar, read live from the changeset so it
+  # tracks the display-name field as it's typed.
+  defp display_initial(changeset) do
+    case Ecto.Changeset.get_field(changeset, :display_name) do
+      name when is_binary(name) and name != "" -> String.first(name)
+      _ -> "?"
     end
   end
 
@@ -183,6 +235,7 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
 
       <.form
         :let={f}
+        id="profile-form"
         for={@changeset}
         phx-change="validate"
         phx-submit="save"
@@ -226,12 +279,84 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
 
           <div>
             <label class="block text-sm text-parchment-dim mb-1">{gettext("Profile photo")}</label>
-            <img
-              :if={@profile.photo_url}
-              src={@profile.photo_url}
-              class="w-24 h-24 rounded-full object-cover mb-2"
-            />
-            <.live_file_input upload={@uploads.photo} class="text-parchment-dim text-sm" />
+            <p class="text-parchment-dim text-xs mb-3">
+              {gettext("A clear, friendly headshot — shown on your public profile and in the nutritionist directory. JPG, PNG or WebP, up to 5 MB.")}
+            </p>
+
+            <div class="flex items-center gap-4" phx-drop-target={@uploads.photo.ref}>
+              <div class="shrink-0">
+                <%!-- Selected-but-unsaved file preview wins over the stored photo. --%>
+                <.live_img_preview
+                  :for={entry <- @uploads.photo.entries}
+                  entry={entry}
+                  class="w-24 h-24 rounded-full object-cover border border-ink-panel2"
+                />
+                <img
+                  :if={@uploads.photo.entries == [] and not is_nil(@profile.photo_url) and not @remove_photo}
+                  src={@profile.photo_url}
+                  class="w-24 h-24 rounded-full object-cover border border-ink-panel2"
+                />
+                <div
+                  :if={@uploads.photo.entries == [] and (is_nil(@profile.photo_url) or @remove_photo)}
+                  class="w-24 h-24 rounded-full bg-paprika/10 text-paprika flex items-center justify-center font-bold text-3xl"
+                >
+                  {display_initial(@changeset)}
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <%!-- The native file input is hidden app-wide (essentials.css), so a
+                     styled <label> tied to its ref is the visible, clickable trigger. --%>
+                <label
+                  for={@uploads.photo.ref}
+                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm cursor-pointer transition"
+                >
+                  <.icon name="hero-arrow-up-tray" class="w-4 h-4" />
+                  {if @profile.photo_url, do: gettext("Change photo"), else: gettext("Choose photo")}
+                </label>
+                <.live_file_input upload={@uploads.photo} />
+
+                <div :for={entry <- @uploads.photo.entries} class="flex items-center gap-3">
+                  <span class="text-parchment-dim text-xs">{entry.progress}%</span>
+                  <button
+                    type="button"
+                    phx-click="cancel-photo"
+                    phx-value-ref={entry.ref}
+                    class="text-xs text-paprika hover:text-paprika-soft"
+                  >
+                    {gettext("Cancel")}
+                  </button>
+                </div>
+
+                <button
+                  :if={@uploads.photo.entries == [] and not is_nil(@profile.photo_url) and not @remove_photo}
+                  type="button"
+                  phx-click="remove-photo"
+                  class="text-xs text-parchment-dim hover:text-paprika"
+                >
+                  {gettext("Remove photo")}
+                </button>
+                <div :if={@remove_photo} class="space-y-1">
+                  <button
+                    type="button"
+                    phx-click="keep-photo"
+                    class="text-xs text-parchment-dim hover:text-paprika"
+                  >
+                    {gettext("Keep current photo")}
+                  </button>
+                  <p class="text-parchment-dim text-xs">
+                    {gettext("Your photo will be removed when you save.")}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p :for={err <- upload_errors(@uploads.photo)} class="text-rose-400 text-xs mt-2">
+              {error_to_string(err)}
+            </p>
+            <%= for entry <- @uploads.photo.entries, err <- upload_errors(@uploads.photo, entry) do %>
+              <p class="text-rose-400 text-xs mt-2">{error_to_string(err)}</p>
+            <% end %>
           </div>
         </section>
 

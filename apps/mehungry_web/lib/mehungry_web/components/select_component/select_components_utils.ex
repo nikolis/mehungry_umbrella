@@ -21,49 +21,48 @@ defmodule MehungryWeb.SelectComponentUtils do
   end
 
   def get_selected_items(changes, _form_params, input_variable, _label_function, assigns) do
-    input_variable_form_params = []
-
-    input_variable_changeset =
-      if length(Map.keys(changes)) > 0 do
-        Map.get(changes, input_variable)
-      else
-        nil
-      end
-
     selected_items = Map.get(assigns, :selected_items)
-
     input_variable_form_data = Map.get(assigns.form.data, input_variable)
 
-    tuple_results =
-      {input_variable_changeset, input_variable_form_params, selected_items,
-       input_variable_form_data}
+    # A field is "touched" the moment the changeset carries an entry for it —
+    # which happens as soon as the user picks *or clears* a value (the JS hook
+    # writes the id, or an empty string, into the hidden input and the form
+    # re-validates). We must distinguish "key present but nil" (the user cleared
+    # the select) from "key absent" (an untouched, freshly rendered field): only
+    # the latter may fall back to the persisted `form.data`. Resurrecting the
+    # persisted value on a deliberate clear is what made the widget snap back to
+    # the old selection instead of letting the user search for a replacement.
+    cond do
+      is_map(changes) and Map.has_key?(changes, input_variable) ->
+        case Map.get(changes, input_variable) do
+          nil ->
+            []
 
-    case tuple_results do
-      {nil, _form_params, nil, nil} ->
-        []
+          change_value ->
+            change_value =
+              if is_map(change_value) do
+                {change_value.id, change_value.name}
+              else
+                change_value
+              end
 
-      {nil, _form_params, nil, form_date} ->
-        form_date
+            Enum.filter(assigns.items, fn x ->
+              if is_binary(change_value) do
+                String.contains?(change_value, elem(x, 0))
+              else
+                change_value == String.to_integer(elem(x, 0))
+              end
+            end)
+        end
 
-      {nil, _form_params, selected_items, _} ->
+      not is_nil(selected_items) ->
         selected_items
 
-      # get_items_from_params(form_params, assigns.items)
-      {selected_items, _, _, _} ->
-        selected_items =
-          if is_map(selected_items) do
-            {selected_items.id, selected_items.name}
-          else
-            selected_items
-          end
+      not is_nil(input_variable_form_data) ->
+        input_variable_form_data
 
-        Enum.filter(assigns.items, fn x ->
-          if is_binary(selected_items) do
-            String.contains?(selected_items, elem(x, 0))
-          else
-            selected_items == String.to_integer(elem(x, 0))
-          end
-        end)
+      true ->
+        []
     end
   end
 end

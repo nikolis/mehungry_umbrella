@@ -1,42 +1,48 @@
 defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
+  @moduledoc """
+  Inline create / rename form for a shopping list. Rendered by the parent in the
+  sidebar while `@basket_form` is set; `action` is `:new` (create) or `:edit`
+  (rename). Save notifies the parent `{:saved, basket}`; Cancel notifies
+  `{:cancelled}`.
+  """
   use MehungryWeb, :live_component
-  import MehungryWeb.CoreComponents
 
   alias Mehungry.Inventory
-  alias Mehungry.History
 
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
+    <div class="p-4 border-b border-ink-panel2">
       <.simple_form
         for={@form}
         id="basket-basic-form"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
-        class="flex flex-col side-form px-4 gap-4"
+        class="flex flex-col gap-3"
       >
-        <.input field={@form[:user_id]} type="hidden" />
         <input
           type="text"
           name={@form[:title].name}
-          placeholder="List name..."
-          class=" h-fit flex-1 mt-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment text-sm placeholder:text-parchment-dim focus:outline-none focus:border-paprika"
+          value={@form[:title].value}
+          placeholder={gettext("List name…")}
+          autofocus
+          class="h-fit flex-1 px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment text-sm placeholder:text-parchment-dim focus:outline-none focus:border-paprika"
         />
-        <div clas="w-fit mx-4 my-4 ">
+        <div class="flex items-center gap-2">
           <button
             type="submit"
-            class="px-3 py-2 bg-paprika hover:bg-paprika-soft text-ink rounded-lg text-sm transition mr-2 font-bold"
-            phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
+            class="px-3 py-2 bg-paprika hover:bg-paprika-soft text-ink rounded-lg text-sm transition font-bold"
           >
-            SAVE
+            {if @action == :edit, do: gettext("Rename"), else: gettext("Create")}
           </button>
           <button
-            class="text-parchment-dim hover:text-parchment font-semibold "
-            phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
+            type="button"
+            phx-click="cancel"
+            phx-target={@myself}
+            class="text-parchment-dim hover:text-parchment text-sm font-semibold"
           >
-            CANCEL
+            {gettext("Cancel")}
           </button>
         </div>
       </.simple_form>
@@ -46,7 +52,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
   @impl true
   def update(%{shopping_basket: basket, user: user} = assigns, socket) do
-    changeset = Inventory.change_shopping_basket(Map.put(basket, "user_id", user.id))
+    changeset = Inventory.change_shopping_basket(basket, %{})
 
     {:ok,
      socket
@@ -57,105 +63,47 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   end
 
   @impl true
-  def handle_event("validate", %{"shopping_basket" => shopping_basket_params}, socket) do
-    shopping_basket_params = Map.put(shopping_basket_params, "user_id", socket.assigns.user.id)
-
+  def handle_event("validate", %{"shopping_basket" => params}, socket) do
     changeset =
       socket.assigns.shopping_basket
-      |> Inventory.change_shopping_basket(shopping_basket_params)
+      |> Inventory.change_shopping_basket(with_user(params, socket))
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
   end
 
-  def handle_event("save", %{"shopping_basket" => shopping_basket_params}, socket) do
-    shopping_basket_params = Map.put(shopping_basket_params, "user_id", socket.assigns.user.id)
-    save_shopping_basket(socket, socket.assigns.action, shopping_basket_params)
+  def handle_event("save", %{"shopping_basket" => params}, socket) do
+    save(socket, socket.assigns.action, with_user(params, socket))
   end
 
-  defp save_shopping_basket(socket, :edit, shopping_basket_params) do
-    case Inventory.update_shopping_basket(socket.assigns.shopping_basket, shopping_basket_params) do
-      {:ok, shopping_basket} ->
-        notify_parent({:saved, shopping_basket})
+  def handle_event("cancel", _params, socket) do
+    notify_parent({:cancelled})
+    {:noreply, socket}
+  end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Shopping basket updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
+  defp save(socket, :edit, params) do
+    case Inventory.update_shopping_basket(socket.assigns.shopping_basket, params) do
+      {:ok, basket} ->
+        notify_parent({:saved, basket})
+        {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
   end
 
-  defp save_shopping_basket(socket, :index, shopping_basket_params) do
-    create_basket(socket, shopping_basket_params)
-  end
-
-  defp save_shopping_basket(socket, :import_items, shopping_basket_params) do
-    create_basket2(socket, shopping_basket_params)
-  end
-
-  defp create_basket2(socket, basket_params_params) do
-    user = socket.assigns.user
-
-    changeset =
-      socket.assigns.shopping_basket
-      |> Inventory.change_shopping_basket(basket_params_params)
-      |> Map.put(:action, :validate)
-
-    case changeset.valid? do
-      false ->
-        {:noreply, assign_form(socket, changeset)}
-
-      true ->
-        start_dt = basket_params_params["start_dt"]
-        st_dt = NaiveDateTime.from_iso8601!(start_dt)
-
-        end_dt = basket_params_params["end_dt"]
-        en_dt = NaiveDateTime.from_iso8601!(end_dt)
-
-        user_meals =
-          History.list_history_user_meals_for_user(socket.assigns.user.id, st_dt, en_dt)
-
-        all_ingredients = Inventory.aggregate_meal_ingredients(user_meals)
-
-        params = %{
-          "start_dt" => st_dt,
-          "end_dt" => en_dt,
-          "basket_ingredients" => all_ingredients,
-          "user_id" => user.id
-        }
-
-        {:ok, shopping_basket} =
-          Inventory.update_shopping_basket(socket.assigns.shopping_basket, params)
-
-        notify_parent({:update, shopping_basket})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Shopping basket updated")
-         |> push_patch(to: socket.assigns.patch)
-         |> assign(:shopping_basket, shopping_basket)}
-    end
-  end
-
-  defp create_basket(socket, basket_params_params) do
-    shopping_basket = Inventory.create_shopping_basket(basket_params_params)
-
-    case shopping_basket do
+  defp save(socket, _new, params) do
+    case Inventory.create_shopping_basket(params) do
       {:ok, basket} ->
         notify_parent({:saved, basket})
+        {:noreply, socket}
 
-      _ ->
-        ""
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign_form(socket, changeset)}
     end
-
-    {:noreply,
-     socket
-     |> assign(:shopping_basket, shopping_basket)
-     |> push_patch(to: socket.assigns.patch)}
   end
+
+  defp with_user(params, socket), do: Map.put(params, "user_id", socket.assigns.user.id)
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))

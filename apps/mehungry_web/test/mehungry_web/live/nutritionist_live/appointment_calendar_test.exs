@@ -81,9 +81,13 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
     assert render(view) =~ "Appointment not found."
   end
 
-  test "clicking a day opens the hourly day-agenda modal (not the create form)",
+  test "the day agenda is an always-visible pane; selecting a day updates it",
        %{conn: conn} do
-    {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+    {:ok, view, html} = live(conn, "/nutritionist/appointments")
+
+    # The console always shows the triage rail and the agenda — no modal needed.
+    assert html =~ "Needs you"
+    assert html =~ "06:00"
 
     html =
       render_click(view, "select_date", %{"date" => Date.to_iso8601(Date.add(Date.utc_today(), 3))})
@@ -110,7 +114,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
       })
 
     {:ok, _view, html} = live(conn, "/nutritionist/appointments")
-    assert html =~ "Google Calendar connected"
+    assert html =~ "Google Calendar synced"
   end
 
   test "cannot manually create an appointment for a user who is not your client",
@@ -134,6 +138,31 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
 
     assert render(view) =~ "Select one of your own clients."
     assert Repo.aggregate(Professionals.Appointment, :count) == before
+  end
+
+  test "editing a requested appointment surfaces Accept, which transitions it", %{
+    conn: conn,
+    attacker: attacker
+  } do
+    client = Mehungry.AccountsFixtures.user_fixture()
+
+    {:ok, pending} =
+      Professionals.create_appointment(%{
+        professional_id: attacker.id,
+        client_id: client.id,
+        scheduled_at: ~N[2099-04-01 10:00:00],
+        ends_at: ~N[2099-04-01 11:00:00],
+        title: "Pending one",
+        status: "requested"
+      })
+
+    {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+
+    html = render_click(view, "edit_appointment", %{"id" => to_string(pending.id)})
+    assert html =~ "This is a pending request."
+
+    render_click(view, "accept_appointment", %{"appointment_id" => to_string(pending.id)})
+    assert Repo.get(Professionals.Appointment, pending.id).status == "accepted"
   end
 
   describe "log measurement" do
@@ -216,6 +245,79 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
       html = render_click(view, "edit_appointment", %{"id" => to_string(external.id)})
 
       refute html =~ "Log measurement"
+    end
+  end
+
+  describe "non-UTC professional (Europe/Athens)" do
+    setup %{conn: conn} do
+      tz = "Europe/Athens"
+      pro = Mehungry.AccountsFixtures.user_fixture()
+      {:ok, _} = Subscriptions.upsert_subscription(pro.id, %{tier: "pro", status: "active"})
+
+      {:ok, _profile} =
+        Professionals.create_professional_profile(%{
+          user_id: pro.id,
+          specialization: "Dietitian",
+          display_name: "Maria Athens",
+          timezone: tz
+        })
+
+      %{conn: log_in_user(conn, pro), pro: pro, tz: tz}
+    end
+
+    test "renders a stored-UTC appointment in the professional's local time", %{
+      conn: conn,
+      pro: pro,
+      tz: tz
+    } do
+      client = Mehungry.AccountsFixtures.user_fixture()
+      local_date = %{Mehungry.Time.local_today(tz) | day: 15}
+      utc_sched = Mehungry.Time.to_utc(NaiveDateTime.new!(local_date, ~T[09:30:00]), tz)
+
+      {:ok, _appt} =
+        Professionals.create_appointment(%{
+          professional_id: pro.id,
+          client_id: client.id,
+          scheduled_at: utc_sched,
+          ends_at: Mehungry.Time.to_utc(NaiveDateTime.new!(local_date, ~T[10:30:00]), tz),
+          title: "Athens consult",
+          status: "accepted"
+        })
+
+      # Stored value really is offset from the 09:30 the professional sees.
+      refute NaiveDateTime.to_time(utc_sched) == ~T[09:30:00]
+
+      {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+      html = render_click(view, "select_date", %{"date" => Date.to_iso8601(local_date)})
+
+      # 09:30 is not an hourly gridline label, so it can only come from the block.
+      assert html =~ "09:30"
+      assert html =~ "Athens consult"
+    end
+
+    test "manual create converts the entered local time to stored UTC", %{
+      conn: conn,
+      tz: tz
+    } do
+      local_date = %{Mehungry.Time.local_today(tz) | day: 16}
+      {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+
+      render_submit(view, "save_appointment", %{
+        "appointment" => %{
+          "external_client_name" => "Walk-in",
+          "title" => "Local 14:00 booking",
+          "date" => Date.to_iso8601(local_date),
+          "start_hour" => "14",
+          "start_minute" => "0",
+          "end_hour" => "15",
+          "end_minute" => "0"
+        }
+      })
+
+      appt = Repo.get_by(Professionals.Appointment, title: "Local 14:00 booking")
+      assert appt
+      assert appt.scheduled_at == Mehungry.Time.to_utc(NaiveDateTime.new!(local_date, ~T[14:00:00]), tz)
+      assert appt.ends_at == Mehungry.Time.to_utc(NaiveDateTime.new!(local_date, ~T[15:00:00]), tz)
     end
   end
 end

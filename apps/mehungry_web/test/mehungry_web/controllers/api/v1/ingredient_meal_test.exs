@@ -31,6 +31,8 @@ defmodule MehungryWeb.Api.V1.IngredientMealTest do
       assert %{"data" => [hit | _]} = resp
       assert hit["id"] == ingredient.id
       assert hit["name"] == "Banana parity"
+      # Species-aware emoji (derived from the English base name here → 🍌).
+      assert hit["icon"] == "🍌"
 
       units = hit["units"]
 
@@ -77,7 +79,7 @@ defmodule MehungryWeb.Api.V1.IngredientMealTest do
 
   describe "POST /api/v1/meals with an ingredient_user_meal" do
     test "logs a description-only portion via unit_selection and round-trips it", %{conn: conn} do
-      ingredient = FoodFixtures.ingredient_fixture(%{})
+      ingredient = FoodFixtures.ingredient_fixture(%{name: "Tomato, diced"})
 
       {:ok, portion} =
         Food.create_ingredient_portion(%{
@@ -99,6 +101,8 @@ defmodule MehungryWeb.Api.V1.IngredientMealTest do
 
       assert ing["ingredient_id"] == ingredient.id
       assert ing["quantity"] == 2.0
+      # The meal entry carries the species-aware emoji (Tomato → 🍅).
+      assert ing["icon"] == "🍅"
       # unit_selection split into the portion FK (no measurement unit), and the
       # signed picker value echoes back for a lossless edit.
       assert ing["ingredient_portion_id"] == portion.id

@@ -62,27 +62,33 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendarTest do
   end
 
   describe "meal creation flow" do
-    test "the calendar index renders and the Add Meal button is present", %{
+    test "the editor grid renders with in-cell add affordances", %{
       conn: conn,
       client: client
     } do
       {:ok, view, html} = live(conn, "/nutritionist/clients/#{client.id}/calendar")
       assert html =~ "meal plan"
-      assert has_element?(view, "#button_calendar")
+      # The week grid lays meal-type rows out with per-cell "add" controls.
+      assert html =~ "Breakfast"
+      assert has_element?(view, ~s(button[phx-click="add_cell"]))
     end
 
-    test "clicking Add Meal opens the meal form modal (does not crash)", %{
+    test "clicking an empty cell opens the meal form modal pre-set to that day/type", %{
       conn: conn,
       client: client
     } do
       {:ok, view, _html} = live(conn, "/nutritionist/clients/#{client.id}/calendar")
+      today = Date.utc_today() |> Date.to_iso8601()
 
+      # Today's breakfast cell is empty → its "+ add" routes through `add_cell`
+      # -> push_patch(:new). It must land on a real route (the whole chain) ...
+      # (Scoped to the desktop grid; the mobile focus-day view renders a twin.)
       view
-      |> element("#button_calendar")
+      |> element(
+        ~s([style*="grid-template-columns"] button[phx-click="add_cell"][phx-value-date="#{today}"][phx-value-type="breakfast"])
+      )
       |> render_click()
 
-      # The click fans out pick-date -> {:initial_modal, ...} -> push_patch(:new).
-      # It must land on a real route (this used to raise on a missing one)...
       path = assert_patch(view)
       assert path =~ ~r{^/nutritionist/clients/#{client.id}/calendar/.+}
 
@@ -101,6 +107,20 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendarTest do
         live(conn, "/nutritionist/clients/#{client.id}/calendar/#{today}/breakfast")
 
       assert has_element?(view, "#client_calendar_modal")
+    end
+  end
+
+  describe "AI draft" do
+    test "the client calendar exposes the client-aware AI draft trigger", %{
+      conn: conn,
+      client: client
+    } do
+      {:ok, view, html} = live(conn, "/nutritionist/clients/#{client.id}/calendar")
+
+      # The trigger + its (collapsed) prompt panel are present, tailored to the client.
+      assert html =~ "AI draft week"
+      assert html =~ "tailored to this client"
+      assert has_element?(view, ~s(form[phx-submit="ai_plan_week"]))
     end
   end
 

@@ -18,6 +18,7 @@ are the key the compound facts and health advice hinge on.
 | `alternative_name` | string | |
 | `scientific_name` | string | optional taxonomy — **drives the crawl** |
 | `family` | string | optional taxonomy |
+| `icon` | string | optional emoji **override**. When blank, `Mehungry.Food.species_icon/1` derives a default emoji from name/variety/family via `Mehungry.Food.SpeciesIcons` (name keyword → `family` → generic 🥗). Editable per species in the `/professional/usda-schema` tree; served on the `/api/v1/species` payloads. **Ingredient-level resolution:** `Mehungry.Food.ingredient_icons/1` maps logged/searched ingredients to an emoji through this species (override-aware), falling back to the ingredient's own English name when it isn't curated onto a species — drives the calendar meal cards and the ingredient search pickers. |
 
 ## Relationships
 

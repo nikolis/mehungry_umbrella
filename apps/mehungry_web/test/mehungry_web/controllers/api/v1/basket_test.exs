@@ -28,6 +28,37 @@ defmodule MehungryWeb.Api.V1.BasketTest do
     assert conn |> delete(~p"/api/v1/basket/items/#{item_id}") |> response(204)
   end
 
+  test "basket items carry a grocery aisle", %{conn: conn} do
+    # A catalog ingredient in the "Vegetables" category → classifies to produce;
+    # its search_name is derived from the name, which is how add_item resolves it.
+    # (`category_fixture` dedups on the misspelled `:catgeory_name` key, so we pass
+    # both spellings to force a fresh "Vegetables" category rather than reusing one.)
+    _ =
+      FoodFixtures.ingredient_fixture(%{
+        name: "Broccoli",
+        catgeory_name: "Vegetables",
+        category_name: "Vegetables"
+      })
+
+    produce =
+      conn
+      |> post(~p"/api/v1/basket/items", %{"name" => "Broccoli", "quantity" => 1.0})
+      |> json_response(201)
+
+    assert %{"data" => %{"aisle" => "produce"}} = produce
+
+    # A free-text manual item with no catalog match falls into "other".
+    other =
+      conn
+      |> post(~p"/api/v1/basket/items", %{"name" => "Zzxqv Widget", "quantity" => 1.0})
+      |> json_response(201)
+
+    assert %{"data" => %{"aisle" => "other"}} = other
+
+    listed = conn |> get(~p"/api/v1/basket") |> json_response(200)
+    assert Enum.all?(listed["data"]["items"], &is_binary(&1["aisle"]))
+  end
+
   test "import a recipe's ingredients into the basket", %{conn: conn, user: user} do
     recipe = FoodFixtures.recipe_fixture(user)
 

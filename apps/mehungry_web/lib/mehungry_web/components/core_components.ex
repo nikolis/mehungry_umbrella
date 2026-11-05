@@ -1831,7 +1831,9 @@ defmodule MehungryWeb.CoreComponents do
         <div>
           <p class="text-parchment font-medium">{gettext("Are you a nutritionist?")}</p>
           <p class="text-parchment-dim text-sm mt-0.5">
-            {gettext("Get discovered, manage your clients, and let AI draft the plans — your advice stays 100% yours.")}
+            {gettext(
+              "Get discovered, manage your clients, and let AI draft the plans — your advice stays 100% yours."
+            )}
           </p>
         </div>
         <a
@@ -1860,6 +1862,91 @@ defmodule MehungryWeb.CoreComponents do
   defp nutritionist_recruit_href(_user), do: "/#{nutritionist_recruit_locale()}/upgrade"
 
   defp nutritionist_recruit_locale, do: Gettext.get_locale(MehungryWeb.Gettext)
+
+  @doc """
+  A public-profile card for a nutritionist, shared by the directory
+  (`/nutritionists`) and the client "My nutritionist" hub so the two never drift.
+
+  Takes a `%Mehungry.Professionals.ProfessionalProfile{}`. Two variants:
+
+    * `:directory_link` (default) — the whole card is a link to the public
+      profile; used in grids of results.
+    * `:preview` — a static card with an `:actions` slot rendered below (the
+      hub's connected-nutritionist hero, where the CTAs navigate explicitly).
+
+  The avatar falls back to the display-name initial when `photo_url` is nil.
+  """
+  attr :profile, :map, required: true
+  attr :variant, :atom, default: :directory_link, values: [:directory_link, :preview]
+  attr :class, :string, default: nil
+  slot :actions
+
+  def nutritionist_card(%{variant: :directory_link} = assigns) do
+    ~H"""
+    <.link
+      navigate={~p"/nutritionists/#{@profile.slug}"}
+      class={[
+        "block bg-ink-panel border border-ink-panel2 rounded-xl p-5 hover:border-paprika/40 transition",
+        @class
+      ]}
+    >
+      <.nutritionist_identity profile={@profile} />
+      <p :if={@profile.city} class="text-sm text-parchment-dim mt-3">📍 {@profile.city}</p>
+      <p :if={@profile.bio} class="text-sm text-parchment-dim mt-2 line-clamp-3">{@profile.bio}</p>
+    </.link>
+    """
+  end
+
+  def nutritionist_card(%{variant: :preview} = assigns) do
+    ~H"""
+    <div class={["bg-ink-panel border border-ink-panel2 rounded-xl p-5", @class]}>
+      <.nutritionist_identity profile={@profile} />
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm text-parchment-dim">
+        <span :if={@profile.city}>📍 {@profile.city}</span>
+        <span :if={@profile.consultation_fee_cents}>
+          {nutritionist_fee_label(@profile.consultation_fee_cents)}
+        </span>
+      </div>
+      <p :if={@profile.bio} class="text-sm text-parchment-dim mt-3 line-clamp-2">{@profile.bio}</p>
+      <div :if={@actions != []} class="flex flex-wrap gap-2 mt-4">
+        {render_slot(@actions)}
+      </div>
+    </div>
+    """
+  end
+
+  attr :profile, :map, required: true
+
+  defp nutritionist_identity(assigns) do
+    ~H"""
+    <div class="flex items-center gap-3">
+      <img
+        :if={@profile.photo_url}
+        src={@profile.photo_url}
+        alt={@profile.display_name}
+        class="w-14 h-14 rounded-full object-cover"
+      />
+      <div
+        :if={is_nil(@profile.photo_url)}
+        class="w-14 h-14 rounded-full bg-paprika/10 text-paprika flex items-center justify-center font-bold text-lg"
+      >
+        {String.first(@profile.display_name || "N")}
+      </div>
+      <div class="min-w-0">
+        <p class="font-semibold text-parchment truncate">{@profile.display_name}</p>
+        <p :if={@profile.specialization} class="text-sm text-parchment-dim truncate">
+          {@profile.specialization}
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  defp nutritionist_fee_label(cents) when is_integer(cents) do
+    gettext("%{amount} / session", amount: "€" <> :erlang.float_to_binary(cents / 100, decimals: 2))
+  end
+
+  defp nutritionist_fee_label(_), do: nil
 
   @doc """
   A flat client↔nutritionist message thread: a scrollable bubble list (own
@@ -1904,6 +1991,8 @@ defmodule MehungryWeb.CoreComponents do
 
       <form phx-submit="send_message" class="mt-3 flex items-end gap-2">
         <textarea
+          id="message-compose"
+          phx-hook="EnterToSend"
           name="body"
           rows="2"
           placeholder={@placeholder}
