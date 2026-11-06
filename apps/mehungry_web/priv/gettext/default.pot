@@ -1476,14 +1476,14 @@ msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:769
 #: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex:145
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:472
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:479
 #, elixir-autogen, elixir-format
 msgid "carbs"
 msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:772
 #: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex:142
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:475
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:482
 #, elixir-autogen, elixir-format
 msgid "fat"
 msgstr ""
@@ -1518,7 +1518,7 @@ msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:764
 #: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex:139
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:467
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:474
 #, elixir-autogen, elixir-format
 msgid "protein"
 msgstr ""
@@ -2189,8 +2189,8 @@ msgstr ""
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:123
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:160
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:207
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:319
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:356
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:291
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:325
 #, elixir-autogen, elixir-format
 msgid "Share"
 msgstr ""
@@ -2428,6 +2428,7 @@ msgstr ""
 #: lib/mehungry_web/live/meal_plan_live/show.ex:222
 #: lib/mehungry_web/live/meal_plan_live/show.ex:224
 #: lib/mehungry_web/live/meal_plan_live/show.ex:225
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:85
 #, elixir-autogen, elixir-format
 msgid "Meal Plans"
 msgstr ""
@@ -2520,7 +2521,7 @@ msgid "Build your own week 👉 %{url}"
 msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:748
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:451
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:458
 #: lib/mehungry_web/live/recipe_browser_live/index.html.heex:181
 #, elixir-autogen, elixir-format
 msgid "Claims follow EU Reg. 1169/2011 & 1924/2006, per serving."
@@ -4811,6 +4812,7 @@ msgid "Manage"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/dashboard.ex:169
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:71
 #, elixir-autogen, elixir-format
 msgid "Meal Blueprints"
 msgstr ""
@@ -7163,7 +7165,7 @@ msgid "Close"
 msgstr ""
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:93
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:508
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:515
 #: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:571
 #: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:572
 #: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:573
@@ -8091,13 +8093,13 @@ msgid "Full nutrition facts"
 msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:789
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:398
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:405
 #, elixir-autogen, elixir-format
 msgid "Save to my recipes"
 msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:789
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:398
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:405
 #, elixir-autogen, elixir-format
 msgid "Saved to my recipes"
 msgstr ""
@@ -8107,7 +8109,7 @@ msgstr ""
 msgid "Shared a weekly plan"
 msgstr ""
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:544
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:551
 #, elixir-autogen, elixir-format
 msgid "View all %{count} comments"
 msgstr ""
@@ -8118,12 +8120,12 @@ msgid "View full plan — recipes, grocery list & nutrition"
 msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:775
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:478
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:485
 #, elixir-autogen, elixir-format
 msgid "per serving"
 msgstr ""
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:531
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:538
 #, elixir-autogen, elixir-format
 msgid "%{count} save"
 msgid_plural "%{count} saves"
@@ -8178,4 +8180,9 @@ msgstr ""
 #: lib/mehungry_web/live/recipe_browser_live/index.html.heex:38
 #, elixir-autogen, elixir-format
 msgid "on"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "Recipes"
 msgstr ""

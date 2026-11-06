@@ -8112,9 +8112,9 @@ msgid "View full plan — recipes, grocery list & nutrition"
 msgstr ""
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:387
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "per serving"
-msgstr ""
+msgstr "ανά μερίδα"
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:505
 #, elixir-autogen, elixir-format
@@ -8122,3 +8122,33 @@ msgid "%{count} save"
 msgid_plural "%{count} saves"
 msgstr[0] "αποθηκεύτηκε %{count}"
 msgstr[1] "αποθηκεύτηκε %{count}"
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:6
+#, elixir-autogen, elixir-format
+msgid "Discover"
+msgstr "Ανακάλυψε"
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Recipes worth saving"
+msgstr "Συνταγές που αξίζει να αποθηκεύσεις"
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:12
+#, elixir-autogen, elixir-format
+msgid "Browse the community kitchen — filtered by the nutrition that matters to you."
+msgstr "Περιηγήσου στην κουζίνα της κοινότητας — φιλτραρισμένη με βάση τη διατροφή που σε ενδιαφέρει."
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "Recipes"
+msgstr "Συνταγές"
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:148
+#, elixir-autogen, elixir-format
+msgid "Nutrition lens"
+msgstr "Διατροφικός φακός"
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:151
+#, elixir-autogen, elixir-format
+msgid "Show recipes proven high in a nutrient — per serving, EU-regulated."
+msgstr "Εμφάνισε συνταγές αποδεδειγμένα πλούσιες σε ένα θρεπτικό συστατικό — ανά μερίδα, βάσει κανονισμών ΕΕ."
