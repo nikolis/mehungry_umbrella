@@ -216,7 +216,10 @@ label-style claim ("High in Iron"), never as health/medical advice.
 `Mehungry.AI.RecipeInsight.macros/1`): `energy_kcal`, `protein_g`, `carbs_g`,
 `fat_g`, each a number **rounded to an integer** and **per serving** (the recipe
 total divided by `servings`). Always present; a recipe with no nutrition data
-yields all-zero values.
+yields all-zero values. Present on the feed card, recipe detail, the profile
+grid card (§6), and the recipe-search card (§8) — the shared `RecipeJSON.card/2`
+payload — so the mobile client can render per-serving macros on typed search
+results.
 
 ### `GET /api/v1/recipes/:id` 🔓
 Full recipe detail (image, timing, servings, ingredients grouped, steps,

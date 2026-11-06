@@ -86,7 +86,8 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       image_url: recipe.image_url,
       list_image_url: recipe.list_image_url || recipe.image_url,
       servings: recipe.servings,
-      badges: badges(recipe)
+      badges: badges(recipe),
+      macros: macros(recipe)
     }
     |> maybe_blueprint_match(blueprint_match)
   end
