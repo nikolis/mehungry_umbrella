@@ -26,6 +26,7 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       hashtags: hashtags(recipe),
       servings: recipe.servings,
       badges: badges(recipe),
+      macros: macros(recipe),
       prep_time: time_range(recipe.preperation_time_lower_limit, recipe.preperation_time_upper_limit),
       cook_time: time_range(recipe.cooking_time_lower_limit, recipe.cooking_time_upper_limit),
       likes_count: length(post.upvotes || []),
@@ -96,6 +97,21 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
   # through as stored (string-keyed, already coverage-gated). Each entry is
   # `%{"nutrient" => "Iron", "level" => "high"|"source", "percent_nrv" => 47}`.
   defp badges(recipe), do: Map.get(recipe, :badges) || []
+
+  # Per-serving macro summary (Energy/Protein/Carbs/Fat), the same figures the
+  # web home card renders via `Mehungry.AI.RecipeInsight.macros/1` — derived from
+  # the recipe's stored `nutrients` map, divided by servings. Rounded to integers
+  # (grams + kcal) to mirror the card display.
+  defp macros(recipe) do
+    m = Mehungry.AI.RecipeInsight.macros(recipe)
+
+    %{
+      energy_kcal: round(m.calories),
+      protein_g: round(m.protein_g),
+      carbs_g: round(m.carbs_g),
+      fat_g: round(m.fat_g)
+    }
+  end
 
   defp ingredient(ri) do
     %{

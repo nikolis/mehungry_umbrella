@@ -128,3 +128,13 @@ rest of the ranked roadmap (role-branched entry screen, pricing flip).
 `list_public_professionals/1` (filters), `get_public_professional_by_slug/1`,
 `list_professional_cities/0`, `update_professional_stripe/2`,
 `get_profile_by_stripe_account/1`, `set_stripe_charges_enabled/2`.
+
+## Mobile API
+
+The public directory + profile + articles are mirrored read-only in
+`docs/implementation/new_dec_specs/mobile_api_spec.md` **§18**: `GET /api/v1/nutritionists`
+(directory, `list_public_professionals/1` + `list_professional_cities/0`),
+`GET /api/v1/nutritionists/:slug` (full profile + active services + article summaries, via
+`get_public_professional_by_slug/1`), and `GET /api/v1/nutritionists/:slug/articles[/:article_slug]`.
+The profile JSON shape is driven by the field list above — **update §18 in the same change whenever
+these fields or the public read functions change.**

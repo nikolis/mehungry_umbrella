@@ -119,6 +119,19 @@ section is wrapped in a **max-height scroll**, preserves the tiered-refund cance
 in the professional's timezone (§ below). Paid bookings started from this hub return via
 `/my-nutritionist?booking=success|cancelled`, flashed by its `handle_params`.
 
+## Mobile API (client-facing)
+
+The mobile mirror of this hub + the booking/cancel flow is specified in
+`docs/implementation/new_dec_specs/mobile_api_spec.md` **§18 "My nutritionist (client-facing)"**
+— `GET/DELETE /api/v1/me/nutritionist` (hub + disconnect), `GET /api/v1/me/appointments` and
+`POST`/`DELETE /api/v1/me/appointments[/:id]` (book / cancel, reusing `request_appointment/4` and
+`cancel_appointment/1` with the same tiered refund), `GET /api/v1/nutritionists/:slug/slots` (the
+booking calendar via `available_slots/3`), the client-side `GET/POST /api/v1/me/invitations`, and
+`GET/POST /api/v1/me/nutritionist/messages`. Paid bookings return a Stripe `checkout_url` the
+client opens to authorize the hold (deep-link `success_url`/`cancel_url` replace the
+`/my-nutritionist?booking=…` return). **Keep that spec in sync with any change to the client flows
+on this page** (it is the mobile contract).
+
 ## Email delivery
 
 `Mehungry.ObanWorkers.AppointmentMailerWorker` runs on the **`:mailers`** Oban queue (this is

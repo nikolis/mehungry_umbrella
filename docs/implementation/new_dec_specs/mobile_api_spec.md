@@ -72,7 +72,11 @@ drives the client. A later cursor upgrade (`?before=<id>`) is noted per-endpoint
 | Notifications (inbox §5.1) | `Api.V1.NotificationController` | `Notifications` (+ `Api.Broadcaster.dispatch/5`) |
 | Invitations | `Api.V1.InvitationController` | `Professionals` |
 | Feedback | `Api.V1.FeedbackController` | `Feedback` |
-| Nutritionist (phase 2) | `Api.V1.Nutritionist.*` | `Professionals`, `History` |
+| My nutritionist — hub/messages/progress (§18) | `Api.V1.MyNutritionistController` | `Professionals` |
+| My nutritionist — directory/profile/slots/articles (§18) | `Api.V1.NutritionistDirectoryController` | `Professionals` |
+| My nutritionist — client appointments (§18) | `Api.V1.AppointmentController` | `Professionals` |
+| My nutritionist — onboarding questionnaire (§18) | `Api.V1.ClientOnboardingController` | `Onboarding`, `Professionals` |
+| Nutritionist portal — pro persona (§14) | `Api.V1.NutritionistController` | `Professionals`, `History` |
 
 Add a new pipeline + scope in `router.ex`:
 
@@ -189,6 +193,7 @@ state).
   "hashtags": ["vegetarian", "eggplant", "comfortfood"],
   "servings": 4,
   "badges": [ {"nutrient": "Iron", "level": "high", "percent_nrv": 47} ],
+  "macros": {"energy_kcal": 420, "protein_g": 18, "carbs_g": 52, "fat_g": 14},
   "prep_time": {"lower": 20, "upper": 20}, "cook_time": {"lower": 40, "upper": 40},
   "likes_count": 0, "comments_count": 0,
   "liked_by_me": false, "following_author": false,
@@ -205,6 +210,13 @@ coverage-gated server-side. Each entry: `nutrient` (canonical English name),
 NRV one serving supplies). Sorted strongest-first; `[]` when none. Present on the
 feed card, recipe detail, and profile card payloads. Render as a neutral
 label-style claim ("High in Iron"), never as health/medical advice.
+
+**`macros`** — per-serving macro summary derived from the recipe's stored
+`nutrients` map (the same figures the web home card renders via
+`Mehungry.AI.RecipeInsight.macros/1`): `energy_kcal`, `protein_g`, `carbs_g`,
+`fat_g`, each a number **rounded to an integer** and **per serving** (the recipe
+total divided by `servings`). Always present; a recipe with no nutrition data
+yields all-zero values.
 
 ### `GET /api/v1/recipes/:id` 🔓
 Full recipe detail (image, timing, servings, ingredients grouped, steps,
@@ -802,6 +814,356 @@ Validation failures return `422` with the standard `errors.fields` envelope
 
 ---
 
+## 18. My nutritionist (client-facing)
+
+The consumer side of the client↔nutritionist relationship — the mobile mirror of
+the **"My nutritionist" hub** (`MehungryWeb.MyNutritionistLive.Index` at
+`/my-nutritionist`), the public nutritionist **directory + profile**
+(`PublicNutritionistLive.{Index,Show}`), the shared **booking** component
+(`AppointmentBookingComponent`), the embedded **messages** thread
+(`MessagesComponent`), the per-nutritionist **onboarding questionnaire**
+(`ClientOnboardingLive`), and the client's own **"My progress"** chart on
+`/profile`. This is distinct from the **nutritionist portal** (§14) — that is the
+pro persona viewing *their* clients; this is any logged-in user viewing *their*
+nutritionist. All endpoints delegate to `Mehungry.Professionals` (plus
+`Mehungry.Onboarding` for the questionnaire); nothing here is pro-gated.
+
+> **Two different links.** "Who is my nutritionist" is the one-per-client
+> `TutorClientAssignment` (`Professionals.get_assignment_for_client/1`), **not**
+> the nutritionist-owned clinical `ProfessionalClient` file. A client has at most
+> one assignment. Consultation-note **bodies/to-dos are never exposed to the
+> client** — only note-derived *measurements* reach them, via `GET /me/progress`.
+
+Suggested modules: `Api.V1.MyNutritionistController` (hub, disconnect, messages,
+progress), `Api.V1.NutritionistDirectoryController` (public directory/profile/
+slots/articles), `Api.V1.AppointmentController` (client appointments), and
+`Api.V1.ClientOnboardingController` (questionnaire). Reuse the existing
+`Api.V1.InvitationController` for `/me/invitations`.
+
+### Discovery — directory & public profile
+
+#### `GET /api/v1/nutritionists` 🔓 — directory
+Mirrors `PublicNutritionistLive.Index`. Filters `?city=` and `?q=` (free text);
+paginated (§1.3). Delegates to `Professionals.list_public_professionals/1` (only
+`is_public` rows). `cities` is the distinct-city filter list
+(`list_professional_cities/0`) so the client can build the city dropdown.
+```json
+// 200
+{ "data": [
+    { "professional_id": 88, "slug": "maria-k", "display_name": "Maria K.",
+      "specialization": "Clinical dietitian", "bio": "Short bio…",
+      "photo_url": "https://…", "city": "Rethymno", "region": "Crete", "handle": "mariak" }
+  ],
+  "meta": { "page": 1, "page_size": 20, "has_more": false },
+  "cities": ["Athens", "Rethymno", "Thessaloniki"] }
+```
+
+#### `GET /api/v1/nutritionists/:slug` 🔓 — public profile
+Mirrors `PublicNutritionistLive.Show`. Resolves via
+`Professionals.get_public_professional_by_slug/1`; `404` if unknown or not public.
+Serializes the full `ProfessionalProfile` plus the bookable **services**
+(`list_active_services/1`, intro first) and a short **articles** list
+(`list_published_articles_for_profile/1`). `payments_enabled` is
+`consultation_payments_enabled?/0 && profile.payable?` — the client uses it to
+know whether booking a paid service will require card authorization.
+```json
+// 200
+{ "data": {
+  "professional_id": 88,
+  "slug": "maria-k",
+  "handle": "mariak",
+  "display_name": "Maria K.",
+  "specialization": "Clinical dietitian",
+  "bio": "Short bio…",
+  "photo_url": "https://…",
+  "education": "…", "scientific_contributions": "…", "professional_achievements": "…",
+  "city": "Rethymno", "region": "Crete", "office_address": "…",
+  "phone": "+30…", "contact_email": "maria@…", "website_url": "https://…",
+  "timezone": "Europe/Athens",
+  "slot_minutes": 60,
+  "payments_enabled": true,
+  "services": [
+    { "id": 5, "kind": "intro",   "name": "Free intro call", "description": "…", "price_eur": null,      "duration_minutes": 15, "session_count": 1 },
+    { "id": 7, "kind": "session", "name": "Follow-up",       "description": "…", "price_eur": "€40.00",  "duration_minutes": 60, "session_count": 1 }
+  ],
+  "articles": [ { "slug": "iron-rich-foods", "title": "Iron-rich foods", "published_at": "2026-09-01T00:00:00Z" } ]
+} }
+```
+
+#### `GET /api/v1/nutritionists/:slug/slots` 🔓 `?from=2026-11-07&to=2026-12-07`
+The booking calendar's open slots. Delegates to
+`Professionals.available_slots/3` (defaults `from`=today, `to`=today+30; past,
+booked, and Google-busy slots already removed). Slots are **UTC** ISO-8601 — the
+client groups them by date and renders them in the profile `timezone`.
+```json
+// 200
+{ "data": {
+  "timezone": "Europe/Athens",
+  "slot_minutes": 60,
+  "services": [ { "id": 5, "kind": "intro", "name": "Free intro call", "price_eur": null, "duration_minutes": 15 } ],
+  "slots": [ "2026-11-10T12:00:00Z", "2026-11-10T13:00:00Z", "2026-11-11T09:00:00Z" ]
+} }
+```
+
+#### `GET /api/v1/nutritionists/:slug/articles` 🔓 → list (as in the profile `articles` field)
+#### `GET /api/v1/nutritionists/:slug/articles/:article_slug` 🔓 — full article
+Mirrors `PublicNutritionistLive.Article`. Delegates to
+`get_published_article_by_slug/1` (verifies the article's profile slug matches the
+URL slug; `404` on draft/unknown). Returns ordered paragraphs (each with optional
+image) and the numbered references (PubMed studies / species / compounds /
+diseases). Read-only.
+
+### The hub — connected nutritionist
+
+#### `GET /api/v1/me/nutritionist` 🔒 — the hub payload
+Mirrors `MyNutritionistLive.Index`. `connected` + the profile **preview** come
+from `get_assignment_for_client/1` → `get_professional_profile/1` (the assignment
+preloads only the `:professional` user, so the profile is fetched separately).
+Always includes `pending_invitations` (so the unconnected empty state can still
+show an invitation banner) and `unread_messages`
+(`count_unread_messages_for/1`).
+```json
+// 200 — connected
+{ "data": {
+  "connected": true,
+  "nutritionist": {
+    "professional_id": 88, "slug": "maria-k", "handle": "mariak",
+    "display_name": "Maria K.", "specialization": "Clinical dietitian",
+    "bio": "Short bio…", "photo_url": "https://…", "city": "Rethymno",
+    "timezone": "Europe/Athens", "payments_enabled": true
+  },
+  "unread_messages": 2,
+  "pending_invitations": []
+} }
+// 200 — unconnected (empty state; directory is at GET /api/v1/nutritionists)
+{ "data": {
+  "connected": false,
+  "nutritionist": null,
+  "unread_messages": 0,
+  "pending_invitations": [
+    { "id": 12, "inserted_at": "2026-11-01T10:00:00Z",
+      "professional": { "professional_id": 88, "slug": "maria-k", "display_name": "Maria K.", "photo_url": "https://…" } }
+  ]
+} }
+```
+
+#### `DELETE /api/v1/me/nutritionist` 🔒 — disconnect → `204`
+The client ends their own link (`unassign_nutritionist/1`, confirm-gated in the
+UI). `404` if not currently connected. The hub then falls back to the unconnected
+state.
+
+### Invitations (from a nutritionist)
+
+Already implemented (`Api.V1.InvitationController`, router `/me/invitations`).
+Documented here as the home of the client-facing surface (§14 only referenced
+them). The pending list is also embedded in the hub payload above.
+
+#### `GET /api/v1/me/invitations` 🔒 → `list_pending_invitations_for_client/1`
+Each row carries the inviting `professional` preview (see the hub shape).
+#### `POST /api/v1/me/invitations/:id/accept` 🔒 — `accept_invitation/2` → creates the assignment. `{ "data": { "connected": true, "nutritionist": { … } } }`.
+#### `POST /api/v1/me/invitations/:id/decline` 🔒 — `decline_invitation/2` → `204`.
+
+An invitation also arrives in real time as a `user:<id>` channel `notification`
+of `type: "invitation"` (§13) and as an OS push.
+
+### Appointments (client side)
+
+#### `GET /api/v1/me/appointments` 🔒
+`list_appointments_for_client/1` (newest first; preloads payment/service/
+professional). Not paginated — a client's appointment history is small.
+```json
+// 200
+{ "data": [
+  {
+    "id": 501,
+    "status": "accepted",                       // requested|accepted|declined|cancelled|no_show
+    "title": "Follow-up consultation",
+    "notes": "high protein week",
+    "scheduled_at": "2026-11-10T12:00:00Z",     // UTC
+    "ends_at": "2026-11-10T13:00:00Z",
+    "timezone": "Europe/Athens",                // render in the nutritionist's zone (e.g. 14:00 EET)
+    "meeting_url": "https://meet.google.com/…", // null until accepted / for non-online
+    "cancellable": true,                        // status in [requested, accepted] AND in the future
+    "cancellation_refund_cents": 2000,          // refund if cancelled NOW (tiered); null if free/none
+    "professional": { "professional_id": 88, "slug": "maria-k", "display_name": "Maria K.", "photo_url": "https://…" },
+    "service": { "id": 7, "kind": "session", "name": "Follow-up", "price_eur": "€40.00", "duration_minutes": 60 },
+    "payment": { "status": "authorized", "amount_cents": 4000, "currency": "eur", "refunded_amount_cents": 0 }
+  }
+] }
+```
+**`scheduled_at`/`ends_at`** are stored as naive UTC and serialized with a `Z`
+suffix; always pair with `timezone` for display. **`payment`** is `null` for
+request-only (free / payments-off) bookings.
+
+#### `GET /api/v1/me/appointments/:id` 🔒 — `get_appointment_for_client/2` (tenant-scoped; `404` cross-tenant). Same shape.
+
+#### `POST /api/v1/me/appointments` 🔒 — book
+The booking wizard's "confirm". Delegates to `request_appointment/4`
+(`professional_id`, `client_id = current_user.id`, `scheduled_at`, opts). Validate
+the slot is still open (it re-derives `available_slots`).
+```json
+// request
+{ "professional_id": 88,
+  "scheduled_at": "2026-11-10T12:00:00Z",
+  "service_id": 7,
+  "title": "Follow-up consultation",
+  "notes": "high protein week",
+  "success_url": "mehungry://my-nutritionist?booking=success",
+  "cancel_url":  "mehungry://my-nutritionist?booking=cancelled" }
+// 201 — free / request-only (nothing to pay yet; status "requested")
+{ "data": { "appointment": { "id": 501, "status": "requested", … }, "checkout_url": null } }
+// 201 — paid service: client MUST open checkout_url to AUTHORIZE (hold) the card.
+//        The hold is only captured when the nutritionist accepts (manual capture).
+{ "data": { "appointment": { "id": 501, "status": "requested", … },
+            "checkout_url": "https://checkout.stripe.com/…" } }
+// 422 — the slot was taken between loading and confirming
+{ "errors": { "detail": "slot unavailable" } }
+```
+- `service_id` optional — omit for the free intro / request-only. A paid
+  `checkout_url` is returned only when `consultation_payments_enabled?()` AND the
+  profile is Stripe-onboarded (`payable?`) AND the service is chargeable AND both
+  `success_url`/`cancel_url` are supplied; otherwise the booking is request-only.
+- `success_url`/`cancel_url` are the deep links Stripe redirects back to; the hub
+  reads `?booking=success|cancelled`.
+- Nothing is confirmed on booking — the nutritionist still accepts/declines. A
+  `requested` email fires to the nutritionist (`AppointmentMailerWorker`).
+
+#### `DELETE /api/v1/me/appointments/:id` 🔒 — cancel
+`cancel_appointment/1` with the **tiered client refund** (`≥24h → 100%`,
+`4–24h → 50%`, `<4h → 0%`; previewed by `client_cancellation_refund_cents/1`).
+`404` cross-tenant; `422` if the appointment is not cancellable (already
+cancelled/declined/past). Returns the refund actually applied so the client can
+confirm it.
+```json
+// 200
+{ "data": { "id": 501, "status": "cancelled", "refund_cents": 4000 } }
+```
+
+### Messages (client ↔ nutritionist thread)
+
+The embedded hub thread (`MessagesComponent`) — there is no standalone page. All
+three resolve the connected nutritionist via `get_assignment_for_client/1`; `404`
+when unconnected.
+
+#### `GET /api/v1/me/nutritionist/messages` 🔒 → `list_messages/2`
+```json
+// 200
+{ "data": {
+  "nutritionist": { "professional_id": 88, "display_name": "Maria K." },
+  "messages": [
+    { "id": 9, "body": "Welcome aboard!", "from_me": false, "sender_user_id": 88, "read_at": "2026-11-02T08:00:00Z", "inserted_at": "2026-11-01T18:00:00Z" },
+    { "id": 10, "body": "Thanks!",        "from_me": true,  "sender_user_id": 49, "read_at": null,                    "inserted_at": "2026-11-01T18:05:00Z" }
+  ]
+} }
+```
+`from_me` = `sender_user_id == current_user.id`.
+#### `POST /api/v1/me/nutritionist/messages` 🔒 `{ "body": "Thanks!" }` — `send_message/4` → `201` with the created message.
+#### `POST /api/v1/me/nutritionist/messages/read` 🔒 — `mark_thread_read/3` → `204`.
+
+### Onboarding questionnaire
+
+The per-nutritionist intake form a client fills (`ClientOnboardingLive`). Keyed by
+`:professional_id` (**not** the assignment) because it is gated on the nutritionist
+having opened a `ProfessionalClient` file for the user
+(`get_client_record_by_user/2`); `404` if no record exists. Answers persist
+against that file (`subject_type: "professional_client"`) and surface to the
+nutritionist on the client file. Prompts/options localize via `Accept-Language`.
+
+#### `GET /api/v1/nutritionists/:professional_id/onboarding` 🔒
+Loads `Onboarding.ensure_client_questions/1` + `list_active_questions("client",
+professional_id)`, merged with the user's existing `get_answers/2`.
+```json
+// 200
+{ "data": { "questions": [
+  { "id": 3, "prompt": "What is your typical breakfast?", "type": "value",
+    "value_kind": "text", "required": true, "position": 0, "options": [],
+    "answer": { "value_text": "Oats", "selected_options": [] } },
+  { "id": 4, "prompt": "Any intolerances?", "type": "multi_choice",
+    "required": false, "position": 1,
+    "options": [ { "key": "gluten", "label": "Gluten" }, { "key": "lactose", "label": "Lactose" } ],
+    "answer": { "value_text": null, "selected_options": ["gluten"] } }
+] } }
+```
+`type` ∈ `value | single_choice | multi_choice`; `value_kind` ∈ `text | number`
+(only for `value`). `answer` is `null` when unanswered.
+
+#### `PUT /api/v1/nutritionists/:professional_id/onboarding` 🔒
+`Onboarding.upsert_answers("professional_client", record.id, answers, questions)`.
+Keys are question ids; `value_text` for value questions, `selected_options` for
+choice questions.
+```json
+// request
+{ "answers": {
+  "3": { "value_text": "Oats and coffee" },
+  "4": { "selected_options": ["gluten"] }
+} }
+// 200 — same shape as GET
+```
+
+### My progress (measurements)
+
+#### `GET /api/v1/me/progress` 🔒
+The client's own progress dashboard (the `/profile` "My progress" chart). Aggregates
+measurements **across every nutritionist** who keeps a file for the user —
+`measurement_history_for_user/1` (merged intakes + consultation-note visits) +
+`measurement_context_for_user/1` (reference values for goal lines) +
+`measurement_metrics/0` (metric list / display order). This is the **only**
+client-visible view of consultation data; note bodies/to-dos are never included.
+```json
+// 200
+{ "data": {
+  "metrics": [
+    { "key": "weight_kg", "label": "Weight", "unit": "kg" },
+    { "key": "body_fat_percentage", "label": "Body fat", "unit": "%" },
+    { "key": "waist_cm", "label": "Waist", "unit": "cm" },
+    { "key": "muscle_mass_kg", "label": "Muscle mass", "unit": "kg" },
+    { "key": "bmi", "label": "BMI", "unit": null },
+    { "key": "bmr_kcal", "label": "BMR", "unit": "kcal" }
+  ],
+  "context": { "height_m": 1.75, "sex": "male", "ideal_weight_kg": 72.0 },
+  "history": [
+    { "date": "2026-09-01", "source": "intake", "weight_kg": 80.0, "body_fat_percentage": 22.0,
+      "waist_cm": 90.0, "muscle_mass_kg": null, "bmi": 26.1, "bmr_kcal": 1700 },
+    { "date": "2026-10-01", "source": "visit",  "weight_kg": 78.5, "body_fat_percentage": 21.0,
+      "waist_cm": 88.0, "muscle_mass_kg": 34.0, "bmi": 25.6, "bmr_kcal": 1680 }
+  ]
+} }
+```
+`source` ∈ `intake | visit`. Any metric may be `null` for a given row. Returns an
+empty `history` (not `404`) when the user has no nutritionist records.
+
+### Router additions
+
+```elixir
+# public (:api_v1 — optional auth)
+get("/nutritionists", NutritionistDirectoryController, :index)
+get("/nutritionists/:slug", NutritionistDirectoryController, :show)
+get("/nutritionists/:slug/slots", NutritionistDirectoryController, :slots)
+get("/nutritionists/:slug/articles", NutritionistDirectoryController, :articles)
+get("/nutritionists/:slug/articles/:article_slug", NutritionistDirectoryController, :article)
+
+# authenticated (:api_v1_auth)
+get("/me/nutritionist", MyNutritionistController, :show)
+delete("/me/nutritionist", MyNutritionistController, :disconnect)
+get("/me/nutritionist/messages", MyNutritionistController, :messages)
+post("/me/nutritionist/messages", MyNutritionistController, :send_message)
+post("/me/nutritionist/messages/read", MyNutritionistController, :read_messages)
+get("/me/progress", MyNutritionistController, :progress)
+
+get("/me/appointments", AppointmentController, :index)
+get("/me/appointments/:id", AppointmentController, :show)
+post("/me/appointments", AppointmentController, :create)
+delete("/me/appointments/:id", AppointmentController, :cancel)
+
+get("/nutritionists/:professional_id/onboarding", ClientOnboardingController, :show)
+put("/nutritionists/:professional_id/onboarding", ClientOnboardingController, :update)
+# /me/invitations already wired (InvitationController)
+```
+(`/nutritionists/:slug` matches one segment and `/nutritionists/:professional_id/onboarding`
+two, so they don't collide; the former is public, the latter authenticated.)
+
+---
+
 ## 13. Phoenix Channels (real-time)
 
 Reuse the existing `MehungryWeb.UserSocket` (currently a no-op scaffold). Add
@@ -867,6 +1229,13 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
   `"result"` `{ job_id, meals: [ … ] }` (same shape as §9 day meals). Client
   refreshes the calendar on `result`. Mirrors the "Plan with AI" async flow.
 
+### `nutritionist_thread:<user_id>` 🔒 (optional, phase 2) — live client↔nutritionist messages
+- The "My nutritionist" hub (§18) chat thread is REST today (`GET/POST
+  /me/nutritionist/messages`). For live delivery, mirror the web hub's
+  `Professionals.subscribe_to_messages/1`: push `"message"` with the same object
+  `GET /me/nutritionist/messages` returns, scoped to the viewer's thread. Until
+  this ships the client polls or refetches on focus.
+
 ### `presence` (optional, phase 2)
 The web app uses `MehungryWeb.Presence` for active-user tracking/visits. Expose
 via `Phoenix.Presence` on `user:*` if the mobile app needs online indicators;
@@ -874,23 +1243,29 @@ not required for MVP.
 
 ---
 
-## 14. Nutritionist portal (phase 2)
+## 14. Nutritionist portal (pro persona)
 
 The `/nutritionist/**` LiveViews (dashboard, clients, client calendar,
-appointments, invitations) are a **separate professional persona**. Recommend a
-**separate RN app or a role-gated section** rather than bloating the consumer
-MVP. When built, mirror §9 for the client calendar and add:
+appointments, invitations) are a **separate professional persona** — the pro user
+viewing *their* clients. (Contrast §18, the **client-facing** "My nutritionist"
+tab: any logged-in user viewing *their own* nutritionist.) Recommend a **separate
+RN app or a role-gated section** rather than bloating the consumer MVP. This
+surface is partly built already (`Api.V1.NutritionistController`, pipeline
+`:api_v1_nutritionist`, scope `/api/v1/nutritionist`):
 
 - `GET /api/v1/nutritionist/clients`, `GET /api/v1/nutritionist/clients/:id`
-- `GET/POST/PUT/DELETE /api/v1/nutritionist/clients/:id/meals*` (same meal shapes
-  as §9, scoped to the client — reuse `NutritionistLive.ClientCalendar` logic in
-  `Professionals` + `History`)
+- `GET /api/v1/nutritionist/clients/:id/meals` (same meal shapes as §9, scoped to
+  the client — reuse `NutritionistLive.ClientCalendar` logic in `Professionals` +
+  `History`)
 - `GET /api/v1/nutritionist/appointments`
-- `GET/POST /api/v1/nutritionist/invitations`, and the client-side
-  `GET/POST /api/v1/me/invitations` (accept/decline) for the consumer app's
-  Notifications screen.
+- `GET/POST /api/v1/nutritionist/invitations`
 
-Gate all of these with `Subscriptions.nutritionist?/1` / `pro?/1`.
+The **client side** of invitations (`GET /api/v1/me/invitations` + accept/decline)
+and everything else a client does with their nutritionist now lives in **§18**,
+not here.
+
+Gate the portal endpoints with `Subscriptions.nutritionist?/1` / `pro?/1` (the
+`RequireNutritionistPlug`). §18 endpoints are **not** pro-gated.
 
 Admin/`/professional/**` tooling is **explicitly out of scope** for mobile.
 
@@ -958,6 +1333,26 @@ POST   /api/v1/uploads/presign         POST /api/v1/uploads
 GET    /api/v1/subscription
 POST   /api/v1/subscription/checkout   POST /api/v1/subscription/portal
 POST   /api/v1/feedback
+
+# My nutritionist (client-facing, §18)
+GET    /api/v1/nutritionists                       GET /api/v1/nutritionists/:slug
+GET    /api/v1/nutritionists/:slug/slots
+GET    /api/v1/nutritionists/:slug/articles        GET /api/v1/nutritionists/:slug/articles/:article_slug
+GET    /api/v1/me/nutritionist                      DELETE /api/v1/me/nutritionist
+GET    /api/v1/me/nutritionist/messages            POST /api/v1/me/nutritionist/messages
+POST   /api/v1/me/nutritionist/messages/read
+GET    /api/v1/me/progress
+GET    /api/v1/me/invitations
+POST   /api/v1/me/invitations/:id/accept           POST /api/v1/me/invitations/:id/decline
+GET    /api/v1/me/appointments                      GET /api/v1/me/appointments/:id
+POST   /api/v1/me/appointments                      DELETE /api/v1/me/appointments/:id
+GET/PUT /api/v1/nutritionists/:professional_id/onboarding
+
+# Nutritionist portal (pro persona, §14)
+GET    /api/v1/nutritionist/clients                 GET /api/v1/nutritionist/clients/:id
+GET    /api/v1/nutritionist/clients/:id/meals
+GET    /api/v1/nutritionist/appointments
+GET    /api/v1/nutritionist/invitations             POST /api/v1/nutritionist/invitations
 
 CHANNELS (wss://host/socket, params: {token})
   feed:lobby        recipe:<id>        user:<user_id>
