@@ -653,6 +653,35 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   @doc """
+  The nutrient-claim badge row shared by the home feed (`post_card`) and the
+  shared `recipe_card`, so the two never drift. Each claim renders as a
+  borderless monospace label in the same "utility label" voice as the card's
+  EASY / PER SERVING eyebrows (basil = nutrition truth) — not a filled pill,
+  which read as a tappable tag and out-weighed the title. A leading ✓ carries
+  the "this is a benefit" signal the old fill used to; the %NRV is emphasised
+  in basil-soft.
+  """
+  attr :claims, :list, required: true
+
+  def nutrient_claim_badges(assigns) do
+    ~H"""
+    <div :if={@claims != []} class="flex flex-wrap gap-x-3 gap-y-1 mb-2.5">
+      <span
+        :for={badge <- @claims}
+        class="inline-flex items-center gap-1 font-mono text-[0.62rem] font-semibold uppercase tracking-wide text-basil whitespace-nowrap"
+        title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+      >
+        <span aria-hidden="true" class="text-[0.72rem] leading-none">✓</span>
+        <span>{MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])}</span>
+        <span :if={badge["percent_nrv"]} class="text-basil-soft font-bold">
+          {badge["percent_nrv"]}%
+        </span>
+      </span>
+    </div>
+    """
+  end
+
+  @doc """
   Difficulty → `{localized label, tailwind dot color}` for the recipe card's
   eyebrow — the same `{label, dot}` shape the home feed (`post_card`) and the
   recipe-detail page use, so the three surfaces never drift. Tolerates the
@@ -741,17 +770,7 @@ defmodule MehungryWeb.RecipeComponents do
             {@recipe.description}
           </p>
           <!-- Nutrient-claim badges lead the nutrition block (basil = nutrition truth). -->
-          <div :if={@claims != []} class="flex flex-wrap gap-1.5 mb-2.5">
-            <span
-              :for={badge <- @claims}
-              class="font-mono text-[0.62rem] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-basil/15 text-basil-soft border border-basil/30 whitespace-nowrap"
-              title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
-            >
-              {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])}<span :if={
-                badge["percent_nrv"]
-              }> · {badge["percent_nrv"]}%</span>
-            </span>
-          </div>
+          <.nutrient_claim_badges claims={@claims} />
           <!-- Compact per-serving macro line — quiet nutrition backup under the badges. -->
           <div
             :if={@macros.calories > 0}

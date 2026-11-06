@@ -263,13 +263,16 @@ toggle), so the same URL is both the in-app filter and an SEO target.
 `recipe.badges` (string-keyed) and filters to the `"high"` tier. It is the single
 helper every HTML surface uses:
 
-- **Browse card** (`recipe_card/1`) — top 1–2 pills overlaid on the image, rendered
-  `"High in X · N% NRV"`.
-- **Home feed** (`home_live/components/post_card.html.heex`) — pills right-aligned in
-  the action row (beside like/comment/share), not over the image, so the photo stays
-  clean; top 2. Here the pill shows **the label only** (`"High in X"`, no `· N% NRV`
-  suffix) — the compact action-row slot can't fit the longer string, and a high
-  `percent_nrv` (e.g. liver's 1606%) would otherwise overflow the card frame.
+- **Browse card** (`recipe_card/1`) and **Home feed**
+  (`home_live/components/post_card.html.heex`) — both render the top 1–2 high-tier
+  claims through the **one shared `MehungryWeb.RecipeComponents.nutrient_claim_badges/1`**
+  component (so the two surfaces can't drift), in the content block under the
+  description and above the per-serving macro line. Each claim is a **borderless
+  monospace label** in the same utility-label voice as the card's `EASY` /
+  `PER SERVING` eyebrows — basil text, a leading `✓`, and the `N% NRV` emphasised in
+  **basil-soft**. This replaced the earlier **filled + bordered basil pill**, which
+  read as a tappable tag and out-weighed the serif title (badge treatment study,
+  2026-11-06).
 - **Recipe detail** (`RecipeDetailsComponent`) — a dedicated **"Claims & reference
   intakes"** panel (the nutritionist "Dark Chart" redesign, 2026-11-05), **not** a pill
   list. It reads `recipe.badges` directly (local `claim_rows/1`, not `high_badges/2`) so
@@ -283,11 +286,10 @@ helper every HTML surface uses:
   "source" row). The panel renders only when at least one claim exists. (This replaced the
   earlier flat high-only pill list + client-side "Show N more" toggle.)
 
-The **card** pills carry the `· N% NRV` — the % is the auditable proof that keeps the
-claim on the label side of the line (the feed drops it only for layout, see above),
-rendered in **paprika** (the brand accent): solid/opaque over the photo on the browse
-card, subtle `/15` tint in the home feed. On the **detail panel** the same proof lives in
-the per-nutrient `· N%` tag, tier-colored (basil/paprika) rather than one flat accent.
+The **card** labels carry the `N% NRV` — the % is the auditable proof that keeps the
+claim on the label side of the line — emphasised in **basil-soft** against the basil
+label. On the **detail panel** the same proof lives in the per-nutrient `· N%` tag,
+tier-colored (basil for high / paprika for source) rather than one flat accent.
 
 ### Mobile API
 
