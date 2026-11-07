@@ -237,6 +237,8 @@ defmodule MehungryWeb.Router do
     delete("/me/progress/entries/:id", ProgressController, :delete_entry)
     post("/me/progress/photos", ProgressController, :attach_photo)
     delete("/me/progress/photos/:id", ProgressController, :delete_photo)
+    post("/me/progress/photos/:id/share", ProgressController, :share_photo)
+    delete("/me/progress/photos/:id/share", ProgressController, :unshare_photo)
 
     get("/me/appointments", AppointmentController, :index)
     get("/me/appointments/:id", AppointmentController, :show)
@@ -576,6 +578,10 @@ defmodule MehungryWeb.Router do
     # emails). A plain GET controller so it works without JS and runs exactly
     # once (a LiveView mount would run on both the HTTP and WS passes).
     get("/trial/unsubscribe/:token", TrialController, :unsubscribe)
+
+    # Opt-in, revocable share link for a (private-bucket) progress photo:
+    # token → 302 to a fresh short-lived signed URL. Unshare revokes the token.
+    get("/shared/photos/:token", SharedPhotoController, :show)
   end
 
   scope "/", MehungryWeb do

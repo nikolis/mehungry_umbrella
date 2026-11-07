@@ -73,9 +73,23 @@ defmodule MehungryWeb.ProfileLive.Index do
      )}
   end
 
+  # Body photos are sensitive — they upload straight to the private bucket and
+  # are only read back through the signed URLs Mehungry.Progress serves.
   defp presign_progress_photo(entry, socket) do
     key = MehungryWeb.Uploads.key_for("progress_photos", entry)
-    {:ok, MehungryWeb.Uploads.meta(entry, key, 5_000_000), socket}
+    {:ok, MehungryWeb.Uploads.meta(entry, key, 5_000_000, bucket: :private), socket}
+  end
+
+  # The lightbox assign: a resolved (signed) display URL + the photo's
+  # share-link state, driving the share/unshare controls.
+  defp lightbox(photo, date) do
+    %{
+      id: photo.id,
+      url: Progress.photo_url(photo),
+      date: date,
+      shared: is_binary(photo.share_token),
+      share_url: photo.share_token && url(~p"/shared/photos/#{photo.share_token}")
+    }
   end
 
   @impl true
@@ -503,13 +517,12 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     case Progress.log_entry(user.id, period.id, entry_params) do
       {:ok, entry} ->
-        consume_uploaded_entries(socket, :progress_photo, fn %{public_url: url} = meta, _entry ->
-          Progress.attach_photo(user.id, entry.id, %{
-            "url" => url,
-            "storage_key" => meta[:key]
-          })
+        consume_uploaded_entries(socket, :progress_photo, fn meta, _entry ->
+          # Private-bucket object: persist only the storage key — reads are
+          # signed at read time (Progress.photo_url/1); there is no public URL.
+          Progress.attach_photo(user.id, entry.id, %{"storage_key" => meta[:key]})
 
-          {:ok, url}
+          {:ok, meta[:key]}
         end)
 
         {:noreply,
@@ -621,12 +634,41 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
-  def handle_event("open_photo", %{"url" => url} = params, socket) do
-    {:noreply, assign(socket, :lightbox_photo, %{url: url, date: params["date"]})}
+  def handle_event("open_photo", %{"id" => id} = params, socket) do
+    case Progress.get_photo(socket.assigns.current_user.id, id) do
+      nil -> {:noreply, socket}
+      photo -> {:noreply, assign(socket, :lightbox_photo, lightbox(photo, params["date"]))}
+    end
   end
 
   def handle_event("close_photo", _params, socket) do
     {:noreply, assign(socket, :lightbox_photo, nil)}
+  end
+
+  def handle_event("share_photo_link", %{"id" => id}, socket) do
+    case Progress.share_photo(socket.assigns.current_user.id, id) do
+      {:ok, photo} ->
+        {:noreply,
+         socket
+         |> assign(:lightbox_photo, lightbox(photo, socket.assigns.lightbox_photo[:date]))
+         |> put_flash(:info, gettext("Share link created — anyone with the link can view this photo."))}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, gettext("Could not create the share link."))}
+    end
+  end
+
+  def handle_event("unshare_photo_link", %{"id" => id}, socket) do
+    case Progress.unshare_photo(socket.assigns.current_user.id, id) do
+      {:ok, photo} ->
+        {:noreply,
+         socket
+         |> assign(:lightbox_photo, lightbox(photo, socket.assigns.lightbox_photo[:date]))
+         |> put_flash(:info, gettext("Share link revoked."))}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, gettext("Could not revoke the share link."))}
+    end
   end
 
   def handle_event("delete_my_ingredient", %{"id" => id}, socket) do
@@ -915,11 +957,41 @@ defmodule MehungryWeb.ProfileLive.Index do
         class="fixed inset-0 z-50 bg-ink/90 flex items-center justify-center p-4"
         phx-click="close_photo"
       >
-        <figure class="max-w-lg w-full">
+        <figure class="max-w-lg w-full" onclick="event.stopPropagation()">
           <img src={@lightbox_photo.url} class="w-full rounded-xl" alt={gettext("progress photo")} />
           <figcaption :if={@lightbox_photo.date} class="text-center text-parchment-dim text-sm mt-2">
             {@lightbox_photo.date}
           </figcaption>
+          <%!-- Opt-in public sharing: photos are private by default; the link is revocable. --%>
+          <div class="mt-3 text-center">
+            <div :if={!@lightbox_photo.shared}>
+              <button
+                type="button"
+                phx-click="share_photo_link"
+                phx-value-id={@lightbox_photo.id}
+                class="px-3 py-1.5 rounded-lg bg-ink-panel text-parchment text-sm hover:text-basil transition"
+              >
+                {gettext("Create share link")}
+              </button>
+            </div>
+            <div :if={@lightbox_photo.shared} class="space-y-2">
+              <input
+                type="text"
+                readonly
+                value={@lightbox_photo.share_url}
+                onclick="event.stopPropagation(); this.select()"
+                class="w-full bg-ink-panel text-parchment-dim text-xs rounded-lg px-2 py-1.5 border border-ink-panel2"
+              />
+              <button
+                type="button"
+                phx-click="unshare_photo_link"
+                phx-value-id={@lightbox_photo.id}
+                class="px-3 py-1.5 rounded-lg bg-ink-panel text-parchment text-sm hover:text-paprika transition"
+              >
+                {gettext("Stop sharing")}
+              </button>
+            </div>
+          </div>
         </figure>
       </div>
 
@@ -1295,7 +1367,7 @@ defmodule MehungryWeb.ProfileLive.Index do
                     <button
                       type="button"
                       phx-click="open_photo"
-                      phx-value-url={photo.url}
+                      phx-value-id={photo.id}
                       phx-value-date={Date.to_iso8601(entry.entry_date)}
                     >
                       <img

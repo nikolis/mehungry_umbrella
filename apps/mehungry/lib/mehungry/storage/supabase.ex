@@ -4,8 +4,13 @@ defmodule Mehungry.Storage.Supabase do
 
   Server calls authenticate with the `service_role` key (a server-only secret).
   Browser-direct uploads use short-lived *signed upload URLs* (`signed_upload/2`)
-  so the service_role key never leaves the server. Reads are served from the
-  public bucket path, matching how the legacy S3 objects were world-readable.
+  so the service_role key never leaves the server.
+
+  Two buckets: the default public bucket (reads served from the world-readable
+  `/object/public/` path, matching how the legacy S3 objects were readable) and
+  a **private** bucket (`bucket: :private` — progress photos), whose objects
+  are only reachable through short-lived signed URLs (`signed_url/3` /
+  `signed_urls/3`, the `POST /storage/v1/object/sign/…` endpoint).
   """
 
   @behaviour Mehungry.Storage.Behaviour
@@ -18,31 +23,31 @@ defmodule Mehungry.Storage.Supabase do
   def put(key, binary, opts) do
     content_type = Keyword.get(opts, :content_type, "application/octet-stream")
 
-    request(:post, object_path(key), binary, [
+    request(:post, object_path(key, opts), binary, [
       {"Content-Type", content_type},
       {"x-upsert", "true"}
     ])
     |> case do
-      {:ok, _body} -> {:ok, %{key: key, url: public_url(key)}}
+      {:ok, _body} -> {:ok, %{key: key, url: maybe_public_url(key, opts)}}
       error -> error
     end
   end
 
   @impl true
-  def get(key) do
-    request(:get, object_path(key), "", [])
+  def get(key, opts \\ []) do
+    request(:get, object_path(key, opts), "", [])
   end
 
   @impl true
-  def delete(key) do
-    request(:delete, object_path(key), "", [])
+  def delete(key, opts \\ []) do
+    request(:delete, object_path(key, opts), "", [])
   end
 
   @impl true
   def list(prefix) do
     body = Jason.encode!(%{prefix: prefix || "", limit: 1000, offset: 0})
 
-    case request(:post, "/storage/v1/object/list/#{bucket()}", body, [
+    case request(:post, "/storage/v1/object/list/#{bucket([])}", body, [
            {"Content-Type", "application/json"}
          ]) do
       {:ok, raw} -> {:ok, Jason.decode!(raw)}
@@ -51,13 +56,65 @@ defmodule Mehungry.Storage.Supabase do
   end
 
   @impl true
-  def public_url(key) do
-    "#{base_url()}/storage/v1/object/public/#{bucket()}/#{encode_key(key)}"
+  def public_url(key, opts \\ []) do
+    "#{base_url()}/storage/v1/object/public/#{bucket(opts)}/#{encode_key(key)}"
   end
 
   @impl true
-  def signed_upload(key, _opts) do
-    case request(:post, "/storage/v1/object/upload/sign/#{bucket()}/#{encode_key(key)}", "", []) do
+  def signed_url(key, expires_in, opts) do
+    body = Jason.encode!(%{expiresIn: expires_in})
+
+    case request(
+           :post,
+           "/storage/v1/object/sign/#{bucket(opts)}/#{encode_key(key)}",
+           body,
+           [{"Content-Type", "application/json"}]
+         ) do
+      {:ok, raw} ->
+        %{"signedURL" => signed_path} = Jason.decode!(raw)
+        {:ok, "#{base_url()}/storage/v1#{signed_path}"}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def signed_urls([], _expires_in, _opts), do: {:ok, %{}}
+
+  def signed_urls(keys, expires_in, opts) when is_list(keys) do
+    body = Jason.encode!(%{expiresIn: expires_in, paths: keys})
+
+    case request(:post, "/storage/v1/object/sign/#{bucket(opts)}", body, [
+           {"Content-Type", "application/json"}
+         ]) do
+      {:ok, raw} ->
+        signed =
+          raw
+          |> Jason.decode!()
+          |> Enum.reduce(%{}, fn
+            %{"path" => path, "signedURL" => sp, "error" => nil}, acc when is_binary(sp) ->
+              Map.put(acc, path, "#{base_url()}/storage/v1#{sp}")
+
+            _failed, acc ->
+              acc
+          end)
+
+        {:ok, signed}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def signed_upload(key, opts) do
+    case request(
+           :post,
+           "/storage/v1/object/upload/sign/#{bucket(opts)}/#{encode_key(key)}",
+           "",
+           []
+         ) do
       {:ok, raw} ->
         %{"url" => signed_path} = Jason.decode!(raw)
 
@@ -67,7 +124,7 @@ defmodule Mehungry.Storage.Supabase do
            url: "#{base_url()}/storage/v1#{signed_path}",
            headers: %{},
            key: key,
-           public_url: public_url(key)
+           public_url: maybe_public_url(key, opts)
          }}
 
       error ->
@@ -95,7 +152,7 @@ defmodule Mehungry.Storage.Supabase do
     end
   end
 
-  defp object_path(key), do: "/storage/v1/object/#{bucket()}/#{encode_key(key)}"
+  defp object_path(key, opts), do: "/storage/v1/object/#{bucket(opts)}/#{encode_key(key)}"
 
   defp auth_headers do
     [{"Authorization", "Bearer #{service_role_key()}"}, {"apikey", service_role_key()}]
@@ -108,6 +165,11 @@ defmodule Mehungry.Storage.Supabase do
     |> String.split("/")
     |> Enum.map(fn seg -> URI.encode(seg, &URI.char_unreserved?/1) end)
     |> Enum.join("/")
+  end
+
+  # Private-bucket objects have no world-readable URL — never hand one out.
+  defp maybe_public_url(key, opts) do
+    if Keyword.get(opts, :bucket) == :private, do: nil, else: public_url(key, opts)
   end
 
   # Accept either the bare project URL (https://<ref>.supabase.co) or the
@@ -124,7 +186,13 @@ defmodule Mehungry.Storage.Supabase do
     cfg(:service_role_key) || raise "SUPABASE_SERVICE_ROLE_KEY not configured"
   end
 
-  defp bucket, do: cfg(:bucket)
+  defp bucket(opts) do
+    case Keyword.get(opts, :bucket) do
+      nil -> cfg(:bucket)
+      :private -> cfg(:private_bucket) || raise "SUPABASE_PRIVATE_BUCKET not configured"
+      name when is_binary(name) -> name
+    end
+  end
 
   defp cfg(k), do: Keyword.get(Mehungry.Storage.config(), k)
 end

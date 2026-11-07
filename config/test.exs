@@ -142,4 +142,5 @@ config :mehungry, session_metrics_recording: false
 config :mehungry, :storage,
   backend: :supabase,
   supabase_url: "https://test.supabase.co",
-  bucket: "media"
+  bucket: "media",
+  private_bucket: "mehungry-private"

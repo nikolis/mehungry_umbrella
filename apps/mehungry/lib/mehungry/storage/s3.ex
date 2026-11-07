@@ -8,6 +8,10 @@ defmodule Mehungry.Storage.S3 do
   Direct browser uploads are not issued here — the S3 era used sigv4 POST-policy
   forms (`MehungryWeb.SimpleS3Upload`); `signed_upload/2` is therefore
   unsupported under this backend.
+
+  There is **no private bucket** on this legacy backend: `bucket: :private`
+  raises rather than silently storing a sensitive object world-readable.
+  `signed_url/3` is a reasonable stub via a presigned GET on the one bucket.
   """
 
   @behaviour Mehungry.Storage.Behaviour
@@ -16,23 +20,23 @@ defmodule Mehungry.Storage.S3 do
 
   @impl true
   def put(key, binary, opts) do
-    case Mehungry.S3.upload_binary(binary, bucket(), key, content_type: content_type(opts)) do
-      {:ok, _} -> {:ok, %{key: key, url: public_url(key)}}
+    case Mehungry.S3.upload_binary(binary, bucket(opts), key, content_type: content_type(opts)) do
+      {:ok, _} -> {:ok, %{key: key, url: public_url(key, opts)}}
       {:error, reason} -> {:error, {:transport_error, reason}}
     end
   end
 
   @impl true
-  def get(key) do
-    case Mehungry.S3.download_file(bucket(), key) do
+  def get(key, opts \\ []) do
+    case Mehungry.S3.download_file(bucket(opts), key) do
       {:ok, %{body: body}} -> {:ok, body}
       {:error, reason} -> {:error, {:transport_error, reason}}
     end
   end
 
   @impl true
-  def delete(key) do
-    case Mehungry.S3.delete_object(bucket(), key, region: @region) do
+  def delete(key, opts \\ []) do
+    case Mehungry.S3.delete_object(bucket(opts), key, region: @region) do
       {:ok, _} = ok -> ok
       {:error, reason} -> {:error, {:transport_error, reason}}
     end
@@ -40,14 +44,34 @@ defmodule Mehungry.Storage.S3 do
 
   @impl true
   def list(prefix) do
-    case Mehungry.S3.list_objects(bucket(), prefix) do
+    case Mehungry.S3.list_objects(bucket([]), prefix) do
       {:ok, %{body: %{contents: contents}}} -> {:ok, contents}
       {:error, reason} -> {:error, {:transport_error, reason}}
     end
   end
 
   @impl true
-  def public_url(key), do: "https://#{bucket()}.s3.#{@region}.amazonaws.com/#{key}"
+  def public_url(key, opts \\ []),
+    do: "https://#{bucket(opts)}.s3.#{@region}.amazonaws.com/#{key}"
+
+  @impl true
+  def signed_url(key, expires_in, opts) do
+    case Mehungry.S3.presigned_url(bucket(opts), key, expires_in, :get) do
+      {:ok, url} -> {:ok, url}
+      {:error, reason} -> {:error, {:transport_error, reason}}
+    end
+  end
+
+  @impl true
+  def signed_urls(keys, expires_in, opts) do
+    {:ok,
+     Enum.reduce(keys, %{}, fn key, acc ->
+       case signed_url(key, expires_in, opts) do
+         {:ok, url} -> Map.put(acc, key, url)
+         _ -> acc
+       end
+     end)}
+  end
 
   # The REST upload endpoint issues a presigned PUT (S3 supports this directly);
   # the LiveView direct-upload path uses the sigv4 POST policy instead
@@ -56,7 +80,7 @@ defmodule Mehungry.Storage.S3 do
   def signed_upload(key, opts) do
     content_type = content_type(opts)
 
-    case Mehungry.S3.presigned_url(bucket(), key, 3600, :put) do
+    case Mehungry.S3.presigned_url(bucket(opts), key, 3600, :put) do
       {:ok, url} ->
         {:ok,
          %{
@@ -64,7 +88,7 @@ defmodule Mehungry.Storage.S3 do
            url: url,
            headers: %{"Content-Type" => content_type},
            key: key,
-           public_url: public_url(key)
+           public_url: public_url(key, opts)
          }}
 
       {:error, reason} ->
@@ -74,5 +98,11 @@ defmodule Mehungry.Storage.S3 do
 
   defp content_type(opts), do: Keyword.get(opts, :content_type, "application/octet-stream")
 
-  defp bucket, do: Application.get_env(:mehungry_web, :aws_bucket)
+  defp bucket(opts) do
+    case Keyword.get(opts, :bucket) do
+      nil -> Application.get_env(:mehungry_web, :aws_bucket)
+      :private -> raise "the legacy S3 backend has no private bucket — use STORAGE_BACKEND=supabase"
+      name when is_binary(name) -> name
+    end
+  end
 end

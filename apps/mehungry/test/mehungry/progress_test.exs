@@ -12,15 +12,24 @@ defmodule Mehungry.ProgressTest do
     @behaviour Mehungry.Storage.Behaviour
 
     def put(_key, _binary, _opts), do: {:ok, %{url: "https://stub/x", key: "x"}}
-    def get(_key), do: {:ok, <<>>}
+    def get(_key, _opts), do: {:ok, <<>>}
 
-    def delete(key) do
-      send(Process.get(:storage_spy_pid) || self(), {:storage_delete, key})
+    def delete(key, opts) do
+      send(
+        Process.get(:storage_spy_pid) || self(),
+        {:storage_delete, key, Keyword.get(opts, :bucket, :public)}
+      )
+
       {:ok, :deleted}
     end
 
     def list(_prefix), do: {:ok, []}
-    def public_url(key), do: "https://stub/#{key}"
+    def public_url(key, _opts), do: "https://stub/#{key}"
+    def signed_url(key, _expires_in, _opts), do: {:ok, "https://stub-signed/#{key}"}
+
+    def signed_urls(keys, _expires_in, _opts),
+      do: {:ok, Map.new(keys, &{&1, "https://stub-signed/#{&1}"})}
+
     def signed_upload(_key, _opts), do: {:error, :not_supported}
   end
 
@@ -458,7 +467,10 @@ defmodule Mehungry.ProgressTest do
       assert {:error, :not_found} = Progress.delete_photo(other.id, p1.id)
 
       {:ok, _} = Progress.delete_photo(user.id, p1.id)
-      assert_received {:storage_delete, "progress_photos/a.jpg"}
+      # The object may live in either bucket (legacy public / migrated private)
+      # — the delete path sweeps both.
+      assert_received {:storage_delete, "progress_photos/a.jpg", :private}
+      assert_received {:storage_delete, "progress_photos/a.jpg", :public}
       assert Progress.comparison(period) == nil
     end
 
@@ -474,8 +486,93 @@ defmodule Mehungry.ProgressTest do
         })
 
       {:ok, _} = Progress.delete_entry(user.id, entry.id)
-      assert_received {:storage_delete, "progress_photos/c.jpg"}
+      assert_received {:storage_delete, "progress_photos/c.jpg", :private}
+      assert_received {:storage_delete, "progress_photos/c.jpg", :public}
       assert Progress.list_entries(user.id, period.id) == []
+    end
+
+    test "private-bucket photos (storage_key only) read back as signed URLs" do
+      user = user_fixture()
+      {:ok, period} = Progress.ensure_active_period(user.id)
+      {:ok, entry} = Progress.log_entry(user.id, period.id, %{"weight_kg" => 80})
+
+      {:ok, photo} =
+        Progress.attach_photo(user.id, entry.id, %{"storage_key" => "progress_photos/p.jpg"})
+
+      assert photo.url == nil
+      assert Progress.photo_url(photo) == "https://stub-signed/progress_photos/p.jpg"
+
+      # Every read surface serves the signed URL, never the raw key.
+      assert [%{photos: [%{url: "https://stub-signed/progress_photos/p.jpg"}]}] =
+               Progress.list_entries(user.id, period.id)
+
+      assert [%{url: "https://stub-signed/progress_photos/p.jpg", photo_id: photo_id}] =
+               Progress.photo_markers(period)
+
+      assert photo_id == photo.id
+    end
+
+    test "legacy public-url photos keep serving their stored url" do
+      user = user_fixture()
+      {:ok, period} = Progress.ensure_active_period(user.id)
+      {:ok, entry} = Progress.log_entry(user.id, period.id, %{"weight_kg" => 80})
+
+      {:ok, photo} =
+        Progress.attach_photo(user.id, entry.id, %{
+          "url" => "https://stub/progress_photos/legacy.jpg",
+          "storage_key" => "progress_photos/legacy.jpg"
+        })
+
+      assert Progress.photo_url(photo) == "https://stub/progress_photos/legacy.jpg"
+    end
+  end
+
+  defp photo_fixture(user) do
+    {:ok, period} = Progress.ensure_active_period(user.id)
+    {:ok, entry} = Progress.log_entry(user.id, period.id, %{"weight_kg" => 80})
+
+    {:ok, photo} =
+      Progress.attach_photo(user.id, entry.id, %{"storage_key" => "progress_photos/s.jpg"})
+
+    photo
+  end
+
+  describe "photo sharing" do
+    setup do
+      stub_storage(self())
+      :ok
+    end
+
+    test "share issues a stable token; unshare revokes it" do
+      user = user_fixture()
+      photo = photo_fixture(user)
+
+      assert photo.share_token == nil
+      assert {:error, :not_found} = Progress.shared_photo_url("nope")
+
+      {:ok, shared} = Progress.share_photo(user.id, photo.id)
+      assert is_binary(shared.share_token)
+      assert %DateTime{} = shared.shared_at
+
+      # Idempotent: re-sharing keeps the same token (links stay valid).
+      {:ok, reshared} = Progress.share_photo(user.id, photo.id)
+      assert reshared.share_token == shared.share_token
+
+      assert {:ok, "https://stub-signed/progress_photos/s.jpg"} =
+               Progress.shared_photo_url(shared.share_token)
+
+      {:ok, unshared} = Progress.unshare_photo(user.id, photo.id)
+      assert unshared.share_token == nil
+      assert {:error, :not_found} = Progress.shared_photo_url(shared.share_token)
+    end
+
+    test "only the owner can share or unshare" do
+      user = user_fixture()
+      other = user_fixture()
+      photo = photo_fixture(user)
+
+      assert {:error, :not_found} = Progress.share_photo(other.id, photo.id)
+      assert {:error, :not_found} = Progress.unshare_photo(other.id, photo.id)
     end
   end
 end

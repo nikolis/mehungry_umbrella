@@ -8,10 +8,14 @@ defmodule Mehungry.StorageTest do
   defmodule StubImpl do
     @behaviour Mehungry.Storage.Behaviour
     def put(key, _bin, _opts), do: {:ok, %{key: key, url: "stub://#{key}"}}
-    def get(_key), do: {:ok, "bytes"}
-    def delete(key), do: {:ok, {:deleted, key}}
+    def get(_key, _opts), do: {:ok, "bytes"}
+    def delete(key, _opts), do: {:ok, {:deleted, key}}
     def list(_prefix), do: {:ok, []}
-    def public_url(key), do: "stub://#{key}"
+    def public_url(key, _opts), do: "stub://#{key}"
+    def signed_url(key, expires_in, _opts), do: {:ok, "stub-signed://#{key}?exp=#{expires_in}"}
+
+    def signed_urls(keys, expires_in, _opts),
+      do: {:ok, Map.new(keys, &{&1, "stub-signed://#{&1}?exp=#{expires_in}"})}
 
     def signed_upload(key, _opts),
       do:

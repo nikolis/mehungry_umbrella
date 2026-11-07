@@ -167,7 +167,10 @@ if config_env() != :test do
     backend: String.to_atom(System.get_env("STORAGE_BACKEND", "supabase")),
     supabase_url: System.get_env("SUPABASE_URL"),
     service_role_key: System.get_env("SUPABASE_SERVICE_ROLE_KEY"),
-    bucket: System.get_env("SUPABASE_STORAGE_BUCKET", "media")
+    bucket: System.get_env("SUPABASE_STORAGE_BUCKET", "media"),
+    # Private bucket (public = false) for sensitive media — progress photos.
+    # Objects are only readable via short-lived signed URLs (Storage.signed_url/3).
+    private_bucket: System.get_env("SUPABASE_PRIVATE_BUCKET", "mehungry-private")
 end
 
 # Android closed-testing opt-in invite (admin panel). Falls back to the

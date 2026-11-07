@@ -77,8 +77,7 @@ msgstr ""
 msgid "Manage subscriptions"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:313
-#: lib/mehungry_web/live/profile_live/index.ex:313
+#: lib/mehungry_web/live/profile_live/index.ex:327
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:209
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:141
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:142
@@ -2506,7 +2505,7 @@ msgstr[1] ""
 msgid "Add a comment…"
 msgstr ""
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:41
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:52
 #, elixir-autogen, elixir-format
 msgid "Bad request"
 msgstr ""
@@ -2626,7 +2625,7 @@ msgstr ""
 msgid "Post"
 msgstr ""
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:33
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:44
 #, elixir-autogen, elixir-format
 msgid "Quota reached for your plan"
 msgstr ""
@@ -2651,7 +2650,7 @@ msgstr ""
 msgid "Text post"
 msgstr ""
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:37
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:48
 #, elixir-autogen, elixir-format
 msgid "Too many requests"
 msgstr ""
@@ -2734,8 +2733,7 @@ msgid "Built for nutritionists."
 msgstr ""
 
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:197
-#: lib/mehungry_web/live/profile_live/index.ex:1245
-#: lib/mehungry_web/live/profile_live/index.ex:1245
+#: lib/mehungry_web/live/profile_live/index.ex:1317
 #, elixir-autogen, elixir-format
 msgid "Cancel upload"
 msgstr ""
@@ -3713,8 +3711,7 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:388
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:103
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:352
-#: lib/mehungry_web/live/profile_live/index.ex:1161
-#: lib/mehungry_web/live/profile_live/index.ex:1161
+#: lib/mehungry_web/live/profile_live/index.ex:1233
 #, elixir-autogen, elixir-format
 msgid "Age"
 msgstr ""
@@ -4294,8 +4291,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1157
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:532
-#: lib/mehungry_web/live/profile_live/index.ex:1197
-#: lib/mehungry_web/live/profile_live/index.ex:1197
+#: lib/mehungry_web/live/profile_live/index.ex:1269
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr ""
@@ -4324,8 +4320,7 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/articles.ex:129
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:560
 #: lib/mehungry_web/live/nutritionist_live/payments.ex:367
-#: lib/mehungry_web/live/profile_live/index.ex:1330
-#: lib/mehungry_web/live/profile_live/index.ex:1330
+#: lib/mehungry_web/live/profile_live/index.ex:1402
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Delete"
 msgstr ""
@@ -4576,8 +4571,7 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:430
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:389
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:601
-#: lib/mehungry_web/live/profile_live/index.ex:1023
-#: lib/mehungry_web/live/profile_live/index.ex:1023
+#: lib/mehungry_web/live/profile_live/index.ex:1095
 #, elixir-autogen, elixir-format
 msgid "Goal"
 msgstr ""
@@ -4608,8 +4602,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:399
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:363
-#: lib/mehungry_web/live/profile_live/index.ex:1136
-#: lib/mehungry_web/live/profile_live/index.ex:1136
+#: lib/mehungry_web/live/profile_live/index.ex:1208
 #, elixir-autogen, elixir-format
 msgid "Height (m)"
 msgstr ""
@@ -5861,8 +5854,7 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:380
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:102
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:344
-#: lib/mehungry_web/live/profile_live/index.ex:1148
-#: lib/mehungry_web/live/profile_live/index.ex:1148
+#: lib/mehungry_web/live/profile_live/index.ex:1220
 #, elixir-autogen, elixir-format
 msgid "Sex"
 msgstr ""
@@ -6401,8 +6393,7 @@ msgid "source"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:176
-#: lib/mehungry_web/live/profile_live/index.ex:1034
-#: lib/mehungry_web/live/profile_live/index.ex:1034
+#: lib/mehungry_web/live/profile_live/index.ex:1106
 #, elixir-autogen, elixir-format
 msgid "tap a metric to chart it"
 msgstr ""
@@ -7774,7 +7765,7 @@ msgstr ""
 msgid "See our Terms"
 msgstr ""
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:50
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:61
 #, elixir-autogen, elixir-format
 msgid "Service temporarily unavailable. Please try again."
 msgstr ""
@@ -7809,7 +7800,7 @@ msgstr ""
 msgid "Smoking"
 msgstr ""
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:86
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:97
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
 msgstr ""
@@ -7855,8 +7846,7 @@ msgid "That file could not be uploaded."
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/profile_edit.ex:151
-#: lib/mehungry_web/live/profile_live/index.ex:1632
-#: lib/mehungry_web/live/profile_live/index.ex:1632
+#: lib/mehungry_web/live/profile_live/index.ex:1704
 #, elixir-autogen, elixir-format
 msgid "That image is too large (max 5 MB)."
 msgstr ""
@@ -8207,32 +8197,27 @@ msgid "Recipes"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:237
-#: lib/mehungry_web/live/profile_live/index.ex:1610
-#: lib/mehungry_web/live/profile_live/index.ex:1610
+#: lib/mehungry_web/live/profile_live/index.ex:1682
 #, elixir-autogen, elixir-format
 msgid "%{start} – ongoing"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1132
-#: lib/mehungry_web/live/profile_live/index.ex:1132
+#: lib/mehungry_web/live/profile_live/index.ex:1204
 #, elixir-autogen, elixir-format
 msgid "About you (used to derive BMI & BMR)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1231
-#: lib/mehungry_web/live/profile_live/index.ex:1231
+#: lib/mehungry_web/live/profile_live/index.ex:1303
 #, elixir-autogen, elixir-format
 msgid "Add progress photos"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1102
-#: lib/mehungry_web/live/profile_live/index.ex:1102
+#: lib/mehungry_web/live/profile_live/index.ex:1174
 #, elixir-autogen, elixir-format
 msgid "BMI and BMR are worked out automatically when your height (and age) are set below."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:958
-#: lib/mehungry_web/live/profile_live/index.ex:958
+#: lib/mehungry_web/live/profile_live/index.ex:1030
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Back to current"
 msgstr ""
@@ -8247,146 +8232,122 @@ msgstr ""
 msgid "Client's own journal (shared with you)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:593
-#: lib/mehungry_web/live/profile_live/index.ex:593
+#: lib/mehungry_web/live/profile_live/index.ex:606
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not reset right now."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:522
-#: lib/mehungry_web/live/profile_live/index.ex:522
+#: lib/mehungry_web/live/profile_live/index.ex:535
 #, elixir-autogen, elixir-format
 msgid "Could not save that entry — check the values."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:529
-#: lib/mehungry_web/live/profile_live/index.ex:529
+#: lib/mehungry_web/live/profile_live/index.ex:542
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not save that entry."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:575
-#: lib/mehungry_web/live/profile_live/index.ex:575
+#: lib/mehungry_web/live/profile_live/index.ex:588
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not save those settings."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:572
-#: lib/mehungry_web/live/profile_live/index.ex:572
+#: lib/mehungry_web/live/profile_live/index.ex:585
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not save — check the values."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:620
-#: lib/mehungry_web/live/profile_live/index.ex:620
+#: lib/mehungry_web/live/profile_live/index.ex:633
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not update sharing."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1314
-#: lib/mehungry_web/live/profile_live/index.ex:1314
+#: lib/mehungry_web/live/profile_live/index.ex:1386
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Delete photo"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1327
-#: lib/mehungry_web/live/profile_live/index.ex:1327
+#: lib/mehungry_web/live/profile_live/index.ex:1399
 #, elixir-autogen, elixir-format
 msgid "Delete this entry? Its photos are removed too."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1313
-#: lib/mehungry_web/live/profile_live/index.ex:1313
+#: lib/mehungry_web/live/profile_live/index.ex:1385
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Delete this photo?"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1186
-#: lib/mehungry_web/live/profile_live/index.ex:1186
+#: lib/mehungry_web/live/profile_live/index.ex:1258
 #, elixir-autogen, elixir-format
 msgid "Diary"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:536
-#: lib/mehungry_web/live/profile_live/index.ex:536
+#: lib/mehungry_web/live/profile_live/index.ex:549
 #, elixir-autogen, elixir-format
 msgid "Entry deleted."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:519
-#: lib/mehungry_web/live/profile_live/index.ex:519
+#: lib/mehungry_web/live/profile_live/index.ex:532
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Entry saved."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1156
-#: lib/mehungry_web/live/profile_live/index.ex:1156
+#: lib/mehungry_web/live/profile_live/index.ex:1228
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Female"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:590
-#: lib/mehungry_web/live/profile_live/index.ex:590
+#: lib/mehungry_web/live/profile_live/index.ex:603
 #, elixir-autogen, elixir-format
 msgid "Fresh start! Your previous progress is saved under past periods."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1071
-#: lib/mehungry_web/live/profile_live/index.ex:1071
+#: lib/mehungry_web/live/profile_live/index.ex:1143
 #, elixir-autogen, elixir-format
 msgid "Goals & tracked metrics"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1108
-#: lib/mehungry_web/live/profile_live/index.ex:1108
+#: lib/mehungry_web/live/profile_live/index.ex:1180
 #, elixir-autogen, elixir-format
 msgid "Goals (optional)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:569
-#: lib/mehungry_web/live/profile_live/index.ex:569
+#: lib/mehungry_web/live/profile_live/index.ex:582
 #, elixir-autogen, elixir-format
 msgid "Goals saved."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1224
-#: lib/mehungry_web/live/profile_live/index.ex:1224
+#: lib/mehungry_web/live/profile_live/index.ex:1296
 #, elixir-autogen, elixir-format
 msgid "How did it go? (optional note)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1264
-#: lib/mehungry_web/live/profile_live/index.ex:1264
+#: lib/mehungry_web/live/profile_live/index.ex:1336
 #, elixir-autogen, elixir-format
 msgid "Log entry"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1154
-#: lib/mehungry_web/live/profile_live/index.ex:1154
+#: lib/mehungry_web/live/profile_live/index.ex:1226
 #, elixir-autogen, elixir-format
 msgid "Male"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1081
-#: lib/mehungry_web/live/profile_live/index.ex:1081
+#: lib/mehungry_web/live/profile_live/index.ex:1153
 #, elixir-autogen, elixir-format
 msgid "Metrics you want to track"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:967
-#: lib/mehungry_web/live/profile_live/index.ex:967
+#: lib/mehungry_web/live/profile_live/index.ex:1039
 #, elixir-autogen, elixir-format, fuzzy
 msgid "My progress"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1051
-#: lib/mehungry_web/live/profile_live/index.ex:1051
+#: lib/mehungry_web/live/profile_live/index.ex:1123
 #, elixir-autogen, elixir-format
 msgid "No measurements yet — log your first entry below. Once you've logged a metric twice, your trend charts here."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1270
-#: lib/mehungry_web/live/profile_live/index.ex:1270
+#: lib/mehungry_web/live/profile_live/index.ex:1342
 #, elixir-autogen, elixir-format
 msgid "Nothing logged in this period."
 msgstr ""
@@ -8396,31 +8357,27 @@ msgstr ""
 msgid "Now"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1634
-#: lib/mehungry_web/live/profile_live/index.ex:1634
+#: lib/mehungry_web/live/profile_live/index.ex:1706
 #, elixir-autogen, elixir-format
 msgid "Only JPG, PNG or WebP images."
 msgstr ""
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:60
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:71
 #, elixir-autogen, elixir-format
 msgid "Payment could not be set up. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:546
-#: lib/mehungry_web/live/profile_live/index.ex:546
+#: lib/mehungry_web/live/profile_live/index.ex:559
 #, elixir-autogen, elixir-format
 msgid "Photo deleted."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1339
-#: lib/mehungry_web/live/profile_live/index.ex:1339
+#: lib/mehungry_web/live/profile_live/index.ex:1411
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Progress history"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1179
-#: lib/mehungry_web/live/profile_live/index.ex:1179
+#: lib/mehungry_web/live/profile_live/index.ex:1251
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Save goals"
 msgstr ""
@@ -8430,28 +8387,23 @@ msgstr ""
 msgid "Self-logged by the client — read-only. They can stop sharing at any time."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:998
-#: lib/mehungry_web/live/profile_live/index.ex:998
+#: lib/mehungry_web/live/profile_live/index.ex:1070
 #, elixir-autogen, elixir-format
 msgid "Share with nutritionist"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:996
-#: lib/mehungry_web/live/profile_live/index.ex:996
-#: lib/mehungry_web/live/profile_live/index.ex:1359
-#: lib/mehungry_web/live/profile_live/index.ex:1359
+#: lib/mehungry_web/live/profile_live/index.ex:1068
+#: lib/mehungry_web/live/profile_live/index.ex:1431
 #, elixir-autogen, elixir-format
 msgid "Shared with nutritionist"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1012
-#: lib/mehungry_web/live/profile_live/index.ex:1012
+#: lib/mehungry_web/live/profile_live/index.ex:1084
 #, elixir-autogen, elixir-format
 msgid "Start over"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1006
-#: lib/mehungry_web/live/profile_live/index.ex:1006
+#: lib/mehungry_web/live/profile_live/index.ex:1078
 #, elixir-autogen, elixir-format
 msgid "Start over from 0? Your current progress stays saved as a past period, and a fresh one begins today."
 msgstr ""
@@ -8461,62 +8413,52 @@ msgstr ""
 msgid "The shared period doesn't have enough logged measurements to chart yet."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:611
-#: lib/mehungry_web/live/profile_live/index.ex:611
+#: lib/mehungry_web/live/profile_live/index.ex:624
 #, elixir-autogen, elixir-format
 msgid "This period is no longer shared."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:610
-#: lib/mehungry_web/live/profile_live/index.ex:610
+#: lib/mehungry_web/live/profile_live/index.ex:623
 #, elixir-autogen, elixir-format
 msgid "This period is now visible to your nutritionist."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1633
-#: lib/mehungry_web/live/profile_live/index.ex:1633
+#: lib/mehungry_web/live/profile_live/index.ex:1705
 #, elixir-autogen, elixir-format
 msgid "Up to 4 photos per entry."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1635
-#: lib/mehungry_web/live/profile_live/index.ex:1635
+#: lib/mehungry_web/live/profile_live/index.ex:1707
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Upload failed — try again."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:948
-#: lib/mehungry_web/live/profile_live/index.ex:948
+#: lib/mehungry_web/live/profile_live/index.ex:1020
 #, elixir-autogen, elixir-format
 msgid "Viewing a past period:"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:617
-#: lib/mehungry_web/live/profile_live/index.ex:617
+#: lib/mehungry_web/live/profile_live/index.ex:630
 #, elixir-autogen, elixir-format
 msgid "You don't have a nutritionist to share with yet."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:937
-#: lib/mehungry_web/live/profile_live/index.ex:937
+#: lib/mehungry_web/live/profile_live/index.ex:1009
 #, elixir-autogen, elixir-format
 msgid "Your earlier self-logged progress is saved below under past periods."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1055
-#: lib/mehungry_web/live/profile_live/index.ex:1055
+#: lib/mehungry_web/live/profile_live/index.ex:1127
 #, elixir-autogen, elixir-format
 msgid "Your nutritionist hasn't recorded measurements yet. Once you've had at least two measured visits, your progress will chart here."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:933
-#: lib/mehungry_web/live/profile_live/index.ex:933
+#: lib/mehungry_web/live/profile_live/index.ex:1005
 #, elixir-autogen, elixir-format
 msgid "Your nutritionist now tracks your progress — measurements from your visits chart here automatically, and self-logging is paused."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:526
-#: lib/mehungry_web/live/profile_live/index.ex:526
+#: lib/mehungry_web/live/profile_live/index.ex:539
 #, elixir-autogen, elixir-format
 msgid "Your nutritionist tracks this period — logging is paused."
 msgstr ""
@@ -8526,10 +8468,8 @@ msgstr ""
 msgid "logged by you"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:919
-#: lib/mehungry_web/live/profile_live/index.ex:919
-#: lib/mehungry_web/live/profile_live/index.ex:1305
-#: lib/mehungry_web/live/profile_live/index.ex:1305
+#: lib/mehungry_web/live/profile_live/index.ex:961
+#: lib/mehungry_web/live/profile_live/index.ex:1377
 #, elixir-autogen, elixir-format
 msgid "progress photo"
 msgstr ""
@@ -8544,20 +8484,47 @@ msgstr ""
 msgid "progress photos"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1616
-#: lib/mehungry_web/live/profile_live/index.ex:1616
+#: lib/mehungry_web/live/profile_live/index.ex:1688
 #, elixir-autogen, elixir-format
 msgid "self-tracked"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1615
-#: lib/mehungry_web/live/profile_live/index.ex:1615
+#: lib/mehungry_web/live/profile_live/index.ex:1687
 #, elixir-autogen, elixir-format, fuzzy
 msgid "with nutritionist"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1153
-#: lib/mehungry_web/live/profile_live/index.ex:1153
+#: lib/mehungry_web/live/profile_live/index.ex:1225
 #, elixir-autogen, elixir-format
 msgid "—"
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:657
+#, elixir-autogen, elixir-format
+msgid "Could not create the share link."
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:670
+#, elixir-autogen, elixir-format
+msgid "Could not revoke the share link."
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:974
+#, elixir-autogen, elixir-format
+msgid "Create share link"
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:654
+#, elixir-autogen, elixir-format
+msgid "Share link created — anyone with the link can view this photo."
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:667
+#, elixir-autogen, elixir-format
+msgid "Share link revoked."
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:991
+#, elixir-autogen, elixir-format
+msgid "Stop sharing"
 msgstr ""

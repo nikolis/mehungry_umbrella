@@ -6,24 +6,27 @@ defmodule Mehungry.Storage do
   The active backend is chosen by `config :mehungry, :storage, backend:`
   (`:s3` → `Mehungry.Storage.S3`, `:supabase` → `Mehungry.Storage.Supabase`).
   Tests/rollback can hard-pin a module via `:storage_impl`. Keys are
-  bucket-relative paths; the bucket lives in config.
+  bucket-relative paths; the bucket lives in config. Every call accepts
+  `bucket: :private` in `opts` to target the **private** bucket (sensitive
+  media — progress photos; world-readable only via short-lived `signed_url/3`
+  links), defaulting to the public media bucket.
 
   See `docs/implementation/infrastructure/object_storage.md`.
   """
 
   alias Mehungry.Storage.{S3, Supabase}
 
-  @doc "Stores `binary` at `key`. Opts: `:content_type`."
+  @doc "Stores `binary` at `key`. Opts: `:content_type`, `:bucket`."
   def put(key, binary, opts \\ []), do: impl().put(key, binary, opts)
 
-  @doc "Reads a local file and stores it at `key`. Opts: `:content_type`."
+  @doc "Reads a local file and stores it at `key`. Opts: `:content_type`, `:bucket`."
   def put_file(key, path, opts \\ []), do: impl().put(key, File.read!(path), opts)
 
-  @doc "Fetches the object bytes at `key`."
-  def get(key), do: impl().get(key)
+  @doc "Fetches the object bytes at `key`. Opts: `:bucket`."
+  def get(key, opts \\ []), do: impl().get(key, opts)
 
-  @doc "Deletes the object at `key`."
-  def delete(key), do: impl().delete(key)
+  @doc "Deletes the object at `key`. Opts: `:bucket`."
+  def delete(key, opts \\ []), do: impl().delete(key, opts)
 
   @doc """
   True if `url` points at storage we own (legacy AWS bucket or our Supabase
@@ -48,10 +51,22 @@ defmodule Mehungry.Storage do
   @doc "Lists object metadata under `prefix` (nil = whole bucket)."
   def list(prefix \\ nil), do: impl().list(prefix)
 
-  @doc "Public (unsigned) URL for `key`."
-  def public_url(key), do: impl().public_url(key)
+  @doc "Public (unsigned) URL for `key`. Meaningless for the private bucket."
+  def public_url(key, opts \\ []), do: impl().public_url(key, opts)
 
-  @doc "Short-lived credential for a direct browser upload to `key`."
+  @doc """
+  Short-lived read URL for `key`, valid `expires_in` seconds — the only way a
+  client reads a private-bucket object. Opts: `:bucket`.
+  """
+  def signed_url(key, expires_in, opts \\ []), do: impl().signed_url(key, expires_in, opts)
+
+  @doc """
+  Bulk `signed_url/3` (one upstream call): `{:ok, %{key => signed_url}}`,
+  containing only the keys that signed successfully.
+  """
+  def signed_urls(keys, expires_in, opts \\ []), do: impl().signed_urls(keys, expires_in, opts)
+
+  @doc "Short-lived credential for a direct browser upload to `key`. Opts: `:bucket`."
   def signed_upload(key, opts \\ []), do: impl().signed_upload(key, opts)
 
   @doc """

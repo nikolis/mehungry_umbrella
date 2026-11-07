@@ -57,6 +57,30 @@ each openable read-only.
   comparison pair with the measurement deltas between them. Tapping any photo
   opens a lightbox. Deleting photos/entries removes the storage objects too.
 
+## Photo privacy (private by default, shareable by choice)
+
+Body photos are sensitive (GDPR Art. 9-adjacent), so they are **never**
+world-readable:
+
+- Objects live in the **private** Supabase bucket (`bucket: :private` through
+  `Mehungry.Storage`; see
+  `docs/implementation/infrastructure/object_storage.md`). Only the
+  private-bucket `storage_key` is persisted — no permanent URL exists.
+- Every read surface (diary thumbnails, chart photo strip, Before → Now,
+  lightbox, all §19 payloads) serves **short-lived signed URLs (~1 h)**,
+  derived in exactly one place: `Progress.photo_url/1` / its bulk signer
+  (REST↔LiveView parity — web and API can't drift).
+- **Opt-in sharing**: from the lightbox (web) or
+  `POST /api/v1/me/progress/photos/:id/share`, the owner can create a public
+  share link — `https://…/shared/photos/<token>`, a crypto-random token that
+  302s to a fresh ~10-min signed URL on each visit. **Unshare deletes the
+  token**, so the link dies instantly (already-issued signed URLs lapse within
+  minutes). Photos are visible to no one else — not even a nutritionist the
+  *period* is shared with (the shared journal panel carries measurements only).
+- Legacy photos uploaded to the public bucket before this change are moved by
+  the one-off `mix progress.migrate_photos` sweep
+  (`Mehungry.Progress.PhotoMigration`).
+
 ## Sharing with the nutritionist
 
 Off by default. The user can mark a period **"Share with nutritionist"**
@@ -70,11 +94,12 @@ assigned nutritionist.
 
 - **Web**: `/profile?tab=progress` (owner-only tab, fully localized EN/EL).
 - **Mobile**: `/api/v1/me/progress/periods…` — spec
-  `docs/implementation/new_dec_specs/mobile_api_spec.md` **§19** (12 routes:
-  periods CRUD/bootstrap, reset, share/unshare, entries upsert/delete, photo
-  attach/delete; photos upload via the §11 presign flow, `kind:
-  "progress_photo"`). §18's nutritionist-sourced `GET /me/progress` is
-  unchanged.
+  `docs/implementation/new_dec_specs/mobile_api_spec.md` **§19** (14 routes:
+  periods CRUD/bootstrap, reset, period share/unshare, entries upsert/delete,
+  photo attach/delete, photo share/unshare; photos upload via the §11 presign
+  flow, `kind: "progress_photo"` → private bucket). §18's
+  nutritionist-sourced `GET /me/progress` is unchanged. Public (no-auth)
+  `GET /shared/photos/:token` resolves photo share links.
 
 ## Implementation map
 
@@ -90,4 +115,5 @@ assigned nutritionist.
   source, goal-from-`context.goals`, `photo_strip/1`, `before_now/1`.
   Nutritionist read surface: `ClientDetail` + `shared_journal_panel`.
 - API: `Api.V1.ProgressController` + `ProgressJSON`; `UploadController` kind
-  `progress_photo`.
+  `progress_photo` (private bucket); public `SharedPhotoController`
+  (`/shared/photos/:token`).

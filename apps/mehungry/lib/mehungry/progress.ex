@@ -24,6 +24,19 @@ defmodule Mehungry.Progress do
   (`%{date:, source:, weight_kg:, ...}`) so `MehungryWeb.MeasurementChart`
   renders either source unchanged; self-logged points carry `source: :self`.
 
+  ## Photo privacy
+
+  Body photos are sensitive media: objects live in the **private** storage
+  bucket (`Mehungry.Storage`, `bucket: :private`) under `storage_key`, and
+  every read surface (entry listings, `photo_markers/1`, `comparison/1`, the
+  §19 REST serializers — all funneled through `photo_url/1`/the bulk signer
+  here, never re-derived in web layers) serves short-lived **signed URLs**
+  (~1 h). `Photo.url` is populated only on legacy rows from
+  the public-bucket era (cleared by `mix progress.migrate_photos`). A photo
+  can be explicitly shared via a revocable crypto-random `share_token`
+  (`share_photo/2` / `unshare_photo/2`, resolved by `shared_photo_url/1`
+  behind the public `GET /shared/photos/:token` redirect).
+
   Depends one-way on `Professionals` (assignment lookup + aligned history);
   the only reverse edge is the two alignment hooks `Professionals` calls.
   """
@@ -35,6 +48,11 @@ defmodule Mehungry.Progress do
   alias Mehungry.Professionals
   alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Progress.{Entry, Period, Photo}
+
+  # Signed-URL lifetimes: ~1 h for the owner's own reads (a profile/app session),
+  # ~10 min for the hop behind a public share-link redirect (each visit re-signs).
+  @photo_url_ttl 3600
+  @shared_link_ttl 600
 
   # ── Periods ────────────────────────────────────────────────────────────────────
 
@@ -286,7 +304,11 @@ defmodule Mehungry.Progress do
     upsert_entry_by_date(user_id, period_id, date, attrs)
   end
 
-  @doc "The period's diary entries, oldest first, photos preloaded."
+  @doc """
+  The period's diary entries, oldest first, photos preloaded — each photo's
+  `url` resolved to a servable URL (`photo_url/1` semantics, bulk-signed in
+  one storage call).
+  """
   def list_entries(user_id, period_id) do
     Repo.all(
       from e in Entry,
@@ -294,6 +316,7 @@ defmodule Mehungry.Progress do
         order_by: [asc: e.entry_date],
         preload: [:photos]
     )
+    |> resolve_entry_photo_urls()
   end
 
   @doc "Fetch an entry by id **and** owner."
@@ -320,8 +343,10 @@ defmodule Mehungry.Progress do
   # ── Photos ─────────────────────────────────────────────────────────────────────
 
   @doc """
-  Attach an uploaded photo (already in `Mehungry.Storage`) to one of the user's
-  entries. `attrs` carries `url` (+ optional `storage_key`/`caption`).
+  Attach an uploaded photo (already in `Mehungry.Storage`'s **private** bucket)
+  to one of the user's entries. `attrs` carries the private-bucket
+  `storage_key` (+ optional `caption`); `url` is accepted only for legacy
+  public-bucket rows.
   """
   def attach_photo(user_id, entry_id, attrs) do
     case get_entry(user_id, entry_id) do
@@ -356,7 +381,7 @@ defmodule Mehungry.Progress do
 
   @doc "Delete a photo row **and** its storage object."
   def delete_photo(user_id, photo_id) do
-    case Repo.get_by(Photo, id: photo_id, user_id: user_id) do
+    case get_photo(user_id, photo_id) do
       nil ->
         {:error, :not_found}
 
@@ -366,6 +391,91 @@ defmodule Mehungry.Progress do
           {:ok, photo}
         end
     end
+  end
+
+  @doc "Fetch a photo by id **and** owner (raw row — `url` is not resolved)."
+  def get_photo(user_id, photo_id), do: Repo.get_by(Photo, id: photo_id, user_id: user_id)
+
+  @doc """
+  The servable URL for a photo: its legacy public `url` when set, else a
+  short-lived (~1 h) signed URL for its private-bucket `storage_key` — the
+  **one** place photo URLs are derived (LiveView + REST both call here).
+  `nil` when signing fails (upstream outage).
+  """
+  def photo_url(%Photo{url: url}) when is_binary(url), do: url
+
+  def photo_url(%Photo{storage_key: key}) when is_binary(key) do
+    case Storage.signed_url(key, @photo_url_ttl, bucket: :private) do
+      {:ok, signed} -> signed
+      {:error, _} -> nil
+    end
+  end
+
+  def photo_url(_), do: nil
+
+  @doc "The photo with its `url` field resolved via `photo_url/1` (for serializing)."
+  def with_photo_url(%Photo{} = photo), do: %{photo | url: photo_url(photo)}
+
+  # ── Photo sharing (opt-in, revocable public links) ─────────────────────────────
+
+  @doc """
+  Create (or return) the photo's public share link token — owner-only. The
+  token is crypto-random and resolves via `shared_photo_url/1` behind
+  `GET /shared/photos/:token`; revoke with `unshare_photo/2`.
+  """
+  def share_photo(user_id, photo_id) do
+    case get_photo(user_id, photo_id) do
+      nil ->
+        {:error, :not_found}
+
+      photo ->
+        photo
+        |> Ecto.Changeset.change(
+          share_token: photo.share_token || generate_share_token(),
+          shared_at: photo.shared_at || DateTime.truncate(DateTime.utc_now(), :second)
+        )
+        |> Ecto.Changeset.unique_constraint(:share_token)
+        |> Repo.update()
+    end
+  end
+
+  @doc "Revoke the photo's public share link (the token is deleted, not disabled)."
+  def unshare_photo(user_id, photo_id) do
+    case get_photo(user_id, photo_id) do
+      nil ->
+        {:error, :not_found}
+
+      photo ->
+        photo
+        |> Ecto.Changeset.change(share_token: nil, shared_at: nil)
+        |> Repo.update()
+    end
+  end
+
+  @doc """
+  Resolve a share token to a **fresh, short-lived** (~10 min) signed URL for
+  the photo object — the redirect target of `GET /shared/photos/:token`.
+  `{:error, :not_found}` for unknown/revoked tokens.
+  """
+  def shared_photo_url(token) when is_binary(token) and token != "" do
+    case Repo.get_by(Photo, share_token: token) do
+      nil ->
+        {:error, :not_found}
+
+      # Legacy public-bucket row (pre-migration) — the stored URL already works.
+      # Same legacy-first rule as photo_url/1.
+      %Photo{url: url} when is_binary(url) ->
+        {:ok, url}
+
+      %Photo{storage_key: key} when is_binary(key) ->
+        Storage.signed_url(key, @shared_link_ttl, bucket: :private)
+    end
+  end
+
+  def shared_photo_url(_), do: {:error, :not_found}
+
+  defp generate_share_token do
+    16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
   end
 
   # ── Chart inputs (shape parity with Professionals.measurement_history_*) ──────
@@ -427,17 +537,35 @@ defmodule Mehungry.Progress do
     |> Map.put(:goals, period.goals || %{})
   end
 
-  @doc "Photo pins for the trend chart: `[%{date:, url:, entry_id:, caption:}]`, oldest first."
+  @doc """
+  Photo pins for the trend chart:
+  `[%{date:, url:, entry_id:, photo_id:, caption:}]`, oldest first — `url`
+  resolved (signed) like every photo read.
+  """
   def photo_markers(%Period{} = period) do
-    Repo.all(
-      from ph in Photo,
-        join: e in Entry,
-        on: ph.progress_entry_id == e.id,
-        where: e.progress_period_id == ^period.id,
-        order_by: [asc: e.entry_date, asc: ph.position],
-        select: %{date: e.entry_date, url: ph.url, entry_id: e.id, caption: ph.caption}
-    )
-    |> Enum.uniq_by(& &1.entry_id)
+    markers =
+      Repo.all(
+        from ph in Photo,
+          join: e in Entry,
+          on: ph.progress_entry_id == e.id,
+          where: e.progress_period_id == ^period.id,
+          order_by: [asc: e.entry_date, asc: ph.position],
+          select: %{
+            date: e.entry_date,
+            url: ph.url,
+            storage_key: ph.storage_key,
+            entry_id: e.id,
+            photo_id: ph.id,
+            caption: ph.caption
+          }
+      )
+      |> Enum.uniq_by(& &1.entry_id)
+
+    signed = bulk_sign(markers)
+
+    Enum.map(markers, fn m ->
+      m |> Map.put(:url, m.url || Map.get(signed, m.storage_key)) |> Map.delete(:storage_key)
+    end)
   end
 
   @doc """
@@ -470,7 +598,7 @@ defmodule Mehungry.Progress do
   defp comparison_side(entry) do
     %{
       date: entry.entry_date,
-      url: List.first(Enum.sort_by(entry.photos, & &1.position)).url,
+      url: photo_url(List.first(Enum.sort_by(entry.photos, & &1.position))),
       entry: entry
     }
   end
@@ -587,12 +715,62 @@ defmodule Mehungry.Progress do
     )
   end
 
+  # Deletes always key off `storage_key` (never `delete_by_url/1` — a signed
+  # URL isn't an `owned_url?/1` path). The object may live in either bucket —
+  # private after `mix progress.migrate_photos`, public on legacy rows — so
+  # try both; the miss is a harmless 404.
   defp delete_photo_object(%Photo{} = photo) do
     cond do
-      photo.storage_key -> Storage.delete(photo.storage_key)
-      photo.url -> Storage.delete_by_url(photo.url)
-      true -> :ok
+      photo.storage_key ->
+        Storage.delete(photo.storage_key, bucket: :private)
+        Storage.delete(photo.storage_key)
+
+      photo.url ->
+        Storage.delete_by_url(photo.url)
+
+      true ->
+        :ok
     end
+
+    :ok
+  end
+
+  # One storage round-trip for a whole photo list: sign every private-bucket
+  # key (rows with no legacy `url`) and return `%{storage_key => signed_url}`.
+  # Degrades to `%{}` on upstream failure — urls come back `nil`, never crash.
+  defp bulk_sign(items) do
+    keys =
+      for item <- items,
+          is_nil(Map.get(item, :url)),
+          key = Map.get(item, :storage_key),
+          is_binary(key),
+          do: key
+
+    case Enum.uniq(keys) do
+      [] ->
+        %{}
+
+      keys ->
+        case Storage.signed_urls(keys, @photo_url_ttl, bucket: :private) do
+          {:ok, signed} -> signed
+          {:error, _} -> %{}
+        end
+    end
+  end
+
+  defp resolve_entry_photo_urls(entries) do
+    signed = entries |> Enum.flat_map(& &1.photos) |> bulk_sign()
+
+    Enum.map(entries, fn entry ->
+      %{
+        entry
+        | photos:
+            Enum.map(entry.photos, fn
+              %Photo{url: nil, storage_key: key} = p -> %{p | url: Map.get(signed, key)}
+              p -> p
+            end)
+      }
+    end)
   end
 
   # Form params arrive as string values; keep only positive numbers over the

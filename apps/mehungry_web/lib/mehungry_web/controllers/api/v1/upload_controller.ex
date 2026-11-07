@@ -5,6 +5,10 @@ defmodule MehungryWeb.Api.V1.UploadController do
     * presigned PUT (preferred) — the client PUTs the binary straight to S3, then
       passes the returned `upload_id` (object key) to the create/update body.
     * direct multipart (fallback) — the server streams the file to S3.
+
+  `kind: "progress_photo"` targets the **private** bucket (sensitive body
+  photos, §19) — those responses carry `url: null` and the object is readable
+  only via the signed URLs the §19 endpoints serve.
   """
   use MehungryWeb, :controller
 
@@ -25,7 +29,7 @@ defmodule MehungryWeb.Api.V1.UploadController do
     with :ok <- validate_kind(kind),
          :ok <- ensure_configured(),
          key <- object_key(kind, content_type),
-         {:ok, upload} <- signed_upload(key, content_type) do
+         {:ok, upload} <- signed_upload(key, content_type, kind) do
       json(
         conn,
         data(%{
@@ -46,7 +50,7 @@ defmodule MehungryWeb.Api.V1.UploadController do
          :ok <- ensure_configured(),
          key <- object_key(kind, content_type),
          {:ok, binary} <- read_upload(upload),
-         {:ok, %{url: url, key: key}} <- put_object(key, binary, content_type) do
+         {:ok, %{url: url, key: key}} <- put_object(key, binary, content_type, kind) do
       json(conn, data(%{upload_id: key, url: url}))
     end
   end
@@ -59,8 +63,8 @@ defmodule MehungryWeb.Api.V1.UploadController do
   # `{:error, {:transport_error, _}}` on upstream failure. Collapse those to the
   # `:upstream_error` the fallback controller maps to a clean 502 — a raw tuple
   # would otherwise match no fallback clause and crash into a 500.
-  defp signed_upload(key, content_type) do
-    case Storage.signed_upload(key, content_type: content_type) do
+  defp signed_upload(key, content_type, kind) do
+    case Storage.signed_upload(key, [content_type: content_type] ++ bucket_opts(kind)) do
       {:ok, upload} ->
         {:ok, upload}
 
@@ -83,8 +87,8 @@ defmodule MehungryWeb.Api.V1.UploadController do
     end
   end
 
-  defp put_object(key, binary, content_type) do
-    case Storage.put(key, binary, content_type: content_type) do
+  defp put_object(key, binary, content_type, kind) do
+    case Storage.put(key, binary, [content_type: content_type] ++ bucket_opts(kind)) do
       {:ok, result} ->
         {:ok, result}
 
@@ -93,6 +97,12 @@ defmodule MehungryWeb.Api.V1.UploadController do
         {:error, :upstream_error}
     end
   end
+
+  # Progress photos are sensitive media (body photos) — they go to the private
+  # bucket and are only ever read back through short-lived signed URLs (§19);
+  # their presign/response `url` fields carry no public object URL.
+  defp bucket_opts("progress_photo"), do: [bucket: :private]
+  defp bucket_opts(_), do: []
 
   defp validate_kind(kind) when kind in @valid_kinds, do: :ok
   defp validate_kind(_), do: {:error, :bad_request}

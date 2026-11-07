@@ -545,7 +545,7 @@ defmodule MehungryWeb.MeasurementChart do
         :for={m <- @markers}
         type="button"
         phx-click="open_photo"
-        phx-value-url={m.url}
+        phx-value-id={m.photo_id}
         phx-value-date={Date.to_iso8601(m.date)}
         class="absolute top-0 -translate-x-1/2 flex flex-col items-center group focus:outline-none"
         style={"left: #{marker_left_pct(m.date, @min_date, @max_date)}%"}

@@ -54,11 +54,19 @@ the assigned nutritionist (opt-in, revocable).
   "weight_kg": 80.0, "waist_cm": 92.0, "body_fat_percentage": null,
   "muscle_mass_kg": null, "bmi": 26.1, "bmr_kcal": 1731,
   "note": "Day one. Felt good.",
-  "photos": [ { "id": 7, "url": "https://…", "caption": null, "position": 0 } ] }
+  "photos": [ { "id": 7, "url": "https://…?token=…", "caption": null, "position": 0,
+                "shared": false, "share_url": null } ] }
 ```
 **One entry per date per period** — logging the same date again *updates* that
 entry (true upsert; same `id` comes back). Design the "log" screen as
 "today's entry" rather than "new entry".
+
+> **Photo URLs are ephemeral (2026-11-07 change).** Photos live in a private
+> bucket; every photo `url` (here, in `photo_markers`, in `comparison`) is a
+> **signed URL valid ~1 hour**. Render it, let the image cache normally, but
+> never persist the string for later sessions — re-fetch the endpoint instead
+> (an expired URL returns 400). `shared`/`share_url` describe the photo's
+> opt-in public share link (see §5a below).
 
 ### History point (chart data)
 ```json
@@ -120,6 +128,8 @@ Key client consequences:
 | `DELETE /me/progress/entries/:id` | 204; removes its photos too (rows + storage). |
 | `POST /me/progress/photos` | `{"entry_id": …, "upload_id": …}` after the §11 presign flow. Never send a URL. |
 | `DELETE /me/progress/photos/:id` | 204; removes the storage object too. |
+| `POST /me/progress/photos/:id/share` | Create the photo's public share link (idempotent — same token back). Returns the photo with `shared: true` + `share_url`. |
+| `DELETE /me/progress/photos/:id/share` | Revoke it (link 404s immediately). Returns the photo with `shared: false`. |
 
 Errors follow the §1 envelope: 404 for any id that isn't yours (treat as "gone"),
 422 with `{"errors": {"detail": …, "fields": …}}` for validation, 401 unauth.
@@ -127,10 +137,28 @@ Errors follow the §1 envelope: 404 for any id that isn't yours (treat as "gone"
 ## 5. Photo upload flow (3 steps)
 
 1. `POST /api/v1/uploads/presign` with `{"kind": "progress_photo", "content_type": "image/jpeg"}`
-   → `{upload_id, url, method, headers}`.
+   → `{upload_id, url, method, headers}`. (This kind targets the **private**
+   bucket — jpeg/png/webp/heic, ≤10 MB.)
 2. HTTP `PUT` the binary to `url` with the returned `headers`.
 3. `POST /api/v1/me/progress/photos` with `{entry_id, upload_id}` → the photo
-   object with its public `url`.
+   object with an **ephemeral signed `url`** (~1 h — display it, don't persist it).
+
+## 5a. Photo privacy & the share sheet
+
+Photos are private to their owner — there is **no permanent public URL**. The
+only way to show one to someone else is the explicit share link:
+
+1. `POST /me/progress/photos/:id/share` → `share_url`
+   (`https://<host>/shared/photos/<token>` — **stable**, this one *is* safe to
+   put in a share sheet / copy to clipboard; each visit redirects to a fresh
+   short-lived signed URL).
+2. `DELETE /me/progress/photos/:id/share` revokes it — the link 404s from that
+   moment (an already-loaded image may survive a few more minutes, nothing else).
+
+Natural UX: a share toggle in the photo viewer — off = private (default),
+on = show the `share_url` with copy/share actions, plus a "Stop sharing"
+affordance. `photo_markers[].photo_id` gives you the photo id from the chart
+strip; entry `photos[].id` from the diary.
 
 So a photo always belongs to a diary entry (that's what pins it to a date).
 The natural UX: attach photos while logging today's entry — upsert the entry

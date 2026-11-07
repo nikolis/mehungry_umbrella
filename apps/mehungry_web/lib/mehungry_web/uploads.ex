@@ -24,13 +24,16 @@ defmodule MehungryWeb.Uploads do
   @doc """
   LiveView external-upload meta for `entry` targeting `key`. `max_file_size` is
   only used by the legacy S3 POST policy (Supabase enforces size via bucket
-  config). Raises if the Supabase backend can't issue a signed URL — the caller
-  surfaces that as an upload error.
+  config). `opts` may carry `bucket: :private` (sensitive media — the returned
+  `:public_url` is then `nil`; consume on `:key` instead). Raises if the
+  Supabase backend can't issue a signed URL — the caller surfaces that as an
+  upload error.
   """
-  def meta(entry, key, max_file_size) do
+  def meta(entry, key, max_file_size, opts \\ []) do
     case backend() do
       :supabase ->
-        {:ok, up} = Storage.signed_upload(key, content_type: entry.client_type)
+        {:ok, up} =
+          Storage.signed_upload(key, [content_type: entry.client_type] ++ opts)
 
         %{
           uploader: "Supabase",

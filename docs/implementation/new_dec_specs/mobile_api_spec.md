@@ -750,6 +750,14 @@ Recipe / avatar images go to S3 (existing `Mehungry.S3`). Two supported flows:
 - **Direct multipart** (fallback): `POST /api/v1/uploads` `multipart/form-data`
   → `{ "data": { "upload_id": "…", "url": "https://…" } }`.
 
+**`kind: "progress_photo"` targets the private bucket.** Body photos are
+sensitive media: they are stored in a **private** Supabase bucket (no public
+object URL exists). The presign flow is identical, but the multipart response's
+`url` is **`null`** for this kind — the client must use only `upload_id` and
+read the photo back through the §19 payloads, whose `url` fields are
+short-lived signed URLs. The private bucket accepts
+`image/jpeg | image/png | image/webp | image/heic` up to 10 MB.
+
 `upload_id` is accepted as `image_upload_id` by **both** `POST /recipes` and
 `PUT /recipes/:id` (map it onto an edited recipe to swap its image). The server
 resolves the storage object key to a **fully-qualified public URL** before
@@ -1299,6 +1307,16 @@ active period (server-enforced). Two kinds:
   opens. The client should surface this state ("your nutritionist tracks your
   progress now; your earlier history is saved under past periods").
 
+**Photo privacy (breaking semantics vs. the first §19 draft).** Progress
+photos live in a **private** storage bucket. Every photo `url` in §19 payloads
+(`photos[].url`, `photo_markers[].url`, `comparison.*.url`) is an **ephemeral
+signed URL valid ~1 hour** — render it, but **never cache/persist it long-term**
+(re-fetch the endpoint instead; an expired URL returns 400). A photo is visible
+only to its owner unless the owner creates an explicit, revocable **share
+link** (`POST /me/progress/photos/:id/share` → `share_url`, a stable public
+`https://<host>/shared/photos/<token>` that 302s to a fresh short-lived signed
+URL on every hit; `DELETE …/share` revokes it immediately).
+
 **Metrics.** Selectable `tracked_metrics` ⊆
 `weight_kg | waist_cm | body_fat_percentage | muscle_mass_kg`. `bmi` and
 `bmr_kcal` are **derived server-side** from the period's `height_m`/`sex`/`age`
@@ -1352,10 +1370,13 @@ the chart's date axis). `404` for another user's period.
                 "entry": { "id": 60, "entry_date": "2026-11-20", "weight_kg": 77.2, "...": "…" } }
   },
   "photo_markers": [
-    { "date": "2026-10-22", "url": "https://…/a.jpg", "entry_id": 51, "caption": null }
+    { "date": "2026-10-22", "url": "https://…/object/sign/…/a.jpg?token=…",
+      "entry_id": 51, "photo_id": 7, "caption": null }
   ]
 } }
 ```
+All photo `url`s above are ephemeral signed URLs (~1 h — see *Photo privacy*);
+`photo_markers[].photo_id` identifies the photo for the share endpoints.
 Empty `history` (not `404`) when nothing is logged yet. For
 `nutritionist_aligned` periods the `history` carries `source: intake | visit`
 points **up to the period's end** (no lower date bound — nutritionist
@@ -1411,9 +1432,13 @@ The period's diary entries, oldest first, photos embedded.
     "weight_kg": 80.0, "waist_cm": 92.0, "body_fat_percentage": null,
     "muscle_mass_kg": null, "bmi": 26.1, "bmr_kcal": 1731,
     "note": "Day one. Felt good.",
-    "photos": [ { "id": 7, "url": "https://…/a.jpg", "caption": null, "position": 0 } ] }
+    "photos": [ { "id": 7, "url": "https://…/object/sign/…/a.jpg?token=…",
+                  "caption": null, "position": 0,
+                  "shared": false, "share_url": null } ] }
 ] }
 ```
+Photo `url`s are ephemeral signed URLs (~1 h); `shared`/`share_url` reflect the
+photo's public share link (see below).
 
 #### `POST /api/v1/me/progress/entries` 🔒
 Log (or re-log) a diary entry — **one per date per period**; sending the same
@@ -1433,18 +1458,35 @@ Log (or re-log) a diary entry — **one per date per period**; sending the same
 
 #### `POST /api/v1/me/progress/photos` 🔒
 Attach an uploaded photo to an entry. Upload first via §11
-(`kind: "progress_photo"`), then pass the returned `upload_id` — the server
-resolves it to the public URL (a raw URL is never accepted).
+(`kind: "progress_photo"` — private bucket), then pass the returned
+`upload_id`; only the object key is stored (a raw URL is never accepted).
 ```json
 // request
 { "entry_id": 51, "upload_id": "progress_photos/3f1c….jpg" }
-// 200
-{ "data": { "id": 7, "url": "https://…/progress_photos/3f1c….jpg",
-            "caption": null, "position": 0 } }
+// 200 — url is an ephemeral signed URL (~1 h)
+{ "data": { "id": 7, "url": "https://…/object/sign/…/3f1c….jpg?token=…",
+            "caption": null, "position": 0, "shared": false, "share_url": null } }
 ```
 
 #### `DELETE /api/v1/me/progress/photos/:id` 🔒
 `204`. Deletes the row **and** the storage object.
+
+#### `POST /api/v1/me/progress/photos/:id/share` 🔒 · `DELETE …/share` 🔒
+Create / revoke the photo's **public share link** — the only way anyone but
+the owner can see a progress photo. `POST` is idempotent (re-sharing returns
+the same token, so an already-sent link keeps working); `DELETE` nulls the
+token, so the link stops resolving immediately. `404` for another user's
+photo.
+```json
+// POST 200 — the photo with its share state
+{ "data": { "id": 7, "url": "https://…?token=…", "caption": null, "position": 0,
+            "shared": true,
+            "share_url": "https://www.m3hungry.com/shared/photos/8aG…Qw" } }
+// DELETE 200 — "shared": false, "share_url": null
+```
+`share_url` is a **stable** public URL (safe to hand to anyone — it is the
+share): each hit 302-redirects to a fresh ~10-min signed URL. Revoked or
+unknown tokens return `404`.
 
 ### Router additions (§19)
 
@@ -1462,6 +1504,11 @@ post("/me/progress/entries", ProgressController, :upsert_entry)
 delete("/me/progress/entries/:id", ProgressController, :delete_entry)
 post("/me/progress/photos", ProgressController, :attach_photo)
 delete("/me/progress/photos/:id", ProgressController, :delete_photo)
+post("/me/progress/photos/:id/share", ProgressController, :share_photo)
+delete("/me/progress/photos/:id/share", ProgressController, :unshare_photo)
+
+# public (no auth) — share-link resolver, outside /api/v1
+get("/shared/photos/:token", SharedPhotoController, :show)  # 302 → signed URL
 ```
 
 ---

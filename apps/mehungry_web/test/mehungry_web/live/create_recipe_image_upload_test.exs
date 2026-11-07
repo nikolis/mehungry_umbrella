@@ -20,8 +20,10 @@ defmodule MehungryWeb.CreateRecipeImageUploadTest do
        }}
     end
 
-    def public_url(key), do: "https://fake.supabase.co/storage/v1/object/public/bucket/#{key}"
-    def delete(_key), do: {:ok, :deleted}
+    def public_url(key, _opts \\ []),
+      do: "https://fake.supabase.co/storage/v1/object/public/bucket/#{key}"
+
+    def delete(_key, _opts \\ []), do: {:ok, :deleted}
     def delete_by_url(_url), do: {:ok, :deleted}
   end
 

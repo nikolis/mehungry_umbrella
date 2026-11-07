@@ -18,7 +18,6 @@ defmodule MehungryWeb.Api.V1.ProgressController do
   import MehungryWeb.Api.V1.JSON.Helpers
 
   alias Mehungry.Progress
-  alias Mehungry.Storage
   alias MehungryWeb.Api.V1.ProgressJSON, as: JSON
 
   action_fallback MehungryWeb.Api.V1.FallbackController
@@ -142,23 +141,38 @@ defmodule MehungryWeb.Api.V1.ProgressController do
   end
 
   @doc """
-  Attach an uploaded photo to an entry. `upload_id` is the object key returned
-  by the §11 presign flow (`kind: "progress_photo"`); resolved to its public
-  URL here — the client never supplies a raw URL.
+  Attach an uploaded photo to an entry. `upload_id` is the **private-bucket**
+  object key returned by the §11 presign flow (`kind: "progress_photo"`); only
+  the key is stored — every read serves a fresh short-lived signed URL
+  (`Progress.photo_url/1`). The client never supplies a raw URL.
   """
   def attach_photo(conn, %{"entry_id" => entry_id, "upload_id" => upload_id})
       when is_binary(upload_id) and upload_id != "" do
-    attrs = %{
-      "url" => Storage.public_url(upload_id),
-      "storage_key" => upload_id
-    }
+    attrs = %{"storage_key" => upload_id}
 
     with {:ok, photo} <- Progress.attach_photo(uid(conn), entry_id, attrs) do
-      json(conn, data(JSON.photo(photo)))
+      json(conn, data(JSON.photo(Progress.with_photo_url(photo))))
     end
   end
 
   def attach_photo(_conn, _params), do: {:error, :bad_request}
+
+  @doc """
+  Create (or return) the photo's public, revocable share link — the only way a
+  progress photo becomes visible to anyone but its owner.
+  """
+  def share_photo(conn, %{"id" => id}) do
+    with {:ok, photo} <- Progress.share_photo(uid(conn), id) do
+      json(conn, data(JSON.photo(Progress.with_photo_url(photo))))
+    end
+  end
+
+  @doc "Revoke the photo's public share link (the token stops resolving immediately)."
+  def unshare_photo(conn, %{"id" => id}) do
+    with {:ok, photo} <- Progress.unshare_photo(uid(conn), id) do
+      json(conn, data(JSON.photo(Progress.with_photo_url(photo))))
+    end
+  end
 
   @doc "Delete a photo (row + storage object)."
   def delete_photo(conn, %{"id" => id}) do

@@ -281,7 +281,7 @@ Required at runtime:
 - `SECRET_KEY_BASE`
 - `ANTHROPIC_API_KEY` — for all AI features
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `STRIPE_PRO_YEARLY_PRICE_ID` (consumer `m3hungry_plus` tier), `STRIPE_NUTRITIONIST_PRICE_ID`, `STRIPE_NUTRITIONIST_YEARLY_PRICE_ID` (nutritionist `pro` tier)
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` — object storage for all images/media via the `Mehungry.Storage` facade; see **`docs/implementation/infrastructure/object_storage.md`**
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` — object storage for all images/media via the `Mehungry.Storage` facade; `SUPABASE_PRIVATE_BUCKET` (default `mehungry-private`) is the **private** bucket for sensitive media (progress body photos — signed-URL reads only, `bucket: :private`); see **`docs/implementation/infrastructure/object_storage.md`**
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ASSETS_BUCKET_NAME` — **only** for the USDA seed-file *import source* bucket (`Mehungry.S3`), not app object storage
 - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`

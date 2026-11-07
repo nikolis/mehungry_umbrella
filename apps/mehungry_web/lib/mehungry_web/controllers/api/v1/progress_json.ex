@@ -64,9 +64,21 @@ defmodule MehungryWeb.Api.V1.ProgressJSON do
     }
   end
 
+  # `url` is an **ephemeral signed URL** (~1 h; see §19) — clients must not
+  # persist it. `share_url` is the public, revocable share link (nil unless
+  # the owner shared the photo).
   def photo(%Photo{} = photo) do
-    %{id: photo.id, url: photo.url, caption: photo.caption, position: photo.position}
+    %{
+      id: photo.id,
+      url: photo.url,
+      caption: photo.caption,
+      position: photo.position,
+      shared: is_binary(photo.share_token),
+      share_url: photo.share_token && share_url(photo.share_token)
+    }
   end
+
+  defp share_url(token), do: MehungryWeb.Endpoint.url() <> "/shared/photos/#{token}"
 
   # ── internals ────────────────────────────────────────────────────────────────
 
@@ -121,7 +133,13 @@ defmodule MehungryWeb.Api.V1.ProgressJSON do
   end
 
   defp marker(m) do
-    %{date: Date.to_iso8601(m.date), url: m.url, entry_id: m.entry_id, caption: m.caption}
+    %{
+      date: Date.to_iso8601(m.date),
+      url: m.url,
+      entry_id: m.entry_id,
+      photo_id: m.photo_id,
+      caption: m.caption
+    }
   end
 
   defp loaded(%Ecto.Association.NotLoaded{}), do: []

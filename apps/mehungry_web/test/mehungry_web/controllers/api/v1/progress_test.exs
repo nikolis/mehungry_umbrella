@@ -1,12 +1,36 @@
 defmodule MehungryWeb.Api.V1.ProgressTest do
   @moduledoc "Self-tracking progress journal (spec §19)."
-  use MehungryWeb.ConnCase, async: true
+  # async: false — the photo tests pin the global `:storage_impl` seam.
+  use MehungryWeb.ConnCase, async: false
 
   alias Mehungry.AccountsFixtures
   alias Mehungry.Professionals
   alias Mehungry.Progress
 
+  # Private-bucket storage stub: photos are signed at read time (§19).
+  defmodule SigningStorageStub do
+    def signed_url(key, _expires_in, _opts), do: {:ok, "https://stub-signed/#{key}"}
+
+    def signed_urls(keys, _expires_in, _opts),
+      do: {:ok, Map.new(keys, &{&1, "https://stub-signed/#{&1}"})}
+
+    def delete(_key, _opts), do: {:ok, :deleted}
+  end
+
   setup :register_and_log_in_api_user
+
+  defp stub_storage(_ctx) do
+    prev = Application.get_env(:mehungry, :storage_impl)
+    Application.put_env(:mehungry, :storage_impl, SigningStorageStub)
+
+    on_exit(fn ->
+      if prev,
+        do: Application.put_env(:mehungry, :storage_impl, prev),
+        else: Application.delete_env(:mehungry, :storage_impl)
+    end)
+
+    :ok
+  end
 
   describe "auth" do
     test "all routes require a bearer token" do
@@ -206,7 +230,9 @@ defmodule MehungryWeb.Api.V1.ProgressTest do
   end
 
   describe "photos" do
-    test "attach resolves the upload key to a public URL", %{conn: conn, user: user} do
+    setup :stub_storage
+
+    test "attach stores the private key and serves a signed URL", %{conn: conn, user: user} do
       {:ok, period} = Progress.ensure_active_period(user.id)
       {:ok, entry} = Progress.log_entry(user.id, period.id, %{"weight_kg" => 80})
 
@@ -218,14 +244,64 @@ defmodule MehungryWeb.Api.V1.ProgressTest do
         })
         |> json_response(200)
 
-      assert %{"data" => %{"id" => _, "url" => url}} = body
-      assert String.contains?(url, "progress_photos/test.jpg")
-      assert String.starts_with?(url, "https://")
+      assert %{"data" => %{"id" => _, "url" => url, "shared" => false, "share_url" => nil}} =
+               body
+
+      # Ephemeral signed URL — never the raw public object path.
+      assert url == "https://stub-signed/progress_photos/test.jpg"
+
+      # The DB row carries only the key, no world-readable URL.
+      [photo] = Progress.list_photos(user.id, period.id)
+      assert photo.storage_key == "progress_photos/test.jpg"
 
       # Missing upload_id → 400.
       assert conn
              |> post(~p"/api/v1/me/progress/photos", %{"entry_id" => entry.id})
              |> json_response(400)
+    end
+
+    test "share issues a revocable public link; unshare revokes it", %{conn: conn, user: user} do
+      {:ok, period} = Progress.ensure_active_period(user.id)
+      {:ok, entry} = Progress.log_entry(user.id, period.id, %{"weight_kg" => 80})
+
+      {:ok, photo} =
+        Progress.attach_photo(user.id, entry.id, %{"storage_key" => "progress_photos/s.jpg"})
+
+      shared =
+        conn
+        |> post(~p"/api/v1/me/progress/photos/#{photo.id}/share")
+        |> json_response(200)
+
+      assert %{"data" => %{"shared" => true, "share_url" => share_url}} = shared
+      assert String.contains?(share_url, "/shared/photos/")
+
+      # The public share route 302s to a fresh signed URL — no auth needed.
+      token = share_url |> String.split("/shared/photos/") |> List.last()
+      public_conn = build_conn() |> get("/shared/photos/#{token}")
+      assert redirected_to(public_conn, 302) == "https://stub-signed/progress_photos/s.jpg"
+
+      unshared =
+        conn
+        |> delete(~p"/api/v1/me/progress/photos/#{photo.id}/share")
+        |> json_response(200)
+
+      assert %{"data" => %{"shared" => false, "share_url" => nil}} = unshared
+
+      # Revoked: the old token stops resolving.
+      assert build_conn() |> get("/shared/photos/#{token}") |> response(404)
+    end
+
+    test "cross-user share is 404", %{conn: conn} do
+      other = AccountsFixtures.user_fixture()
+      {:ok, other_period} = Progress.ensure_active_period(other.id)
+      {:ok, entry} = Progress.log_entry(other.id, other_period.id, %{"weight_kg" => 70})
+
+      {:ok, photo} =
+        Progress.attach_photo(other.id, entry.id, %{"storage_key" => "progress_photos/o.jpg"})
+
+      assert conn
+             |> post(~p"/api/v1/me/progress/photos/#{photo.id}/share")
+             |> json_response(404)
     end
 
     test "presign accepts the progress_photo kind", %{conn: conn} do
