@@ -14,7 +14,7 @@ defmodule MehungryWeb.Api.V1.NutritionistJSON do
   alias Mehungry.Accounts.User
   alias Mehungry.Onboarding.{Question, QuestionOption}
   alias Mehungry.Professionals
-  alias Mehungry.Professionals.ProfessionalProfile
+  alias Mehungry.Professionals.{ClinicalConsent, ProfessionalProfile}
 
   # ── Directory & public profile ──────────────────────────────────────────────
 
@@ -217,6 +217,16 @@ defmodule MehungryWeb.Api.V1.NutritionistJSON do
       timezone: Mehungry.Time.tz(nil),
       payments_enabled: false
     }
+  end
+
+  @doc """
+  The hub's clinical-data consent block (spec §18), or `nil` when there is no
+  active consent — the client reads this to gate its clinical surface.
+  """
+  def consent(nil), do: nil
+
+  def consent(%ClinicalConsent{} = c) do
+    %{granted: true, version: c.version, granted_at: utc(c.inserted_at)}
   end
 
   @doc "A minimal professional preview (invitations, appointments)."

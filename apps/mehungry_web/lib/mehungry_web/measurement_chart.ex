@@ -163,15 +163,26 @@ defmodule MehungryWeb.MeasurementChart do
 
   # ── goal line / healthy band (grounded in the client's intake) ─────────────────
 
-  @doc "A goal reference value for `key` from `context`, or `nil`."
-  def goal(context, "weight_kg") do
+  @doc """
+  A goal reference value for `key` from `context`, or `nil`. A user-set
+  per-metric goal (`context.goals`, string-keyed — self-tracking periods)
+  wins; `weight_kg` falls back to the intake's `ideal_weight_kg`.
+  """
+  def goal(context, key) do
+    case get_in(context, [:goals, key]) do
+      v when is_number(v) and v > 0 -> v * 1.0
+      _ -> legacy_goal(context, key)
+    end
+  end
+
+  defp legacy_goal(context, "weight_kg") do
     case context[:ideal_weight_kg] do
       w when is_number(w) and w > 0 -> w * 1.0
       _ -> nil
     end
   end
 
-  def goal(_context, _key), do: nil
+  defp legacy_goal(_context, _key), do: nil
 
   @doc "A `{low, high}` healthy band for `key` from `context`, or `nil`."
   def band(_context, "bmi"), do: {18.5, 24.9}
@@ -196,11 +207,18 @@ defmodule MehungryWeb.MeasurementChart do
 
   def band(_context, _key), do: nil
 
-  @doc "Legend entries to show for `key`: `:intake`/`:visit` always, plus `:goal`/`:band` when present."
-  def legend_items(context, nil), do: legend_items(context, "weight_kg") |> List.delete(:goal) |> List.delete(:band)
+  @doc """
+  Legend entries to show for `key`: the point `sources` present in the history
+  (`:intake`/`:visit` for nutritionist-recorded data — the default — or
+  `[:self]` for a self-tracking period), plus `:goal`/`:band` when present.
+  """
+  def legend_items(context, key, sources \\ [:intake, :visit])
 
-  def legend_items(context, key) do
-    [:intake, :visit] ++
+  def legend_items(context, nil, sources),
+    do: legend_items(context, "weight_kg", sources) |> List.delete(:goal) |> List.delete(:band)
+
+  def legend_items(context, key, sources) do
+    sources ++
       if(goal(context, key), do: [:goal], else: []) ++
       if(band(context, key), do: [:band], else: [])
   end
@@ -336,6 +354,9 @@ defmodule MehungryWeb.MeasurementChart do
 
         p.source == :intake ->
           ~s(<circle cx="#{f(x)}" cy="#{f(y)}" r="3.6" fill="#{@c_basil}"/>)
+
+        p.source == :self ->
+          ~s(<circle cx="#{f(x)}" cy="#{f(y)}" r="3.6" fill="#{@c_paprika}" opacity="0.75"/>)
 
         true ->
           ~s(<circle cx="#{f(x)}" cy="#{f(y)}" r="3.6" fill="#{@c_panel}" stroke="#{@c_basil}" stroke-width="1.8"/>)
@@ -487,6 +508,9 @@ defmodule MehungryWeb.MeasurementChart do
       <span :if={:visit in @legend} class="inline-flex items-center gap-1.5">
         <span class="w-2.5 h-2.5 rounded-full" style="background:#211D16;border:1.5px solid #45C4AE"></span>{gettext("visit")}
       </span>
+      <span :if={:self in @legend} class="inline-flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#E8622C;opacity:0.85"></span>{gettext("logged by you")}
+      </span>
       <span :if={:goal in @legend} class="inline-flex items-center gap-1.5">
         <span class="inline-block w-4" style="border-top:2px dashed #E8622C"></span>{gettext("goal")}
       </span>
@@ -500,4 +524,126 @@ defmodule MehungryWeb.MeasurementChart do
   defp tone_text(:good), do: "text-basil"
   defp tone_text(:bad), do: "text-error-500"
   defp tone_text(_), do: "text-parchment-dim"
+
+  # ── progress-photo strip (pinned under the trend chart's date axis) ────────────
+
+  @doc """
+  A row of progress-photo thumbnails rendered directly **below the trend
+  chart**, each pinned horizontally to its entry's date using the same
+  x-fraction math as the chart itself (so a photo sits under its data point).
+  Thumbnails emit `open_photo` (with `url`/`date`) for the host's lightbox.
+  Renders nothing without markers.
+  """
+  attr :markers, :list, required: true
+  attr :min_date, :any, required: true
+  attr :max_date, :any, required: true
+
+  def photo_strip(assigns) do
+    ~H"""
+    <div :if={@markers != []} class="relative h-16 mt-1" aria-label={gettext("progress photos")}>
+      <button
+        :for={m <- @markers}
+        type="button"
+        phx-click="open_photo"
+        phx-value-url={m.url}
+        phx-value-date={Date.to_iso8601(m.date)}
+        class="absolute top-0 -translate-x-1/2 flex flex-col items-center group focus:outline-none"
+        style={"left: #{marker_left_pct(m.date, @min_date, @max_date)}%"}
+        title={Calendar.strftime(m.date, "%b %d")}
+      >
+        <span class="block w-px h-2" style="background:#A9A08C"></span>
+        <img
+          src={m.url}
+          alt={gettext("progress photo, %{date}", date: Calendar.strftime(m.date, "%b %d"))}
+          loading="lazy"
+          class="w-11 h-11 object-cover rounded-lg border border-ink-panel2 group-hover:border-paprika group-focus:border-paprika transition"
+        />
+      </button>
+    </div>
+    """
+  end
+
+  # Mirror the chart's x_of/1: position within the plot area (left margin @ml,
+  # right margin @mr of the @w-wide viewBox), as a percentage of full width —
+  # the SVG scales to 100% width, so percentages line up with the date axis.
+  defp marker_left_pct(date, min_date, max_date) do
+    span = Date.diff(max_date, min_date)
+    frac = if span == 0, do: 0.5, else: Date.diff(date, min_date) / span
+    Float.round((@ml + frac * (@w - @ml - @mr)) / @w * 100, 2)
+  end
+
+  # ── before → now photo comparison ──────────────────────────────────────────────
+
+  @doc """
+  The before→now comparison: the period's earliest and latest photo-carrying
+  diary entries side by side, with the measurement deltas between them.
+  `comparison` is `Mehungry.Progress.comparison/1`'s `%{before:, now:}` (or
+  `nil` — renders nothing).
+  """
+  attr :comparison, :any, default: nil
+
+  def before_now(assigns) do
+    ~H"""
+    <div :if={@comparison} class="mb-5">
+      <div class="grid grid-cols-2 gap-3">
+        <figure :for={{label, side} <- [{gettext("Before"), @comparison.before}, {gettext("Now"), @comparison.now}]}>
+          <button
+            type="button"
+            phx-click="open_photo"
+            phx-value-url={side.url}
+            phx-value-date={Date.to_iso8601(side.date)}
+            class="block w-full focus:outline-none focus:ring-2 focus:ring-paprika rounded-xl"
+          >
+            <img
+              src={side.url}
+              alt={"#{label} — #{Calendar.strftime(side.date, "%b %d, %Y")}"}
+              loading="lazy"
+              class="w-full aspect-[3/4] object-cover rounded-xl border border-ink-panel2"
+            />
+          </button>
+          <figcaption class="mt-1 text-xs text-parchment-dim flex items-baseline justify-between">
+            <span class="font-semibold uppercase tracking-wide">{label}</span>
+            <span class="tabular-nums">{Calendar.strftime(side.date, "%b %d, %Y")}</span>
+          </figcaption>
+        </figure>
+      </div>
+      <div
+        :if={comparison_deltas(@comparison) != []}
+        class="flex gap-x-4 gap-y-1 flex-wrap mt-2 text-sm"
+      >
+        <span :for={d <- comparison_deltas(@comparison)} class="inline-flex items-baseline gap-1.5">
+          <span class="text-parchment-dim text-xs">{d.label}</span>
+          <span class={["font-semibold tabular-nums", tone_text(d.tone)]}>{d.arrow} {d.delta_abs}</span>
+        </span>
+      </div>
+    </div>
+    """
+  end
+
+  # Per-metric deltas between the two compared entries (only metrics present on
+  # both sides), reusing the KPI cards' tone/arrow/format rules.
+  defp comparison_deltas(%{before: %{entry: before_e}, now: %{entry: now_e}}) do
+    Enum.flat_map(metric_keys(), fn key ->
+      atom = String.to_existing_atom(key)
+      b = Map.get(before_e, atom)
+      n = Map.get(now_e, atom)
+
+      if is_number(b) and is_number(n) do
+        delta = n - b
+
+        [
+          %{
+            label: metric_label(key),
+            delta_abs: fmt_num(abs(delta)) <> maybe_unit(delta_unit(key)),
+            arrow: arrow(delta),
+            tone: tone(key, delta)
+          }
+        ]
+      else
+        []
+      end
+    end)
+  end
+
+  defp comparison_deltas(_), do: []
 end

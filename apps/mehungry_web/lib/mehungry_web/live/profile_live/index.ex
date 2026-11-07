@@ -14,6 +14,8 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias Mehungry.Posts
   alias Mehungry.Professionals
   alias Mehungry.Professionals.ProfessionalProfile
+  alias Mehungry.Progress
+  alias Mehungry.Progress.Period
   alias MehungryWeb.MeasurementChart
 
   @impl true
@@ -46,12 +48,34 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:progress_cards, [])
      |> assign(:progress_chart_svg, nil)
      |> assign(:progress_legend, [])
+     |> assign(:progress_periods, [])
+     |> assign(:active_period, nil)
+     |> assign(:viewing_period, nil)
+     |> assign(:period_entries, [])
+     |> assign(:photo_markers, [])
+     |> assign(:photo_axis, nil)
+     |> assign(:comparison, nil)
+     |> assign(:show_period_settings, false)
+     |> assign(:entry_form_version, 0)
+     |> assign(:lightbox_photo, nil)
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
      |> assign(:current_user_profile, current_user_profile)
      |> assign(:current_user_follows, current_user_follows)
-     |> assign(:current_user_recipes, current_user_recipes)}
+     |> assign(:current_user_recipes, current_user_recipes)
+     |> allow_upload(:progress_photo,
+       accept: ~w(.jpg .jpeg .png .webp),
+       max_entries: 4,
+       max_file_size: 5_000_000,
+       auto_upload: true,
+       external: &presign_progress_photo/2
+     )}
+  end
+
+  defp presign_progress_photo(entry, socket) do
+    key = MehungryWeb.Uploads.key_for("progress_photos", entry)
+    {:ok, MehungryWeb.Uploads.meta(entry, key, 5_000_000), socket}
   end
 
   @impl true
@@ -283,41 +307,95 @@ defmodule MehungryWeb.ProfileLive.Index do
           nil
       end
 
-    # The client's own body-measurement progress, loaded only for the Progress
-    # tab. Keyed strictly on current_user.id — a client only ever sees their own
-    # measurements, aggregated across every nutritionist who keeps a file on them.
-    {measurement_history, measurement_context} =
-      case {content_state, is_nil(current_user)} do
-        {:progress, false} ->
-          {Professionals.measurement_history_for_user(current_user.id),
-           Professionals.measurement_context_for_user(current_user.id)}
-
-        _ ->
-          {[], %{}}
-      end
-
-    available_metrics = MeasurementChart.available_metrics(measurement_history)
-    selected_metric = MeasurementChart.pick_metric(nil, available_metrics)
-
     # Tab badges must show real totals even for tabs whose lists aren't loaded
     # (only the active tab's list is fetched above). Cheap COUNT queries, always.
     socket
-    |> assign(:page_title, "Profile")
+    |> assign(:page_title, gettext("Profile"))
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_ingredients, user_ingredients)
     |> assign(:user_meal_plans, user_meal_plans)
     |> assign(:nutritionist_assignment, nutritionist_assignment)
-    |> assign(:measurement_history, measurement_history)
-    |> assign(:measurement_context, measurement_context)
-    |> assign(:available_metrics, available_metrics)
-    |> assign(:selected_metric, selected_metric)
-    |> assign(:progress_cards, MeasurementChart.cards(measurement_history))
-    |> assign(:progress_chart_svg, MeasurementChart.chart_svg(measurement_history, selected_metric, measurement_context))
-    |> assign(:progress_legend, MeasurementChart.legend_items(measurement_context, selected_metric))
     |> assign(:created_count, Food.count_user_created_recipes(current_user.id) || 0)
     |> assign(:saved_count, Accounts.count_user_saved_recipes(current_user.id) || 0)
     |> assign(:meal_plans_count, PublishedPlans.count_plans_for_user(current_user.id))
+    |> maybe_load_progress(content_state)
+  end
+
+  # ── Progress journal (owner-only tab) ────────────────────────────────────────
+  #
+  # The user's own period-based progress journal (Mehungry.Progress). Loaded
+  # only for the Progress tab, keyed strictly on current_user.id. The first
+  # visit bootstraps the journal (ensure_journal/1 opens a self period — or a
+  # nutritionist-aligned one when the user already has a nutritionist).
+  defp maybe_load_progress(socket, :progress) do
+    user = socket.assigns.current_user
+    {:ok, active} = Progress.ensure_journal(user.id)
+
+    socket
+    |> assign(:progress_periods, Progress.list_periods(user.id))
+    |> assign(:active_period, active)
+    |> assign_progress_view(active)
+  end
+
+  defp maybe_load_progress(socket, _content_state), do: socket
+
+  # Point the whole progress tab (diary, chart, photos, comparison) at one
+  # period — the active one by default, or a past period from the history list.
+  defp assign_progress_view(socket, nil) do
+    socket
+    |> assign(:viewing_period, nil)
+    |> assign(:period_entries, [])
+    |> assign(:photo_markers, [])
+    |> assign(:photo_axis, nil)
+    |> assign(:comparison, nil)
+    |> assign(:measurement_history, [])
+    |> assign(:measurement_context, %{})
+    |> assign(:available_metrics, [])
+    |> assign(:selected_metric, nil)
+    |> assign(:progress_cards, [])
+    |> assign(:progress_chart_svg, nil)
+    |> assign(:progress_legend, [])
+  end
+
+  defp assign_progress_view(socket, %Period{} = period) do
+    user = socket.assigns.current_user
+    history = Progress.measurement_history_for_period(period)
+    context = Progress.progress_context(user.id, period)
+    available = MeasurementChart.available_metrics(history)
+    selected = MeasurementChart.pick_metric(socket.assigns[:selected_metric], available)
+
+    socket
+    |> assign(:viewing_period, period)
+    # Diary reads newest-first; the chart gets the ascending history.
+    |> assign(:period_entries, user.id |> Progress.list_entries(period.id) |> Enum.reverse())
+    |> assign(:photo_markers, Progress.photo_markers(period))
+    |> assign(:photo_axis, chart_date_range(history, selected))
+    |> assign(:comparison, Progress.comparison(period))
+    |> assign(:measurement_history, history)
+    |> assign(:measurement_context, context)
+    |> assign(:available_metrics, available)
+    |> assign(:selected_metric, selected)
+    |> assign(:progress_cards, MeasurementChart.cards(history))
+    |> assign(:progress_chart_svg, MeasurementChart.chart_svg(history, selected, context))
+    |> assign(:progress_legend, MeasurementChart.legend_items(context, selected, period_sources(period)))
+  end
+
+  # Which point sources a period's chart draws, for the legend.
+  defp period_sources(%Period{kind: "self"}), do: [:self]
+  defp period_sources(_), do: [:intake, :visit]
+
+  # The selected metric's charted date span — the photo strip pins thumbnails
+  # against the same axis the chart draws. nil when the metric has no points.
+  defp chart_date_range(_history, nil), do: nil
+
+  defp chart_date_range(history, metric) do
+    atom = String.to_existing_atom(metric)
+
+    case history |> Enum.filter(& &1[atom]) |> Enum.map(& &1.date) do
+      [] -> nil
+      dates -> {Enum.min(dates, Date), Enum.max(dates, Date)}
+    end
   end
 
   # A pro user has a canonical public page; used by apply_action(:show) to
@@ -394,12 +472,161 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def handle_event("select_metric", %{"metric" => metric}, socket) do
     context = socket.assigns.measurement_context
+    history = socket.assigns.measurement_history
+    sources = period_sources(socket.assigns.viewing_period)
 
     {:noreply,
      socket
      |> assign(:selected_metric, metric)
-     |> assign(:progress_chart_svg, MeasurementChart.chart_svg(socket.assigns.measurement_history, metric, context))
-     |> assign(:progress_legend, MeasurementChart.legend_items(context, metric))}
+     |> assign(:photo_axis, chart_date_range(history, metric))
+     |> assign(:progress_chart_svg, MeasurementChart.chart_svg(history, metric, context))
+     |> assign(:progress_legend, MeasurementChart.legend_items(context, metric, sources))}
+  end
+
+  # ── Progress journal events ─────────────────────────────────────────────────
+
+  def handle_event("select_period", %{"id" => id}, socket) do
+    case Progress.get_period(socket.assigns.current_user.id, id) do
+      nil -> {:noreply, socket}
+      period -> {:noreply, assign_progress_view(socket, period)}
+    end
+  end
+
+  def handle_event("validate_entry", _params, socket) do
+    # Uploads are auto_upload/external — this phx-change exists to drive them.
+    {:noreply, socket}
+  end
+
+  def handle_event("log_entry", %{"entry" => entry_params}, socket) do
+    user = socket.assigns.current_user
+    period = socket.assigns.viewing_period
+
+    case Progress.log_entry(user.id, period.id, entry_params) do
+      {:ok, entry} ->
+        consume_uploaded_entries(socket, :progress_photo, fn %{public_url: url} = meta, _entry ->
+          Progress.attach_photo(user.id, entry.id, %{
+            "url" => url,
+            "storage_key" => meta[:key]
+          })
+
+          {:ok, url}
+        end)
+
+        {:noreply,
+         socket
+         |> update(:entry_form_version, &(&1 + 1))
+         |> refresh_journal()
+         |> put_flash(:info, gettext("Entry saved."))}
+
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not save that entry — check the values."))}
+
+      {:error, :not_self_period} ->
+        {:noreply,
+         put_flash(socket, :error, gettext("Your nutritionist tracks this period — logging is paused."))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not save that entry."))}
+    end
+  end
+
+  def handle_event("delete_entry", %{"id" => id}, socket) do
+    case Progress.delete_entry(socket.assigns.current_user.id, id) do
+      {:ok, _} ->
+        {:noreply, socket |> refresh_journal() |> put_flash(:info, gettext("Entry deleted."))}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("delete_photo", %{"id" => id}, socket) do
+    case Progress.delete_photo(socket.assigns.current_user.id, id) do
+      {:ok, _} ->
+        {:noreply, socket |> refresh_journal() |> put_flash(:info, gettext("Photo deleted."))}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("cancel_photo_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :progress_photo, ref)}
+  end
+
+  def handle_event("save_period_settings", %{"period" => period_params}, socket) do
+    user = socket.assigns.current_user
+    period = socket.assigns.viewing_period
+    # Unchecked checkbox groups submit nothing — default to "track weight".
+    period_params = Map.put_new(period_params, "tracked_metrics", ["weight_kg"])
+
+    case Progress.configure_period(user.id, period.id, period_params) do
+      {:ok, _period} ->
+        {:noreply,
+         socket
+         |> assign(:show_period_settings, false)
+         |> refresh_journal()
+         |> put_flash(:info, gettext("Goals saved."))}
+
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not save — check the values."))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not save those settings."))}
+    end
+  end
+
+  def handle_event("toggle_period_settings", _params, socket) do
+    {:noreply, update(socket, :show_period_settings, &(!&1))}
+  end
+
+  def handle_event("reset_period", _params, socket) do
+    case Progress.reset_period(socket.assigns.current_user.id) do
+      {:ok, %{opened: opened}} ->
+        {:noreply,
+         socket
+         |> assign(:selected_metric, nil)
+         |> refresh_journal(opened)
+         |> put_flash(:info, gettext("Fresh start! Your previous progress is saved under past periods."))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not reset right now."))}
+    end
+  end
+
+  def handle_event("toggle_share", _params, socket) do
+    user = socket.assigns.current_user
+    period = socket.assigns.viewing_period
+
+    result =
+      if period.shared_with_nutritionist,
+        do: Progress.unshare_period(user.id, period.id),
+        else: Progress.share_period(user.id, period.id)
+
+    case result do
+      {:ok, updated} ->
+        flash =
+          if updated.shared_with_nutritionist,
+            do: gettext("This period is now visible to your nutritionist."),
+            else: gettext("This period is no longer shared.")
+
+        {:noreply, socket |> refresh_journal(updated) |> put_flash(:info, flash)}
+
+      {:error, :no_nutritionist} ->
+        {:noreply,
+         put_flash(socket, :error, gettext("You don't have a nutritionist to share with yet."))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not update sharing."))}
+    end
+  end
+
+  def handle_event("open_photo", %{"url" => url} = params, socket) do
+    {:noreply, assign(socket, :lightbox_photo, %{url: url, date: params["date"]})}
+  end
+
+  def handle_event("close_photo", _params, socket) do
+    {:noreply, assign(socket, :lightbox_photo, nil)}
   end
 
   def handle_event("delete_my_ingredient", %{"id" => id}, socket) do
@@ -544,6 +771,21 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> put_flash(:info, "#{String.capitalize(provider)} account disconnected.")}
   end
 
+  # Reload the journal after a mutation, keeping the currently viewed period
+  # (or pointing at `period` when given — e.g. right after share/reset).
+  defp refresh_journal(socket, period \\ nil) do
+    user = socket.assigns.current_user
+    viewing = period || socket.assigns.viewing_period
+
+    viewing =
+      (viewing && Progress.get_period(user.id, viewing.id)) || Progress.active_period(user.id)
+
+    socket
+    |> assign(:progress_periods, Progress.list_periods(user.id))
+    |> assign(:active_period, Progress.active_period(user.id))
+    |> assign_progress_view(viewing)
+  end
+
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
     <div
@@ -666,27 +908,470 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_profile_content(%{content_state: :progress} = assigns) do
     ~H"""
-    <div class="pb-20 w-full max-w-3xl mx-auto px-4">
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
-        <div class="flex items-center justify-between mb-4 gap-4">
-          <h2 class="text-parchment font-display font-semibold">My progress</h2>
-          <span :if={@progress_cards != []} class="text-parchment-dim text-xs">
-            tap a metric to chart it
+    <div class="pb-20 w-full max-w-3xl mx-auto px-4 space-y-4">
+      <%!-- Photo lightbox --%>
+      <div
+        :if={@lightbox_photo}
+        class="fixed inset-0 z-50 bg-ink/90 flex items-center justify-center p-4"
+        phx-click="close_photo"
+      >
+        <figure class="max-w-lg w-full">
+          <img src={@lightbox_photo.url} class="w-full rounded-xl" alt={gettext("progress photo")} />
+          <figcaption :if={@lightbox_photo.date} class="text-center text-parchment-dim text-sm mt-2">
+            {@lightbox_photo.date}
+          </figcaption>
+        </figure>
+      </div>
+
+      <%!-- Nutritionist-aligned notice: the active period is tracked for you --%>
+      <div
+        :if={@viewing_period && @viewing_period.kind == "nutritionist_aligned" && is_nil(@viewing_period.ended_on)}
+        class="bg-basil/10 border border-basil/40 rounded-xl p-4 text-sm text-parchment flex gap-3"
+      >
+        <.icon name="hero-information-circle" class="w-5 h-5 text-basil shrink-0 mt-0.5" />
+        <div>
+          {gettext(
+            "Your nutritionist now tracks your progress — measurements from your visits chart here automatically, and self-logging is paused."
+          )}
+          <span class="text-parchment-dim">
+            {gettext("Your earlier self-logged progress is saved below under past periods.")}
           </span>
         </div>
-        <%= if @progress_cards != [] do %>
-          <MeasurementChart.progress_dashboard
-            cards={@progress_cards}
-            selected={@selected_metric}
-            chart={@progress_chart_svg}
-            legend={@progress_legend}
+      </div>
+
+      <%!-- Viewing a past period --%>
+      <div
+        :if={@viewing_period && @viewing_period.ended_on}
+        class="bg-ink-panel border border-ink-panel2 rounded-xl px-4 py-3 text-sm text-parchment-dim flex items-center justify-between gap-3"
+      >
+        <span>
+          {gettext("Viewing a past period:")}
+          <span class="text-parchment font-semibold">{period_range_label(@viewing_period)}</span>
+        </span>
+        <button
+          :if={@active_period}
+          type="button"
+          phx-click="select_period"
+          phx-value-id={@active_period.id}
+          class="text-basil hover:underline shrink-0"
+        >
+          {gettext("Back to current")} →
+        </button>
+      </div>
+
+      <%!-- Main period card: header + comparison + dashboard + photo strip --%>
+      <div :if={@viewing_period} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+        <div class="flex items-start justify-between mb-1 gap-4 flex-wrap">
+          <div>
+            <h2 class="text-parchment font-display font-semibold">
+              {@viewing_period.title || gettext("My progress")}
+            </h2>
+            <div class="flex items-center gap-2 mt-1 text-xs">
+              <span class="text-parchment-dim tabular-nums">{period_range_label(@viewing_period)}</span>
+              <span class={[
+                "px-2 py-0.5 rounded-full",
+                if(@viewing_period.kind == "self",
+                  do: "bg-paprika/15 text-paprika",
+                  else: "bg-basil/15 text-basil"
+                )
+              ]}>
+                {period_kind_label(@viewing_period)}
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              phx-click="toggle_share"
+              class={[
+                "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                if(@viewing_period.shared_with_nutritionist,
+                  do: "bg-basil/15 border-basil/40 text-basil",
+                  else: "border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim"
+                )
+              ]}
+            >
+              <%= if @viewing_period.shared_with_nutritionist do %>
+                {gettext("Shared with nutritionist")} ✓
+              <% else %>
+                {gettext("Share with nutritionist")}
+              <% end %>
+            </button>
+            <button
+              :if={self_logging?(@viewing_period)}
+              type="button"
+              phx-click="reset_period"
+              data-confirm={
+                gettext(
+                  "Start over from 0? Your current progress stays saved as a past period, and a fresh one begins today."
+                )
+              }
+              class="px-3 py-1.5 rounded-full text-xs font-semibold border border-ink-panel2 text-parchment-dim hover:text-paprika hover:border-paprika transition"
+            >
+              {gettext("Start over")}
+            </button>
+          </div>
+        </div>
+
+        <%!-- Goal chips for the tracked metrics --%>
+        <div :if={@viewing_period.goals != %{}} class="flex gap-2 flex-wrap mt-2 mb-1">
+          <span
+            :for={{metric, target} <- @viewing_period.goals}
+            class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim tabular-nums"
+          >
+            {gettext("Goal")}: {MeasurementChart.metric_label(metric)} {target} {MeasurementChart.metric_unit(
+              metric
+            )}
+          </span>
+        </div>
+
+        <div class="mt-4">
+          <MeasurementChart.before_now comparison={@comparison} />
+
+          <%= if @progress_cards != [] do %>
+            <span class="block text-parchment-dim text-xs mb-2">
+              {gettext("tap a metric to chart it")}
+            </span>
+            <MeasurementChart.progress_dashboard
+              cards={@progress_cards}
+              selected={@selected_metric}
+              chart={@progress_chart_svg}
+              legend={@progress_legend}
+            />
+            <MeasurementChart.photo_strip
+              :if={@photo_axis && @progress_chart_svg}
+              markers={@photo_markers}
+              min_date={elem(@photo_axis, 0)}
+              max_date={elem(@photo_axis, 1)}
+            />
+          <% else %>
+            <p class="text-parchment-dim text-sm">
+              <%= if self_logging?(@viewing_period) do %>
+                {gettext(
+                  "No measurements yet — log your first entry below. Once you've logged a metric twice, your trend charts here."
+                )}
+              <% else %>
+                {gettext(
+                  "Your nutritionist hasn't recorded measurements yet. Once you've had at least two measured visits, your progress will chart here."
+                )}
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <%!-- Goals & tracking settings (self periods only) --%>
+      <div :if={self_logging?(@viewing_period)} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+        <button
+          type="button"
+          phx-click="toggle_period_settings"
+          class="w-full flex items-center justify-between text-left"
+        >
+          <h3 class="text-parchment font-display font-medium">{gettext("Goals & tracked metrics")}</h3>
+          <.icon
+            name={if @show_period_settings, do: "hero-chevron-up", else: "hero-chevron-down"}
+            class="w-4 h-4 text-parchment-dim"
           />
-        <% else %>
-          <p class="text-parchment-dim text-sm">
-            Your nutritionist hasn't recorded measurements yet. Once you've had at least
-            two measured visits, your progress will chart here.
+        </button>
+
+        <form :if={@show_period_settings} phx-submit="save_period_settings" class="mt-4 space-y-4">
+          <div>
+            <span class="block text-parchment-dim text-xs uppercase tracking-wide font-semibold mb-2">
+              {gettext("Metrics you want to track")}
+            </span>
+            <div class="grid grid-cols-2 gap-2">
+              <label
+                :for={metric <- Period.selectable_metrics()}
+                class="flex items-center gap-2 text-sm text-parchment bg-ink-panel2 rounded-lg px-3 py-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  name="period[tracked_metrics][]"
+                  value={metric}
+                  checked={metric in @viewing_period.tracked_metrics}
+                  class="rounded border-ink-panel2 text-paprika focus:ring-paprika bg-ink"
+                />
+                {MeasurementChart.metric_label(metric)}
+                <span :if={MeasurementChart.metric_unit(metric)} class="text-parchment-dim text-xs">
+                  ({MeasurementChart.metric_unit(metric)})
+                </span>
+              </label>
+            </div>
+            <p class="text-parchment-dim text-xs mt-2">
+              {gettext("BMI and BMR are worked out automatically when your height (and age) are set below.")}
+            </p>
+          </div>
+
+          <div>
+            <span class="block text-parchment-dim text-xs uppercase tracking-wide font-semibold mb-2">
+              {gettext("Goals (optional)")}
+            </span>
+            <div class="grid grid-cols-2 gap-2">
+              <label :for={metric <- Period.selectable_metrics()} class="block">
+                <span class="text-parchment-dim text-xs">
+                  {MeasurementChart.metric_label(metric)}
+                  <span :if={MeasurementChart.metric_unit(metric)}>
+                    ({MeasurementChart.metric_unit(metric)})
+                  </span>
+                </span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  name={"period[goals][#{metric}]"}
+                  value={@viewing_period.goals[metric]}
+                  class="mt-1 w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <span class="block text-parchment-dim text-xs uppercase tracking-wide font-semibold mb-2">
+              {gettext("About you (used to derive BMI & BMR)")}
+            </span>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="block">
+                <span class="text-parchment-dim text-xs">{gettext("Height (m)")}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="period[height_m]"
+                  value={@viewing_period.height_m}
+                  placeholder="1.75"
+                  class="mt-1 w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
+                />
+              </label>
+              <label class="block">
+                <span class="text-parchment-dim text-xs">{gettext("Sex")}</span>
+                <select
+                  name="period[sex]"
+                  class="mt-1 w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
+                >
+                  <option value="">{gettext("—")}</option>
+                  <option value="male" selected={@viewing_period.sex == "male"}>{gettext("Male")}</option>
+                  <option value="female" selected={@viewing_period.sex == "female"}>
+                    {gettext("Female")}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-parchment-dim text-xs">{gettext("Age")}</span>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  max="129"
+                  name="period[age]"
+                  value={@viewing_period.age}
+                  class="mt-1 w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
+                />
+              </label>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors"
+          >
+            {gettext("Save goals")}
+          </button>
+        </form>
+      </div>
+
+      <%!-- Diary: log form (active self periods) + entries --%>
+      <div :if={@viewing_period} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+        <h3 class="text-parchment font-display font-medium mb-4">{gettext("Diary")}</h3>
+
+        <form
+          :if={self_logging?(@viewing_period) && is_nil(@viewing_period.ended_on)}
+          id={"log-entry-form-#{@viewing_period.id}-#{@entry_form_version}"}
+          phx-submit="log_entry"
+          phx-change="validate_entry"
+          class="border border-ink-panel2 rounded-xl p-4 mb-5 space-y-3"
+        >
+          <div class="flex items-end gap-2 flex-wrap">
+            <label class="block">
+              <span class="text-parchment-dim text-xs">{gettext("Date")}</span>
+              <input
+                type="date"
+                name="entry[entry_date]"
+                value={Date.to_iso8601(Date.utc_today())}
+                max={Date.to_iso8601(Date.utc_today())}
+                class="mt-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
+              />
+            </label>
+            <label :for={metric <- @viewing_period.tracked_metrics} class="block w-24">
+              <span class="text-parchment-dim text-xs">
+                {MeasurementChart.metric_label(metric)}
+              </span>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                name={"entry[#{metric}]"}
+                placeholder={MeasurementChart.metric_unit(metric)}
+                class="mt-1 w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
+              />
+            </label>
+          </div>
+
+          <textarea
+            name="entry[note]"
+            rows="2"
+            placeholder={gettext("How did it go? (optional note)")}
+            class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
+          ></textarea>
+
+          <div>
+            <label class="inline-flex items-center gap-2 text-sm text-parchment-dim cursor-pointer hover:text-parchment transition">
+              <.icon name="hero-camera" class="w-4 h-4" />
+              {gettext("Add progress photos")}
+              <.live_file_input upload={@uploads.progress_photo} class="sr-only" />
+            </label>
+
+            <div :if={@uploads.progress_photo.entries != []} class="flex gap-2 flex-wrap mt-2">
+              <div :for={entry <- @uploads.progress_photo.entries} class="relative">
+                <.live_img_preview
+                  entry={entry}
+                  class="w-16 h-16 object-cover rounded-lg border border-ink-panel2"
+                />
+                <button
+                  type="button"
+                  phx-click="cancel_photo_upload"
+                  phx-value-ref={entry.ref}
+                  aria-label={gettext("Cancel upload")}
+                  class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ink text-parchment-dim hover:text-paprika text-xs leading-none"
+                >
+                  ✕
+                </button>
+                <p :for={err <- upload_errors(@uploads.progress_photo, entry)} class="text-red-400 text-xs mt-1">
+                  {upload_error_label(err)}
+                </p>
+              </div>
+            </div>
+            <p :for={err <- upload_errors(@uploads.progress_photo)} class="text-red-400 text-xs mt-1">
+              {upload_error_label(err)}
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors"
+          >
+            {gettext("Log entry")}
+          </button>
+        </form>
+
+        <%= if @period_entries == [] do %>
+          <p :if={!self_logging?(@viewing_period)} class="text-parchment-dim text-sm">
+            {gettext("Nothing logged in this period.")}
           </p>
+        <% else %>
+          <ol class="space-y-3">
+            <li
+              :for={entry <- @period_entries}
+              class="border border-ink-panel2 rounded-xl p-4 flex gap-4 items-start"
+            >
+              <div class="min-w-0 flex-1">
+                <div class="flex items-baseline gap-3 flex-wrap">
+                  <span class="text-parchment font-semibold text-sm tabular-nums">
+                    {Calendar.strftime(entry.entry_date, "%b %d, %Y")}
+                  </span>
+                  <span
+                    :for={{label, value} <- entry_metric_values(entry)}
+                    class="text-parchment-dim text-xs tabular-nums"
+                  >
+                    {label}: <span class="text-parchment">{value}</span>
+                  </span>
+                </div>
+                <p :if={entry.note} class="text-parchment-dim text-sm mt-1.5 whitespace-pre-line">
+                  {entry.note}
+                </p>
+                <div :if={entry.photos != []} class="flex gap-2 flex-wrap mt-2">
+                  <div :for={photo <- entry.photos} class="relative group">
+                    <button
+                      type="button"
+                      phx-click="open_photo"
+                      phx-value-url={photo.url}
+                      phx-value-date={Date.to_iso8601(entry.entry_date)}
+                    >
+                      <img
+                        src={photo.url}
+                        loading="lazy"
+                        class="w-16 h-16 object-cover rounded-lg border border-ink-panel2 hover:border-paprika transition"
+                        alt={gettext("progress photo")}
+                      />
+                    </button>
+                    <button
+                      :if={self_logging?(@viewing_period)}
+                      type="button"
+                      phx-click="delete_photo"
+                      phx-value-id={photo.id}
+                      data-confirm={gettext("Delete this photo?")}
+                      aria-label={gettext("Delete photo")}
+                      class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ink text-parchment-dim hover:text-paprika text-xs leading-none opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button
+                :if={self_logging?(@viewing_period)}
+                type="button"
+                phx-click="delete_entry"
+                phx-value-id={entry.id}
+                data-confirm={gettext("Delete this entry? Its photos are removed too.")}
+                class="text-parchment-dim hover:text-paprika text-xs shrink-0 transition"
+              >
+                {gettext("Delete")}
+              </button>
+            </li>
+          </ol>
         <% end %>
+      </div>
+
+      <%!-- Past periods --%>
+      <div :if={length(@progress_periods) > 1} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+        <h3 class="text-parchment font-display font-medium mb-3">{gettext("Progress history")}</h3>
+        <ul class="space-y-2">
+          <li :for={period <- @progress_periods}>
+            <button
+              type="button"
+              phx-click="select_period"
+              phx-value-id={period.id}
+              class={[
+                "w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 border text-left transition",
+                if(@viewing_period && period.id == @viewing_period.id,
+                  do: "border-paprika bg-[#2e2112]",
+                  else: "border-ink-panel2 hover:border-paprika-soft"
+                )
+              ]}
+            >
+              <span class="text-parchment text-sm tabular-nums">
+                {period_range_label(period)}
+                <span :if={period.title} class="text-parchment-dim">· {period.title}</span>
+              </span>
+              <span class="flex items-center gap-2 shrink-0">
+                <span :if={period.shared_with_nutritionist} title={gettext("Shared with nutritionist")}>
+                  <.icon name="hero-eye" class="w-3.5 h-3.5 text-basil" />
+                </span>
+                <span class={[
+                  "text-[11px] px-2 py-0.5 rounded-full",
+                  if(period.kind == "self",
+                    do: "bg-paprika/15 text-paprika",
+                    else: "bg-basil/15 text-basil"
+                  )
+                ]}>
+                  {period_kind_label(period)}
+                </span>
+              </span>
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
     """
@@ -915,4 +1600,37 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   def get_profile_content(assigns), do: ~H""
+
+  # ── Progress tab helpers ─────────────────────────────────────────────────────
+
+  defp self_logging?(%Period{kind: "self"}), do: true
+  defp self_logging?(_), do: false
+
+  def period_range_label(%Period{started_on: s, ended_on: nil}),
+    do: gettext("%{start} – ongoing", start: Calendar.strftime(s, "%b %d, %Y"))
+
+  def period_range_label(%Period{started_on: s, ended_on: e}),
+    do: "#{Calendar.strftime(s, "%b %d, %Y")} – #{Calendar.strftime(e, "%b %d, %Y")}"
+
+  def period_kind_label(%Period{kind: "nutritionist_aligned"}), do: gettext("with nutritionist")
+  def period_kind_label(_), do: gettext("self-tracked")
+
+  # The measurements an entry carries, as display pairs (derived BMI/BMR included).
+  defp entry_metric_values(entry) do
+    Enum.flat_map(MeasurementChart.metric_keys(), fn key ->
+      case Map.get(entry, String.to_existing_atom(key)) do
+        nil ->
+          []
+
+        value ->
+          unit = MeasurementChart.metric_unit(key)
+          [{MeasurementChart.metric_label(key), "#{value}#{if unit, do: " #{unit}", else: ""}"}]
+      end
+    end)
+  end
+
+  defp upload_error_label(:too_large), do: gettext("That image is too large (max 5 MB).")
+  defp upload_error_label(:too_many_files), do: gettext("Up to 4 photos per entry.")
+  defp upload_error_label(:not_accepted), do: gettext("Only JPG, PNG or WebP images.")
+  defp upload_error_label(_), do: gettext("Upload failed — try again.")
 end

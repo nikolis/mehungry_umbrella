@@ -23,13 +23,15 @@ defmodule Mehungry.Professionals do
     AppointmentPayment,
     GoogleAccount,
     CalendarBusy,
-    Anthropometrics
+    Anthropometrics,
+    ClinicalConsent
   }
 
   alias Mehungry.Professionals.DietaryHistory
   alias Mehungry.Health.Condition
   alias Mehungry.Billing.StripeHandler
   alias Mehungry.ObanWorkers.AppointmentCalendarSyncWorker
+  alias Mehungry.Progress
 
   # ── Professional Profile ───────────────────────────────────────────────────────
 
@@ -416,20 +418,34 @@ defmodule Mehungry.Professionals do
   def accept_invitation(invitation_id, client_id) do
     with %TutorInvitation{} = inv <- Repo.get(TutorInvitation, invitation_id),
          true <- inv.client_id == client_id,
-         true <- inv.status == "pending",
-         {:ok, inv} <- inv |> TutorInvitation.changeset(%{status: "accepted"}) |> Repo.update() do
-      # Remove any existing assignment for this client (one nutritionist max)
-      Repo.delete_all(from a in TutorClientAssignment, where: a.client_id == ^client_id)
-
-      case %TutorClientAssignment{}
-           |> TutorClientAssignment.changeset(%{
-             professional_id: inv.professional_id,
-             client_id: client_id
-           })
-           |> Repo.insert() do
-        {:ok, assignment} -> {:ok, assignment}
-        {:error, cs} -> {:error, cs}
-      end
+         true <- inv.status == "pending" do
+      # Transactional so the assignment, the invitation state, and the client's
+      # nutritionist-aligned progress period can never get out of sync. Note a
+      # nutritionist *switch* lands here too (the old assignment is replaced
+      # directly, without remove_client/unassign) — the Progress hook closes
+      # whatever period was active, so the switch is covered by this one call.
+      Repo.transaction(fn ->
+        with {:ok, inv} <-
+               inv |> TutorInvitation.changeset(%{status: "accepted"}) |> Repo.update(),
+             # Remove any existing assignment for this client (one nutritionist max)
+             _ <-
+               Repo.delete_all(
+                 from a in TutorClientAssignment, where: a.client_id == ^client_id
+               ),
+             {:ok, assignment} <-
+               %TutorClientAssignment{}
+               |> TutorClientAssignment.changeset(%{
+                 professional_id: inv.professional_id,
+                 client_id: client_id
+               })
+               |> Repo.insert(),
+             {:ok, _period} <-
+               Progress.on_nutritionist_assigned(client_id, inv.professional_id) do
+          assignment
+        else
+          {:error, cs} -> Repo.rollback(cs)
+        end
+      end)
     else
       nil -> {:error, :not_found}
       false -> {:error, :unauthorized}
@@ -517,8 +533,16 @@ defmodule Mehungry.Professionals do
 
   def remove_client(professional_id, client_id) do
     case get_assignment(professional_id, client_id) do
-      nil -> {:error, :not_found}
-      assignment -> Repo.delete(assignment)
+      nil ->
+        {:error, :not_found}
+
+      assignment ->
+        with {:ok, deleted} <- Repo.delete(assignment) do
+          # Close the client's nutritionist-aligned progress period and resume
+          # self-tracking (no-op when they never had one).
+          Progress.on_nutritionist_unassigned(client_id)
+          {:ok, deleted}
+        end
     end
   end
 
@@ -529,9 +553,89 @@ defmodule Mehungry.Professionals do
   """
   def unassign_nutritionist(client_id) do
     case Repo.get_by(TutorClientAssignment, client_id: client_id) do
-      nil -> {:error, :not_found}
-      assignment -> Repo.delete(assignment)
+      nil ->
+        {:error, :not_found}
+
+      assignment ->
+        with {:ok, deleted} <- Repo.delete(assignment) do
+          # Close the aligned progress period, reopen self-tracking (see
+          # Progress.on_nutritionist_unassigned/1; no-op without one).
+          Progress.on_nutritionist_unassigned(client_id)
+          {:ok, deleted}
+        end
     end
+  end
+
+  # ── Clinical-data consent (GDPR Art. 9) ──────────────────────────────────────────
+  #
+  # Explicit consent to process a client's special-category health data (onboarding
+  # answers + "My progress" measurements). Recorded per user; append-only with a
+  # `withdrawn_at` tombstone so the grant/withdrawal history is auditable.
+
+  # The consent copy/version the server currently requires. Bump it to force a
+  # re-consent when the consent wording materially changes; the mobile client
+  # mirrors it as `CLINICAL_CONSENT_VERSION`.
+  @clinical_consent_version "2026-11"
+
+  @doc "The consent version the server currently requires."
+  def clinical_consent_version, do: @clinical_consent_version
+
+  @doc """
+  The user's **active** clinical-data consent at the current version, or `nil`
+  when none is on record / it was withdrawn / it is stale (an older version).
+  """
+  def current_clinical_consent(user_id) do
+    Repo.one(
+      from c in ClinicalConsent,
+        where:
+          c.user_id == ^user_id and c.version == ^@clinical_consent_version and
+            is_nil(c.withdrawn_at),
+        order_by: [desc: c.inserted_at],
+        limit: 1
+    )
+  end
+
+  @doc "True when the user has an active consent at the current version."
+  def clinical_consent_granted?(user_id), do: not is_nil(current_clinical_consent(user_id))
+
+  @doc """
+  Record explicit consent at `version`. Idempotent — returns the existing active
+  consent when one is already on record rather than inserting a duplicate.
+  Returns `{:error, :consent_version_mismatch}` when `version` is not the current
+  server version (a stale client that should be prompted to update).
+  """
+  def grant_clinical_consent(user_id, version)
+
+  def grant_clinical_consent(user_id, @clinical_consent_version = version) do
+    case current_clinical_consent(user_id) do
+      nil ->
+        %ClinicalConsent{}
+        |> ClinicalConsent.changeset(%{user_id: user_id, version: version})
+        |> Repo.insert()
+
+      consent ->
+        {:ok, consent}
+    end
+  end
+
+  def grant_clinical_consent(_user_id, _version), do: {:error, :consent_version_mismatch}
+
+  @doc """
+  Withdraw the user's consent (Art. 7(3) — as easy as giving it) by stamping
+  `withdrawn_at` on every still-active row. Idempotent: `{:ok, count}` even when
+  nothing was active. Does not delete measurements the nutritionist already
+  recorded — it only re-gates the client's in-app clinical surface.
+  """
+  def withdraw_clinical_consent(user_id) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    {count, _} =
+      Repo.update_all(
+        from(c in ClinicalConsent, where: c.user_id == ^user_id and is_nil(c.withdrawn_at)),
+        set: [withdrawn_at: now, updated_at: now]
+      )
+
+    {:ok, count}
   end
 
   # ── Client ↔ Nutritionist messages ──────────────────────────────────────────────
@@ -632,6 +736,10 @@ defmodule Mehungry.Professionals do
   The account is a real, pre-confirmed `User` (so it has a calendar and can hold
   meal plans) but has no password and cannot be logged into until the client
   claims it via the returned token. Returns `{:ok, %{user: user, claim_token: token}}`.
+
+  Deliberately does **not** fire `Progress.on_nutritionist_assigned/2`: a
+  login-less managed account has never self-tracked, so opening a
+  nutritionist-aligned progress period would only create a phantom journal.
   """
   def create_managed_client(professional_id, alias_name) do
     result =

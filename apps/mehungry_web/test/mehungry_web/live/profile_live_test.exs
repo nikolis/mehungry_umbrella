@@ -340,6 +340,12 @@ defmodule MehungryWeb.ProfileLiveTest do
         })
     end
 
+    # Assigned to the nutritionist → the journal opens a nutritionist-aligned
+    # period whose chart carries the recorded history (incl. visits predating
+    # the assignment).
+    {:ok, inv} = Mehungry.Professionals.invite_client(nutritionist.id, user.email)
+    {:ok, _} = Mehungry.Professionals.accept_invitation(inv.id, user.id)
+
     {:ok, _index_live, html} =
       live(conn, Routes.profile_index_path(conn, :index) <> "?tab=progress")
 
@@ -349,9 +355,11 @@ defmodule MehungryWeb.ProfileLiveTest do
     assert html =~ "Weight"
     assert html =~ "<svg"
     refute html =~ "recorded measurements yet"
+    # Aligned period: self-logging is paused, with the explanatory notice.
+    assert html =~ "Your nutritionist now tracks your progress"
   end
 
-  test "progress tab shows an empty state for a user with no measurements", %{
+  test "progress tab bootstraps a self journal for a user with no measurements", %{
     conn: conn,
     user: user
   } do
@@ -361,7 +369,9 @@ defmodule MehungryWeb.ProfileLiveTest do
       live(conn, Routes.profile_index_path(conn, :index) <> "?tab=progress")
 
     assert html =~ "My progress"
-    assert html =~ "recorded measurements yet"
+    # No nutritionist → a self-tracked period with the log-your-first-entry empty state.
+    assert html =~ "log your first entry"
+    assert html =~ "Diary"
     refute html =~ ~s(id="profile-vega-measurement")
   end
 end

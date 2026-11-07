@@ -194,6 +194,51 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     """
   end
 
+  # ── Zone 2b: the client's own shared self-tracking journal (read-only) ──────────────
+
+  attr :shared_journal, :any, default: nil
+  attr :shared_cards, :list, default: []
+  attr :shared_selected, :string, default: nil
+  attr :shared_chart_svg, :any, default: nil
+  attr :shared_legend, :list, default: []
+
+  def shared_journal_panel(assigns) do
+    ~H"""
+    <.panel_card :if={@shared_journal} class="mb-6">
+      <div class="flex items-center justify-between mb-1 gap-4 flex-wrap">
+        <h2 class="font-display text-base font-semibold text-parchment inline-flex items-center gap-2">
+          <.icon name="hero-eye" class="w-4 h-4 text-basil" />
+          {gettext("Client's own journal (shared with you)")}
+        </h2>
+        <span class="text-parchment-dim text-xs tabular-nums">
+          {shared_period_range(@shared_journal.period)}
+        </span>
+      </div>
+      <p class="text-parchment-dim text-xs mb-4">
+        {gettext("Self-logged by the client — read-only. They can stop sharing at any time.")}
+      </p>
+      <%= if @shared_cards != [] do %>
+        <MeasurementChart.progress_dashboard
+          cards={@shared_cards}
+          selected={@shared_selected}
+          chart={@shared_chart_svg}
+          legend={@shared_legend}
+        />
+      <% else %>
+        <p class="text-parchment-dim text-sm">
+          {gettext("The shared period doesn't have enough logged measurements to chart yet.")}
+        </p>
+      <% end %>
+    </.panel_card>
+    """
+  end
+
+  defp shared_period_range(%{started_on: s, ended_on: nil}),
+    do: gettext("%{start} – ongoing", start: Calendar.strftime(s, "%b %d, %Y"))
+
+  defp shared_period_range(%{started_on: s, ended_on: e}),
+    do: "#{Calendar.strftime(s, "%b %d, %Y")} – #{Calendar.strftime(e, "%b %d, %Y")}"
+
   # ── Zone 3 (left): dietary history / intake ─────────────────────────────────────────
 
   attr :record, :any, default: nil

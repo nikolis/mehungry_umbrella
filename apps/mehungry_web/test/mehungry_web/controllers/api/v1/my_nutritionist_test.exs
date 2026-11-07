@@ -182,10 +182,75 @@ defmodule MehungryWeb.Api.V1.MyNutritionistTest do
   end
 
   describe "progress (GET /me/progress)" do
-    test "returns the metric list and an empty history for a user with no records", %{conn: conn} do
+    test "403 consent_required without an active clinical-data consent", %{conn: conn} do
+      body = conn |> get(~p"/api/v1/me/progress") |> json_response(403)
+      assert %{"errors" => %{"detail" => "consent_required"}} = body
+    end
+
+    test "returns the metric list and an empty history once consent is granted", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _} = Professionals.grant_clinical_consent(user.id, Professionals.clinical_consent_version())
+
       body = conn |> get(~p"/api/v1/me/progress") |> json_response(200)
       assert %{"data" => %{"metrics" => metrics, "history" => [], "context" => %{}}} = body
       assert Enum.any?(metrics, &(&1["key"] == "weight_kg"))
+    end
+  end
+
+  describe "clinical-data consent (GDPR Art. 9)" do
+    test "hub reports consent null until granted, then the record", %{conn: conn} do
+      assert %{"data" => %{"consent" => nil}} =
+               conn |> get(~p"/api/v1/me/nutritionist") |> json_response(200)
+
+      granted =
+        conn
+        |> post(~p"/api/v1/me/nutritionist/consent", %{
+          "version" => Professionals.clinical_consent_version()
+        })
+        |> json_response(200)
+
+      assert %{"data" => %{"consent" => %{"granted" => true, "version" => v, "granted_at" => _}}} =
+               granted
+
+      assert v == Professionals.clinical_consent_version()
+
+      assert %{"data" => %{"consent" => %{"granted" => true}}} =
+               conn |> get(~p"/api/v1/me/nutritionist") |> json_response(200)
+    end
+
+    test "granting is idempotent (no duplicate active record)", %{conn: conn, user: user} do
+      version = Professionals.clinical_consent_version()
+      path = ~p"/api/v1/me/nutritionist/consent"
+
+      assert conn |> post(path, %{"version" => version}) |> json_response(200)
+      assert conn |> post(path, %{"version" => version}) |> json_response(200)
+      assert Professionals.clinical_consent_granted?(user.id)
+    end
+
+    test "a stale version is a 422 consent_version_mismatch", %{conn: conn} do
+      body =
+        conn
+        |> post(~p"/api/v1/me/nutritionist/consent", %{"version" => "1999-01"})
+        |> json_response(422)
+
+      assert %{"errors" => %{"detail" => "consent_version_mismatch"}} = body
+    end
+
+    test "withdrawing re-gates the clinical surface", %{conn: conn, user: user} do
+      {:ok, _} = Professionals.grant_clinical_consent(user.id, Professionals.clinical_consent_version())
+      assert conn |> get(~p"/api/v1/me/progress") |> json_response(200)
+
+      assert conn |> delete(~p"/api/v1/me/nutritionist/consent") |> response(204)
+      refute Professionals.clinical_consent_granted?(user.id)
+
+      assert %{"errors" => %{"detail" => "consent_required"}} =
+               conn |> get(~p"/api/v1/me/progress") |> json_response(403)
+    end
+
+    test "withdrawing with no active consent is an idempotent 204", %{conn: conn} do
+      assert conn |> delete(~p"/api/v1/me/nutritionist/consent") |> response(204)
     end
   end
 end

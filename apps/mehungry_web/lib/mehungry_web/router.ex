@@ -219,7 +219,24 @@ defmodule MehungryWeb.Router do
     get("/me/nutritionist/messages", MyNutritionistController, :messages)
     post("/me/nutritionist/messages", MyNutritionistController, :send_message)
     post("/me/nutritionist/messages/read", MyNutritionistController, :read_messages)
+    post("/me/nutritionist/consent", MyNutritionistController, :grant_consent)
+    delete("/me/nutritionist/consent", MyNutritionistController, :withdraw_consent)
     get("/me/progress", MyNutritionistController, :progress)
+
+    # Self-tracking progress journal (spec §19) — distinct from §18's
+    # GET /me/progress (nutritionist-recorded history), which stays as-is.
+    get("/me/progress/periods", ProgressController, :index)
+    post("/me/progress/periods", ProgressController, :create)
+    get("/me/progress/periods/:id", ProgressController, :show)
+    patch("/me/progress/periods/:id", ProgressController, :update)
+    post("/me/progress/reset", ProgressController, :reset)
+    post("/me/progress/periods/:id/share", ProgressController, :share)
+    delete("/me/progress/periods/:id/share", ProgressController, :unshare)
+    get("/me/progress/periods/:id/entries", ProgressController, :entries)
+    post("/me/progress/entries", ProgressController, :upsert_entry)
+    delete("/me/progress/entries/:id", ProgressController, :delete_entry)
+    post("/me/progress/photos", ProgressController, :attach_photo)
+    delete("/me/progress/photos/:id", ProgressController, :delete_photo)
 
     get("/me/appointments", AppointmentController, :index)
     get("/me/appointments/:id", AppointmentController, :show)

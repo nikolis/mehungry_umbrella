@@ -209,11 +209,19 @@ Measurements can be logged two ways, both writing a `ConsultationNote`:
    duplicates down to the latest note (deleting the rest in the same transaction).
 
 **Client-facing view.** The client sees their own progress on their profile (`/profile` →
-**My progress** tab, owner-only). `measurement_history_for_user/1` aggregates every
-`ProfessionalClient` record keyed to the viewer's `user_id` (across all nutritionists) and renders
-the same chart. The read path uses only `current_user.id` and the tab is rendered only on the
-owner's own `:index` profile (never on a `:show` of someone else) — a client only ever sees their
-own body data.
+**My progress** tab, owner-only). Since 2026-11-07 that tab is the period-based **progress
+journal** (`Mehungry.Progress`, see [`../progress_journal.md`](../progress_journal.md)): the
+nutritionist-recorded history renders inside the client's **nutritionist-aligned period**
+(date-filtered `measurement_history_for_user/1` — still aggregated across all nutritionists,
+`source: intake | visit`), alongside their own past self-tracked periods. The read path uses only
+`current_user.id` and the tab is rendered only on the owner's own `:index` profile (never on a
+`:show` of someone else) — a client only ever sees their own body data.
+
+**Shared self-tracking journal (read-only).** When the client opts to **share** one of their own
+journal periods, the client file shows a **"Client's own journal (shared with you)"** dashboard
+(`shared_journal_panel`, above the clinical panels): the client's self-logged measurements on the
+same `MeasurementChart`, `source: self`. Strictly read-only; the client can revoke at any time;
+`Progress.shared_history_for_professional/2` verifies the viewer is the assigned nutritionist.
 
 ## The payoff — the client file feeds the AI meal-plan draft
 

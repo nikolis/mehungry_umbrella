@@ -15,6 +15,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   alias Mehungry.Plans, as: PlansCtx
   alias Mehungry.MealBlueprints
   alias Mehungry.Professionals.Anthropometrics
+  alias Mehungry.Progress
   alias Mehungry.ObanWorkers.NutritionistAgentWorker
   alias MehungryWeb.MeasurementChart
 
@@ -310,7 +311,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
        :progress_chart_svg,
        MeasurementChart.chart_svg(socket.assigns.measurement_history, metric, context)
      )
-     |> assign(:progress_legend, MeasurementChart.legend_items(context, metric))}
+     |> assign(:progress_legend, MeasurementChart.legend_items(context, metric))
+     # One metric selection drives the page — the shared journal (when present)
+     # follows it where its data allows.
+     |> load_shared_journal()}
   end
 
   # ── Intake (dietary history) events ─────────────────────────────────────────────
@@ -549,6 +553,41 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     |> assign(:progress_cards, MeasurementChart.cards(history))
     |> assign(:progress_chart_svg, MeasurementChart.chart_svg(history, selected, context))
     |> assign(:progress_legend, MeasurementChart.legend_items(context, selected))
+    |> load_shared_journal()
+  end
+
+  # The client's own self-tracked journal — visible only when they opted to
+  # share a period with this nutritionist. Read-only: no write surface here.
+  # `Progress.shared_history_for_professional/2` verifies the assignment, so a
+  # stale client id can never surface another client's journal.
+  defp load_shared_journal(socket) do
+    shared =
+      Progress.shared_history_for_professional(
+        socket.assigns.current_user.id,
+        socket.assigns.client.id
+      )
+
+    case shared do
+      nil ->
+        socket
+        |> assign(:shared_journal, nil)
+        |> assign(:shared_cards, [])
+        |> assign(:shared_selected, nil)
+        |> assign(:shared_chart_svg, nil)
+        |> assign(:shared_legend, [])
+
+      %{period: period, history: history, context: context} ->
+        available = MeasurementChart.available_metrics(history)
+        selected = MeasurementChart.pick_metric(socket.assigns[:selected_metric], available)
+        sources = if period.kind == "self", do: [:self], else: [:intake, :visit]
+
+        socket
+        |> assign(:shared_journal, shared)
+        |> assign(:shared_cards, MeasurementChart.cards(history))
+        |> assign(:shared_selected, selected)
+        |> assign(:shared_chart_svg, MeasurementChart.chart_svg(history, selected, context))
+        |> assign(:shared_legend, MeasurementChart.legend_items(context, selected, sources))
+    end
   end
 
   # The at-a-glance summary strip — derived purely from already-loaded assigns, no
@@ -688,6 +727,14 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         selected_metric={@selected_metric}
         progress_chart_svg={@progress_chart_svg}
         progress_legend={@progress_legend}
+      />
+
+      <.shared_journal_panel
+        shared_journal={@shared_journal}
+        shared_cards={@shared_cards}
+        shared_selected={@shared_selected}
+        shared_chart_svg={@shared_chart_svg}
+        shared_legend={@shared_legend}
       />
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -19,13 +19,15 @@ defmodule MehungryWeb.Api.V1.ClientOnboardingController do
   action_fallback MehungryWeb.Api.V1.FallbackController
 
   def show(conn, %{"professional_id" => professional_id}) do
-    with {:ok, record, pro_id} <- fetch_record(conn, professional_id) do
+    with {:ok, record, pro_id} <- fetch_record(conn, professional_id),
+         :ok <- require_consent(conn) do
       json(conn, data(%{questions: questions_payload(pro_id, record, conn)}))
     end
   end
 
   def update(conn, %{"professional_id" => professional_id} = params) do
-    with {:ok, record, pro_id} <- fetch_record(conn, professional_id) do
+    with {:ok, record, pro_id} <- fetch_record(conn, professional_id),
+         :ok <- require_consent(conn) do
       questions = active_questions(pro_id)
       answers = Map.get(params, "answers", %{})
       Onboarding.upsert_answers("professional_client", record.id, answers, questions)
@@ -34,6 +36,15 @@ defmodule MehungryWeb.Api.V1.ClientOnboardingController do
   end
 
   # ── helpers ──────────────────────────────────────────────────────────────────
+
+  # The questionnaire returns/collects the client's health answers, so it is gated
+  # on an active Art. 9 consent (checked after the client-file 404 so "no
+  # relationship" stays a 404, not a misleading 403).
+  defp require_consent(conn) do
+    if Professionals.clinical_consent_granted?(uid(conn)),
+      do: :ok,
+      else: {:error, :consent_required}
+  end
 
   defp fetch_record(conn, professional_id) do
     with pro_id when is_integer(pro_id) <- to_int(professional_id),

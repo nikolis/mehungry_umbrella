@@ -16,7 +16,7 @@ defmodule MehungryWeb.Api.V1.UploadController do
 
   action_fallback MehungryWeb.Api.V1.FallbackController
 
-  @valid_kinds ~w(recipe_image avatar)
+  @valid_kinds ~w(recipe_image avatar progress_photo)
 
   def presign(conn, params) do
     kind = params["kind"] || "recipe_image"
@@ -102,7 +102,13 @@ defmodule MehungryWeb.Api.V1.UploadController do
   end
 
   defp object_key(kind, content_type) do
-    prefix = if kind == "avatar", do: "avatars/tmp", else: "recipe_images/tmp"
+    prefix =
+      case kind do
+        "avatar" -> "avatars/tmp"
+        "progress_photo" -> "progress_photos"
+        _ -> "recipe_images/tmp"
+      end
+
     "#{prefix}/#{Ecto.UUID.generate()}#{extension(content_type)}"
   end
 

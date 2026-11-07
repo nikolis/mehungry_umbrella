@@ -49,7 +49,8 @@ defmodule MehungryWeb.Api.V1.MyNutritionistController do
         nutritionist: nutritionist,
         unread_messages: Professionals.count_unread_messages_for(uid),
         pending_invitations:
-          Enum.map(invitations, &JSON.invitation(&1, profiles[&1.professional_id]))
+          Enum.map(invitations, &JSON.invitation(&1, profiles[&1.professional_id])),
+        consent: JSON.consent(Professionals.current_clinical_consent(uid))
       })
     )
   end
@@ -98,18 +99,40 @@ defmodule MehungryWeb.Api.V1.MyNutritionistController do
   def progress(conn, _params) do
     uid = uid(conn)
 
-    json(
-      conn,
-      data(
-        JSON.progress(
-          Professionals.measurement_history_for_user(uid),
-          Professionals.measurement_context_for_user(uid)
+    with :ok <- require_consent(uid) do
+      json(
+        conn,
+        data(
+          JSON.progress(
+            Professionals.measurement_history_for_user(uid),
+            Professionals.measurement_context_for_user(uid)
+          )
         )
       )
-    )
+    end
+  end
+
+  # ── Clinical-data consent (GDPR Art. 9) ───────────────────────────────────────
+
+  def grant_consent(conn, params) do
+    with {:ok, consent} <-
+           Professionals.grant_clinical_consent(uid(conn), Map.get(params, "version")) do
+      json(conn, data(%{consent: JSON.consent(consent)}))
+    end
+  end
+
+  def withdraw_consent(conn, _params) do
+    Professionals.withdraw_clinical_consent(uid(conn))
+    send_resp(conn, :no_content, "")
   end
 
   # ── helpers ──────────────────────────────────────────────────────────────────
+
+  # Gate the health-data reads/writes on an active Art. 9 consent (defense in
+  # depth — a compliant client already gates its UI on the hub `consent` field).
+  defp require_consent(user_id) do
+    if Professionals.clinical_consent_granted?(user_id), do: :ok, else: {:error, :consent_required}
+  end
 
   defp hub_preview(_assignment, %ProfessionalProfile{} = profile),
     do: JSON.hub_nutritionist(profile, payments_enabled?(profile))

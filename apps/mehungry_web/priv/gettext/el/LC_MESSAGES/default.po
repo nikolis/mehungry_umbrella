@@ -77,6 +77,8 @@ msgstr "Σύνδεση"
 msgid "Manage subscriptions"
 msgstr "Διαχείριση συνδρομών"
 
+#: lib/mehungry_web/live/profile_live/index.ex:313
+#: lib/mehungry_web/live/profile_live/index.ex:313
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:209
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:141
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:142
@@ -281,7 +283,7 @@ msgid "No recommendations recorded for this condition yet."
 msgstr "Δεν έχουν καταγραφεί ακόμη συστάσεις για αυτή την πάθηση."
 
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:621
-#: lib/mehungry_web/live/foods_live/index.html.heex:272
+#: lib/mehungry_web/live/foods_live/index.html.heex:273
 #, elixir-autogen, elixir-format
 msgid "Nutrition"
 msgstr "Διατροφή"
@@ -317,7 +319,7 @@ msgstr "Εμφάνιση %{count} παθήσεων"
 msgid "View full food page →"
 msgstr "Προβολή πλήρους σελίδας τροφίμου →"
 
-#: lib/mehungry_web/components/recipe_components.ex:502
+#: lib/mehungry_web/components/recipe_components.ex:501
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:329
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:747
 #: lib/mehungry_web/live/landing_live.ex:820
@@ -620,7 +622,7 @@ msgstr "ή 99€/έτος —"
 msgid "save 17%"
 msgstr "εξοικονομήστε 17%"
 
-#: lib/mehungry_web/components/recipe_components.ex:507
+#: lib/mehungry_web/components/recipe_components.ex:506
 #: lib/mehungry_web/live/landing_live.ex:818
 #: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:365
 #, elixir-autogen, elixir-format
@@ -714,13 +716,15 @@ msgstr "Περιγράψτε τη συνταγή σας… π.χ. «Κρεμώδ
 msgid "Details"
 msgstr "Στοιχεία"
 
-#: lib/mehungry_web/components/recipe_components.ex:583
+#: lib/mehungry_web/components/recipe_components.ex:582
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:146
 #, elixir-autogen, elixir-format
 msgid "Difficult"
 msgstr "Δύσκολη"
 
-#: lib/mehungry_web/components/recipe_components.ex:581
+#: lib/mehungry_web/components/recipe_components.ex:580
+#: lib/mehungry_web/components/recipe_components.ex:690
+#: lib/mehungry_web/components/recipe_components.ex:693
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:146
 #: lib/mehungry_web/live/home_live/index.ex:308
 #: lib/mehungry_web/live/home_live/index.ex:311
@@ -791,9 +795,9 @@ msgid "Ingredient"
 msgstr "Υλικό"
 
 #: lib/mehungry_web/components/core_components.ex:1567
-#: lib/mehungry_web/components/recipe_components.ex:517
+#: lib/mehungry_web/components/recipe_components.ex:516
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:235
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:524
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:536
 #, elixir-autogen, elixir-format
 msgid "Ingredients"
 msgstr "Υλικά"
@@ -803,7 +807,8 @@ msgstr "Υλικά"
 msgid "Language"
 msgstr "Γλώσσα"
 
-#: lib/mehungry_web/components/recipe_components.ex:582
+#: lib/mehungry_web/components/recipe_components.ex:581
+#: lib/mehungry_web/components/recipe_components.ex:691
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:146
 #: lib/mehungry_web/live/home_live/index.ex:309
 #: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:210
@@ -916,8 +921,8 @@ msgid "Saving..."
 msgstr "Αποθήκευση..."
 
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:284
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:417
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:664
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:462
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:709
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:224
 #: lib/mehungry_web/live/shopping_basket_live/form_component.ex:30
 #, elixir-autogen, elixir-format
@@ -950,7 +955,7 @@ msgid "Something went wrong with the upload"
 msgstr "Κάτι πήγε στραβά με τη μεταφόρτωση"
 
 #: lib/mehungry_web/components/core_components.ex:1567
-#: lib/mehungry_web/components/recipe_components.ex:540
+#: lib/mehungry_web/components/recipe_components.ex:539
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:256
 #, elixir-autogen, elixir-format
 msgid "Steps"
@@ -1325,7 +1330,7 @@ msgstr "Νάτριο"
 #: lib/mehungry_web/components/recipe_components.ex:288
 #: lib/mehungry_web/live/condition_detail_live/index.ex:268
 #: lib/mehungry_web/live/condition_detail_live/index.ex:679
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:505
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:517
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr "Πηγή"
@@ -1471,14 +1476,16 @@ msgstr "Αντιγράφουμε τα υλικά, ξαναγράφουμε τα 
 msgid "Zinc"
 msgstr "Ψευδάργυρος"
 
+#: lib/mehungry_web/components/recipe_components.ex:788
 #: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex:145
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:381
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:469
 #, elixir-autogen, elixir-format
 msgid "carbs"
 msgstr "υδατάνθρακες"
 
+#: lib/mehungry_web/components/recipe_components.ex:791
 #: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex:142
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:384
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:472
 #, elixir-autogen, elixir-format
 msgid "fat"
 msgstr "λιπαρά"
@@ -1511,8 +1518,9 @@ msgstr[1] "γεύματα"
 msgid "or import from a link"
 msgstr "ή εισαγωγή από σύνδεσμο"
 
+#: lib/mehungry_web/components/recipe_components.ex:783
 #: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex:139
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:378
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:464
 #, elixir-autogen, elixir-format
 msgid "protein"
 msgstr "πρωτεΐνη"
@@ -2183,8 +2191,8 @@ msgstr "Αντικατάσταση αποθηκευμένης κάρτας"
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:123
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:160
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:207
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:429
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:466
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:291
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:325
 #, elixir-autogen, elixir-format
 msgid "Share"
 msgstr "Κοινοποίηση"
@@ -2291,8 +2299,8 @@ msgstr "Χωρίς δεδομένα μακροθρεπτικών"
 msgid "No nutrition data available"
 msgstr "Δεν υπάρχουν διαθέσιμα διατροφικά δεδομένα"
 
-#: lib/mehungry_web/components/recipe_components.ex:1087
-#: lib/mehungry_web/components/recipe_components.ex:1116
+#: lib/mehungry_web/components/recipe_components.ex:1055
+#: lib/mehungry_web/components/recipe_components.ex:1084
 #, elixir-autogen, elixir-format
 msgid "Nutrition Facts"
 msgstr "Διατροφικά Στοιχεία"
@@ -2422,6 +2430,7 @@ msgstr "Φτιαγμένο με"
 #: lib/mehungry_web/live/meal_plan_live/show.ex:222
 #: lib/mehungry_web/live/meal_plan_live/show.ex:224
 #: lib/mehungry_web/live/meal_plan_live/show.ex:225
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:85
 #, elixir-autogen, elixir-format
 msgid "Meal Plans"
 msgstr "Προγράμματα Γευμάτων"
@@ -2513,8 +2522,8 @@ msgstr "Πρότυπα"
 msgid "Build your own week 👉 %{url}"
 msgstr "Φτιάξτε τη δική σας εβδομάδα 👉 %{url}"
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:362
-#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:171
+#: lib/mehungry_web/components/recipe_components.ex:672
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:181
 #, elixir-autogen, elixir-format
 msgid "Claims follow EU Reg. 1169/2011 & 1924/2006, per serving."
 msgstr "Οι ισχυρισμοί βάσει Καν. ΕΕ 1169/2011 & 1924/2006, ανά μερίδα."
@@ -2561,7 +2570,7 @@ msgstr "Λήψη εικόνας"
 msgid "Download the image, copy the caption, then post them together."
 msgstr "Κατεβάστε την εικόνα, αντιγράψτε τη λεζάντα και δημοσιεύστε τα μαζί."
 
-#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:150
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:158
 #, elixir-autogen, elixir-format
 msgid "Filter recipes by nutrient"
 msgstr "Φιλτράρισμα συνταγών ανά θρεπτικό συστατικό"
@@ -2677,7 +2686,7 @@ msgstr "Μη εξουσιοδοτημένο"
 msgid "🛒 Free grocery list included"
 msgstr "🛒 Περιλαμβάνεται δωρεάν λίστα για ψώνια"
 
-#: lib/mehungry_web/components/recipe_components.ex:494
+#: lib/mehungry_web/components/recipe_components.ex:493
 #, elixir-autogen, elixir-format
 msgid "A short description will appear here."
 msgstr "Μια σύντομη περιγραφή θα εμφανιστεί εδώ."
@@ -2692,7 +2701,7 @@ msgstr "Ενεργοί πελάτες"
 msgid "Add ingredient"
 msgstr "Προσθήκη υλικού"
 
-#: lib/mehungry_web/components/recipe_components.ex:523
+#: lib/mehungry_web/components/recipe_components.ex:522
 #, elixir-autogen, elixir-format
 msgid "Add ingredients to see them here."
 msgstr "Προσθέστε υλικά για να εμφανιστούν εδώ."
@@ -2725,6 +2734,8 @@ msgid "Built for nutritionists."
 msgstr "Σχεδιασμένο για διατροφολόγους."
 
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:197
+#: lib/mehungry_web/live/profile_live/index.ex:1245
+#: lib/mehungry_web/live/profile_live/index.ex:1245
 #, elixir-autogen, elixir-format
 msgid "Cancel upload"
 msgstr "Ακύρωση μεταφόρτωσης"
@@ -2781,7 +2792,7 @@ msgstr "Αναπτύξτε το ιατρείο σας"
 msgid "Hide parts"
 msgstr "Απόκρυψη μερών"
 
-#: lib/mehungry_web/components/recipe_components.ex:478
+#: lib/mehungry_web/components/recipe_components.ex:477
 #, elixir-autogen, elixir-format
 msgid "Image added"
 msgstr "Η εικόνα προστέθηκε"
@@ -2801,7 +2812,7 @@ msgstr "Κρατήστε το 100% δικό σας."
 msgid "Licensed under"
 msgstr "Με άδεια χρήσης"
 
-#: lib/mehungry_web/components/recipe_components.ex:458
+#: lib/mehungry_web/components/recipe_components.ex:457
 #, elixir-autogen, elixir-format
 msgid "Live preview"
 msgstr "Ζωντανή προεπισκόπηση"
@@ -2837,7 +2848,7 @@ msgstr "Προεπισκόπηση συνταγής"
 msgid "Published articles"
 msgstr "Δημοσιευμένα άρθρα"
 
-#: lib/mehungry_web/components/recipe_components.ex:464
+#: lib/mehungry_web/components/recipe_components.ex:463
 #: lib/mehungry_web/live/create_recipe_live/index.html.heex:271
 #, elixir-autogen, elixir-format
 msgid "Ready to save"
@@ -2890,7 +2901,7 @@ msgstr "Ξεκινήστε το ιατρείο σας"
 msgid "Today's appointments"
 msgstr "Τα σημερινά ραντεβού"
 
-#: lib/mehungry_web/components/recipe_components.ex:546
+#: lib/mehungry_web/components/recipe_components.ex:545
 #, elixir-autogen, elixir-format
 msgid "Your method will appear here, step by step."
 msgstr "Η μέθοδός σας θα εμφανιστεί εδώ, βήμα προς βήμα."
@@ -2907,7 +2918,7 @@ msgstr "Το όνομά σας εδώ"
 msgid "Your practice"
 msgstr "Το ιατρείο σας"
 
-#: lib/mehungry_web/components/recipe_components.ex:491
+#: lib/mehungry_web/components/recipe_components.ex:490
 #, elixir-autogen, elixir-format
 msgid "Your recipe title"
 msgstr "Ο τίτλος της συνταγής σας"
@@ -3457,7 +3468,7 @@ msgstr "Γιατί να αλλάξεις"
 msgid "m3hungry"
 msgstr "m3hungry"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:507
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:511
 #, elixir-autogen, elixir-format
 msgid " (%{skipped} skipped)"
 msgstr " (%{skipped} παραλείφθηκαν)"
@@ -3522,7 +3533,7 @@ msgstr " — πλάνο γευμάτων"
 msgid "(hidden)"
 msgstr "(κρυφό)"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:482
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:527
 #, elixir-autogen, elixir-format
 msgid "+ Add condition"
 msgstr "+ Προσθήκη πάθησης"
@@ -3542,7 +3553,7 @@ msgstr "+ Προσθήκη παραγράφου"
 msgid "+ New"
 msgstr "+ Νέο"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:522
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:567
 #, elixir-autogen, elixir-format
 msgid "+ New visit"
 msgstr "+ Νέα επίσκεψη"
@@ -3562,7 +3573,7 @@ msgstr "+ Συνεδρία"
 msgid "+ Start file"
 msgstr "+ Έναρξη φακέλου"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:501
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:505
 #, elixir-autogen, elixir-format
 msgid ", replacing %{count} existing meal that week"
 msgid_plural ", replacing %{count} existing meals that week"
@@ -3574,8 +3585,8 @@ msgstr[1] ", αντικαθιστώντας %{count} υπάρχοντα γεύμ
 msgid ". Send them an invitation to join m3hungry? When they sign up they'll become your client automatically."
 msgstr ". Να τους στείλετε πρόσκληση για εγγραφή στο m3hungry; Όταν εγγραφούν, θα γίνουν αυτόματα πελάτες σας."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:307
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:402
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:352
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:447
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:131
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:406
 #, elixir-autogen, elixir-format
@@ -3597,7 +3608,7 @@ msgstr "Λίγα βήματα για να σας ανακαλύψουν και �
 msgid "A short, memorable link to print on cards or drop in your social bios. It redirects visitors to your public profile."
 msgstr "Ένας σύντομος, εύκολος να θυμάστε σύνδεσμος για να τυπώσετε σε κάρτες ή να βάλετε στα βιογραφικά των κοινωνικών σας δικτύων. Ανακατευθύνει τους επισκέπτες στο δημόσιο προφίλ σας."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:751
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:796
 #, elixir-autogen, elixir-format
 msgid "AI Meal Plan Assistant"
 msgstr "Βοηθός πλάνων γευμάτων AI"
@@ -3625,13 +3636,13 @@ msgstr "Αποδοχή πληρωμών"
 msgid "Active Clients"
 msgstr "Ενεργοί πελάτες"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:281
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:326
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:104
 #, elixir-autogen, elixir-format
 msgid "Activity"
 msgstr "Δραστηριότητα"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:346
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:391
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:355
 #, elixir-autogen, elixir-format
 msgid "Activity level"
@@ -3640,7 +3651,7 @@ msgstr "Επίπεδο δραστηριότητας"
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:537
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:550
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:563
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:487
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:532
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:318
 #, elixir-autogen, elixir-format
 msgid "Add"
@@ -3656,7 +3667,7 @@ msgstr "Προσθήκη πάθησης"
 msgid "Add client"
 msgstr "Προσθήκη πελάτη"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:225
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:270
 #, elixir-autogen, elixir-format
 msgid "Add dietary history"
 msgstr "Προσθήκη διατροφικού ιστορικού"
@@ -3671,12 +3682,12 @@ msgstr "Προσθήκη σημείωσης"
 msgid "Add or invite your first client"
 msgstr "Προσθέστε ή προσκαλέστε τον πρώτο σας πελάτη"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:886
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:931
 #, elixir-autogen, elixir-format
 msgid "Add to calendar"
 msgstr "Προσθήκη στο ημερολόγιο"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:499
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:503
 #, elixir-autogen, elixir-format
 msgid "Added %{created} meals to %{whose}'s calendar"
 msgstr "Προστέθηκαν %{created} γεύματα στο ημερολόγιο του/της %{whose}"
@@ -3686,22 +3697,24 @@ msgstr "Προστέθηκαν %{created} γεύματα στο ημερολόγ
 msgid "Address"
 msgstr "Διεύθυνση"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:288
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:333
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:110
 #, elixir-autogen, elixir-format
 msgid "Adjusted wt"
 msgstr "Προσαρμ. βάρος"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:369
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:414
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:378
 #, elixir-autogen, elixir-format
 msgid "Adjusted wt (kg)"
 msgstr "Προσαρμ. βάρος (kg)"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:279
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:343
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:324
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:388
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:103
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:352
+#: lib/mehungry_web/live/profile_live/index.ex:1161
+#: lib/mehungry_web/live/profile_live/index.ex:1161
 #, elixir-autogen, elixir-format
 msgid "Age"
 msgstr "Ηλικία"
@@ -3711,7 +3724,7 @@ msgstr "Ηλικία"
 msgid "All conditions in the registry are already linked."
 msgstr "Όλες οι παθήσεις του μητρώου είναι ήδη συνδεδεμένες."
 
-#: lib/mehungry_web/live/foods_live/index.html.heex:304
+#: lib/mehungry_web/live/foods_live/index.html.heex:305
 #, elixir-autogen, elixir-format
 msgid "All foods"
 msgstr "Όλες οι τροφές"
@@ -3733,12 +3746,12 @@ msgstr "Όλη η περίοδος"
 msgid "Analytics"
 msgstr "Αναλυτικά στοιχεία"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:564
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:609
 #, elixir-autogen, elixir-format
 msgid "Appointment"
 msgstr "Ραντεβού"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:903
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:948
 #, elixir-autogen, elixir-format
 msgid "Appointment History"
 msgstr "Ιστορικό ραντεβού"
@@ -3799,18 +3812,18 @@ msgstr "Το άρθρο αποθηκεύτηκε."
 msgid "Article title"
 msgstr "Τίτλος άρθρου"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:260
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:305
 #, elixir-autogen, elixir-format
 msgid "Assessed %{date}"
 msgstr "Αξιολογήθηκε %{date}"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:332
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:377
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:341
 #, elixir-autogen, elixir-format
 msgid "Assessed on"
 msgstr "Αξιολογήθηκε στις"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:841
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:886
 #, elixir-autogen, elixir-format
 msgid "Assign a saved plan"
 msgstr "Αναθέστε ένα αποθηκευμένο πλάνο"
@@ -3821,14 +3834,14 @@ msgid "Author & share"
 msgstr "Συγγραφή και κοινοποίηση"
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:123
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:265
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:310
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:107
 #: lib/mehungry_web/measurement_chart.ex:79
 #, elixir-autogen, elixir-format
 msgid "BMI"
 msgstr "BMI"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:360
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:405
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:369
 #, elixir-autogen, elixir-format
 msgid "BMI (auto)"
@@ -3844,14 +3857,14 @@ msgstr "BMI / Βάρος"
 msgid "BMI and BMR are computed automatically from the client's latest intake."
 msgstr "Τα BMI και BMR υπολογίζονται αυτόματα από την πιο πρόσφατη καταγραφή του πελάτη."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:267
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:312
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:111
 #: lib/mehungry_web/measurement_chart.ex:80
 #, elixir-autogen, elixir-format
 msgid "BMR"
 msgstr "BMR"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:372
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:417
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:381
 #, elixir-autogen, elixir-format
 msgid "BMR (auto, kcal)"
@@ -3878,17 +3891,17 @@ msgid "Body"
 msgstr "Σώμα"
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1341
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:639
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:684
 #, elixir-autogen, elixir-format
 msgid "Body fat (%)"
 msgstr "Σωματικό λίπος (%)"
 
-#: lib/mehungry_web/live/foods_live/index.html.heex:302
+#: lib/mehungry_web/live/foods_live/index.html.heex:303
 #, elixir-autogen, elixir-format
 msgid "Browse all foods A–Z"
 msgstr "Περιηγηθείτε σε όλες τις τροφές Α–Ω"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:848
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:893
 #, elixir-autogen, elixir-format
 msgid "Build one in Meal Blueprints →"
 msgstr "Δημιουργήστε ένα στα Meal Blueprints →"
@@ -3916,8 +3929,8 @@ msgstr "Ανά υπηρεσία"
 
 #: lib/mehungry_web/live/my_nutritionist_live/index.ex:415
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:498
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:421
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:668
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:466
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:713
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:394
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:556
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:627
@@ -3955,7 +3968,7 @@ msgstr "Παρακρατήθηκε"
 msgid "Change image"
 msgstr "Αλλαγή εικόνας"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:871
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:916
 #, elixir-autogen, elixir-format
 msgid "Choose a plan…"
 msgstr "Επιλέξτε πλάνο…"
@@ -3989,7 +4002,7 @@ msgstr "Καθαρισμός φίλτρων"
 msgid "Client"
 msgstr "Πελάτης"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:508
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:553
 #, elixir-autogen, elixir-format
 msgid "Client Record — Visits"
 msgstr "Καρτέλα πελάτη — Επισκέψεις"
@@ -4025,7 +4038,7 @@ msgid "Client name (external)"
 msgstr "Όνομα πελάτη (εξωτερικός)"
 
 #: lib/mehungry_web/live/nutritionist_live/client_calendar.ex:21
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:30
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:31
 #, elixir-autogen, elixir-format
 msgid "Client not found."
 msgstr "Ο πελάτης δεν βρέθηκε."
@@ -4050,7 +4063,7 @@ msgstr "Ο πελάτης αποθηκεύτηκε."
 msgid "Client since %{date}"
 msgstr "Πελάτης από %{date}"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:63
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:64
 #, elixir-autogen, elixir-format
 msgid "Client: %{name}"
 msgstr "Πελάτης: %{name}"
@@ -4075,7 +4088,7 @@ msgstr "Σύμπτυξη σημειώσεων"
 msgid "Compound…"
 msgstr "Ένωση…"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:165
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:166
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:90
 #, elixir-autogen, elixir-format
 msgid "Condition added."
@@ -4138,7 +4151,7 @@ msgstr "Δεν ήταν δυνατή η αποδοχή της πρόσκληση
 msgid "Could not accept the appointment."
 msgstr "Δεν ήταν δυνατή η αποδοχή του ραντεβού."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:168
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:169
 #, elixir-autogen, elixir-format
 msgid "Could not add the condition."
 msgstr "Δεν ήταν δυνατή η προσθήκη της πάθησης."
@@ -4281,6 +4294,8 @@ msgstr "Δημιουργεί έναν λογαριασμό χωρίς σύνδε
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1157
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:532
+#: lib/mehungry_web/live/profile_live/index.ex:1197
+#: lib/mehungry_web/live/profile_live/index.ex:1197
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr "Ημερομηνία"
@@ -4309,6 +4324,8 @@ msgstr "Απόρριψη αυτού του αιτήματος;"
 #: lib/mehungry_web/live/nutritionist_live/articles.ex:129
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:560
 #: lib/mehungry_web/live/nutritionist_live/payments.ex:367
+#: lib/mehungry_web/live/profile_live/index.ex:1330
+#: lib/mehungry_web/live/profile_live/index.ex:1330
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Διαγραφή"
@@ -4338,7 +4355,7 @@ msgstr "Διαγραφή αυτής της παραγράφου;"
 msgid "Description"
 msgstr "Περιγραφή"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:214
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:259
 #, elixir-autogen, elixir-format
 msgid "Dietary History"
 msgstr "Διατροφικό ιστορικό"
@@ -4348,12 +4365,12 @@ msgstr "Διατροφικό ιστορικό"
 msgid "Dietary history"
 msgstr "Διατροφικό ιστορικό"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:376
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:380
 #, elixir-autogen, elixir-format
 msgid "Dietary history saved."
 msgstr "Το διατροφικό ιστορικό αποθηκεύτηκε."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:774
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:819
 #, elixir-autogen, elixir-format
 msgid "Dietary notes for this client, e.g. 'low-carb, avoid shellfish'"
 msgstr "Διατροφικές σημειώσεις για αυτόν τον πελάτη, π.χ. 'χαμηλοί υδατάνθρακες, αποφυγή οστρακοειδών'"
@@ -4375,7 +4392,7 @@ msgstr "Αποσύνδεση του Google Calendar; Τα αποδεκτά ρα�
 msgid "Disease…"
 msgstr "Πάθηση…"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:758
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:803
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:408
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
@@ -4386,12 +4403,12 @@ msgstr "Απόρριψη"
 msgid "Display name"
 msgstr "Εμφανιζόμενο όνομα"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:778
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:823
 #, elixir-autogen, elixir-format
 msgid "Draft 7-day Plan"
 msgstr "Προσχέδιο Πλάνου 7 ημερών"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:811
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:856
 #, elixir-autogen, elixir-format
 msgid "Draft Another"
 msgstr "Σύνταξη νέου προσχεδίου"
@@ -4417,7 +4434,7 @@ msgid "Earnings & pipeline"
 msgstr "Έσοδα & pipeline"
 
 #: lib/mehungry_web/live/nutritionist_live/articles.ex:121
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:225
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:270
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:63
 #: lib/mehungry_web/live/nutritionist_live/payments.ex:348
 #, elixir-autogen, elixir-format
@@ -4556,14 +4573,16 @@ msgid "Give your note a title first."
 msgstr "Δώστε πρώτα έναν τίτλο στη σημείωσή σας."
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:87
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:385
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:430
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:389
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:601
+#: lib/mehungry_web/live/profile_live/index.ex:1023
+#: lib/mehungry_web/live/profile_live/index.ex:1023
 #, elixir-autogen, elixir-format
 msgid "Goal"
 msgstr "Στόχος"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:294
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:339
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:117
 #, elixir-autogen, elixir-format
 msgid "Goal:"
@@ -4574,21 +4593,23 @@ msgstr "Στόχος:"
 msgid "Handle"
 msgstr "Όνομα χρήστη"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:443
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:488
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:79
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:277
 #, elixir-autogen, elixir-format
 msgid "Health conditions"
 msgstr "Παθήσεις υγείας"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:285
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:330
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:105
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr "Ύψος"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:354
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:399
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:363
+#: lib/mehungry_web/live/profile_live/index.ex:1136
+#: lib/mehungry_web/live/profile_live/index.ex:1136
 #, elixir-autogen, elixir-format
 msgid "Height (m)"
 msgstr "Ύψος (m)"
@@ -4608,13 +4629,13 @@ msgstr "Απόκρυψη"
 msgid "Hide suggested notes"
 msgstr "Απόκρυψη προτεινόμενων σημειώσεων"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:286
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:331
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:108
 #, elixir-autogen, elixir-format
 msgid "Ideal wt"
 msgstr "Ιδανικό βάρος"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:366
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:411
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:375
 #, elixir-autogen, elixir-format
 msgid "Ideal wt (kg)"
@@ -4655,8 +4676,8 @@ msgstr "Εισήχθη ο/η %{name} με %{count} σημειώσεις συνε
 msgid "In flight"
 msgstr "Σε εξέλιξη"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:630
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1080
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:675
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1125
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:207
 #, elixir-autogen, elixir-format
 msgid "In person"
@@ -4750,7 +4771,7 @@ msgstr "Προσκεκλημένος"
 msgid "Largest sample"
 msgstr "Μεγαλύτερο δείγμα"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:853
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:898
 #, elixir-autogen, elixir-format
 msgid "Lay one of your plans onto %{name}'s calendar. The plan's 7 days start from the chosen date —"
 msgstr "Τοποθετήστε ένα από τα πλάνα σας στο ημερολόγιο του/της %{name}. Οι 7 ημέρες του πλάνου ξεκινούν από την επιλεγμένη ημερομηνία —"
@@ -4760,8 +4781,8 @@ msgstr "Τοποθετήστε ένα από τα πλάνα σας στο ημ�
 msgid "Link existing conditions to this client. Only you, the nutritionist, can record these."
 msgstr "Συνδέστε υπάρχουσες παθήσεις με αυτόν τον πελάτη. Μόνο εσείς, ο/η διατροφολόγος, μπορείτε να τις καταγράψετε."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:589
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:649
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:634
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:694
 #, elixir-autogen, elixir-format
 msgid "Linked appointment"
 msgstr "Συνδεδεμένο ραντεβού"
@@ -4772,7 +4793,7 @@ msgstr "Συνδεδεμένο ραντεβού"
 msgid "Linked to %{label}."
 msgstr "Συνδέθηκε με %{label}."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:562
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:607
 #, elixir-autogen, elixir-format
 msgid "Linked to an appointment"
 msgstr "Συνδεδεμένο με ραντεβού"
@@ -4804,16 +4825,17 @@ msgid "Manage"
 msgstr "Διαχείριση"
 
 #: lib/mehungry_web/live/nutritionist_live/dashboard.ex:169
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:71
 #, elixir-autogen, elixir-format
 msgid "Meal Blueprints"
 msgstr "Πρότυπα γευμάτων"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:989
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1034
 #, elixir-autogen, elixir-format
 msgid "Meal Plan History"
 msgstr "Ιστορικό πλάνων γευμάτων"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:936
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:981
 #, elixir-autogen, elixir-format
 msgid "Meal Plan Ratings"
 msgstr "Αξιολογήσεις πλάνων γευμάτων"
@@ -4829,22 +4851,22 @@ msgid "Measurement logged."
 msgstr "Η μέτρηση καταγράφηκε."
 
 #: lib/mehungry_web/live/my_nutritionist_live/messages_component.ex:66
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:146
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:147
 #, elixir-autogen, elixir-format
 msgid "Message can't be empty."
 msgstr "Το μήνυμα δεν μπορεί να είναι κενό."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:728
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:773
 #, elixir-autogen, elixir-format
 msgid "Message your client…"
 msgstr "Στείλτε μήνυμα στον πελάτη σας…"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:721
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:766
 #, elixir-autogen, elixir-format
 msgid "Messages with %{name}"
 msgstr "Μηνύματα με %{name}"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:625
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:670
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:535
 #, elixir-autogen, elixir-format
 msgid "Modality"
@@ -4866,7 +4888,7 @@ msgid "Moved back to draft."
 msgstr "Επαναφέρθηκε σε πρόχειρο."
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1349
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:645
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:690
 #, elixir-autogen, elixir-format
 msgid "Muscle mass (kg)"
 msgstr "Μυϊκή μάζα (kg)"
@@ -4968,7 +4990,7 @@ msgstr "Νέος πελάτης"
 msgid "New clients"
 msgstr "Νέοι πελάτες"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:610
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:655
 #, elixir-autogen, elixir-format
 msgid "New visit"
 msgstr "Νέα επίσκεψη"
@@ -4983,7 +5005,7 @@ msgstr "Νέοι έναντι επαναλαμβανόμενων"
 msgid "Newest first"
 msgstr "Νεότερα πρώτα"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:906
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:951
 #, elixir-autogen, elixir-format
 msgid "No appointments yet."
 msgstr "Δεν υπάρχουν ακόμη ραντεβού."
@@ -5023,12 +5045,12 @@ msgstr "Δεν υπάρχουν ακόμη σημειώσεις συνεδρία
 msgid "No consultation notes."
 msgstr "Δεν υπάρχουν σημειώσεις συνεδρίας."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:235
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:280
 #, elixir-autogen, elixir-format
 msgid "No dietary history recorded yet."
 msgstr "Δεν έχει καταγραφεί ακόμη διατροφικό ιστορικό."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:518
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:563
 #, elixir-autogen, elixir-format
 msgid "No dietary-history record yet."
 msgstr "Δεν υπάρχει ακόμη εγγραφή διατροφικού ιστορικού."
@@ -5063,7 +5085,7 @@ msgstr "Δεν βρέθηκε λογαριασμός m3hungry για"
 msgid "No matching users found."
 msgstr "Δεν βρέθηκαν χρήστες που να ταιριάζουν."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:582
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:627
 #, elixir-autogen, elixir-format
 msgid "No notes recorded."
 msgstr "Δεν έχουν καταγραφεί σημειώσεις."
@@ -5078,7 +5100,7 @@ msgstr "Δεν έχουν αποθηκευτεί ακόμη σημειώσεις
 msgid "No pending invitations."
 msgstr "Δεν υπάρχουν εκκρεμείς προσκλήσεις."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:939
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:984
 #, elixir-autogen, elixir-format
 msgid "No ratings submitted yet."
 msgstr "Δεν έχουν υποβληθεί ακόμη αξιολογήσεις."
@@ -5103,7 +5125,7 @@ msgstr "Καμία μελέτη δεν ταιριάζει με αυτά τα φ�
 msgid "No user found with that email address."
 msgstr "Δεν βρέθηκε χρήστης με αυτήν τη διεύθυνση email."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:527
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:572
 #, elixir-autogen, elixir-format
 msgid "No visits recorded yet."
 msgstr "Δεν έχουν καταγραφεί ακόμη επισκέψεις."
@@ -5114,7 +5136,7 @@ msgstr "Δεν έχουν καταγραφεί ακόμη επισκέψεις."
 msgid "No-show retained"
 msgstr "Παρακράτηση για μη εμφάνιση"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:448
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:493
 #, elixir-autogen, elixir-format
 msgid "None recorded yet"
 msgstr "Δεν έχει καταγραφεί ακόμη τίποτα"
@@ -5158,8 +5180,8 @@ msgid "Note title…"
 msgstr "Τίτλος σημείωσης…"
 
 #: lib/mehungry_web/dietary_history/labels.ex:49
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:458
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:657
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:503
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:702
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:542
 #: lib/mehungry_web/live/nutritionist_live/research_paper.ex:250
 #: lib/mehungry_web/live/nutritionist_live/research_paper.ex:259
@@ -5208,13 +5230,13 @@ msgstr "Διεύθυνση γραφείου"
 msgid "Onboarding Qs"
 msgstr "Ερωτήσεις υποδοχής"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:691
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:736
 #, elixir-autogen, elixir-format
 msgid "Onboarding answers"
 msgstr "Απαντήσεις υποδοχής"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:632
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1079
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:677
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1124
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:206
 #, elixir-autogen, elixir-format
 msgid "Online"
@@ -5235,7 +5257,7 @@ msgstr "Άνοιγμα έρευνας %{name}"
 msgid "Open full record"
 msgstr "Άνοιγμα πλήρους καρτέλας"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:221
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:266
 #, elixir-autogen, elixir-format
 msgid "Open full record →"
 msgstr "Άνοιγμα πλήρους καρτέλας →"
@@ -5246,7 +5268,7 @@ msgstr "Άνοιγμα πλήρους καρτέλας →"
 msgid "Open in text"
 msgstr "Άνοιγμα στο κείμενο"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:456
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:501
 #, elixir-autogen, elixir-format
 msgid "Open my notes for %{name}"
 msgstr "Άνοιγμα των σημειώσεών μου για %{name}"
@@ -5348,8 +5370,8 @@ msgstr "Προσωπικό μήνυμα (προαιρετικά)"
 msgid "Personal short link"
 msgstr "Προσωπικός σύντομος σύνδεσμος"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:631
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1078
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:676
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1123
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:205
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:246
 #: lib/mehungry_web/live/nutritionist_live/profile_edit.ex:412
@@ -5357,7 +5379,7 @@ msgstr "Προσωπικός σύντομος σύνδεσμος"
 msgid "Phone"
 msgstr "Τηλέφωνο"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:233
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:234
 #, elixir-autogen, elixir-format
 msgid "Pick a plan and a valid start date."
 msgstr "Επιλέξτε ένα πλάνο και μια έγκυρη ημερομηνία έναρξης."
@@ -5367,7 +5389,7 @@ msgstr "Επιλέξτε ένα πλάνο και μια έγκυρη ημερο
 msgid "Pick the registered client this dietary history belongs to."
 msgstr "Επιλέξτε τον εγγεγραμμένο πελάτη στον οποίο ανήκει αυτό το διατροφικό ιστορικό."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:867
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:912
 #, elixir-autogen, elixir-format
 msgid "Plan"
 msgstr "Πλάνο"
@@ -5483,7 +5505,7 @@ msgstr "Η ερώτηση διαγράφηκε."
 msgid "Question saved."
 msgstr "Η ερώτηση αποθηκεύτηκε."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:389
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:434
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:393
 #, elixir-autogen, elixir-format
 msgid "Questionnaire"
@@ -5537,7 +5559,7 @@ msgstr "Αποδεσμεύτηκε (απορρίφθηκε/έληξε)"
 msgid "Remove"
 msgstr "Αφαίρεση"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:464
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:509
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:293
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"
@@ -5627,7 +5649,7 @@ msgstr "Αποθήκευση απαντήσεων"
 msgid "Save details"
 msgstr "Αποθήκευση στοιχείων"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:418
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:463
 #, elixir-autogen, elixir-format
 msgid "Save dietary history"
 msgstr "Αποθήκευση διατροφικού ιστορικού"
@@ -5664,7 +5686,7 @@ msgstr "Αποθήκευση παραγράφου"
 msgid "Save profile"
 msgstr "Αποθήκευση προφίλ"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:665
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:710
 #, elixir-autogen, elixir-format
 msgid "Save visit"
 msgstr "Αποθήκευση επίσκεψης"
@@ -5835,10 +5857,12 @@ msgstr "Ρυθμίστε το επαγγελματικό σας προφίλ π�
 msgid "Set up your services"
 msgstr "Ρυθμίστε τις υπηρεσίες σας"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:278
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:335
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:323
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:380
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:102
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:344
+#: lib/mehungry_web/live/profile_live/index.ex:1148
+#: lib/mehungry_web/live/profile_live/index.ex:1148
 #, elixir-autogen, elixir-format
 msgid "Sex"
 msgstr "Φύλο"
@@ -5863,7 +5887,7 @@ msgstr "Ταξινόμηση"
 msgid "Specialization"
 msgstr "Εξειδίκευση"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:876
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:921
 #, elixir-autogen, elixir-format
 msgid "Start date"
 msgstr "Ημερομηνία έναρξης"
@@ -5894,13 +5918,13 @@ msgstr "Σύνοψη"
 msgid "Sunday"
 msgstr "Κυριακή"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:266
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:311
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:112
 #, elixir-autogen, elixir-format
 msgid "TDEE"
 msgstr "TDEE"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:375
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:420
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:384
 #, elixir-autogen, elixir-format
 msgid "TDEE (auto, kcal)"
@@ -5966,15 +5990,15 @@ msgstr "Αυτήν την εβδομάδα"
 msgid "Thursday"
 msgstr "Πέμπτη"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:585
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:660
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:630
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:705
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:175
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:546
 #, elixir-autogen, elixir-format
 msgid "To do"
 msgstr "Προς εκτέλεση"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:823
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:868
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr "Δοκιμάστε ξανά"
@@ -6022,13 +6046,13 @@ msgstr "Χωρίς τίτλο"
 msgid "Upcoming Appointments"
 msgstr "Επερχόμενα ραντεβού"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:287
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:332
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:109
 #, elixir-autogen, elixir-format
 msgid "Usual wt"
 msgstr "Συνήθες βάρος"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:363
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:408
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:372
 #, elixir-autogen, elixir-format
 msgid "Usual wt (kg)"
@@ -6040,7 +6064,6 @@ msgid "Video call link (optional)"
 msgstr "Σύνδεσμος βιντεοκλήσης (προαιρετικό)"
 
 #: lib/mehungry_web/live/nutritionist_live/articles.ex:115
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:566
 #, elixir-autogen, elixir-format
 msgid "View"
 msgstr "Προβολή"
@@ -6051,7 +6074,7 @@ msgstr "Προβολή"
 msgid "View Plan"
 msgstr "Προβολή πλάνου"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:808
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:853
 #, elixir-autogen, elixir-format
 msgid "View Plan →"
 msgstr "Προβολή πλάνου →"
@@ -6071,7 +6094,7 @@ msgstr "Προβολή όλων των σημειώσεων"
 msgid "View client"
 msgstr "Προβολή πελάτη"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:515
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:560
 #, elixir-autogen, elixir-format
 msgid "View full dietary history →"
 msgstr "Προβολή πλήρους διατροφικού ιστορικού →"
@@ -6091,25 +6114,25 @@ msgstr "Προβολή δημόσιας σελίδας →"
 msgid "View public →"
 msgstr "Δημόσια προβολή →"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:622
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:667
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:529
 #, elixir-autogen, elixir-format
 msgid "Visit #"
 msgstr "Επίσκεψη #"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:550
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:595
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:158
 #, elixir-autogen, elixir-format
 msgid "Visit %{number}"
 msgstr "Επίσκεψη %{number}"
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1333
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:619
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:664
 #, elixir-autogen, elixir-format
 msgid "Visit date"
 msgstr "Ημερομηνία επίσκεψης"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:921
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:966
 #, elixir-autogen, elixir-format
 msgid "Visit note recorded"
 msgstr "Η σημείωση επίσκεψης καταγράφηκε"
@@ -6119,13 +6142,13 @@ msgstr "Η σημείωση επίσκεψης καταγράφηκε"
 msgid "Visit range"
 msgstr "Εύρος επισκέψεων"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:286
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:287
 #, elixir-autogen, elixir-format
 msgid "Visit recorded."
 msgstr "Η επίσκεψη καταγράφηκε."
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1345
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:642
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:687
 #, elixir-autogen, elixir-format
 msgid "Waist (cm)"
 msgstr "Μέση (cm)"
@@ -6151,7 +6174,7 @@ msgid "Weekly availability"
 msgstr "Εβδομαδιαία διαθεσιμότητα"
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:103
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:269
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:314
 #: lib/mehungry_web/live/nutritionist_live/client_record.ex:106
 #: lib/mehungry_web/measurement_chart.ex:75
 #, elixir-autogen, elixir-format
@@ -6159,8 +6182,8 @@ msgid "Weight"
 msgstr "Βάρος"
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1337
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:357
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:636
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:402
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:681
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:366
 #: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:538
 #, elixir-autogen, elixir-format
@@ -6208,7 +6231,7 @@ msgstr "Δεν μπορείτε να αναθέσετε γεύματα σε πα
 msgid "You can't invite yourself."
 msgstr "Δεν μπορείτε να προσκαλέσετε τον εαυτό σας."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:846
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:891
 #, elixir-autogen, elixir-format
 msgid "You have no completed plans yet."
 msgstr "Δεν έχετε ολοκληρωμένα πλάνα ακόμη."
@@ -6271,7 +6294,7 @@ msgstr "μόνο περίληψη"
 msgid "after 5% platform fee ·"
 msgstr "μετά την προμήθεια πλατφόρμας 5% ·"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:857
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:902
 #, elixir-autogen, elixir-format
 msgid "any meals already on that week are replaced."
 msgstr "όσα γεύματα υπάρχουν ήδη σε αυτή την εβδομάδα αντικαθίστανται."
@@ -6378,6 +6401,8 @@ msgid "source"
 msgstr "πηγή"
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:176
+#: lib/mehungry_web/live/profile_live/index.ex:1034
+#: lib/mehungry_web/live/profile_live/index.ex:1034
 #, elixir-autogen, elixir-format
 msgid "tap a metric to chart it"
 msgstr "πατήστε μια μέτρηση για να τη σχεδιάσετε σε γράφημα"
@@ -6417,7 +6442,7 @@ msgstr "— συνδέστε έναν υπάρχοντα χρήστη m3hungry."
 msgid "— for someone without an account yet (you plan now, they claim later)."
 msgstr "— για κάποιον που δεν έχει ακόμη λογαριασμό (σχεδιάζετε τώρα, τον διεκδικεί αργότερα)."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:653
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:698
 #, elixir-autogen, elixir-format
 msgid "— none —"
 msgstr "— κανένα —"
@@ -6453,12 +6478,12 @@ msgstr "← Επιστροφή στον πελάτη"
 msgid "← Back to clients"
 msgstr "← Επιστροφή στους πελάτες"
 
-#: lib/mehungry_web/measurement_chart.ex:477
+#: lib/mehungry_web/measurement_chart.ex:498
 #, elixir-autogen, elixir-format
 msgid "%{delta} since start"
 msgstr "%{delta} από την έναρξη"
 
-#: lib/mehungry_web/measurement_chart.ex:475
+#: lib/mehungry_web/measurement_chart.ex:496
 #, elixir-autogen, elixir-format
 msgid "%{value} now"
 msgstr "%{value} τώρα"
@@ -6474,7 +6499,7 @@ msgid "Add question"
 msgstr "Προσθήκη ερώτησης"
 
 #: lib/mehungry_web/measurement_chart.ex:76
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Body fat"
 msgstr "Λίπος σώματος"
 
@@ -6494,7 +6519,7 @@ msgid "Free text"
 msgstr "Ελεύθερο κείμενο"
 
 #: lib/mehungry_web/measurement_chart.ex:78
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Muscle mass"
 msgstr "Μυϊκή μάζα"
 
@@ -6540,22 +6565,22 @@ msgid "Save question"
 msgstr "Αποθήκευση ερώτησης"
 
 #: lib/mehungry_web/measurement_chart.ex:77
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Waist"
 msgstr "Μέση"
 
-#: lib/mehungry_web/measurement_chart.ex:491
-#, elixir-autogen, elixir-format, fuzzy
+#: lib/mehungry_web/measurement_chart.ex:515
+#, elixir-autogen, elixir-format
 msgid "goal"
 msgstr "στόχος"
 
-#: lib/mehungry_web/measurement_chart.ex:304
+#: lib/mehungry_web/measurement_chart.ex:322
 #, elixir-autogen, elixir-format
 msgid "goal %{value}"
 msgstr "στόχος %{value}"
 
-#: lib/mehungry_web/measurement_chart.ex:284
-#: lib/mehungry_web/measurement_chart.ex:494
+#: lib/mehungry_web/measurement_chart.ex:302
+#: lib/mehungry_web/measurement_chart.ex:518
 #, elixir-autogen, elixir-format
 msgid "healthy range"
 msgstr "υγιές εύρος"
@@ -6565,8 +6590,8 @@ msgstr "υγιές εύρος"
 msgid "hidden"
 msgstr "κρυφό"
 
-#: lib/mehungry_web/measurement_chart.ex:485
-#, elixir-autogen, elixir-format, fuzzy
+#: lib/mehungry_web/measurement_chart.ex:506
+#, elixir-autogen, elixir-format
 msgid "intake"
 msgstr "αρχική καταγραφή"
 
@@ -6580,7 +6605,7 @@ msgstr "απαιτείται"
 msgid "to create one."
 msgstr "για να δημιουργήσετε μία."
 
-#: lib/mehungry_web/measurement_chart.ex:488
+#: lib/mehungry_web/measurement_chart.ex:509
 #, elixir-autogen, elixir-format
 msgid "visit"
 msgstr "επίσκεψη"
@@ -6860,7 +6885,7 @@ msgid_plural "%{count} avoid-flags"
 msgstr[0] "%{count} γεύμα"
 msgstr[1] "%{count} γεύματα"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:541
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:553
 #, elixir-autogen, elixir-format, fuzzy
 msgid "%{count} step"
 msgid_plural "%{count} steps"
@@ -6893,10 +6918,10 @@ msgstr ""
 msgid "%{n} · Choose a time"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:972
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1017
 #, elixir-autogen, elixir-format
 msgid "%{score} of 5"
-msgstr ""
+msgstr "%{score} από 5"
 
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:170
 #, elixir-autogen, elixir-format, fuzzy
@@ -6911,19 +6936,19 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:112
 #, elixir-autogen, elixir-format
 msgid "/ goal %{w} kg"
-msgstr ""
+msgstr "/ στόχος %{w} kg"
 
 #: lib/mehungry_web/live/components/appointment_booking_component.ex:328
 #, elixir-autogen, elixir-format
 msgid "1 · Choose a service"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:472
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:484
 #, elixir-autogen, elixir-format
 msgid "15% — source of"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:475
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:487
 #, elixir-autogen, elixir-format
 msgid "30% — high in"
 msgstr ""
@@ -7000,10 +7025,10 @@ msgstr ""
 msgid "Added %{n} meals to the plan."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:883
-#, elixir-autogen, elixir-format, fuzzy
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:928
+#, elixir-autogen, elixir-format
 msgid "Adding…"
-msgstr "Προσθήκη"
+msgstr "Προσθήκη…"
 
 #: lib/mehungry_web/dietary_history/labels.ex:55
 #, elixir-autogen, elixir-format
@@ -7055,15 +7080,15 @@ msgstr ""
 msgid "Awaiting confirmation"
 msgstr "Σε αναμονή επιβεβαίωσης"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:380
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:425
 #, elixir-autogen, elixir-format
 msgid "BMI, BMR and TDEE recompute from height, weight, sex, age and activity — type to override."
-msgstr ""
+msgstr "Τα BMI, BMR και TDEE υπολογίζονται ξανά από ύψος, βάρος, φύλο, ηλικία και δραστηριότητα — πληκτρολογήστε για να τα αλλάξετε."
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:34
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Back to clients"
-msgstr "← Επιστροφή στους πελάτες"
+msgstr "Επιστροφή στους πελάτες"
 
 #: lib/mehungry_web/dietary_history/labels.ex:31
 #, elixir-autogen, elixir-format
@@ -7085,7 +7110,7 @@ msgstr "Συνδεδεμένο ραντεβού"
 msgid "Book another time"
 msgstr ""
 
-#: lib/mehungry_web/live/foods_live/index.html.heex:253
+#: lib/mehungry_web/live/foods_live/index.html.heex:254
 #, elixir-autogen, elixir-format
 msgid "Browse nutritionists"
 msgstr "Δείτε διατροφολόγους"
@@ -7095,7 +7120,7 @@ msgstr "Δείτε διατροφολόγους"
 msgid "Browse the full directory"
 msgstr "Δες όλο τον κατάλογο"
 
-#: lib/mehungry_web/live/foods_live/index.html.heex:247
+#: lib/mehungry_web/live/foods_live/index.html.heex:248
 #, elixir-autogen, elixir-format
 msgid "Browsing is the start. A nutritionist on the platform builds it around your body, conditions, and week."
 msgstr ""
@@ -7130,7 +7155,7 @@ msgstr ""
 msgid "Choose photo"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:462
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:474
 #, elixir-autogen, elixir-format
 msgid "Claims & reference intakes"
 msgstr ""
@@ -7157,10 +7182,10 @@ msgid "Close"
 msgstr "κλείσιμο"
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:93
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:400
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:576
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:577
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:578
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:505
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:571
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:572
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:573
 #, elixir-autogen, elixir-format
 msgid "Comments"
 msgstr ""
@@ -7195,17 +7220,17 @@ msgstr "Cookies"
 msgid "Could not generate plan: %{reason}"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:195
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:196
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not open the record. Please try again."
 msgstr "Δεν ήταν δυνατή η δημοσίευση του σχολίου σας. Παρακαλώ δοκιμάστε ξανά."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:389
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:393
 #, elixir-autogen, elixir-format
 msgid "Could not save the dietary history. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:296
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:297
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not save the visit. Please try again."
 msgstr "Δεν ήταν δυνατή η αποθήκευση της υπηρεσίας."
@@ -7215,17 +7240,17 @@ msgstr "Δεν ήταν δυνατή η αποθήκευση της υπηρεσ
 msgid "Could not send your request. Please try again."
 msgstr "Δεν ήταν δυνατή η δημοσίευση του σχολίου σας. Παρακαλώ δοκιμάστε ξανά."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:333
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:337
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not start editing. Please try again."
 msgstr "Δεν ήταν δυνατή η αποστολή της πρόσκλησης. Παρακαλώ δοκιμάστε ξανά."
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:117
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:118
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Could not start the AI assistant. Please try again."
 msgstr "Δεν ήταν δυνατή η δημιουργία του πελάτη. Παρακαλώ δοκιμάστε ξανά."
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:599
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:594
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Couldn't load comments."
 msgstr "Δεν ήταν δυνατή η φόρτωση των ενώσεων."
@@ -7319,14 +7344,14 @@ msgstr "Τροφικές απέχθειες"
 msgid "Food intolerances"
 msgstr "Τροφικές δυσανεξίες"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:527
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:539
 #, elixir-autogen, elixir-format
 msgid "For %{count} serving"
 msgid_plural "For %{count} servings"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/mehungry_web/live/foods_live/index.html.heex:241
+#: lib/mehungry_web/live/foods_live/index.html.heex:242
 #, elixir-autogen, elixir-format
 msgid "For your goals"
 msgstr "Για τους στόχους σας"
@@ -7372,6 +7397,7 @@ msgstr ""
 msgid "Gynecological history"
 msgstr "Γυναικολογικό ιστορικό"
 
+#: lib/mehungry_web/components/recipe_components.ex:692
 #: lib/mehungry_web/live/home_live/index.ex:310
 #: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:211
 #, elixir-autogen, elixir-format
@@ -7383,7 +7409,7 @@ msgstr ""
 msgid "Hereditary conditions"
 msgstr "Κληρονομικά νοσήματα"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:505
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:517
 #, elixir-autogen, elixir-format, fuzzy
 msgid "High"
 msgstr "Ύψος"
@@ -7406,9 +7432,9 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:146
 #, elixir-autogen, elixir-format
 msgid "Last visit"
-msgstr ""
+msgstr "Τελευταία επίσκεψη"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:595
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:590
 #, elixir-autogen, elixir-format
 msgid "Loading comments…"
 msgstr ""
@@ -7444,7 +7470,7 @@ msgstr "Μήνυμα"
 msgid "Message your nutritionist…"
 msgstr "Είστε διατροφολόγος;"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:538
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:550
 #, elixir-autogen, elixir-format
 msgid "Method"
 msgstr ""
@@ -7495,15 +7521,15 @@ msgstr ""
 msgid "Next week"
 msgstr "Επόμενο"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:604
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:599
 #, elixir-autogen, elixir-format
 msgid "No comments yet. Be the first to comment!"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:992
-#, elixir-autogen, elixir-format, fuzzy
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1037
+#, elixir-autogen, elixir-format
 msgid "No meal plans yet."
-msgstr "Δεν έχουν προγραμματιστεί γεύματα"
+msgstr "Δεν υπάρχουν ακόμη πλάνα γευμάτων."
 
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:233
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:253
@@ -7534,24 +7560,24 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:116
 #, elixir-autogen, elixir-format
 msgid "No readings yet"
-msgstr ""
+msgstr "Δεν υπάρχουν ακόμη μετρήσεις"
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:154
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No visits yet"
-msgstr "Δεν έχουν καταγραφεί ακόμη επισκέψεις."
+msgstr "Δεν έχουν καταγραφεί ακόμη επισκέψεις"
 
 #: lib/mehungry_web/live/my_nutritionist_live/index.ex:499
 #, elixir-autogen, elixir-format
 msgid "No-show"
 msgstr "Μη εμφάνιση"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:459
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:471
 #, elixir-autogen, elixir-format
 msgid "Nutrient profile"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:513
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:525
 #, elixir-autogen, elixir-format
 msgid "Nutrients computed from matched USDA ingredients; claims assessed against EU Reg. 1169/2011 & 1924/2006 (≥15% NRV “source of”, ≥30% “high in”, per serving)."
 msgstr ""
@@ -7619,7 +7645,7 @@ msgstr ""
 msgid "Per 100 g"
 msgstr "ανά 100g"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:449
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:452
 #, elixir-autogen, elixir-format
 msgid "Per serving."
 msgstr ""
@@ -7759,7 +7785,7 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:95
 #, elixir-autogen, elixir-format
 msgid "Set a goal"
-msgstr ""
+msgstr "Ορίστε στόχο"
 
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:177
 #, elixir-autogen, elixir-format, fuzzy
@@ -7786,7 +7812,7 @@ msgstr "Ύπνος"
 msgid "Smoking"
 msgstr "Κάπνισμα"
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:76
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:86
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
 msgstr ""
@@ -7796,7 +7822,7 @@ msgstr ""
 msgid "Special eating habits"
 msgstr "Ιδιαίτερες διατροφικές συνήθειες"
 
-#: lib/mehungry_web/live/foods_live/index.html.heex:270
+#: lib/mehungry_web/live/foods_live/index.html.heex:271
 #, elixir-autogen, elixir-format
 msgid "Species"
 msgstr "Είδος"
@@ -7806,7 +7832,7 @@ msgstr "Είδος"
 msgid "Start minute"
 msgstr "Ημερομηνία έναρξης"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:583
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:622
 #, elixir-autogen, elixir-format
 msgid "Starting analysis for %{name}…"
 msgstr ""
@@ -7832,9 +7858,11 @@ msgid "That file could not be uploaded."
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/profile_edit.ex:151
+#: lib/mehungry_web/live/profile_live/index.ex:1632
+#: lib/mehungry_web/live/profile_live/index.ex:1632
 #, elixir-autogen, elixir-format
 msgid "That image is too large (max 5 MB)."
-msgstr ""
+msgstr "Η εικόνα είναι πολύ μεγάλη (έως 5 MB)."
 
 #: lib/mehungry_web/live/components/appointment_booking_component.ex:138
 #, elixir-autogen, elixir-format
@@ -7856,7 +7884,7 @@ msgstr ""
 msgid "The question"
 msgstr "Νέα ερώτηση"
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:230
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:231
 #, elixir-autogen, elixir-format
 msgid "The start date can't be in the past."
 msgstr ""
@@ -7871,7 +7899,7 @@ msgstr ""
 msgid "This is a pending request."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:476
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:480
 #, elixir-autogen, elixir-format
 msgid "This replaces %{count} meal already on that week. Continue?"
 msgid_plural "This replaces %{count} meals already on that week. Continue?"
@@ -7909,7 +7937,7 @@ msgstr "Τρί"
 msgid "Turn off to hide it without deleting it."
 msgstr ""
 
-#: lib/mehungry_web/live/foods_live/index.html.heex:244
+#: lib/mehungry_web/live/foods_live/index.html.heex:245
 #, elixir-autogen, elixir-format
 msgid "Turn this data into a plan"
 msgstr "Μετατρέψτε αυτά τα δεδομένα σε πλάνο"
@@ -8046,10 +8074,10 @@ msgstr ""
 msgid "on track"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1145
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1190
 #, elixir-autogen, elixir-format
 msgid "outside healthy range"
-msgstr ""
+msgstr "εκτός υγιούς εύρους"
 
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:364
 #, elixir-autogen, elixir-format
@@ -8061,15 +8089,15 @@ msgstr ""
 msgid "per 100 g"
 msgstr "ανά 100g"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:466
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:478
 #, elixir-autogen, elixir-format
 msgid "per serving · % of adult NRV"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1144
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1189
 #, elixir-autogen, elixir-format
 msgid "within healthy range"
-msgstr ""
+msgstr "εντός υγιούς εύρους"
 
 #: lib/mehungry_web/live/components/appointment_booking_component.ex:474
 #, elixir-autogen, elixir-format
@@ -8081,17 +8109,19 @@ msgstr ""
 msgid "Filter by compound"
 msgstr "Φιλτράρισμα ανά ένωση"
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:562
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:458
 #, elixir-autogen, elixir-format
 msgid "Full nutrition facts"
 msgstr ""
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:313
+#: lib/mehungry_web/components/recipe_components.ex:808
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:405
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Save to my recipes"
 msgstr "Αποθήκευση συνταγής"
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:313
+#: lib/mehungry_web/components/recipe_components.ex:808
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:405
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Saved to my recipes"
 msgstr "Αποθήκευση συνταγής"
@@ -8101,7 +8131,7 @@ msgstr "Αποθήκευση συνταγής"
 msgid "Shared a weekly plan"
 msgstr ""
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:515
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:541
 #, elixir-autogen, elixir-format, fuzzy
 msgid "View all %{count} comments"
 msgstr "Προβολή όλων των σημειώσεων"
@@ -8111,44 +8141,426 @@ msgstr "Προβολή όλων των σημειώσεων"
 msgid "View full plan — recipes, grocery list & nutrition"
 msgstr ""
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:387
+#: lib/mehungry_web/components/recipe_components.ex:794
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:475
 #, elixir-autogen, elixir-format
 msgid "per serving"
 msgstr "ανά μερίδα"
 
-#: lib/mehungry_web/live/home_live/components/post_card.html.heex:505
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:528
 #, elixir-autogen, elixir-format
 msgid "%{count} save"
 msgid_plural "%{count} saves"
 msgstr[0] "αποθηκεύτηκε %{count}"
 msgstr[1] "αποθηκεύτηκε %{count}"
 
-#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:6
-#, elixir-autogen, elixir-format
-msgid "Discover"
-msgstr "Ανακάλυψε"
-
-#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:9
-#, elixir-autogen, elixir-format
-msgid "Recipes worth saving"
-msgstr "Συνταγές που αξίζει να αποθηκεύσεις"
-
 #: lib/mehungry_web/live/recipe_browser_live/index.html.heex:12
 #, elixir-autogen, elixir-format
 msgid "Browse the community kitchen — filtered by the nutrition that matters to you."
 msgstr "Περιηγήσου στην κουζίνα της κοινότητας — φιλτραρισμένη με βάση τη διατροφή που σε ενδιαφέρει."
 
-#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:57
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:328
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear lens"
+msgstr "Καθαρισμός φίλτρων"
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:6
 #, elixir-autogen, elixir-format
-msgid "Recipes"
-msgstr "Συνταγές"
+msgid "Discover"
+msgstr "Ανακάλυψε"
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:318
+#, elixir-autogen, elixir-format
+msgid "Nothing matches that yet."
+msgstr ""
 
 #: lib/mehungry_web/live/recipe_browser_live/index.html.heex:148
 #, elixir-autogen, elixir-format
 msgid "Nutrition lens"
 msgstr "Διατροφικός φακός"
 
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Recipes worth saving"
+msgstr "Συνταγές που αξίζει να αποθηκεύσεις"
+
 #: lib/mehungry_web/live/recipe_browser_live/index.html.heex:151
 #, elixir-autogen, elixir-format
 msgid "Show recipes proven high in a nutrient — per serving, EU-regulated."
 msgstr "Εμφάνισε συνταγές αποδεδειγμένα πλούσιες σε ένα θρεπτικό συστατικό — ανά μερίδα, βάσει κανονισμών ΕΕ."
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:321
+#, elixir-autogen, elixir-format
+msgid "Try a different search, or clear the nutrition lens to see everything."
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:38
+#, elixir-autogen, elixir-format
+msgid "off"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:38
+#, elixir-autogen, elixir-format, fuzzy
+msgid "on"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "Recipes"
+msgstr "Συνταγές"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:237
+#: lib/mehungry_web/live/profile_live/index.ex:1610
+#: lib/mehungry_web/live/profile_live/index.ex:1610
+#, elixir-autogen, elixir-format
+msgid "%{start} – ongoing"
+msgstr "%{start} – σε εξέλιξη"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1132
+#: lib/mehungry_web/live/profile_live/index.ex:1132
+#, elixir-autogen, elixir-format
+msgid "About you (used to derive BMI & BMR)"
+msgstr "Σχετικά με εσάς (για τον υπολογισμό BMI & BMR)"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1231
+#: lib/mehungry_web/live/profile_live/index.ex:1231
+#, elixir-autogen, elixir-format
+msgid "Add progress photos"
+msgstr "Προσθήκη φωτογραφιών προόδου"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1102
+#: lib/mehungry_web/live/profile_live/index.ex:1102
+#, elixir-autogen, elixir-format
+msgid "BMI and BMR are worked out automatically when your height (and age) are set below."
+msgstr "Ο BMI και ο BMR υπολογίζονται αυτόματα όταν ορίσετε παρακάτω το ύψος (και την ηλικία) σας."
+
+#: lib/mehungry_web/live/profile_live/index.ex:958
+#: lib/mehungry_web/live/profile_live/index.ex:958
+#, elixir-autogen, elixir-format
+msgid "Back to current"
+msgstr "Επιστροφή στην τρέχουσα"
+
+#: lib/mehungry_web/measurement_chart.ex:589
+#, elixir-autogen, elixir-format
+msgid "Before"
+msgstr "Πριν"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:211
+#, elixir-autogen, elixir-format
+msgid "Client's own journal (shared with you)"
+msgstr "Το προσωπικό ημερολόγιο του πελάτη (κοινοποιημένο σε εσάς)"
+
+#: lib/mehungry_web/live/profile_live/index.ex:593
+#: lib/mehungry_web/live/profile_live/index.ex:593
+#, elixir-autogen, elixir-format
+msgid "Could not reset right now."
+msgstr "Δεν ήταν δυνατή η επαναφορά αυτή τη στιγμή."
+
+#: lib/mehungry_web/live/profile_live/index.ex:522
+#: lib/mehungry_web/live/profile_live/index.ex:522
+#, elixir-autogen, elixir-format
+msgid "Could not save that entry — check the values."
+msgstr "Δεν ήταν δυνατή η αποθήκευση της καταχώρισης — ελέγξτε τις τιμές."
+
+#: lib/mehungry_web/live/profile_live/index.ex:529
+#: lib/mehungry_web/live/profile_live/index.ex:529
+#, elixir-autogen, elixir-format
+msgid "Could not save that entry."
+msgstr "Δεν ήταν δυνατή η αποθήκευση της καταχώρισης."
+
+#: lib/mehungry_web/live/profile_live/index.ex:575
+#: lib/mehungry_web/live/profile_live/index.ex:575
+#, elixir-autogen, elixir-format
+msgid "Could not save those settings."
+msgstr "Δεν ήταν δυνατή η αποθήκευση των ρυθμίσεων."
+
+#: lib/mehungry_web/live/profile_live/index.ex:572
+#: lib/mehungry_web/live/profile_live/index.ex:572
+#, elixir-autogen, elixir-format
+msgid "Could not save — check the values."
+msgstr "Δεν ήταν δυνατή η αποθήκευση — ελέγξτε τις τιμές."
+
+#: lib/mehungry_web/live/profile_live/index.ex:620
+#: lib/mehungry_web/live/profile_live/index.ex:620
+#, elixir-autogen, elixir-format
+msgid "Could not update sharing."
+msgstr "Δεν ήταν δυνατή η ενημέρωση της κοινοποίησης."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1314
+#: lib/mehungry_web/live/profile_live/index.ex:1314
+#, elixir-autogen, elixir-format
+msgid "Delete photo"
+msgstr "Διαγραφή φωτογραφίας"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1327
+#: lib/mehungry_web/live/profile_live/index.ex:1327
+#, elixir-autogen, elixir-format
+msgid "Delete this entry? Its photos are removed too."
+msgstr "Διαγραφή αυτής της καταχώρισης; Θα αφαιρεθούν και οι φωτογραφίες της."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1313
+#: lib/mehungry_web/live/profile_live/index.ex:1313
+#, elixir-autogen, elixir-format
+msgid "Delete this photo?"
+msgstr "Διαγραφή αυτής της φωτογραφίας;"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1186
+#: lib/mehungry_web/live/profile_live/index.ex:1186
+#, elixir-autogen, elixir-format
+msgid "Diary"
+msgstr "Ημερολόγιο"
+
+#: lib/mehungry_web/live/profile_live/index.ex:536
+#: lib/mehungry_web/live/profile_live/index.ex:536
+#, elixir-autogen, elixir-format
+msgid "Entry deleted."
+msgstr "Η καταχώριση διαγράφηκε."
+
+#: lib/mehungry_web/live/profile_live/index.ex:519
+#: lib/mehungry_web/live/profile_live/index.ex:519
+#, elixir-autogen, elixir-format
+msgid "Entry saved."
+msgstr "Η καταχώριση αποθηκεύτηκε."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1156
+#: lib/mehungry_web/live/profile_live/index.ex:1156
+#, elixir-autogen, elixir-format
+msgid "Female"
+msgstr "Γυναίκα"
+
+#: lib/mehungry_web/live/profile_live/index.ex:590
+#: lib/mehungry_web/live/profile_live/index.ex:590
+#, elixir-autogen, elixir-format
+msgid "Fresh start! Your previous progress is saved under past periods."
+msgstr "Νέα αρχή! Η προηγούμενη πρόοδός σας είναι αποθηκευμένη στις προηγούμενες περιόδους."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1071
+#: lib/mehungry_web/live/profile_live/index.ex:1071
+#, elixir-autogen, elixir-format
+msgid "Goals & tracked metrics"
+msgstr "Στόχοι & μετρήσεις παρακολούθησης"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1108
+#: lib/mehungry_web/live/profile_live/index.ex:1108
+#, elixir-autogen, elixir-format
+msgid "Goals (optional)"
+msgstr "Στόχοι (προαιρετικό)"
+
+#: lib/mehungry_web/live/profile_live/index.ex:569
+#: lib/mehungry_web/live/profile_live/index.ex:569
+#, elixir-autogen, elixir-format
+msgid "Goals saved."
+msgstr "Οι στόχοι αποθηκεύτηκαν."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1224
+#: lib/mehungry_web/live/profile_live/index.ex:1224
+#, elixir-autogen, elixir-format
+msgid "How did it go? (optional note)"
+msgstr "Πώς πήγε; (προαιρετική σημείωση)"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1264
+#: lib/mehungry_web/live/profile_live/index.ex:1264
+#, elixir-autogen, elixir-format
+msgid "Log entry"
+msgstr "Καταχώριση"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1154
+#: lib/mehungry_web/live/profile_live/index.ex:1154
+#, elixir-autogen, elixir-format
+msgid "Male"
+msgstr "Άνδρας"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1081
+#: lib/mehungry_web/live/profile_live/index.ex:1081
+#, elixir-autogen, elixir-format
+msgid "Metrics you want to track"
+msgstr "Μετρήσεις που θέλετε να παρακολουθείτε"
+
+#: lib/mehungry_web/live/profile_live/index.ex:967
+#: lib/mehungry_web/live/profile_live/index.ex:967
+#, elixir-autogen, elixir-format
+msgid "My progress"
+msgstr "Η πρόοδός μου"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1051
+#: lib/mehungry_web/live/profile_live/index.ex:1051
+#, elixir-autogen, elixir-format
+msgid "No measurements yet — log your first entry below. Once you've logged a metric twice, your trend charts here."
+msgstr "Δεν υπάρχουν ακόμη μετρήσεις — καταχωρίστε την πρώτη σας εγγραφή παρακάτω. Μόλις καταγράψετε μια μέτρηση δύο φορές, η τάση σας θα εμφανιστεί εδώ."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1270
+#: lib/mehungry_web/live/profile_live/index.ex:1270
+#, elixir-autogen, elixir-format
+msgid "Nothing logged in this period."
+msgstr "Δεν καταγράφηκε τίποτα σε αυτή την περίοδο."
+
+#: lib/mehungry_web/measurement_chart.ex:589
+#, elixir-autogen, elixir-format
+msgid "Now"
+msgstr "Τώρα"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1634
+#: lib/mehungry_web/live/profile_live/index.ex:1634
+#, elixir-autogen, elixir-format
+msgid "Only JPG, PNG or WebP images."
+msgstr "Μόνο εικόνες JPG, PNG ή WebP."
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:60
+#, elixir-autogen, elixir-format
+msgid "Payment could not be set up. Please try again."
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:546
+#: lib/mehungry_web/live/profile_live/index.ex:546
+#, elixir-autogen, elixir-format
+msgid "Photo deleted."
+msgstr "Η φωτογραφία διαγράφηκε."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1339
+#: lib/mehungry_web/live/profile_live/index.ex:1339
+#, elixir-autogen, elixir-format
+msgid "Progress history"
+msgstr "Ιστορικό προόδου"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1179
+#: lib/mehungry_web/live/profile_live/index.ex:1179
+#, elixir-autogen, elixir-format
+msgid "Save goals"
+msgstr "Αποθήκευση στόχων"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:218
+#, elixir-autogen, elixir-format
+msgid "Self-logged by the client — read-only. They can stop sharing at any time."
+msgstr "Καταγράφεται από τον ίδιο τον πελάτη — μόνο για ανάγνωση. Μπορεί να σταματήσει την κοινοποίηση ανά πάσα στιγμή."
+
+#: lib/mehungry_web/live/profile_live/index.ex:998
+#: lib/mehungry_web/live/profile_live/index.ex:998
+#, elixir-autogen, elixir-format
+msgid "Share with nutritionist"
+msgstr "Κοινοποίηση στον διατροφολόγο"
+
+#: lib/mehungry_web/live/profile_live/index.ex:996
+#: lib/mehungry_web/live/profile_live/index.ex:996
+#: lib/mehungry_web/live/profile_live/index.ex:1359
+#: lib/mehungry_web/live/profile_live/index.ex:1359
+#, elixir-autogen, elixir-format
+msgid "Shared with nutritionist"
+msgstr "Κοινοποιημένο στον διατροφολόγο"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1012
+#: lib/mehungry_web/live/profile_live/index.ex:1012
+#, elixir-autogen, elixir-format
+msgid "Start over"
+msgstr "Νέα αρχή"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1006
+#: lib/mehungry_web/live/profile_live/index.ex:1006
+#, elixir-autogen, elixir-format
+msgid "Start over from 0? Your current progress stays saved as a past period, and a fresh one begins today."
+msgstr "Νέα αρχή από το 0; Η τρέχουσα πρόοδός σας μένει αποθηκευμένη ως προηγούμενη περίοδος και μια νέα ξεκινά σήμερα."
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:229
+#, elixir-autogen, elixir-format
+msgid "The shared period doesn't have enough logged measurements to chart yet."
+msgstr "Η κοινοποιημένη περίοδος δεν έχει ακόμη αρκετές μετρήσεις για γράφημα."
+
+#: lib/mehungry_web/live/profile_live/index.ex:611
+#: lib/mehungry_web/live/profile_live/index.ex:611
+#, elixir-autogen, elixir-format
+msgid "This period is no longer shared."
+msgstr "Αυτή η περίοδος δεν είναι πλέον κοινοποιημένη."
+
+#: lib/mehungry_web/live/profile_live/index.ex:610
+#: lib/mehungry_web/live/profile_live/index.ex:610
+#, elixir-autogen, elixir-format
+msgid "This period is now visible to your nutritionist."
+msgstr "Αυτή η περίοδος είναι πλέον ορατή στον διατροφολόγο σας."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1633
+#: lib/mehungry_web/live/profile_live/index.ex:1633
+#, elixir-autogen, elixir-format
+msgid "Up to 4 photos per entry."
+msgstr "Έως 4 φωτογραφίες ανά καταχώριση."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1635
+#: lib/mehungry_web/live/profile_live/index.ex:1635
+#, elixir-autogen, elixir-format
+msgid "Upload failed — try again."
+msgstr "Η μεταφόρτωση απέτυχε — δοκιμάστε ξανά."
+
+#: lib/mehungry_web/live/profile_live/index.ex:948
+#: lib/mehungry_web/live/profile_live/index.ex:948
+#, elixir-autogen, elixir-format
+msgid "Viewing a past period:"
+msgstr "Προβολή προηγούμενης περιόδου:"
+
+#: lib/mehungry_web/live/profile_live/index.ex:617
+#: lib/mehungry_web/live/profile_live/index.ex:617
+#, elixir-autogen, elixir-format
+msgid "You don't have a nutritionist to share with yet."
+msgstr "Δεν έχετε ακόμη διατροφολόγο για κοινοποίηση."
+
+#: lib/mehungry_web/live/profile_live/index.ex:937
+#: lib/mehungry_web/live/profile_live/index.ex:937
+#, elixir-autogen, elixir-format
+msgid "Your earlier self-logged progress is saved below under past periods."
+msgstr "Η προηγούμενη αυτοκαταγεγραμμένη πρόοδός σας είναι αποθηκευμένη παρακάτω στις προηγούμενες περιόδους."
+
+#: lib/mehungry_web/live/profile_live/index.ex:1055
+#: lib/mehungry_web/live/profile_live/index.ex:1055
+#, elixir-autogen, elixir-format
+msgid "Your nutritionist hasn't recorded measurements yet. Once you've had at least two measured visits, your progress will chart here."
+msgstr "Ο διατροφολόγος σας δεν έχει καταγράψει ακόμη μετρήσεις. Μόλις έχετε τουλάχιστον δύο επισκέψεις με μετρήσεις, η πρόοδός σας θα εμφανιστεί εδώ."
+
+#: lib/mehungry_web/live/profile_live/index.ex:933
+#: lib/mehungry_web/live/profile_live/index.ex:933
+#, elixir-autogen, elixir-format
+msgid "Your nutritionist now tracks your progress — measurements from your visits chart here automatically, and self-logging is paused."
+msgstr "Ο διατροφολόγος σας παρακολουθεί πλέον την πρόοδό σας — οι μετρήσεις από τις επισκέψεις σας εμφανίζονται εδώ αυτόματα και η προσωπική καταγραφή έχει παύσει."
+
+#: lib/mehungry_web/live/profile_live/index.ex:526
+#: lib/mehungry_web/live/profile_live/index.ex:526
+#, elixir-autogen, elixir-format
+msgid "Your nutritionist tracks this period — logging is paused."
+msgstr "Ο διατροφολόγος σας παρακολουθεί αυτή την περίοδο — η καταγραφή έχει παύσει."
+
+#: lib/mehungry_web/measurement_chart.ex:512
+#, elixir-autogen, elixir-format
+msgid "logged by you"
+msgstr "καταγεγραμμένο από εσάς"
+
+#: lib/mehungry_web/live/profile_live/index.ex:919
+#: lib/mehungry_web/live/profile_live/index.ex:919
+#: lib/mehungry_web/live/profile_live/index.ex:1305
+#: lib/mehungry_web/live/profile_live/index.ex:1305
+#, elixir-autogen, elixir-format
+msgid "progress photo"
+msgstr "φωτογραφία προόδου"
+
+#: lib/mehungry_web/measurement_chart.ex:557
+#, elixir-autogen, elixir-format
+msgid "progress photo, %{date}"
+msgstr "φωτογραφία προόδου, %{date}"
+
+#: lib/mehungry_web/measurement_chart.ex:543
+#, elixir-autogen, elixir-format
+msgid "progress photos"
+msgstr "φωτογραφίες προόδου"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1616
+#: lib/mehungry_web/live/profile_live/index.ex:1616
+#, elixir-autogen, elixir-format
+msgid "self-tracked"
+msgstr "προσωπική παρακολούθηση"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1615
+#: lib/mehungry_web/live/profile_live/index.ex:1615
+#, elixir-autogen, elixir-format
+msgid "with nutritionist"
+msgstr "με διατροφολόγο"
+
+#: lib/mehungry_web/live/profile_live/index.ex:1153
+#: lib/mehungry_web/live/profile_live/index.ex:1153
+#, elixir-autogen, elixir-format
+msgid "—"
+msgstr "—"

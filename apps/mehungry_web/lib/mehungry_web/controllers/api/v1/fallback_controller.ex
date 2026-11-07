@@ -27,6 +27,17 @@ defmodule MehungryWeb.Api.V1.FallbackController do
     conn |> put_status(:forbidden) |> json(errors(gettext("forbidden")))
   end
 
+  # Art. 9 consent gate on the clinical endpoints — a machine-readable detail
+  # token the client matches on (not a humanized string).
+  def call(conn, {:error, :consent_required}) do
+    conn |> put_status(:forbidden) |> json(errors("consent_required"))
+  end
+
+  # Grant attempt whose version is not the current server version (stale client).
+  def call(conn, {:error, :consent_version_mismatch}) do
+    conn |> put_status(:unprocessable_entity) |> json(errors("consent_version_mismatch"))
+  end
+
   def call(conn, {:error, :quota_exceeded}) do
     conn
     |> put_status(:forbidden)

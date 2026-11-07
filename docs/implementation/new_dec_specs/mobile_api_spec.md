@@ -76,6 +76,7 @@ drives the client. A later cursor upgrade (`?before=<id>`) is noted per-endpoint
 | My nutritionist — directory/profile/slots/articles (§18) | `Api.V1.NutritionistDirectoryController` | `Professionals` |
 | My nutritionist — client appointments (§18) | `Api.V1.AppointmentController` | `Professionals` |
 | My nutritionist — onboarding questionnaire (§18) | `Api.V1.ClientOnboardingController` | `Onboarding`, `Professionals` |
+| Self-tracking progress journal (§19) | `Api.V1.ProgressController` | `Mehungry.Progress` |
 | Nutritionist portal — pro persona (§14) | `Api.V1.NutritionistController` | `Professionals`, `History` |
 
 Add a new pipeline + scope in `router.ex`:
@@ -744,6 +745,8 @@ Recipe / avatar images go to S3 (existing `Mehungry.S3`). Two supported flows:
   `{ "kind": "recipe_image", "content_type": "image/jpeg" }` →
   `{ "data": { "upload_id": "recipe_images/tmp/uuid.jpg", "url": "<presigned>", "headers": {…} } }`.
   Client PUTs the binary to `url`, then passes `upload_id` in the create/update body.
+  `kind` ∈ `recipe_image | avatar | progress_photo` (the latter for §19 progress
+  photos — its `upload_id` goes to `POST /me/progress/photos`).
 - **Direct multipart** (fallback): `POST /api/v1/uploads` `multipart/form-data`
   → `{ "data": { "upload_id": "…", "url": "https://…" } }`.
 
@@ -838,7 +841,7 @@ nutritionist. All endpoints delegate to `Mehungry.Professionals` (plus
 > client** — only note-derived *measurements* reach them, via `GET /me/progress`.
 
 Suggested modules: `Api.V1.MyNutritionistController` (hub, disconnect, messages,
-progress), `Api.V1.NutritionistDirectoryController` (public directory/profile/
+progress, clinical-data consent), `Api.V1.NutritionistDirectoryController` (public directory/profile/
 slots/articles), `Api.V1.AppointmentController` (client appointments), and
 `Api.V1.ClientOnboardingController` (questionnaire). Reuse the existing
 `Api.V1.InvitationController` for `/me/invitations`.
@@ -966,7 +969,8 @@ to each `pending_invitations[].professional`.
     "timezone": "Europe/Athens", "payments_enabled": true
   },
   "unread_messages": 2,
-  "pending_invitations": []
+  "pending_invitations": [],
+  "consent": { "granted": true, "version": "2026-11", "granted_at": "2026-11-05T09:30:00Z" }
 } }
 // 200 — unconnected (empty state; directory is at GET /api/v1/nutritionists)
 { "data": {
@@ -976,7 +980,8 @@ to each `pending_invitations[].professional`.
   "pending_invitations": [
     { "id": 12, "inserted_at": "2026-11-01T10:00:00Z",
       "professional": { "professional_id": 88, "slug": "maria-k", "display_name": "Maria K.", "photo_url": "https://…" } }
-  ]
+  ],
+  "consent": null
 } }
 ```
 
@@ -984,6 +989,71 @@ to each `pending_invitations[].professional`.
 The client ends their own link (`unassign_nutritionist/1`, confirm-gated in the
 UI). `404` if not currently connected. The hub then falls back to the unconnected
 state.
+
+### Clinical-data consent (GDPR Art. 9)
+
+Processing a client's **special-category health data** — their onboarding
+questionnaire answers and the body measurements shown in "My progress" — requires
+the client's **explicit consent** under GDPR Art. 9(2)(a). The mobile client gates
+its entire clinical surface on this; the server **enforces** it (below) so the data
+cannot be read or written without a lawful basis.
+
+Consent is recorded per **user** (independent of the assignment — a client may
+consent at the moment they accept an invitation, and consent survives a
+disconnect/reconnect). Keep an audit trail: `version`, `granted_at`, `user_id`,
+and `withdrawn_at`. Suggested storage: an append-only `clinical_consents` row per
+grant (withdrawal sets `withdrawn_at` rather than deleting, preserving history).
+Suggested context (`Mehungry.Professionals`): `current_clinical_consent/1`,
+`grant_clinical_consent/2`, `withdraw_clinical_consent/1`.
+
+The **current consent version** is a server constant
+(`@clinical_consent_version "2026-11"`, mirrored client-side as
+`CLINICAL_CONSENT_VERSION`). Bump it to force a re-consent when the consent copy
+materially changes — a stored consent at an older version is treated as absent.
+
+The hub's `consent` field is the user's **active** consent **at the current
+version**, or `null` when none exists / it was withdrawn / it is stale:
+```json
+"consent": { "granted": true, "version": "2026-11", "granted_at": "2026-11-05T09:30:00Z" }
+```
+
+#### `POST /api/v1/me/nutritionist/consent` 🔒 — grant
+`grant_clinical_consent(current_user, version)`. Records explicit consent at the
+given version. Idempotent — re-granting an already-active consent returns `200`
+with the existing record. Does **not** require a connected nutritionist.
+```json
+// request
+{ "version": "2026-11" }
+// 200
+{ "data": { "consent": { "granted": true, "version": "2026-11", "granted_at": "2026-11-05T09:30:00Z" } } }
+// 422 — version ≠ the current server version (stale client; prompt an app update)
+{ "errors": { "detail": "consent_version_mismatch" } }
+```
+
+#### `DELETE /api/v1/me/nutritionist/consent` 🔒 — withdraw → `204`
+`withdraw_clinical_consent(current_user)` (sets `withdrawn_at`). Withdrawal is as
+easy as granting (Art. 7(3)) and is **idempotent** — `204` even with no active
+consent. Withdrawal does **not** delete measurements the nutritionist already
+recorded (those live on the nutritionist's own clinical file, §14); it stops
+further in-app sharing and re-gates the endpoints below. A client wanting erasure
+asks the nutritionist or deletes their account (`DELETE /me`).
+
+#### Consent enforcement on clinical endpoints
+Without an active consent at the current version, the health-data endpoints return
+`403`:
+```json
+// 403
+{ "errors": { "detail": "consent_required" } }
+```
+- `GET /api/v1/me/progress` — `403` (never return body measurements without a
+  lawful basis). This is distinct from the empty-`history` `200` a **consented**
+  user with no records yet receives.
+- `GET` **and** `PUT /api/v1/nutritionists/:professional_id/onboarding` — `403`
+  (the questionnaire returns/collects the client's health answers).
+
+A compliant client never hits these `403`s (it gates on the hub `consent` field);
+enforcement is defense-in-depth for direct API callers and for a session whose
+consent was withdrawn on another device.
 
 ### Invitations (from a nutritionist)
 
@@ -1107,7 +1177,9 @@ nutritionist on the client file. Prompts/options localize via `Accept-Language`.
 
 #### `GET /api/v1/nutritionists/:professional_id/onboarding` 🔒
 Loads `Onboarding.ensure_client_questions/1` + `list_active_questions("client",
-professional_id)`, merged with the user's existing `get_answers/2`.
+professional_id)`, merged with the user's existing `get_answers/2`. Requires an
+active clinical-data consent — `403 { "errors": { "detail": "consent_required" } }`
+otherwise (see "Clinical-data consent").
 ```json
 // 200
 { "data": { "questions": [
@@ -1126,7 +1198,8 @@ professional_id)`, merged with the user's existing `get_answers/2`.
 #### `PUT /api/v1/nutritionists/:professional_id/onboarding` 🔒
 `Onboarding.upsert_answers("professional_client", record.id, answers, questions)`.
 Keys are question ids; `value_text` for value questions, `selected_options` for
-choice questions.
+choice questions. Requires an active clinical-data consent —
+`403 { "errors": { "detail": "consent_required" } }` otherwise.
 ```json
 // request
 { "answers": {
@@ -1145,6 +1218,9 @@ measurements **across every nutritionist** who keeps a file for the user —
 `measurement_context_for_user/1` (reference values for goal lines) +
 `measurement_metrics/0` (metric list / display order). This is the **only**
 client-visible view of consultation data; note bodies/to-dos are never included.
+Requires an active clinical-data consent — `403 { "errors": { "detail":
+"consent_required" } }` otherwise (distinct from the empty-`history` `200` a
+consented user with no records yet receives; see "Clinical-data consent").
 ```json
 // 200
 { "data": {
@@ -1185,6 +1261,8 @@ get("/me/nutritionist/messages", MyNutritionistController, :messages)
 post("/me/nutritionist/messages", MyNutritionistController, :send_message)
 post("/me/nutritionist/messages/read", MyNutritionistController, :read_messages)
 get("/me/progress", MyNutritionistController, :progress)
+post("/me/nutritionist/consent", MyNutritionistController, :grant_consent)
+delete("/me/nutritionist/consent", MyNutritionistController, :withdraw_consent)
 
 get("/me/appointments", AppointmentController, :index)
 get("/me/appointments/:id", AppointmentController, :show)
@@ -1197,6 +1275,194 @@ put("/nutritionists/:professional_id/onboarding", ClientOnboardingController, :u
 ```
 (`/nutritionists/:slug` matches one segment and `/nutritionists/:professional_id/onboarding`
 two, so they don't collide; the former is public, the latter authenticated.)
+
+---
+
+## 19. Self-tracking progress journal
+
+The user's **own** progress journal (`Mehungry.Progress`, mirroring the
+`/profile?tab=progress` web tab): personal goals, chosen metrics, dated diary
+entries, body photos, and "start over" — for users **with or without** a
+nutritionist. Distinct from §18's `GET /api/v1/me/progress` (the flat,
+nutritionist-recorded measurement history), which is **unchanged**; the §19
+routes all live under `/me/progress/…` subpaths.
+
+**Periods.** Progress is organised into **periods** identified by date range
+(`started_on`..`ended_on`; `ended_on: null` = active). A user has exactly one
+active period (server-enforced). Two kinds:
+
+- `"self"` — the user logs their own entries against their goals (`self_logging: true` while active).
+- `"nutritionist_aligned"` — opened **automatically** when the user is assigned a
+  nutritionist (accepting an invitation): the previous period is closed, self-logging
+  pauses, and this period's `history` is fed by the nutritionist's measurements
+  (`source: intake | visit`). On unassignment it closes and a fresh `"self"` period
+  opens. The client should surface this state ("your nutritionist tracks your
+  progress now; your earlier history is saved under past periods").
+
+**Metrics.** Selectable `tracked_metrics` ⊆
+`weight_kg | waist_cm | body_fat_percentage | muscle_mass_kg`. `bmi` and
+`bmr_kcal` are **derived server-side** from the period's `height_m`/`sex`/`age`
+snapshot (BMI needs height; BMR needs sex+age+height) — never sent by the client.
+History points use the §18 point shape with the additional `source: "self"`.
+
+#### `GET /api/v1/me/progress/periods` 🔒
+All periods, most recent first. **Bootstraps the journal** on first call (creates
+the right first period — aligned when a nutritionist is already assigned).
+```json
+// 200
+{ "data": {
+  "active_period_id": 12,
+  "periods": [
+    { "id": 12, "kind": "self", "professional_id": null,
+      "started_on": "2026-10-22", "ended_on": null, "active": true, "self_logging": true,
+      "tracked_metrics": ["weight_kg", "waist_cm"], "goals": { "weight_kg": 72.0 },
+      "shared_with_nutritionist": false, "title": null, "notes": null,
+      "height_m": 1.75, "sex": "male", "age": 34 },
+    { "id": 9, "kind": "nutritionist_aligned", "professional_id": 88,
+      "started_on": "2026-08-01", "ended_on": "2026-10-22", "active": false,
+      "self_logging": false, "tracked_metrics": ["weight_kg"], "goals": {},
+      "shared_with_nutritionist": true, "title": null, "notes": null,
+      "height_m": null, "sex": null, "age": null }
+  ]
+} }
+```
+
+#### `GET /api/v1/me/progress/periods/:id` 🔒
+One period's full dashboard payload: the period (as above) **plus** `metrics`
+(localized labels/units, §18 shape), `context` (reference values + the user's
+`goals` for goal lines), `history` (chart points), `comparison` (before→now
+photo pair, or `null` until two dated entries carry photos), and
+`photo_markers` (one pin per photo-carrying entry, for pinning thumbnails to
+the chart's date axis). `404` for another user's period.
+```json
+// 200
+{ "data": {
+  "id": 12, "kind": "self", "...": "…period fields as above…",
+  "metrics": [ { "key": "weight_kg", "label": "Weight", "unit": "kg" }, "…" ],
+  "context": { "height_m": 1.75, "sex": "male", "ideal_weight_kg": null,
+               "goals": { "weight_kg": 72.0 } },
+  "history": [
+    { "date": "2026-10-22", "source": "self", "weight_kg": 80.0, "waist_cm": 92.0,
+      "body_fat_percentage": null, "muscle_mass_kg": null, "bmi": 26.1, "bmr_kcal": 1731 }
+  ],
+  "comparison": {
+    "before": { "date": "2026-10-22", "url": "https://…/progress_photos/a.jpg",
+                "entry": { "id": 51, "entry_date": "2026-10-22", "weight_kg": 80.0, "...": "…" } },
+    "now":    { "date": "2026-11-20", "url": "https://…/progress_photos/b.jpg",
+                "entry": { "id": 60, "entry_date": "2026-11-20", "weight_kg": 77.2, "...": "…" } }
+  },
+  "photo_markers": [
+    { "date": "2026-10-22", "url": "https://…/a.jpg", "entry_id": 51, "caption": null }
+  ]
+} }
+```
+Empty `history` (not `404`) when nothing is logged yet. For
+`nutritionist_aligned` periods the `history` carries `source: intake | visit`
+points **up to the period's end** (no lower date bound — nutritionist
+measurements predating the assignment still chart, matching §18's flat view).
+
+#### `POST /api/v1/me/progress/periods` 🔒
+Idempotent journal bootstrap: ensures a journal exists and returns the active
+period. An optional `period` object configures it in the same call (self
+periods only; silently skipped for aligned periods).
+```json
+// request (all optional)
+{ "period": { "tracked_metrics": ["weight_kg", "waist_cm"],
+              "goals": { "weight_kg": 72.0, "waist_cm": 85 },
+              "height_m": 1.75, "sex": "male", "age": 34, "title": "Cut v2" } }
+// 200 — the active period (see GET /periods shape)
+```
+
+#### `PATCH /api/v1/me/progress/periods/:id` 🔒
+Configure a **self** period: `goals` (map metric→positive number; invalid
+entries dropped), `tracked_metrics`, `title`, `notes`, `height_m`, `sex`, `age`.
+`422` with `not self period` for aligned periods; `404` for others' periods.
+```json
+// request
+{ "period": { "goals": { "weight_kg": 70 }, "tracked_metrics": ["weight_kg"] } }
+// 200 — the updated period
+```
+
+#### `POST /api/v1/me/progress/reset` 🔒
+"Start over from 0": closes the active period **today** and opens a fresh
+`"self"` period (carrying over `tracked_metrics` and the height/sex/age
+snapshot, resetting goals). The closed period — with all entries and photos —
+stays in the history list.
+```json
+// 200
+{ "data": { "closed": { "id": 12, "ended_on": "2026-11-07", "...": "…" },
+            "opened": { "id": 13, "started_on": "2026-11-07", "active": true, "...": "…" } } }
+```
+
+#### `POST /api/v1/me/progress/periods/:id/share` 🔒 · `DELETE …/share` 🔒
+Opt a period in/out of being visible to the user's **assigned** nutritionist
+(read-only on their side). `POST` returns `422` (`no nutritionist`) when the
+user has no assignment.
+```json
+// 200 — the period with "shared_with_nutritionist": true (POST) / false (DELETE)
+```
+
+#### `GET /api/v1/me/progress/periods/:id/entries` 🔒
+The period's diary entries, oldest first, photos embedded.
+```json
+// 200
+{ "data": [
+  { "id": 51, "period_id": 12, "entry_date": "2026-10-22",
+    "weight_kg": 80.0, "waist_cm": 92.0, "body_fat_percentage": null,
+    "muscle_mass_kg": null, "bmi": 26.1, "bmr_kcal": 1731,
+    "note": "Day one. Felt good.",
+    "photos": [ { "id": 7, "url": "https://…/a.jpg", "caption": null, "position": 0 } ] }
+] }
+```
+
+#### `POST /api/v1/me/progress/entries` 🔒
+Log (or re-log) a diary entry — **one per date per period**; sending the same
+`entry_date` again updates that entry (upsert). `entry_date` defaults to today.
+`bmi`/`bmr_kcal` are derived server-side and ignored if sent. `422`
+(`not self period`) when the period is nutritionist-aligned.
+```json
+// request
+{ "period_id": 12,
+  "entry": { "entry_date": "2026-10-29", "weight_kg": 79.1, "waist_cm": 91.0,
+             "note": "Week one done." } }
+// 200 — the entry (photos: [] on a fresh upsert; attach photos separately)
+```
+
+#### `DELETE /api/v1/me/progress/entries/:id` 🔒
+`204`. The entry's photos (rows **and** storage objects) are removed with it.
+
+#### `POST /api/v1/me/progress/photos` 🔒
+Attach an uploaded photo to an entry. Upload first via §11
+(`kind: "progress_photo"`), then pass the returned `upload_id` — the server
+resolves it to the public URL (a raw URL is never accepted).
+```json
+// request
+{ "entry_id": 51, "upload_id": "progress_photos/3f1c….jpg" }
+// 200
+{ "data": { "id": 7, "url": "https://…/progress_photos/3f1c….jpg",
+            "caption": null, "position": 0 } }
+```
+
+#### `DELETE /api/v1/me/progress/photos/:id` 🔒
+`204`. Deletes the row **and** the storage object.
+
+### Router additions (§19)
+
+```elixir
+# authenticated (:api_v1_auth) — subpaths of /me/progress; §18's GET /me/progress is untouched
+get("/me/progress/periods", ProgressController, :index)
+post("/me/progress/periods", ProgressController, :create)
+get("/me/progress/periods/:id", ProgressController, :show)
+patch("/me/progress/periods/:id", ProgressController, :update)
+post("/me/progress/reset", ProgressController, :reset)
+post("/me/progress/periods/:id/share", ProgressController, :share)
+delete("/me/progress/periods/:id/share", ProgressController, :unshare)
+get("/me/progress/periods/:id/entries", ProgressController, :entries)
+post("/me/progress/entries", ProgressController, :upsert_entry)
+delete("/me/progress/entries/:id", ProgressController, :delete_entry)
+post("/me/progress/photos", ProgressController, :attach_photo)
+delete("/me/progress/photos/:id", ProgressController, :delete_photo)
+```
 
 ---
 
@@ -1383,6 +1649,15 @@ POST   /api/v1/me/invitations/:id/accept           POST /api/v1/me/invitations/:
 GET    /api/v1/me/appointments                      GET /api/v1/me/appointments/:id
 POST   /api/v1/me/appointments                      DELETE /api/v1/me/appointments/:id
 GET/PUT /api/v1/nutritionists/:professional_id/onboarding
+
+# Self-tracking progress journal (§19)
+GET    /api/v1/me/progress/periods                  POST /api/v1/me/progress/periods
+GET    /api/v1/me/progress/periods/:id              PATCH /api/v1/me/progress/periods/:id
+POST   /api/v1/me/progress/reset
+POST   /api/v1/me/progress/periods/:id/share        DELETE /api/v1/me/progress/periods/:id/share
+GET    /api/v1/me/progress/periods/:id/entries
+POST   /api/v1/me/progress/entries                  DELETE /api/v1/me/progress/entries/:id
+POST   /api/v1/me/progress/photos                   DELETE /api/v1/me/progress/photos/:id
 
 # Nutritionist portal (pro persona, §14)
 GET    /api/v1/nutritionist/clients                 GET /api/v1/nutritionist/clients/:id
