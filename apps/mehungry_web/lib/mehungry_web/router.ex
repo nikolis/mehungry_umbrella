@@ -132,6 +132,16 @@ defmodule MehungryWeb.Router do
     get("/blueprints", BlueprintController, :index)
     get("/blueprints/:slug", BlueprintController, :show)
 
+    # Public nutritionist directory / profile / slots / articles (spec §18).
+    # `/nutritionists/:slug` matches one segment; the authenticated
+    # `/nutritionists/:professional_id/onboarding` matches two, so they don't
+    # collide (the former public, the latter in `:api_v1_auth`).
+    get("/nutritionists", NutritionistDirectoryController, :index)
+    get("/nutritionists/:slug", NutritionistDirectoryController, :show)
+    get("/nutritionists/:slug/slots", NutritionistDirectoryController, :slots)
+    get("/nutritionists/:slug/articles", NutritionistDirectoryController, :articles)
+    get("/nutritionists/:slug/articles/:article_slug", NutritionistDirectoryController, :article)
+
     post("/feedback", FeedbackController, :create)
   end
 
@@ -202,6 +212,22 @@ defmodule MehungryWeb.Router do
     get("/me/invitations", InvitationController, :index)
     post("/me/invitations/:id/accept", InvitationController, :accept)
     post("/me/invitations/:id/decline", InvitationController, :decline)
+
+    # Client-facing "My nutritionist" hub + appointments + onboarding (spec §18).
+    get("/me/nutritionist", MyNutritionistController, :show)
+    delete("/me/nutritionist", MyNutritionistController, :disconnect)
+    get("/me/nutritionist/messages", MyNutritionistController, :messages)
+    post("/me/nutritionist/messages", MyNutritionistController, :send_message)
+    post("/me/nutritionist/messages/read", MyNutritionistController, :read_messages)
+    get("/me/progress", MyNutritionistController, :progress)
+
+    get("/me/appointments", AppointmentController, :index)
+    get("/me/appointments/:id", AppointmentController, :show)
+    post("/me/appointments", AppointmentController, :create)
+    delete("/me/appointments/:id", AppointmentController, :cancel)
+
+    get("/nutritionists/:professional_id/onboarding", ClientOnboardingController, :show)
+    put("/nutritionists/:professional_id/onboarding", ClientOnboardingController, :update)
 
     get("/me/notifications", NotificationController, :index)
     get("/me/notifications/unread_count", NotificationController, :unread_count)

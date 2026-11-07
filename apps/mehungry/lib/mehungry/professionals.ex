@@ -779,9 +779,15 @@ defmodule Mehungry.Professionals do
     )
   end
 
-  @doc "Fetch an appointment scoped to its owning client (nil cross-tenant)."
+  @doc """
+  Fetch an appointment scoped to its owning client (nil cross-tenant), with its
+  payment and service preloaded (for the client-facing serializers).
+  """
   def get_appointment_for_client(client_id, id) do
-    Repo.get_by(Appointment, id: id, client_id: client_id)
+    case Repo.get_by(Appointment, id: id, client_id: client_id) do
+      nil -> nil
+      appointment -> Repo.preload(appointment, [:payment, :service])
+    end
   end
 
   @doc """

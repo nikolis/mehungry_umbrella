@@ -50,6 +50,16 @@ defmodule MehungryWeb.Api.V1.FallbackController do
     |> json(errors(gettext("Service temporarily unavailable. Please try again.")))
   end
 
+  # Stripe Checkout session creation failed while setting up a paid booking
+  # (`Professionals.request_appointment/4` → `maybe_start_payment`). Return a
+  # retryable 502 rather than letting the `{:payment_setup_failed, _}` tuple fall
+  # through to the catch-all 500.
+  def call(conn, {:error, {:payment_setup_failed, _reason}}) do
+    conn
+    |> put_status(:bad_gateway)
+    |> json(errors(gettext("Payment could not be set up. Please try again.")))
+  end
+
   def call(conn, {:error, message}) when is_binary(message) do
     conn |> put_status(:bad_request) |> json(errors(message))
   end

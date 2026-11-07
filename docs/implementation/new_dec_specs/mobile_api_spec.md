@@ -914,7 +914,29 @@ Mirrors `PublicNutritionistLive.Article`. Delegates to
 `get_published_article_by_slug/1` (verifies the article's profile slug matches the
 URL slug; `404` on draft/unknown). Returns ordered paragraphs (each with optional
 image) and the numbered references (PubMed studies / species / compounds /
-diseases). Read-only.
+diseases). Read-only. References are deduped and numbered in first-encounter order
+across all paragraphs (same numbering the web uses for inline markers); each
+paragraph carries the `reference_numbers` that cite it.
+```json
+// 200
+{ "data": {
+  "slug": "iron-rich-foods",
+  "title": "Iron-rich foods",
+  "summary": "…",
+  "cover_image_url": "https://…",
+  "published_at": "2026-09-01T00:00:00Z",
+  "paragraphs": [
+    { "position": 0, "heading": "Why iron matters", "body": "…",
+      "image_url": "https://…", "image_caption": "…", "reference_numbers": [1, 2] }
+  ],
+  "references": [
+    { "number": 1, "type": "study",   "citation": "Dietary iron absorption · PMID 12345678", "url": "https://pubmed.ncbi.nlm.nih.gov/12345678" },
+    { "number": 2, "type": "species", "citation": "Spinacia oleracea", "url": null }
+  ]
+} }
+```
+`type` ∈ `study | species | compound | condition`; `url` is the PubMed link for
+`study` references, `null` otherwise.
 
 ### The hub — connected nutritionist
 
@@ -925,6 +947,14 @@ preloads only the `:professional` user, so the profile is fetched separately).
 Always includes `pending_invitations` (so the unconnected empty state can still
 show an invitation banner) and `unread_messages`
 (`count_unread_messages_for/1`).
+
+`connected` reflects the **assignment**, not the profile: if the assigned
+nutritionist has no `ProfessionalProfile` row yet (same "connected, no public
+profile" state the web hub renders), `connected` is still `true` and
+`nutritionist` is a reduced preview built from the professional `User` —
+`slug`/`handle`/`specialization`/`bio`/`city` are `null`, `payments_enabled` is
+`false`, `display_name`/`photo_url` come from the user. The same fallback applies
+to each `pending_invitations[].professional`.
 ```json
 // 200 — connected
 { "data": {
@@ -1021,6 +1051,9 @@ the slot is still open (it re-derives `available_slots`).
             "checkout_url": "https://checkout.stripe.com/…" } }
 // 422 — the slot was taken between loading and confirming
 { "errors": { "detail": "slot unavailable" } }
+// 400 — malformed professional_id or scheduled_at
+// 404 — professional_id resolves to no public profile
+// 502 — a paid-booking Stripe Checkout session could not be created (retryable)
 ```
 - `service_id` optional — omit for the free intro / request-only. A paid
   `checkout_url` is returned only when `consultation_payments_enabled?()` AND the
