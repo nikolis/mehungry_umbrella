@@ -3,19 +3,22 @@ defmodule MehungryWeb.Api.V1.MealJSON do
 
   import MehungryWeb.Api.V1.JSON.Helpers
 
+  alias Mehungry.History
   alias Mehungry.History.IngredientUserMeal
   alias Mehungry.History.MealType
+  alias Mehungry.NutrientUtils
 
   @doc "A weekly range grouped into days + the meal-type vocabulary."
   def range(meals, start_date, end_date) do
     icons = icon_map(meals)
+    summaries = nutrition_summaries(meals)
 
     days =
       meals
       |> Enum.group_by(&NaiveDateTime.to_date(&1.start_dt))
       |> Enum.sort_by(fn {date, _} -> date end, Date)
       |> Enum.map(fn {date, day_meals} ->
-        %{date: Date.to_iso8601(date), meals: Enum.map(day_meals, &meal(&1, icons))}
+        %{date: Date.to_iso8601(date), meals: Enum.map(day_meals, &meal(&1, icons, summaries))}
       end)
 
     data(%{
@@ -28,13 +31,15 @@ defmodule MehungryWeb.Api.V1.MealJSON do
   @doc "A single day's meals."
   def day(meals, date) do
     icons = icon_map(meals)
-    data(%{date: date, meals: Enum.map(meals, &meal(&1, icons))})
+    summaries = nutrition_summaries(meals)
+    data(%{date: date, meals: Enum.map(meals, &meal(&1, icons, summaries))})
   end
 
   @doc "A single meal."
-  def meal(user_meal), do: meal(user_meal, icon_map([user_meal]))
+  def meal(user_meal),
+    do: meal(user_meal, icon_map([user_meal]), nutrition_summaries([user_meal]))
 
-  def meal(user_meal, icons) do
+  def meal(user_meal, icons, summaries) do
     %{
       id: user_meal.id,
       title: user_meal.title,
@@ -44,8 +49,39 @@ defmodule MehungryWeb.Api.V1.MealJSON do
       recipes: user_meal.recipe_user_meals |> loaded() |> Enum.map(&recipe_entry/1),
       ingredients:
         user_meal.ingredient_user_meals |> loaded() |> Enum.map(&ingredient_entry(&1, icons)),
-      free_foods: user_meal.free_food_user_meals |> loaded() |> Enum.map(&free_food_entry/1)
+      free_foods: user_meal.free_food_user_meals |> loaded() |> Enum.map(&free_food_entry/1),
+      nutrition_summary: Map.get(summaries, user_meal.id)
     }
+  end
+
+  # A compact `%{meal_id => %{energy, protein, carbs, fat}}` summary for the whole
+  # response, so the calendar overview surfaces (week strip, today band, weekly
+  # average) can show kcal + macros straight from the `/meals` payload without a
+  # second round-trip to `GET /meals/day/:date/nutrition` (spec §9).
+  #
+  # Computed off the already-loaded calendar preloads: `format_user_meals/1`
+  # reads the denormalized nutrient columns (recipe/ingredient `nutrients`, scaled
+  # free-food trees), so this adds no per-meal DB queries — only one batched icon
+  # lookup shared across the set. Names are the canonical English buckets
+  # `macro_summary/1` matches, so we summarize before any localization. Energy is
+  # rounded to whole kcal and the macros to 0.1 g by `macro_summary/1`.
+  defp nutrition_summaries(meals) do
+    meals
+    |> History.format_user_meals()
+    |> Map.new(fn formatted ->
+      macros =
+        [formatted]
+        |> NutrientUtils.summarize_meals_nutrients()
+        |> NutrientUtils.macro_summary()
+
+      {formatted.id,
+       %{
+         energy: macros.energy_kcal,
+         protein: macros.protein_g,
+         carbs: macros.carbs_g,
+         fat: macros.fat_g
+       }}
+    end)
   end
 
   # One batched `%{ingredient_id => emoji}` for a whole response, so serializing

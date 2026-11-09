@@ -568,7 +568,7 @@ Unsorted, shown last). Backed by `History` + `History.UserMeal`.
         "measurement_unit":{"id":5,"name":"piece"}} ],
       "free_foods": [ {"id":7,"name":"Big Mac","grams":300.0,"portion_name":"burger","portion_grams":150.0,"portions":2.0,
         "nutrients_per_100g":[{"name":"Energy","unit":"kcal","amount":250},{"name":"Protein","unit":"g","amount":12}]} ],
-      "nutrition_summary": {"energy":336,"protein":18}
+      "nutrition_summary": {"energy":336,"protein":18,"carbs":40,"fat":12}
     } ]
   } ],
   "meal_type_vocabulary": [ {"key":"breakfast","label":"Breakfast"}, {"key":"morning_snack","label":"Morning Snack"},
@@ -576,6 +576,11 @@ Unsorted, shown last). Backed by `History` + `History.UserMeal`.
     {"key":"dinner","label":"Dinner"}, {"key":null,"label":"Unsorted"} ]
 } }
 ```
+`nutrition_summary` is a flat per-meal roll-up — `energy` in whole kcal, `protein`/
+`carbs`/`fat` in grams (0.1 g precision) — so the calendar overview can show
+kcal + macros without a second call to `GET /meals/day/:date/nutrition`. Keys are
+fixed (not localized); it is present on every meal of the week/day/single
+responses, reading `0` where a meal has no computable nutrition.
 
 ### `GET /api/v1/meals/day/:date` 🔒 — single day (day drill-in).
 ### `POST /api/v1/meals` 🔒 — add a meal (the "+" and `/calendar/:start/:title`).

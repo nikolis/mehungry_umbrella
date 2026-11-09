@@ -121,6 +121,44 @@ defmodule MehungryWeb.Api.V1.MealTest do
       assert %{"Energy" => %{"amount" => 625.0}, "Protein" => %{"amount" => 30.0}} = nutrition
     end
 
+    test "meals carry a per-meal nutrition_summary (energy + macros) in every payload", %{
+      conn: conn
+    } do
+      body = %{
+        "date" => "2026-08-12",
+        "meal_type" => "dinner",
+        "free_food_user_meals" => [
+          %{
+            "name" => "Test Food",
+            "nutrients_per_100g" => [
+              %{"name" => "Energy", "unit" => "kcal", "amount" => 250},
+              %{"name" => "Protein", "unit" => "g", "amount" => 12},
+              %{"name" => "Carbohydrate", "unit" => "g", "amount" => 30},
+              %{"name" => "Fat", "unit" => "g", "amount" => 10}
+            ],
+            "grams" => 200
+          }
+        ]
+      }
+
+      # The create response (MealJSON.meal/1) carries the summary; 200 g = ×2.
+      created = conn |> post(~p"/api/v1/meals", body) |> json_response(201)
+      assert %{"data" => %{"nutrition_summary" => summary}} = created
+      assert %{"energy" => 500, "protein" => 24.0, "carbs" => 60.0, "fat" => 20.0} = summary
+
+      # The week range (the calendar overview's source) carries it per meal too —
+      # this is the surface that previously read zeros.
+      listed = conn |> get(~p"/api/v1/meals?start=2026-08-10&end=2026-08-16") |> json_response(200)
+
+      meal =
+        listed["data"]["days"]
+        |> Enum.flat_map(& &1["meals"])
+        |> Enum.find(&(&1["id"] == created["data"]["id"]))
+
+      assert %{"energy" => 500, "protein" => 24.0, "carbs" => 60.0, "fat" => 20.0} =
+               meal["nutrition_summary"]
+    end
+
     test "portion mode: resolves grams = portion_grams × portions", %{conn: conn} do
       body = %{
         "date" => "2026-08-12",
