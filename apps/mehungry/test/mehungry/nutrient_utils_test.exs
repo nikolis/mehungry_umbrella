@@ -259,6 +259,12 @@ defmodule Mehungry.NutrientUtilsTest do
       assert Nu.normalize_nutrient_name("thiamin") == "Vitamin B1 (Thiamin)"
     end
 
+    test "maps trans-fat variants to Trans Fat" do
+      assert Nu.normalize_nutrient_name("Fatty acids, total trans") == "Trans Fat"
+      assert Nu.normalize_nutrient_name("trans fat") == "Trans Fat"
+      assert Nu.normalize_nutrient_name("Total trans fatty acids") == "Trans Fat"
+    end
+
     test "resolves single-letter mineral symbols via fuzzy fallback" do
       assert Nu.normalize_nutrient_name("na") == "Sodium"
       assert Nu.normalize_nutrient_name("fe") == "Iron"
@@ -380,6 +386,55 @@ defmodule Mehungry.NutrientUtilsTest do
       assert summary.carbs_g == 9.0
       assert summary.fat_g == 15.0
       assert summary.protein_g == 2.0
+    end
+  end
+
+  describe "nutrition_series_summary/1" do
+    test "adds the fat subtypes nested under Total Fat to the macro summary" do
+      tree = %{
+        "Energy" => %{"name" => "Energy", "amount" => 2000.0, "measurement_unit" => "kcal"},
+        "Protein" => %{"name" => "Protein", "amount" => 90.0, "measurement_unit" => "g"},
+        "Total Fat" => %{
+          "name" => "Total Fat",
+          "amount" => 70.0,
+          "measurement_unit" => "g",
+          "children" => [
+            %{"name" => "Polyunsaturated Fat", "amount" => 12.0, "measurement_unit" => "g"},
+            %{"name" => "Fatty acids, total monounsaturated", "amount" => 25.0, "measurement_unit" => "g"},
+            %{"name" => "Fatty acids, total trans", "amount" => 0.4, "measurement_unit" => "g"}
+          ]
+        }
+      }
+
+      summary = Nu.nutrition_series_summary(tree)
+
+      assert summary.energy_kcal == 2000
+      assert summary.protein_g == 90.0
+      assert summary.total_fat_g == 70.0
+      assert summary.polyunsaturated_fat_g == 12.0
+      assert summary.monounsaturated_fat_g == 25.0
+      assert summary.trans_fat_g == 0.4
+    end
+
+    test "every series key is present and 0 when the nutrient is absent" do
+      summary = Nu.nutrition_series_summary(%{})
+
+      assert Map.keys(summary) |> Enum.sort() ==
+               [
+                 :carbs_g,
+                 :energy_kcal,
+                 :fiber_g,
+                 :monounsaturated_fat_g,
+                 :polyunsaturated_fat_g,
+                 :protein_g,
+                 :sugars_g,
+                 :total_fat_g,
+                 :trans_fat_g
+               ]
+
+      assert summary.energy_kcal == 0
+      assert summary.polyunsaturated_fat_g == 0.0
+      assert summary.trans_fat_g == 0.0
     end
   end
 

@@ -77,7 +77,7 @@ msgstr ""
 msgid "Manage subscriptions"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:327
+#: lib/mehungry_web/live/profile_live/index.ex:330
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:209
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:141
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:142
@@ -137,7 +137,7 @@ msgstr ""
 #: lib/mehungry_web/components/nutrient_labels.ex:261
 #: lib/mehungry_web/live/calendar_live/index.html.heex:481
 #: lib/mehungry_web/live/meal_plan_live/show.ex:290
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:437
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:449
 #: lib/mehungry_web/live/shopping_basket_live/index.html.heex:121
 #: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
@@ -208,7 +208,7 @@ msgstr ""
 #: lib/mehungry_web/components/nutrient_labels.ex:261
 #: lib/mehungry_web/live/calendar_live/index.html.heex:480
 #: lib/mehungry_web/live/meal_plan_live/show.ex:291
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:445
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:457
 #: lib/mehungry_web/live/shopping_basket_live/index.html.heex:115
 #: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
@@ -217,6 +217,7 @@ msgstr ""
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
 #: lib/mehungry_web/live/calendar_live/index.html.heex:482
+#: lib/mehungry_web/progress_overlay_chart.ex:99
 #, elixir-autogen, elixir-format
 msgid "Fiber"
 msgstr ""
@@ -290,8 +291,9 @@ msgstr ""
 #: lib/mehungry_web/components/nutrient_labels.ex:261
 #: lib/mehungry_web/live/calendar_live/index.html.heex:479
 #: lib/mehungry_web/live/meal_plan_live/show.ex:289
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:429
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:441
 #: lib/mehungry_web/live/shopping_basket_live/index.html.heex:109
+#: lib/mehungry_web/progress_overlay_chart.ex:100
 #: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
 msgid "Protein"
@@ -623,7 +625,7 @@ msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:506
 #: lib/mehungry_web/live/landing_live.ex:818
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:365
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:377
 #, elixir-autogen, elixir-format
 msgid "servings"
 msgstr ""
@@ -727,8 +729,8 @@ msgstr ""
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:146
 #: lib/mehungry_web/live/home_live/index.ex:308
 #: lib/mehungry_web/live/home_live/index.ex:311
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:209
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:212
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:214
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:217
 #, elixir-autogen, elixir-format
 msgid "Easy"
 msgstr ""
@@ -796,7 +798,7 @@ msgstr ""
 #: lib/mehungry_web/components/core_components.ex:1567
 #: lib/mehungry_web/components/recipe_components.ex:516
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:235
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:536
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:566
 #, elixir-autogen, elixir-format
 msgid "Ingredients"
 msgstr ""
@@ -810,7 +812,7 @@ msgstr ""
 #: lib/mehungry_web/components/recipe_components.ex:691
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:146
 #: lib/mehungry_web/live/home_live/index.ex:309
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:210
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:215
 #, elixir-autogen, elixir-format
 msgid "Medium"
 msgstr ""
@@ -920,8 +922,9 @@ msgid "Saving..."
 msgstr ""
 
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:284
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:462
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:709
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:938
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1215
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1329
 #: lib/mehungry_web/live/onboarding_question_live/form_component.ex:224
 #: lib/mehungry_web/live/shopping_basket_live/form_component.ex:30
 #, elixir-autogen, elixir-format
@@ -1094,6 +1097,7 @@ msgid "Calcium"
 msgstr ""
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/progress_overlay_chart.ex:97
 #, elixir-autogen, elixir-format
 msgid "Carbohydrates"
 msgstr ""
@@ -1129,6 +1133,7 @@ msgid "Daily macro targets"
 msgstr ""
 
 #: lib/mehungry_web/live/meal_plan_live/show.ex:820
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1576
 #: lib/mehungry_web/meal_plan_share_text.ex:155
 #: lib/mehungry_web/meal_plan_share_text.ex:160
 #, elixir-autogen, elixir-format
@@ -1156,7 +1161,9 @@ msgid "Each recommendation links the research it is based on so you can read the
 msgstr ""
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:421
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:318
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:433
+#: lib/mehungry_web/progress_overlay_chart.ex:101
 #, elixir-autogen, elixir-format
 msgid "Energy"
 msgstr ""
@@ -1242,6 +1249,7 @@ msgid "Monosaccharides"
 msgstr ""
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/progress_overlay_chart.ex:95
 #, elixir-autogen, elixir-format
 msgid "Monounsaturated Fat"
 msgstr ""
@@ -1277,6 +1285,7 @@ msgid "Please enter a valid http(s) recipe link."
 msgstr ""
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/progress_overlay_chart.ex:94
 #, elixir-autogen, elixir-format
 msgid "Polyunsaturated Fat"
 msgstr ""
@@ -1329,7 +1338,7 @@ msgstr ""
 #: lib/mehungry_web/components/recipe_components.ex:288
 #: lib/mehungry_web/live/condition_detail_live/index.ex:268
 #: lib/mehungry_web/live/condition_detail_live/index.ex:679
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:517
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:531
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr ""
@@ -1376,6 +1385,7 @@ msgid "Terms"
 msgstr ""
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/progress_overlay_chart.ex:93
 #, elixir-autogen, elixir-format
 msgid "Total Fat"
 msgstr ""
@@ -1386,6 +1396,7 @@ msgid "Total Sugars"
 msgstr ""
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/progress_overlay_chart.ex:96
 #, elixir-autogen, elixir-format
 msgid "Trans Fat"
 msgstr ""
@@ -2534,6 +2545,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/meal_plan_live/show.ex:442
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:954
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:635
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:429
 #, elixir-autogen, elixir-format
 msgid "Copy"
@@ -2601,6 +2613,7 @@ msgid "Meal plan"
 msgstr ""
 
 #: lib/mehungry_web/live/my_nutritionist_live/index.ex:374
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:137
 #, elixir-autogen, elixir-format
 msgid "Messages"
 msgstr ""
@@ -2733,7 +2746,7 @@ msgid "Built for nutritionists."
 msgstr ""
 
 #: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:197
-#: lib/mehungry_web/live/profile_live/index.ex:1317
+#: lib/mehungry_web/live/profile_live/index.ex:1365
 #, elixir-autogen, elixir-format
 msgid "Cancel upload"
 msgstr ""
@@ -3466,7 +3479,7 @@ msgstr ""
 msgid "m3hungry"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:511
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:818
 #, elixir-autogen, elixir-format
 msgid " (%{skipped} skipped)"
 msgstr ""
@@ -3531,7 +3544,7 @@ msgstr ""
 msgid "(hidden)"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:527
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1006
 #, elixir-autogen, elixir-format
 msgid "+ Add condition"
 msgstr ""
@@ -3551,7 +3564,7 @@ msgstr ""
 msgid "+ New"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:567
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1046
 #, elixir-autogen, elixir-format
 msgid "+ New visit"
 msgstr ""
@@ -3571,7 +3584,7 @@ msgstr ""
 msgid "+ Start file"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:505
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:812
 #, elixir-autogen, elixir-format
 msgid ", replacing %{count} existing meal that week"
 msgid_plural ", replacing %{count} existing meals that week"
@@ -3583,10 +3596,9 @@ msgstr[1] ""
 msgid ". Send them an invitation to join m3hungry? When they sign up they'll become your client automatically."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:352
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:447
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:131
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:406
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:693
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:921
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:176
 #, elixir-autogen, elixir-format
 msgid "24-hour recall"
 msgstr ""
@@ -3606,7 +3618,7 @@ msgstr ""
 msgid "A short, memorable link to print on cards or drop in your social bios. It redirects visitors to your public profile."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:796
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1428
 #, elixir-autogen, elixir-format
 msgid "AI Meal Plan Assistant"
 msgstr ""
@@ -3634,14 +3646,13 @@ msgstr ""
 msgid "Active Clients"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:326
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:104
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:392
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:138
 #, elixir-autogen, elixir-format
 msgid "Activity"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:391
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:355
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:859
 #, elixir-autogen, elixir-format
 msgid "Activity level"
 msgstr ""
@@ -3649,15 +3660,9 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:537
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:550
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:563
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:532
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:318
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1011
 #, elixir-autogen, elixir-format
 msgid "Add"
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:307
-#, elixir-autogen, elixir-format
-msgid "Add a condition"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/dashboard.ex:59
@@ -3665,14 +3670,9 @@ msgstr ""
 msgid "Add client"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:270
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:542
 #, elixir-autogen, elixir-format
 msgid "Add dietary history"
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:500
-#, elixir-autogen, elixir-format
-msgid "Add note"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/dashboard.ex:56
@@ -3680,45 +3680,38 @@ msgstr ""
 msgid "Add or invite your first client"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:931
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1564
 #, elixir-autogen, elixir-format
 msgid "Add to calendar"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:503
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:810
 #, elixir-autogen, elixir-format
 msgid "Added %{created} meals to %{whose}'s calendar"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:253
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1322
 #, elixir-autogen, elixir-format
 msgid "Address"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:333
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:110
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:398
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:147
 #, elixir-autogen, elixir-format
 msgid "Adjusted wt"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:414
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:378
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:882
 #, elixir-autogen, elixir-format
 msgid "Adjusted wt (kg)"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:324
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:388
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:103
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:352
-#: lib/mehungry_web/live/profile_live/index.ex:1233
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:391
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:856
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:136
+#: lib/mehungry_web/live/profile_live/index.ex:1280
 #, elixir-autogen, elixir-format
 msgid "Age"
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:304
-#, elixir-autogen, elixir-format
-msgid "All conditions in the registry are already linked."
 msgstr ""
 
 #: lib/mehungry_web/live/foods_live/index.html.heex:305
@@ -3743,12 +3736,12 @@ msgstr ""
 msgid "Analytics"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:609
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1088
 #, elixir-autogen, elixir-format
 msgid "Appointment"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:948
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1604
 #, elixir-autogen, elixir-format
 msgid "Appointment History"
 msgstr ""
@@ -3809,18 +3802,17 @@ msgstr ""
 msgid "Article title"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:305
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:671
 #, elixir-autogen, elixir-format
 msgid "Assessed %{date}"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:377
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:341
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:845
 #, elixir-autogen, elixir-format
 msgid "Assessed on"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:886
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1519
 #, elixir-autogen, elixir-format
 msgid "Assign a saved plan"
 msgstr ""
@@ -3830,16 +3822,14 @@ msgstr ""
 msgid "Author & share"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:123
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:310
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:107
-#: lib/mehungry_web/measurement_chart.ex:79
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:295
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:144
+#: lib/mehungry_web/measurement_chart.ex:89
 #, elixir-autogen, elixir-format
 msgid "BMI"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:405
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:369
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:873
 #, elixir-autogen, elixir-format
 msgid "BMI (auto)"
 msgstr ""
@@ -3854,15 +3844,13 @@ msgstr ""
 msgid "BMI and BMR are computed automatically from the client's latest intake."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:312
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:111
-#: lib/mehungry_web/measurement_chart.ex:80
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:148
+#: lib/mehungry_web/measurement_chart.ex:90
 #, elixir-autogen, elixir-format
 msgid "BMR"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:417
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:381
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:885
 #, elixir-autogen, elixir-format
 msgid "BMR (auto, kcal)"
 msgstr ""
@@ -3888,7 +3876,7 @@ msgid "Body"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1341
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:684
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1187
 #, elixir-autogen, elixir-format
 msgid "Body fat (%)"
 msgstr ""
@@ -3898,7 +3886,7 @@ msgstr ""
 msgid "Browse all foods A–Z"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:893
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1526
 #, elixir-autogen, elixir-format
 msgid "Build one in Meal Blueprints →"
 msgstr ""
@@ -3926,8 +3914,10 @@ msgstr ""
 
 #: lib/mehungry_web/live/my_nutritionist_live/index.ex:415
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:498
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:466
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:713
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:244
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:942
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1219
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1333
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:394
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:556
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:627
@@ -3965,7 +3955,7 @@ msgstr ""
 msgid "Change image"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:916
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1549
 #, elixir-autogen, elixir-format
 msgid "Choose a plan…"
 msgstr ""
@@ -3999,7 +3989,7 @@ msgstr ""
 msgid "Client"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:553
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1032
 #, elixir-autogen, elixir-format
 msgid "Client Record — Visits"
 msgstr ""
@@ -4014,7 +4004,7 @@ msgstr ""
 msgid "Client created. Share the claim link below so they can log in."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:225
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1297
 #, elixir-autogen, elixir-format
 msgid "Client details"
 msgstr ""
@@ -4050,7 +4040,7 @@ msgstr ""
 msgid "Client removed."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:183
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:272
 #, elixir-autogen, elixir-format
 msgid "Client saved."
 msgstr ""
@@ -4060,7 +4050,7 @@ msgstr ""
 msgid "Client since %{date}"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:64
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:73
 #, elixir-autogen, elixir-format
 msgid "Client: %{name}"
 msgstr ""
@@ -4085,8 +4075,7 @@ msgstr ""
 msgid "Compound…"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:166
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:90
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:215
 #, elixir-autogen, elixir-format
 msgid "Condition added."
 msgstr ""
@@ -4121,8 +4110,7 @@ msgstr ""
 msgid "Consultation notes"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:146
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:497
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:192
 #, elixir-autogen, elixir-format
 msgid "Consultation notes (%{count})"
 msgstr ""
@@ -4148,7 +4136,7 @@ msgstr ""
 msgid "Could not accept the appointment."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:169
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:218
 #, elixir-autogen, elixir-format
 msgid "Could not add the condition."
 msgstr ""
@@ -4214,11 +4202,6 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/invitations.ex:166
 #, elixir-autogen, elixir-format
 msgid "Could not revoke invitation."
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:148
-#, elixir-autogen, elixir-format
-msgid "Could not save note."
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/payments.ex:160
@@ -4290,13 +4273,12 @@ msgid "Creates a login-less account you can plan for right away. Share the claim
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1157
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:532
-#: lib/mehungry_web/live/profile_live/index.ex:1269
+#: lib/mehungry_web/live/profile_live/index.ex:1316
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:240
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1309
 #, elixir-autogen, elixir-format
 msgid "Date of birth"
 msgstr ""
@@ -4318,9 +4300,9 @@ msgstr ""
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1284
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:413
 #: lib/mehungry_web/live/nutritionist_live/articles.ex:129
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:560
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1133
 #: lib/mehungry_web/live/nutritionist_live/payments.ex:367
-#: lib/mehungry_web/live/profile_live/index.ex:1402
+#: lib/mehungry_web/live/profile_live/index.ex:1453
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
@@ -4335,11 +4317,6 @@ msgstr ""
 msgid "Delete this article? This cannot be undone."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:558
-#, elixir-autogen, elixir-format
-msgid "Delete this note?"
-msgstr ""
-
 #: lib/mehungry_web/live/nutritionist_live/article_editor.ex:410
 #, elixir-autogen, elixir-format
 msgid "Delete this paragraph?"
@@ -4350,7 +4327,7 @@ msgstr ""
 msgid "Description"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:259
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:509
 #, elixir-autogen, elixir-format
 msgid "Dietary History"
 msgstr ""
@@ -4360,12 +4337,12 @@ msgstr ""
 msgid "Dietary history"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:380
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:531
 #, elixir-autogen, elixir-format
 msgid "Dietary history saved."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:819
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1451
 #, elixir-autogen, elixir-format
 msgid "Dietary notes for this client, e.g. 'low-carb, avoid shellfish'"
 msgstr ""
@@ -4387,7 +4364,7 @@ msgstr ""
 msgid "Disease…"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:803
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1435
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:408
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
@@ -4398,12 +4375,12 @@ msgstr ""
 msgid "Display name"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:823
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1455
 #, elixir-autogen, elixir-format
 msgid "Draft 7-day Plan"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:856
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1488
 #, elixir-autogen, elixir-format
 msgid "Draft Another"
 msgstr ""
@@ -4429,8 +4406,8 @@ msgid "Earnings & pipeline"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/articles.ex:121
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:270
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:63
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:526
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1123
 #: lib/mehungry_web/live/nutritionist_live/payments.ex:348
 #, elixir-autogen, elixir-format
 msgid "Edit"
@@ -4461,11 +4438,6 @@ msgstr ""
 msgid "Edit profile"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:47
-#, elixir-autogen, elixir-format
-msgid "Edit: %{name}"
-msgstr ""
-
 #: lib/mehungry_web/live/nutritionist_live/client_calendar.ex:328
 #, elixir-autogen, elixir-format
 msgid "Editing"
@@ -4476,7 +4448,7 @@ msgstr ""
 msgid "Education"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:243
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1312
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr ""
@@ -4542,7 +4514,7 @@ msgstr ""
 msgid "From"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:236
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1305
 #, elixir-autogen, elixir-format
 msgid "Full name"
 msgstr ""
@@ -4567,17 +4539,17 @@ msgstr ""
 msgid "Give your note a title first."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:87
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:430
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:389
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:221
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:231
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:776
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:898
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:601
-#: lib/mehungry_web/live/profile_live/index.ex:1095
+#: lib/mehungry_web/live/profile_live/index.ex:1125
 #, elixir-autogen, elixir-format
 msgid "Goal"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:339
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:117
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:154
 #, elixir-autogen, elixir-format
 msgid "Goal:"
 msgstr ""
@@ -4587,22 +4559,20 @@ msgstr ""
 msgid "Handle"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:488
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:79
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:277
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:967
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:107
 #, elixir-autogen, elixir-format
 msgid "Health conditions"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:330
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:105
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:394
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:142
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:399
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:363
-#: lib/mehungry_web/live/profile_live/index.ex:1208
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:867
+#: lib/mehungry_web/live/profile_live/index.ex:1253
 #, elixir-autogen, elixir-format
 msgid "Height (m)"
 msgstr ""
@@ -4622,14 +4592,13 @@ msgstr ""
 msgid "Hide suggested notes"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:331
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:108
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:396
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:145
 #, elixir-autogen, elixir-format
 msgid "Ideal wt"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:411
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:375
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:879
 #, elixir-autogen, elixir-format
 msgid "Ideal wt (kg)"
 msgstr ""
@@ -4669,9 +4638,10 @@ msgstr ""
 msgid "In flight"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:675
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1125
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:207
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:202
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1177
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1734
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:259
 #, elixir-autogen, elixir-format
 msgid "In person"
 msgstr ""
@@ -4686,15 +4656,9 @@ msgstr ""
 msgid "Initial consultation"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:93
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:338
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:122
 #, elixir-autogen, elixir-format
 msgid "Intake"
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:125
-#, elixir-autogen, elixir-format
-msgid "Intake saved."
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/analytics_live.ex:128
@@ -4764,18 +4728,13 @@ msgstr ""
 msgid "Largest sample"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:898
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1531
 #, elixir-autogen, elixir-format
 msgid "Lay one of your plans onto %{name}'s calendar. The plan's 7 days start from the chosen date —"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:279
-#, elixir-autogen, elixir-format
-msgid "Link existing conditions to this client. Only you, the nutritionist, can record these."
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:634
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:694
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1113
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1200
 #, elixir-autogen, elixir-format
 msgid "Linked appointment"
 msgstr ""
@@ -4786,7 +4745,7 @@ msgstr ""
 msgid "Linked to %{label}."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:607
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1086
 #, elixir-autogen, elixir-format
 msgid "Linked to an appointment"
 msgstr ""
@@ -4823,12 +4782,12 @@ msgstr ""
 msgid "Meal Blueprints"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1034
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1690
 #, elixir-autogen, elixir-format
 msgid "Meal Plan History"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:981
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1637
 #, elixir-autogen, elixir-format
 msgid "Meal Plan Ratings"
 msgstr ""
@@ -4844,23 +4803,22 @@ msgid "Measurement logged."
 msgstr ""
 
 #: lib/mehungry_web/live/my_nutritionist_live/messages_component.ex:66
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:147
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:196
 #, elixir-autogen, elixir-format
 msgid "Message can't be empty."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:773
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1405
 #, elixir-autogen, elixir-format
 msgid "Message your client…"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:766
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1391
 #, elixir-autogen, elixir-format
 msgid "Messages with %{name}"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:670
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:535
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1172
 #, elixir-autogen, elixir-format
 msgid "Modality"
 msgstr ""
@@ -4881,7 +4839,7 @@ msgid "Moved back to draft."
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1349
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:690
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1195
 #, elixir-autogen, elixir-format
 msgid "Muscle mass (kg)"
 msgstr ""
@@ -4983,7 +4941,7 @@ msgstr ""
 msgid "New clients"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:655
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1155
 #, elixir-autogen, elixir-format
 msgid "New visit"
 msgstr ""
@@ -4998,7 +4956,7 @@ msgstr ""
 msgid "Newest first"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:951
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1607
 #, elixir-autogen, elixir-format
 msgid "No appointments yet."
 msgstr ""
@@ -5023,27 +4981,17 @@ msgstr ""
 msgid "No conditions match “%{query}”."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:283
-#, elixir-autogen, elixir-format
-msgid "No conditions recorded yet."
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:505
-#, elixir-autogen, elixir-format
-msgid "No consultation notes yet."
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:150
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:196
 #, elixir-autogen, elixir-format
 msgid "No consultation notes."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:280
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:596
 #, elixir-autogen, elixir-format
 msgid "No dietary history recorded yet."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:563
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1042
 #, elixir-autogen, elixir-format
 msgid "No dietary-history record yet."
 msgstr ""
@@ -5078,7 +5026,7 @@ msgstr ""
 msgid "No matching users found."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:627
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1106
 #, elixir-autogen, elixir-format
 msgid "No notes recorded."
 msgstr ""
@@ -5093,7 +5041,7 @@ msgstr ""
 msgid "No pending invitations."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:984
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1640
 #, elixir-autogen, elixir-format
 msgid "No ratings submitted yet."
 msgstr ""
@@ -5118,7 +5066,7 @@ msgstr ""
 msgid "No user found with that email address."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:572
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1051
 #, elixir-autogen, elixir-format
 msgid "No visits recorded yet."
 msgstr ""
@@ -5129,7 +5077,7 @@ msgstr ""
 msgid "No-show retained"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:493
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:972
 #, elixir-autogen, elixir-format
 msgid "None recorded yet"
 msgstr ""
@@ -5140,7 +5088,7 @@ msgstr ""
 msgid "Not authorized."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:188
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:430
 #, elixir-autogen, elixir-format
 msgid "Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass) will chart here once there are at least two readings."
 msgstr ""
@@ -5162,20 +5110,14 @@ msgstr ""
 msgid "Note saved to your notes."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:147
-#, elixir-autogen, elixir-format
-msgid "Note saved."
-msgstr ""
-
 #: lib/mehungry_web/live/nutritionist_live/research_paper.ex:307
 #, elixir-autogen, elixir-format
 msgid "Note title…"
 msgstr ""
 
 #: lib/mehungry_web/dietary_history/labels.ex:49
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:503
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:702
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:542
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:982
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1208
 #: lib/mehungry_web/live/nutritionist_live/research_paper.ex:250
 #: lib/mehungry_web/live/nutritionist_live/research_paper.ex:259
 #, elixir-autogen, elixir-format
@@ -5223,14 +5165,15 @@ msgstr ""
 msgid "Onboarding Qs"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:736
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1356
 #, elixir-autogen, elixir-format
 msgid "Onboarding answers"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:677
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1124
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:206
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:200
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1179
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1733
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:258
 #, elixir-autogen, elixir-format
 msgid "Online"
 msgstr ""
@@ -5245,23 +5188,13 @@ msgstr ""
 msgid "Open %{name} research"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:70
-#, elixir-autogen, elixir-format
-msgid "Open full record"
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:266
-#, elixir-autogen, elixir-format
-msgid "Open full record →"
-msgstr ""
-
 #: lib/mehungry_web/live/nutritionist_live/my_research_notes.ex:163
 #: lib/mehungry_web/live/nutritionist_live/research_condition.ex:468
 #, elixir-autogen, elixir-format
 msgid "Open in text"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:501
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:980
 #, elixir-autogen, elixir-format
 msgid "Open my notes for %{name}"
 msgstr ""
@@ -5281,6 +5214,7 @@ msgstr ""
 msgid "Outcome"
 msgstr ""
 
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:135
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:522
 #, elixir-autogen, elixir-format
 msgid "Overview"
@@ -5363,16 +5297,16 @@ msgstr ""
 msgid "Personal short link"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:676
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1123
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:205
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:246
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1178
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1315
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1732
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:257
 #: lib/mehungry_web/live/nutritionist_live/profile_edit.ex:412
 #, elixir-autogen, elixir-format
 msgid "Phone"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:234
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:322
 #, elixir-autogen, elixir-format
 msgid "Pick a plan and a valid start date."
 msgstr ""
@@ -5382,7 +5316,7 @@ msgstr ""
 msgid "Pick the registered client this dietary history belongs to."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:912
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1545
 #, elixir-autogen, elixir-format
 msgid "Plan"
 msgstr ""
@@ -5407,7 +5341,7 @@ msgstr ""
 msgid "Please fix the errors below."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:249
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1318
 #, elixir-autogen, elixir-format
 msgid "Postal code"
 msgstr ""
@@ -5447,7 +5381,7 @@ msgstr ""
 msgid "Profile saved."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:173
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:415
 #, elixir-autogen, elixir-format
 msgid "Progress trend"
 msgstr ""
@@ -5498,24 +5432,17 @@ msgstr ""
 msgid "Question saved."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:434
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:393
-#, elixir-autogen, elixir-format
-msgid "Questionnaire"
-msgstr ""
-
 #: lib/mehungry_web/live/nutritionist_live/research_condition.ex:371
 #, elixir-autogen, elixir-format
 msgid "Read full text"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:22
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:33
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:23
 #, elixir-autogen, elixir-format
 msgid "Record not found."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:34
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:35
 #, elixir-autogen, elixir-format
 msgid "Record: %{name}"
 msgstr ""
@@ -5552,8 +5479,7 @@ msgstr ""
 msgid "Remove"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:509
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:293
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:988
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"
 msgstr ""
@@ -5637,12 +5563,12 @@ msgstr ""
 msgid "Save answers"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:261
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1330
 #, elixir-autogen, elixir-format
 msgid "Save details"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:463
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:939
 #, elixir-autogen, elixir-format
 msgid "Save dietary history"
 msgstr ""
@@ -5652,17 +5578,11 @@ msgstr ""
 msgid "Save image"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:420
-#, elixir-autogen, elixir-format
-msgid "Save intake"
-msgstr ""
-
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1365
 #, elixir-autogen, elixir-format
 msgid "Save measurement"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:551
 #: lib/mehungry_web/live/nutritionist_live/research_condition.ex:537
 #: lib/mehungry_web/live/nutritionist_live/research_paper.ex:315
 #, elixir-autogen, elixir-format
@@ -5679,7 +5599,7 @@ msgstr ""
 msgid "Save profile"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:710
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1216
 #, elixir-autogen, elixir-format
 msgid "Save visit"
 msgstr ""
@@ -5690,7 +5610,7 @@ msgstr ""
 msgid "Saved"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:67
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:78
 #, elixir-autogen, elixir-format
 msgid "Schedule Appointment"
 msgstr ""
@@ -5850,11 +5770,10 @@ msgstr ""
 msgid "Set up your services"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:323
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:380
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:102
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:344
-#: lib/mehungry_web/live/profile_live/index.ex:1220
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:390
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:848
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:132
+#: lib/mehungry_web/live/profile_live/index.ex:1265
 #, elixir-autogen, elixir-format
 msgid "Sex"
 msgstr ""
@@ -5879,7 +5798,7 @@ msgstr ""
 msgid "Specialization"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:921
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1554
 #, elixir-autogen, elixir-format
 msgid "Start date"
 msgstr ""
@@ -5910,14 +5829,12 @@ msgstr ""
 msgid "Sunday"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:311
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:112
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:149
 #, elixir-autogen, elixir-format
 msgid "TDEE"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:420
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:384
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:888
 #, elixir-autogen, elixir-format
 msgid "TDEE (auto, kcal)"
 msgstr ""
@@ -5982,15 +5899,15 @@ msgstr ""
 msgid "Thursday"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:630
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:705
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:175
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:546
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1109
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1211
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1272
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:221
 #, elixir-autogen, elixir-format
 msgid "To do"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:868
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1500
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr ""
@@ -6038,14 +5955,13 @@ msgstr ""
 msgid "Upcoming Appointments"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:332
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:109
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:397
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:146
 #, elixir-autogen, elixir-format
 msgid "Usual wt"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:408
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:372
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:876
 #, elixir-autogen, elixir-format
 msgid "Usual wt (kg)"
 msgstr ""
@@ -6060,13 +5976,13 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:60
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:71
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:542
 #, elixir-autogen, elixir-format
 msgid "View Plan"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:853
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1485
 #, elixir-autogen, elixir-format
 msgid "View Plan →"
 msgstr ""
@@ -6086,11 +6002,6 @@ msgstr ""
 msgid "View client"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:560
-#, elixir-autogen, elixir-format
-msgid "View full dietary history →"
-msgstr ""
-
 #: lib/mehungry_web/live/nutritionist_live/research_paper.ex:191
 #, elixir-autogen, elixir-format
 msgid "View on PubMed"
@@ -6106,25 +6017,24 @@ msgstr ""
 msgid "View public →"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:667
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:529
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1169
 #, elixir-autogen, elixir-format
 msgid "Visit #"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:595
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:158
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1074
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:204
 #, elixir-autogen, elixir-format
 msgid "Visit %{number}"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1333
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:664
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1166
 #, elixir-autogen, elixir-format
 msgid "Visit date"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:966
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1622
 #, elixir-autogen, elixir-format
 msgid "Visit note recorded"
 msgstr ""
@@ -6134,13 +6044,13 @@ msgstr ""
 msgid "Visit range"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:287
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:597
 #, elixir-autogen, elixir-format
 msgid "Visit recorded."
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1345
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:687
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1191
 #, elixir-autogen, elixir-format
 msgid "Waist (cm)"
 msgstr ""
@@ -6165,19 +6075,17 @@ msgstr ""
 msgid "Weekly availability"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:103
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:314
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:106
-#: lib/mehungry_web/measurement_chart.ex:75
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:275
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1282
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:143
+#: lib/mehungry_web/measurement_chart.ex:85
 #, elixir-autogen, elixir-format
 msgid "Weight"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1337
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:402
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:681
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:366
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:538
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:870
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1183
 #, elixir-autogen, elixir-format
 msgid "Weight (kg)"
 msgstr ""
@@ -6192,7 +6100,7 @@ msgstr ""
 msgid "Where it came from"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:256
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1325
 #, elixir-autogen, elixir-format
 msgid "Work / schedule"
 msgstr ""
@@ -6223,7 +6131,7 @@ msgstr ""
 msgid "You can't invite yourself."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:891
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1524
 #, elixir-autogen, elixir-format
 msgid "You have no completed plans yet."
 msgstr ""
@@ -6286,7 +6194,7 @@ msgstr ""
 msgid "after 5% platform fee ·"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:902
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1535
 #, elixir-autogen, elixir-format
 msgid "any meals already on that week are replaced."
 msgstr ""
@@ -6346,7 +6254,7 @@ msgstr ""
 msgid "independent funding"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:69
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:94
 #, elixir-autogen, elixir-format
 msgid "m3hungry client"
 msgstr ""
@@ -6392,8 +6300,7 @@ msgstr ""
 msgid "source"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:176
-#: lib/mehungry_web/live/profile_live/index.ex:1106
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:418
 #, elixir-autogen, elixir-format
 msgid "tap a metric to chart it"
 msgstr ""
@@ -6413,14 +6320,10 @@ msgstr ""
 msgid "view page"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:103
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:391
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:136
 #, elixir-autogen, elixir-format
 msgid "yrs"
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:312
-#, elixir-autogen, elixir-format
-msgid "— Select a condition —"
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/clients.ex:358
@@ -6433,7 +6336,7 @@ msgstr ""
 msgid "— for someone without an account yet (you plan now, they claim later)."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:698
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1204
 #, elixir-autogen, elixir-format
 msgid "— none —"
 msgstr ""
@@ -6459,22 +6362,17 @@ msgstr ""
 msgid "← All articles"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_record_editor.ex:205
-#, elixir-autogen, elixir-format
-msgid "← Back to client"
-msgstr ""
-
-#: lib/mehungry_web/live/nutritionist_live/client_record.ex:60
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:76
 #, elixir-autogen, elixir-format
 msgid "← Back to clients"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:498
+#: lib/mehungry_web/measurement_chart.ex:528
 #, elixir-autogen, elixir-format
 msgid "%{delta} since start"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:496
+#: lib/mehungry_web/measurement_chart.ex:524
 #, elixir-autogen, elixir-format
 msgid "%{value} now"
 msgstr ""
@@ -6489,7 +6387,8 @@ msgstr ""
 msgid "Add question"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:76
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1283
+#: lib/mehungry_web/measurement_chart.ex:86
 #, elixir-autogen, elixir-format
 msgid "Body fat"
 msgstr ""
@@ -6509,7 +6408,8 @@ msgstr ""
 msgid "Free text"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:78
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1285
+#: lib/mehungry_web/measurement_chart.ex:88
 #, elixir-autogen, elixir-format
 msgid "Muscle mass"
 msgstr ""
@@ -6555,23 +6455,24 @@ msgstr ""
 msgid "Save question"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:77
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1284
+#: lib/mehungry_web/measurement_chart.ex:87
 #, elixir-autogen, elixir-format
 msgid "Waist"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:515
+#: lib/mehungry_web/measurement_chart.ex:549
 #, elixir-autogen, elixir-format
 msgid "goal"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:322
+#: lib/mehungry_web/measurement_chart.ex:338
 #, elixir-autogen, elixir-format
 msgid "goal %{value}"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:302
-#: lib/mehungry_web/measurement_chart.ex:518
+#: lib/mehungry_web/measurement_chart.ex:318
+#: lib/mehungry_web/measurement_chart.ex:552
 #, elixir-autogen, elixir-format
 msgid "healthy range"
 msgstr ""
@@ -6581,7 +6482,7 @@ msgstr ""
 msgid "hidden"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:506
+#: lib/mehungry_web/measurement_chart.ex:536
 #, elixir-autogen, elixir-format
 msgid "intake"
 msgstr ""
@@ -6596,7 +6497,7 @@ msgstr ""
 msgid "to create one."
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:509
+#: lib/mehungry_web/measurement_chart.ex:539
 #, elixir-autogen, elixir-format
 msgid "visit"
 msgstr ""
@@ -6876,7 +6777,7 @@ msgid_plural "%{count} avoid-flags"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:553
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:583
 #, elixir-autogen, elixir-format
 msgid "%{count} step"
 msgid_plural "%{count} steps"
@@ -6909,7 +6810,7 @@ msgstr ""
 msgid "%{n} · Choose a time"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1017
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1673
 #, elixir-autogen, elixir-format
 msgid "%{score} of 5"
 msgstr ""
@@ -6924,7 +6825,7 @@ msgstr ""
 msgid "+ video link"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:112
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:284
 #, elixir-autogen, elixir-format
 msgid "/ goal %{w} kg"
 msgstr ""
@@ -6934,12 +6835,12 @@ msgstr ""
 msgid "1 · Choose a service"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:484
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:496
 #, elixir-autogen, elixir-format
 msgid "15% — source of"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:487
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:499
 #, elixir-autogen, elixir-format
 msgid "30% — high in"
 msgstr ""
@@ -7016,7 +6917,7 @@ msgstr ""
 msgid "Added %{n} meals to the plan."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:928
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1561
 #, elixir-autogen, elixir-format
 msgid "Adding…"
 msgstr ""
@@ -7071,12 +6972,12 @@ msgstr ""
 msgid "Awaiting confirmation"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:425
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:893
 #, elixir-autogen, elixir-format
 msgid "BMI, BMR and TDEE recompute from height, weight, sex, age and activity — type to override."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:34
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:35
 #, elixir-autogen, elixir-format
 msgid "Back to clients"
 msgstr ""
@@ -7146,7 +7047,7 @@ msgstr ""
 msgid "Choose photo"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:474
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:486
 #, elixir-autogen, elixir-format
 msgid "Claims & reference intakes"
 msgstr ""
@@ -7174,9 +7075,9 @@ msgstr ""
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:93
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:505
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:571
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:572
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:573
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:601
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:602
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:603
 #, elixir-autogen, elixir-format
 msgid "Comments"
 msgstr ""
@@ -7201,7 +7102,7 @@ msgstr ""
 msgid "Consultation with %{name}"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:359
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:371
 #, elixir-autogen, elixir-format
 msgid "Cook"
 msgstr ""
@@ -7211,17 +7112,17 @@ msgstr ""
 msgid "Could not generate plan: %{reason}"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:196
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:250
 #, elixir-autogen, elixir-format
 msgid "Could not open the record. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:393
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:544
 #, elixir-autogen, elixir-format
 msgid "Could not save the dietary history. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:297
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:607
 #, elixir-autogen, elixir-format
 msgid "Could not save the visit. Please try again."
 msgstr ""
@@ -7231,17 +7132,17 @@ msgstr ""
 msgid "Could not send your request. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:337
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:445
 #, elixir-autogen, elixir-format
 msgid "Could not start editing. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:118
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:167
 #, elixir-autogen, elixir-format
 msgid "Could not start the AI assistant. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:594
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:624
 #, elixir-autogen, elixir-format
 msgid "Couldn't load comments."
 msgstr ""
@@ -7313,14 +7214,14 @@ msgid "Fluids"
 msgstr ""
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:269
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:398
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:405
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:410
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:417
 #, elixir-autogen, elixir-format
 msgid "Follow"
 msgstr ""
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:269
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:398
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:410
 #, elixir-autogen, elixir-format
 msgid "Following"
 msgstr ""
@@ -7335,7 +7236,7 @@ msgstr ""
 msgid "Food intolerances"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:539
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:569
 #, elixir-autogen, elixir-format
 msgid "For %{count} serving"
 msgid_plural "For %{count} servings"
@@ -7390,7 +7291,7 @@ msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:692
 #: lib/mehungry_web/live/home_live/index.ex:310
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:211
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:216
 #, elixir-autogen, elixir-format
 msgid "Hard"
 msgstr ""
@@ -7400,7 +7301,7 @@ msgstr ""
 msgid "Hereditary conditions"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:517
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:531
 #, elixir-autogen, elixir-format
 msgid "High"
 msgstr ""
@@ -7420,12 +7321,13 @@ msgstr ""
 msgid "Keep current photo"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:146
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:337
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1253
 #, elixir-autogen, elixir-format
 msgid "Last visit"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:590
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:620
 #, elixir-autogen, elixir-format
 msgid "Loading comments…"
 msgstr ""
@@ -7461,7 +7363,7 @@ msgstr ""
 msgid "Message your nutritionist…"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:550
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:580
 #, elixir-autogen, elixir-format
 msgid "Method"
 msgstr ""
@@ -7511,12 +7413,12 @@ msgstr ""
 msgid "Next week"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:599
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:629
 #, elixir-autogen, elixir-format
 msgid "No comments yet. Be the first to comment!"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1037
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1693
 #, elixir-autogen, elixir-format
 msgid "No meal plans yet."
 msgstr ""
@@ -7547,12 +7449,12 @@ msgstr ""
 msgid "No open times in the next %{days} days. Please check back soon."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:116
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:288
 #, elixir-autogen, elixir-format
 msgid "No readings yet"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:154
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:347
 #, elixir-autogen, elixir-format
 msgid "No visits yet"
 msgstr ""
@@ -7562,12 +7464,12 @@ msgstr ""
 msgid "No-show"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:471
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:483
 #, elixir-autogen, elixir-format
 msgid "Nutrient profile"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:525
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:555
 #, elixir-autogen, elixir-format
 msgid "Nutrients computed from matched USDA ingredients; claims assessed against EU Reg. 1169/2011 & 1924/2006 (≥15% NRV “source of”, ≥30% “high in”, per serving)."
 msgstr ""
@@ -7635,7 +7537,7 @@ msgstr ""
 msgid "Per 100 g"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:452
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:464
 #, elixir-autogen, elixir-format
 msgid "Per serving."
 msgstr ""
@@ -7680,7 +7582,7 @@ msgstr ""
 msgid "Please choose a single image."
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:353
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:365
 #, elixir-autogen, elixir-format
 msgid "Prep"
 msgstr ""
@@ -7713,7 +7615,7 @@ msgid "Reason justification"
 msgstr ""
 
 #: lib/mehungry_web/live/home_live/components/post_card.html.heex:250
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:378
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:390
 #, elixir-autogen, elixir-format
 msgid "Recipe by"
 msgstr ""
@@ -7770,7 +7672,7 @@ msgstr ""
 msgid "Service temporarily unavailable. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:95
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:267
 #, elixir-autogen, elixir-format
 msgid "Set a goal"
 msgstr ""
@@ -7820,7 +7722,7 @@ msgstr ""
 msgid "Start minute"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:622
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:968
 #, elixir-autogen, elixir-format
 msgid "Starting analysis for %{name}…"
 msgstr ""
@@ -7846,7 +7748,7 @@ msgid "That file could not be uploaded."
 msgstr ""
 
 #: lib/mehungry_web/live/nutritionist_live/profile_edit.ex:151
-#: lib/mehungry_web/live/profile_live/index.ex:1704
+#: lib/mehungry_web/live/profile_live/index.ex:1761
 #, elixir-autogen, elixir-format
 msgid "That image is too large (max 5 MB)."
 msgstr ""
@@ -7871,7 +7773,7 @@ msgstr ""
 msgid "The question"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:231
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:319
 #, elixir-autogen, elixir-format
 msgid "The start date can't be in the past."
 msgstr ""
@@ -7886,7 +7788,7 @@ msgstr ""
 msgid "This is a pending request."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:480
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:754
 #, elixir-autogen, elixir-format
 msgid "This replaces %{count} meal already on that week. Continue?"
 msgid_plural "This replaces %{count} meals already on that week. Continue?"
@@ -8051,7 +7953,7 @@ msgstr ""
 msgid "empty"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:347
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:359
 #, elixir-autogen, elixir-format
 msgid "min total"
 msgstr ""
@@ -8061,7 +7963,7 @@ msgstr ""
 msgid "on track"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1190
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1799
 #, elixir-autogen, elixir-format
 msgid "outside healthy range"
 msgstr ""
@@ -8076,12 +7978,12 @@ msgstr ""
 msgid "per 100 g"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:478
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:490
 #, elixir-autogen, elixir-format
 msgid "per serving · % of adult NRV"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1189
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1798
 #, elixir-autogen, elixir-format
 msgid "within healthy range"
 msgstr ""
@@ -8096,7 +7998,7 @@ msgstr ""
 msgid "Filter by compound"
 msgstr ""
 
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:458
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:470
 #, elixir-autogen, elixir-format
 msgid "Full nutrition facts"
 msgstr ""
@@ -8196,168 +8098,170 @@ msgstr ""
 msgid "Recipes"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:237
-#: lib/mehungry_web/live/profile_live/index.ex:1682
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:479
+#: lib/mehungry_web/live/profile_live/index.ex:1739
 #, elixir-autogen, elixir-format
 msgid "%{start} – ongoing"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1204
+#: lib/mehungry_web/live/profile_live/index.ex:1249
 #, elixir-autogen, elixir-format
 msgid "About you (used to derive BMI & BMR)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1303
+#: lib/mehungry_web/live/profile_live/index.ex:1351
 #, elixir-autogen, elixir-format
 msgid "Add progress photos"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1174
+#: lib/mehungry_web/live/profile_live/index.ex:1217
 #, elixir-autogen, elixir-format
 msgid "BMI and BMR are worked out automatically when your height (and age) are set below."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1030
+#: lib/mehungry_web/live/profile_live/index.ex:1059
 #, elixir-autogen, elixir-format
 msgid "Back to current"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:589
+#: lib/mehungry_web/measurement_chart.ex:627
 #, elixir-autogen, elixir-format
 msgid "Before"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:211
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:453
 #, elixir-autogen, elixir-format
 msgid "Client's own journal (shared with you)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:606
+#: lib/mehungry_web/live/profile_live/index.ex:630
 #, elixir-autogen, elixir-format
 msgid "Could not reset right now."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:535
+#: lib/mehungry_web/live/profile_live/index.ex:552
 #, elixir-autogen, elixir-format
 msgid "Could not save that entry — check the values."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:542
+#: lib/mehungry_web/live/profile_live/index.ex:563
 #, elixir-autogen, elixir-format
 msgid "Could not save that entry."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:588
+#: lib/mehungry_web/live/profile_live/index.ex:609
 #, elixir-autogen, elixir-format
 msgid "Could not save those settings."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:585
+#: lib/mehungry_web/live/profile_live/index.ex:606
 #, elixir-autogen, elixir-format
 msgid "Could not save — check the values."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:633
+#: lib/mehungry_web/live/profile_live/index.ex:657
 #, elixir-autogen, elixir-format
 msgid "Could not update sharing."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1386
+#: lib/mehungry_web/live/profile_live/index.ex:1437
 #, elixir-autogen, elixir-format
 msgid "Delete photo"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1399
+#: lib/mehungry_web/live/profile_live/index.ex:1450
 #, elixir-autogen, elixir-format
 msgid "Delete this entry? Its photos are removed too."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1385
+#: lib/mehungry_web/live/profile_live/index.ex:1436
 #, elixir-autogen, elixir-format
 msgid "Delete this photo?"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1258
+#: lib/mehungry_web/live/profile_live/index.ex:1305
 #, elixir-autogen, elixir-format
 msgid "Diary"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:549
+#: lib/mehungry_web/live/profile_live/index.ex:570
 #, elixir-autogen, elixir-format
 msgid "Entry deleted."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:532
+#: lib/mehungry_web/live/profile_live/index.ex:548
 #, elixir-autogen, elixir-format
 msgid "Entry saved."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1228
+#: lib/mehungry_web/components/anthropometric_labels.ex:37
+#: lib/mehungry_web/live/profile_live/index.ex:1275
 #, elixir-autogen, elixir-format
 msgid "Female"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:603
+#: lib/mehungry_web/live/profile_live/index.ex:626
 #, elixir-autogen, elixir-format
 msgid "Fresh start! Your previous progress is saved under past periods."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1143
+#: lib/mehungry_web/live/profile_live/index.ex:1185
 #, elixir-autogen, elixir-format
 msgid "Goals & tracked metrics"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1180
+#: lib/mehungry_web/live/profile_live/index.ex:1225
 #, elixir-autogen, elixir-format
 msgid "Goals (optional)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:582
+#: lib/mehungry_web/live/profile_live/index.ex:603
 #, elixir-autogen, elixir-format
 msgid "Goals saved."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1296
+#: lib/mehungry_web/live/profile_live/index.ex:1344
 #, elixir-autogen, elixir-format
 msgid "How did it go? (optional note)"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1336
+#: lib/mehungry_web/live/profile_live/index.ex:1387
 #, elixir-autogen, elixir-format
 msgid "Log entry"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1226
+#: lib/mehungry_web/components/anthropometric_labels.ex:36
+#: lib/mehungry_web/live/profile_live/index.ex:1272
 #, elixir-autogen, elixir-format
 msgid "Male"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1153
+#: lib/mehungry_web/live/profile_live/index.ex:1196
 #, elixir-autogen, elixir-format
 msgid "Metrics you want to track"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1039
+#: lib/mehungry_web/live/profile_live/index.ex:1068
 #, elixir-autogen, elixir-format
 msgid "My progress"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1123
+#: lib/mehungry_web/live/profile_live/index.ex:1161
 #, elixir-autogen, elixir-format
 msgid "No measurements yet — log your first entry below. Once you've logged a metric twice, your trend charts here."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1342
+#: lib/mehungry_web/live/profile_live/index.ex:1393
 #, elixir-autogen, elixir-format
 msgid "Nothing logged in this period."
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:589
+#: lib/mehungry_web/measurement_chart.ex:628
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1706
+#: lib/mehungry_web/live/profile_live/index.ex:1763
 #, elixir-autogen, elixir-format
 msgid "Only JPG, PNG or WebP images."
 msgstr ""
@@ -8367,164 +8271,443 @@ msgstr ""
 msgid "Payment could not be set up. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:559
+#: lib/mehungry_web/live/profile_live/index.ex:580
 #, elixir-autogen, elixir-format
 msgid "Photo deleted."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1411
+#: lib/mehungry_web/live/profile_live/index.ex:1465
 #, elixir-autogen, elixir-format
 msgid "Progress history"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1251
+#: lib/mehungry_web/live/profile_live/index.ex:1298
 #, elixir-autogen, elixir-format
 msgid "Save goals"
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:218
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:460
 #, elixir-autogen, elixir-format
 msgid "Self-logged by the client — read-only. They can stop sharing at any time."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1070
+#: lib/mehungry_web/live/profile_live/index.ex:1100
 #, elixir-autogen, elixir-format
 msgid "Share with nutritionist"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1068
-#: lib/mehungry_web/live/profile_live/index.ex:1431
+#: lib/mehungry_web/live/profile_live/index.ex:1098
+#: lib/mehungry_web/live/profile_live/index.ex:1487
 #, elixir-autogen, elixir-format
 msgid "Shared with nutritionist"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1084
+#: lib/mehungry_web/live/profile_live/index.ex:1114
 #, elixir-autogen, elixir-format
 msgid "Start over"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1078
+#: lib/mehungry_web/live/profile_live/index.ex:1108
 #, elixir-autogen, elixir-format
 msgid "Start over from 0? Your current progress stays saved as a past period, and a fresh one begins today."
 msgstr ""
 
-#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:229
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:471
 #, elixir-autogen, elixir-format
 msgid "The shared period doesn't have enough logged measurements to chart yet."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:624
+#: lib/mehungry_web/live/profile_live/index.ex:648
 #, elixir-autogen, elixir-format
 msgid "This period is no longer shared."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:623
+#: lib/mehungry_web/live/profile_live/index.ex:647
 #, elixir-autogen, elixir-format
 msgid "This period is now visible to your nutritionist."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1705
+#: lib/mehungry_web/live/profile_live/index.ex:1762
 #, elixir-autogen, elixir-format
 msgid "Up to 4 photos per entry."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1707
+#: lib/mehungry_web/live/profile_live/index.ex:1764
 #, elixir-autogen, elixir-format
 msgid "Upload failed — try again."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1020
+#: lib/mehungry_web/live/profile_live/index.ex:1049
 #, elixir-autogen, elixir-format
 msgid "Viewing a past period:"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:630
+#: lib/mehungry_web/live/profile_live/index.ex:654
 #, elixir-autogen, elixir-format
 msgid "You don't have a nutritionist to share with yet."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1009
+#: lib/mehungry_web/live/profile_live/index.ex:1038
 #, elixir-autogen, elixir-format
 msgid "Your earlier self-logged progress is saved below under past periods."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1127
+#: lib/mehungry_web/live/profile_live/index.ex:1165
 #, elixir-autogen, elixir-format
 msgid "Your nutritionist hasn't recorded measurements yet. Once you've had at least two measured visits, your progress will chart here."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1005
+#: lib/mehungry_web/live/profile_live/index.ex:1034
 #, elixir-autogen, elixir-format
 msgid "Your nutritionist now tracks your progress — measurements from your visits chart here automatically, and self-logging is paused."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:539
+#: lib/mehungry_web/live/profile_live/index.ex:559
 #, elixir-autogen, elixir-format
 msgid "Your nutritionist tracks this period — logging is paused."
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:512
+#: lib/mehungry_web/measurement_chart.ex:544
 #, elixir-autogen, elixir-format
 msgid "logged by you"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:961
-#: lib/mehungry_web/live/profile_live/index.ex:1377
+#: lib/mehungry_web/live/profile_live/index.ex:987
+#: lib/mehungry_web/live/profile_live/index.ex:1428
 #, elixir-autogen, elixir-format
 msgid "progress photo"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:557
+#: lib/mehungry_web/measurement_chart.ex:593
 #, elixir-autogen, elixir-format
 msgid "progress photo, %{date}"
 msgstr ""
 
-#: lib/mehungry_web/measurement_chart.ex:543
+#: lib/mehungry_web/measurement_chart.ex:579
 #, elixir-autogen, elixir-format
 msgid "progress photos"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1688
+#: lib/mehungry_web/live/profile_live/index.ex:1745
 #, elixir-autogen, elixir-format
 msgid "self-tracked"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1687
+#: lib/mehungry_web/live/profile_live/index.ex:1744
 #, elixir-autogen, elixir-format
 msgid "with nutritionist"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:1225
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:800
+#: lib/mehungry_web/live/profile_live/index.ex:1270
 #, elixir-autogen, elixir-format
 msgid "—"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:657
+#: lib/mehungry_web/live/profile_live/index.ex:684
 #, elixir-autogen, elixir-format
 msgid "Could not create the share link."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:670
+#: lib/mehungry_web/live/profile_live/index.ex:697
 #, elixir-autogen, elixir-format
 msgid "Could not revoke the share link."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:974
+#: lib/mehungry_web/live/profile_live/index.ex:1000
 #, elixir-autogen, elixir-format
 msgid "Create share link"
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:654
+#: lib/mehungry_web/live/profile_live/index.ex:680
 #, elixir-autogen, elixir-format
 msgid "Share link created — anyone with the link can view this photo."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:667
+#: lib/mehungry_web/live/profile_live/index.ex:694
 #, elixir-autogen, elixir-format
 msgid "Share link revoked."
 msgstr ""
 
-#: lib/mehungry_web/live/profile_live/index.ex:991
+#: lib/mehungry_web/live/profile_live/index.ex:1017
 #, elixir-autogen, elixir-format
 msgid "Stop sharing"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:549
+#, elixir-autogen, elixir-format
+msgid "Show all %{count} claims"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:546
+#, elixir-autogen, elixir-format
+msgid "Show fewer"
+msgstr ""
+
+#: lib/mehungry_web/progress_overlay_chart.ex:447
+#, elixir-autogen, elixir-format
+msgid "From your logged meals"
+msgstr ""
+
+#: lib/mehungry_web/progress_overlay_chart.ex:470
+#, elixir-autogen, elixir-format
+msgid "Log meals on your calendar to overlay nutrition trends here."
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:1135
+#, elixir-autogen, elixir-format
+msgid "Pick a metric below to chart it."
+msgstr ""
+
+#: lib/mehungry_web/progress_overlay_chart.ex:98
+#, elixir-autogen, elixir-format
+msgid "Sugars"
+msgstr ""
+
+#: lib/mehungry_web/live/profile_live/index.ex:1145
+#, elixir-autogen, elixir-format
+msgid "Tap metrics to overlay them — each line is scaled to its own range; latest values show in the legend."
+msgstr ""
+
+#: lib/mehungry_web/components/core_components.ex:1977
+#, elixir-autogen, elixir-format
+msgid "No messages yet. Say hello 👋"
+msgstr ""
+
+#: lib/mehungry_web/components/core_components.ex:2009
+#, elixir-autogen, elixir-format
+msgid "Send"
+msgstr ""
+
+#: lib/mehungry_web/components/core_components.ex:2006
+#, elixir-autogen, elixir-format
+msgid "Write a message…"
+msgstr ""
+
+#: lib/mehungry_web/components/anthropometric_labels.ex:44
+#, elixir-autogen, elixir-format
+msgid "Active (6–7 days/wk)"
+msgstr ""
+
+#: lib/mehungry_web/components/anthropometric_labels.ex:39
+#, elixir-autogen, elixir-format
+msgid "Lightly active (1–3 days/wk)"
+msgstr ""
+
+#: lib/mehungry_web/components/anthropometric_labels.ex:42
+#, elixir-autogen, elixir-format
+msgid "Moderately active (3–5 days/wk)"
+msgstr ""
+
+#: lib/mehungry_web/components/anthropometric_labels.ex:38
+#, elixir-autogen, elixir-format
+msgid "Sedentary (little/no exercise)"
+msgstr ""
+
+#: lib/mehungry_web/components/anthropometric_labels.ex:47
+#, elixir-autogen, elixir-format
+msgid "Very active (hard exercise/physical job)"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:395
+#, elixir-autogen, elixir-format
+msgid "Weight at intake"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1130
+#, elixir-autogen, elixir-format
+msgid "Delete this visit?"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:81
+#, elixir-autogen, elixir-format
+msgid "Edit details"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:87
+#, elixir-autogen, elixir-format
+msgid "Edit on client overview"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1155
+#, elixir-autogen, elixir-format
+msgid "Edit visit"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1216
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:377
+#, elixir-autogen, elixir-format
+msgid "Visit deleted."
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:617
+#, elixir-autogen, elixir-format
+msgid "Visit updated."
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:807
+#, elixir-autogen, elixir-format
+msgid "Clinical flags"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:808
+#, elixir-autogen, elixir-format
+msgid "Lifestyle & eating habits"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:809
+#, elixir-autogen, elixir-format
+msgid "Medical background"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:810
+#, elixir-autogen, elixir-format
+msgid "Story & goals"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1397
+#, elixir-autogen, elixir-format
+msgid "%{count} new"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:66
+#, elixir-autogen, elixir-format
+msgid "%{count} unread message"
+msgid_plural "%{count} unread messages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:327
+#, elixir-autogen, elixir-format
+msgid "BMR %{kcal} kcal"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:577
+#, elixir-autogen, elixir-format
+msgid "Could not save the goal. Please try again."
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:254
+#, elixir-autogen, elixir-format
+msgid "Edit goal"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:573
+#, elixir-autogen, elixir-format
+msgid "Goal saved."
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:354
+#, elixir-autogen, elixir-format
+msgid "Next steps"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:365
+#, elixir-autogen, elixir-format
+msgid "Nothing recorded"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:236
+#, elixir-autogen, elixir-format
+msgid "Save goal"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:323
+#, elixir-autogen, elixir-format
+msgid "kcal TDEE"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1238
+#, elixir-autogen, elixir-format
+msgid "last: %{value} %{unit}"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:108
+#, elixir-autogen, elixir-format
+msgid "Client sections"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:613
+#, elixir-autogen, elixir-format
+msgid "Client's onboarding answers"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:633
+#, elixir-autogen, elixir-format
+msgid "Copy answer"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:166
+#, elixir-autogen, elixir-format
+msgid "Last time"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:178
+#, elixir-autogen, elixir-format
+msgid "Log visit"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:138
+#, elixir-autogen, elixir-format
+msgid "Planning"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:136
+#, elixir-autogen, elixir-format
+msgid "Record"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1571
+#, elixir-autogen, elixir-format
+msgid "This plan lays down"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:190
+#, elixir-autogen, elixir-format
+msgid "Today %{time}"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:191
+#, elixir-autogen, elixir-format
+msgid "Tomorrow %{time}"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:652
+#, elixir-autogen, elixir-format
+msgid "Assessment"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:481
+#, elixir-autogen, elixir-format
+msgid "Could not start a new assessment. Please try again."
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex:75
+#, elixir-autogen, elixir-format
+msgid "Drafting in progress…"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:534
+#, elixir-autogen, elixir-format
+msgid "New assessment"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex:80
+#, elixir-autogen, elixir-format
+msgid "Print / Save as PDF"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:516
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1039
+#, elixir-autogen, elixir-format
+msgid "Printable record →"
+msgstr ""
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:571
+#, elixir-autogen, elixir-format
+msgid "Viewing a past assessment (read-only). Open the latest to edit."
 msgstr ""

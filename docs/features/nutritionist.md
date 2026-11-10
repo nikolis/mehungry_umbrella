@@ -114,7 +114,7 @@ Booking/ICS flow: [`professionals/appointments_booking.md`](professionals/appoin
 |---|---|---|
 | `/nutritionist` | `NutritionistLive.Dashboard` | workspace home |
 | `/nutritionist/profile` | `NutritionistLive.ProfileEdit` | profile + availability + Stripe |
-| `/nutritionist/clients[...]` | `NutritionistLive.{Clients,ClientDetail,ClientCalendar,ClientRecord,ClientRecordEditor}` | roster / records / per-client calendar |
+| `/nutritionist/clients[...]` | `NutritionistLive.{Clients,ClientDetail,ClientCalendar,ClientRecord}` | roster / records / per-client calendar |
 | `/nutritionist/invitations` | `NutritionistLive.Invitations` | invite clients (email / name search) |
 | `/nutritionist/appointments` | `NutritionistLive.AppointmentCalendar` | bookings |
 | `/nutritionist/articles[...]` | `NutritionistLive.{Articles,ArticleEditor}` | authoring |

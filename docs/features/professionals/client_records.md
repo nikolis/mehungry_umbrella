@@ -6,7 +6,7 @@ timeline of **consultation notes**. Records are created two ways: by **importing
 Google-Sheet CSV export, or **by hand** in-app when onboarding a fresh client. Profiles, booking,
 and articles are documented separately in the sibling docs.
 
-> **Localized.** Like the rest of the nutritionist workspace, the client-record editor and
+> **Localized.** Like the rest of the nutritionist workspace, the client-file editing surfaces and
 > timeline render in the nutritionist's language (EN/EL) — the surface is fully `gettext`-wrapped
 > and translated. See `docs/implementation/localization.md` ("Done: the nutritionist workspace").
 
@@ -80,7 +80,7 @@ previously a client's conditions lived only as free text inside `ClientIntake.de
   `has_many :client_conditions`.
 - **Existing conditions only** — the link always points at a `Health.Condition` picked from the
   registry (`Health.list_conditions/0`); this layer never creates a condition.
-- **Nutritionist-only** — the only write path is the nutritionist-gated record editor (below).
+- **Nutritionist-only** — the only write path is the nutritionist-gated client Overview (below).
   Consumers/clients never see or edit it (stays inside the YMYL boundary).
 
 ## Context API (`professionals.ex`)
@@ -118,41 +118,55 @@ is chosen from the nutritionist's assigned clients (`list_clients/1`) and its ac
 fallback when the sheet's identity row is blank. `ClientDetail` deep-links here with the client
 preselected via `?client_id=`.
 
-## Manual authoring — editing the full record
+## Manual authoring — everything edits on the client Overview
 
-There is **no separate "new client" page and no user picker**: a record is always reached from a
-client, so its platform-user association is implied by which client you opened. The file is created
-by `ClientDetail.ensure_record/1` (lazily on first intake/visit, or eagerly via the **Open full
-record** button) and then edited at `/nutritionist/records/:id/edit` →
-`MehungryWeb.NutritionistLive.ClientRecordEditor` (`:edit` only). Modeled on
-`ArticleEditor`/`ProfileEdit` (incremental persistence, raw changesets in assigns, `<.input>` +
-local `<.labeled>`, `validate`/`save` events).
+There is **no separate record editor, no "new client" page, and no user picker**: a record is
+always reached from a client, so its platform-user association is implied by which client you
+opened, and **all editing happens on the client Overview** (`ClientDetail`,
+`/nutritionist/clients/:id`). The record is created by `ClientDetail.ensure_record/1` lazily on
+the first write (intake, visit, condition, or PII edit). The three editable pieces:
 
-Three stacked sections: the **client-details** form (editable PII — `professional_id`/`user_id` are
-already set and untouched by a details save); one **intake** form (typed anthropometrics via
-`<.input>`; questionnaire + 24h recall as plain `intake[details][…]` inputs so the `details` map
-casts as-is — create if absent, else update the latest); and a repeatable **consultation notes**
-list (add / edit / delete, each its own form with a hidden `_id`).
+- **Client details (PII)** — the header's **Edit details** button opens a modal
+  (`client_details_modal`) with the record's own PII fields (full name, date of birth, email,
+  phone, postal code, address, work/schedule) → `Professionals.update_client_record/2`.
+  `professional_id`/`user_id` are already set and untouched by a details save; `date_of_birth`
+  feeds the age prefill on a new intake.
+- **Intake** — edited inline in the Dietary History card (typed anthropometrics via `<.input>`;
+  questionnaire + 24h recall as plain `intake[details][…]` textareas so the `details` map casts
+  as-is — create if absent, else update the latest), with live BMI/BMR/TDEE recompute on source
+  edits (typed outputs are overrides). The schema is `has_many` keyed on `assessed_on`, so a client
+  is **re-assessed over time**: **"New assessment"** opens a fresh intake dated today **prefilled
+  from the latest** (`prefilled_assessment/2` carries the stable picture forward; its `id` is nil so
+  the save creates a second row rather than overwriting). An **assessment-history switcher** (one
+  dated chip per assessment, `list_intakes/1`) lets the nutritionist view any past assessment
+  **read-only** — only the latest is editable; `@intake` (used by the summary/progress/AI) stays the
+  latest.
+- **Visits (consultation notes)** — the **+ New visit** modal creates; each expanded visit row
+  has **Edit** (reopens the same modal prefilled, covering the full measurement set + appointment
+  link) and a confirm-gated **Delete**.
 
-Ownership is enforced on mount via `get_client_record!(current_user.id, id)` in a rescue
-(redirect to `/nutritionist/clients` on miss). The read-only record page
-(`NutritionistLive.ClientRecord`, `/nutritionist/records/:id`) has an **Edit** link and an
-`m3hungry client` badge.
+The record page (`NutritionistLive.ClientRecord`, `/nutritionist/records/:id`) is the **printable
+clinical document** — the chronological timeline with an `m3hungry client` badge, a **Print / Save
+as PDF** action (`window.print()`) and a **Edit on client overview** button. A `@media print`
+rule hides the surrounding app chrome and prints only the `#printable` subtree, so it hands cleanly
+to a client or a file. Client-file links to it are labelled **"Printable record →"**. Ownership is
+enforced on its mount via `get_client_record!(current_user.id, id)` in a rescue (redirect to
+`/nutritionist/clients` on miss); the Overview enforces it via the assignment check.
+
+(The former standalone editor, `ClientRecordEditor` at `/nutritionist/records/:id/edit`, was
+removed 2026-11-10 — it duplicated the intake form and condition picker, and its note form had
+drifted behind the visit modal's measurement set. Note the Overview resolves the **most recent**
+record per user, so older duplicate records from repeated CSV imports are read-only.)
 
 ## Health conditions — recording the structured link
 
-A nutritionist links conditions in **two** nutritionist-gated places, both driven by the same
-`add_condition` / `remove_condition` events (→ `Professionals.add_client_condition/2` /
-`remove_client_condition/2`, reassigning the chip list — no changeset round-trip):
-
-- **User Overview** (`ClientDetail`, `/nutritionist/clients/:id`) — the primary surface. Conditions
-  render as **one more basic field in the Dietary History card** (right under the intake
-  Sex/Age/…/TDEE metrics): a "Conditions" label, the linked conditions as chips, and a minimal
-  `+ Add condition` `<select>`. Adding the first condition **lazily creates** the `ProfessionalClient`
-  record (via `ensure_record/1`) just like recording the first visit, so the nutritionist never has
-  to open the full editor first.
-- **Record editor** (`ClientRecordEditor`, `/nutritionist/records/:id/edit`) — the same picker in a
-  dedicated "Health conditions" section between the client-details and intake forms.
+A nutritionist links conditions on the **User Overview** (`ClientDetail`,
+`/nutritionist/clients/:id`), driven by the `add_condition` / `remove_condition` events
+(→ `Professionals.add_client_condition/2` / `remove_client_condition/2`, reassigning the chip
+list — no changeset round-trip). Conditions render as **one more basic field in the Dietary
+History card**: a "Conditions" label, the linked conditions as chips, and a minimal
+`+ Add condition` `<select>`. Adding the first condition **lazily creates** the
+`ProfessionalClient` record (via `ensure_record/1`) just like recording the first visit.
 
 Because the picker is a fixed list of registry conditions (`Health.list_conditions/0`, minus the
 already-linked ones), a nutritionist can only ever link **existing** conditions, never type a new
@@ -166,21 +180,69 @@ condition's research when nothing is saved yet. This is the Phase 3 payoff of th
 **Suggested Notes** feature, which was blocked on exactly this structured link (see
 [`research_notes.md`](research_notes.md) §6).
 
-## User Overview integration — visits accordion
+## The client file — tabbed by job
 
-The per-client **User Overview** (`NutritionistLive.ClientDetail`, `/nutritionist/clients/:id`,
-keyed on the platform **`User` id**, reached via **Overview** on the clients roster) surfaces the
-client's dietary-history record inline. `get_client_record_by_user/2` resolves the
+The per-client file (`NutritionistLive.ClientDetail`, `/nutritionist/clients/:id`, keyed on the
+platform **`User` id**, reached via **Overview** on the clients roster) is organised into four
+tabs (`?tab=`, driven by `handle_params`, each one a distinct nutritionist job — `patch` links so
+back/forward/deep-links work):
+
+- **Overview** (today's work) — the **session ribbon**, the summary strip, the progress trend, the
+  shared journal, the visits accordion, and appointment history.
+- **Record** (the clinical file) — the Dietary History intake + conditions, and the client's
+  onboarding answers.
+- **Messages** — the full-height thread (its tab label carries the unread badge).
+- **Planning** — the AI meal-plan assistant, the "assign a saved plan" tool (with preview), the
+  meal-plan history, and the meal-plan ratings.
+
+When an **appointment with this client falls within the next ~48h** (`next_session/1`, derived
+in-memory from the already-loaded appointment list), the Overview opens with a paprika-edged
+**session ribbon**: when it is / what kind (online if the appointment has a meeting link) / the last
+visit's date + agreed next-steps / a **Log visit** button — the whole pre-session prep compressed to
+one glance. No upcoming appointment → no ribbon.
+
+### Overview — summary strip + visits accordion
+
+The Overview opens with a
+single **at-a-glance summary strip**: six KPI cards — Goal, Weight (latest reading + since-baseline
+delta vs. the intake's ideal weight), BMI (healthy-band dot), **Energy** (TDEE headline with BMR
+underneath — one card, since they are one concept), Last visit, and **Next steps** (the last visit's
+`todo`, surfaced for pre-session prep instead of being buried in the timeline) — plus a compact
+**reference line** underneath with the latest intake's anthropometrics (sex, age, activity, height,
+weight at intake, ideal/usual/adjusted weight; only filled fields show). The **Goal card edits
+inline** (`edit_goal`/`save_goal`): one sentence shouldn't open the whole intake form, so the save
+writes just `goal` onto the latest intake (lazily creating the record + a goal-only intake on first
+use). This is the **one**
+metrics overview on the page — the Dietary History card (on the **Record** tab) deliberately repeats
+none of it and holds only the qualitative record (assessed date, conditions, goal, questionnaire,
+24h recall). The **Record** tab surfaces the client's dietary-history record **grouped by lifecycle**
+(`Fields.detail_groups/0` — unit-tested to cover every questionnaire key): conditions and the
+**clinical-flag chips** (allergies, intolerances, aversions, medications — the every-visit safety
+layer) stay always visible at the top of the card, and everything else folds into native
+`<details>` sections with filled-field counts — **Lifestyle & eating habits**, **Medical
+background**, **Story & goals** (opens with the full goal text), **24-hour recall**. The intake
+edit form and the read-only record page mirror the same group headings
+(`ClientDetailComponents.detail_field_groups/0`). While the intake is being **edited**, the client's
+own **onboarding answers sit beside the form** with a per-answer **Copy** button (the `Copy` hook) so
+the nutritionist lifts the client's exact words into the matching field instead of re-typing them.
+`get_client_record_by_user/2` resolves the
 `ProfessionalClient` for `(professional_id, user_id)` (most recent if several); its consultation
 notes render as a **"Client Record — Visits"** accordion inside a scrollable
-(`max-h-96 overflow-y-auto`) container — each row shows only basic info (visit number, date,
-modality, weight) with the full body/todo revealed on expand via client-side `JS.toggle` +
-chevron `JS.toggle_class("rotate-180")` (no server round-trip). A **View full dietary history**
+(`max-h-96 overflow-y-auto`) container — each row is a native `<details>` disclosure
+(keyboard/screen-reader accessible) showing basic info (visit number, date, modality, weight), with
+the full body/todo revealed on expand; the newest visit opens by default. A **View full dietary history**
 link deep-links to `/nutritionist/records/:id`. A **+ New visit** button opens a `<.modal>` form
 (`save_visit`) that **lazily creates** the `ProfessionalClient` (from the client `User`'s
 name/email) on the first visit if none exists, then `create_consultation_note/1`. The visit form
 captures the full measurement set (weight, body fat %, waist, muscle mass); BMI/BMR are filled
-automatically from the client's latest intake.
+automatically from the client's latest intake. The modal never covers its own context: the
+**previous visit** rides along in a read-only reference pane (its measurements, note excerpt and
+agreed to-dos) and every measurement input carries a **"last: X"** hint — the delta is the point of
+measuring, so a new value is typed against a reference, not into a void (when editing an existing
+visit, the reference is the latest *earlier* visit, never the one being edited). New visits are
+numbered **`max(visit_number) + 1`**, not `count + 1`, so deleting a middle visit never re-issues a
+duplicate "Visit N". Linking an appointment stamps the visit date from it and, when that appointment
+carries a meeting link, also prefills the **online** modality (`prefill_from_appointment`).
 
 ## Progress tracking — measurement chart
 
@@ -208,6 +270,12 @@ Measurements can be logged two ways, both writing a `ConsultationNote`:
    `Professionals.upsert_consultation_note_for_appointment/1`, which also consolidates any pre-existing
    duplicates down to the latest note (deleting the rest in the same transaction).
 
+Either way, a note's `appointment_id` is **ownership-validated at write time**
+(`Professionals` create/update → `validate_note_appointment/1`): the linked appointment must belong
+to the same professional **and** be booked with the record's platform user — a crafted form payload
+can't attach (and therefore render, via the `:appointment` preload) another professional's
+appointment.
+
 **Client-facing view.** The client sees their own progress on their profile (`/profile` →
 **My progress** tab, owner-only). Since 2026-11-07 that tab is the period-based **progress
 journal** (`Mehungry.Progress`, see [`../progress_journal.md`](../progress_journal.md)): the
@@ -223,10 +291,26 @@ journal periods, the client file shows a **"Client's own journal (shared with yo
 same `MeasurementChart`, `source: self`. Strictly read-only; the client can revoke at any time;
 `Progress.shared_history_for_professional/2` verifies the viewer is the assigned nutritionist.
 
+## Messages — honest read receipts
+
+The **Messages** tab carries the client↔nutritionist thread (shared `<.message_thread>`). The thread
+is **not** marked read when the client file is opened on another tab — a nutritionist glancing at a
+weight must never fire a "seen" receipt they didn't earn. The read receipt is **opening the Messages
+tab**: `handle_params` runs `mark_thread_read/3` when `tab == "messages"`, gated on
+`connected?(socket)` (so the disconnected HTTP render / link-prefetch / reconnect reload never fires
+it) and skipped when nothing is unread. While the nutritionist is on another tab, an incoming message
+appends and **increments the unread badge** (on the Messages tab label, plus a paprika chip in the
+client header that patches to `?tab=messages`); while the Messages tab is open, new messages are read
+as they arrive (`messages_visible?`, set true by `apply_tab`, gates the live `handle_info`). The
+unread count for the thread is `Professionals.count_unread_in_thread/3`.
+
 ## The payoff — the client file feeds the AI meal-plan draft
 
 The record is not just a filing cabinet: when the nutritionist clicks **"Draft 7-day Plan"** on the
-User Overview, the `NutritionistAgent` reads the whole file so the draft honours it. Its
+Planning tab, the `NutritionistAgent` reads the whole file so the draft honours it. Progress streams
+live over PubSub; if the nutritionist navigates away and re-mounts mid-draft, the panel **resumes
+its running state** (`NutritionistAgentWorker.running?/2` checks Oban for an active job for this
+professional+client on mount) instead of flashing the idle form. Its
 `get_client_record` tool merges the latest **intake** (goal, TDEE → the plan's `calorie_target`),
 the linked **conditions**, the latest **consultation note**, and the client's own `UserProfile`
 (diet, `avoid_foods`) into one brief with a unified **`avoid` list** — personal avoid foods +
@@ -242,14 +326,20 @@ see [`../../implementation/ai/ai_agents.md`](../../implementation/ai/ai_agents.m
 - `lib/mehungry/professionals/{professional_client,client_intake,consultation_note,client_condition}.ex`
 - `lib/mehungry/professionals/dietary_history/{csv_parser,importer}.ex`,
   `dietary_history/fields.ex` (shared label lists)
-- `lib/mehungry/professionals.ex` — record/intake/note/condition context functions
+- `lib/mehungry/professionals.ex` — record/intake/note/condition/message context functions
+  (`list_intakes/1`, `count_unread_in_thread/3`, …)
+- `lib/mehungry/oban_workers/nutritionist_agent_worker.ex` — `running?/2` (AI-draft resume on re-mount)
 - `priv/repo/migrations/20260904000001_*`, `..002_*`, `..003_*`,
   `20261027150000_create_professional_client_conditions.exs`
 
 **Web (`apps/mehungry_web`)**
-- `lib/mehungry_web/live/nutritionist_live/{records,client_record,client_record_editor,client_detail}.ex`
-  (`client_detail` = the User Overview, which also embeds the visits accordion + new-visit modal)
+- `lib/mehungry_web/live/nutritionist_live/client_detail.ex` — the client file: tabbed
+  (Overview/Record/Messages/Planning via `?tab=`), session ribbon, inline goal, intake re-assessment,
+  visits modal, messages (tab-activation read receipt), plan assign + preview, AI draft
+- `lib/mehungry_web/live/nutritionist_live/client_detail_components.ex` — its presentational components
+- `lib/mehungry_web/live/nutritionist_live/client_record.ex` — printable `/nutritionist/records/:id`
+- `assets/js/hooks.js` — `Copy` (onboarding-answer copy), `EnterToSend`
 - `lib/mehungry_web/router.ex`
 
 **Tests**
-- `apps/mehungry_web/test/mehungry_web/live/nutritionist_live/client_record_editor_test.exs`
+- `apps/mehungry_web/test/mehungry_web/live/nutritionist_live/client_detail_test.exs`

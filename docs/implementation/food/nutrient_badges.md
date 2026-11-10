@@ -283,8 +283,13 @@ helper every HTML surface uses:
   follows the tier too) — and a footnote citing **EU Reg. 1169/2011 & 1924/2006**. The
   nutrient name is localized via `NutrientLabels.translate_name/1` (the bare vocabulary
   term), **not** `claim_label/1` (which hard-codes "High in" and so can't label a
-  "source" row). The panel renders only when at least one claim exists. (This replaced the
-  earlier flat high-only pill list + client-side "Show N more" toggle.)
+  "source" row). The panel renders only when at least one claim exists. The list is
+  **capped at 6 rows** (`claims_collapsed_count/0`) behind a server-side
+  "Show all N claims" / "Show fewer" toggle (`toggle_claims` event, `:show_all_claims`
+  assign) — the NRV table has 22 entries, so nutrient-dense recipes can carry 10+
+  claims and would push Ingredients/Method below the fold; the high-before-source /
+  descending-%NRV sort guarantees the visible 6 are always the strongest claims. (This
+  replaced the earlier flat high-only pill list + client-side "Show N more" toggle.)
 
 The **card** labels carry the `N% NRV` — the % is the auditable proof that keeps the
 claim on the label side of the line — emphasised in **basil-soft** against the basil

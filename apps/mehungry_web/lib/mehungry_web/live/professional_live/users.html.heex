@@ -63,12 +63,13 @@
       </h1>
       <div class="flex gap-4 mt-2">
         <span class="text-parchment-dim text-sm">Showing {@shown_count} of {@total_count}</span>
-        <span class="text-amber-400 text-sm">Pro: {@pro_count}</span>
+        <span class="text-amber-400 text-sm">Paid (Plus + Pro): {@pro_count}</span>
       </div>
     </div>
 
     <!-- Filters -->
     <form
+      id="user-filters"
       phx-change="filter"
       class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 mb-5 flex flex-wrap items-end gap-3"
     >
@@ -174,14 +175,20 @@
                   {user.name || String.split(user.email, "@") |> List.first()}
                 </span>
                 <% sub = Map.get(@subscriptions, user.id) %>
-                <%= if sub && sub.tier == "pro" do %>
-                  <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
-                    Pro
-                  </span>
-                <% else %>
-                  <span class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
-                    Free
-                  </span>
+                <% tier = if sub, do: sub.tier, else: "free" %>
+                <%= cond do %>
+                  <% tier == "pro" -> %>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
+                      Pro
+                    </span>
+                  <% tier == "m3hungry_plus" -> %>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 font-semibold border border-violet-500/30">
+                      Plus
+                    </span>
+                  <% true -> %>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
+                      Free
+                    </span>
                 <% end %>
                 <%= if is_nil(user.confirmed_at) do %>
                   <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
@@ -207,7 +214,7 @@
                 }>
                   Recipes: {recipe_count}
                 </span>
-                <%= if sub && sub.tier == "pro" && sub.period_end do %>
+                <%= if tier in ["pro", "m3hungry_plus"] && sub.period_end do %>
                   <span class="text-amber-500/70">
                     Renews: {Calendar.strftime(sub.period_end, "%Y-%m-%d")}
                   </span>
@@ -217,24 +224,25 @@
 
             <!-- Actions -->
             <div class="flex items-center gap-2 flex-shrink-0">
-              <%= if sub && sub.tier == "pro" do %>
+              <%= if tier != "m3hungry_plus" && tier != "pro" do %>
                 <button
-                  phx-click="revoke_nutritionist"
+                  phx-click="grant_plus"
                   phx-value-id={user.id}
-                  data-confirm={"Revoke nutritionist tier from #{user.email}?"}
-                  class="p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 transition"
-                  title="Revoke Nutritionist Tier"
+                  data-confirm={"Grant Mehungry Plus tier to #{user.email}?"}
+                  class="p-2 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 hover:text-violet-300 transition"
+                  title="Grant Mehungry Plus Tier"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       stroke-width="2"
-                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                      d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
                 </button>
-              <% else %>
+              <% end %>
+              <%= if tier != "pro" do %>
                 <button
                   phx-click="grant_nutritionist"
                   phx-value-id={user.id}
@@ -248,6 +256,24 @@
                       stroke-linejoin="round"
                       stroke-width="2"
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </button>
+              <% end %>
+              <%= if tier in ["m3hungry_plus", "pro"] do %>
+                <button
+                  phx-click="revoke_subscription"
+                  phx-value-id={user.id}
+                  data-confirm={"Revoke #{if tier == "pro", do: "nutritionist", else: "Mehungry Plus"} tier from #{user.email}?"}
+                  class="p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 transition"
+                  title="Revoke Subscription"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                     />
                   </svg>
                 </button>

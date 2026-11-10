@@ -16,15 +16,16 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
   use MehungryWeb, :html
 
   alias Phoenix.LiveView.JS
-  alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
+  alias MehungryWeb.AnthropometricLabels
   alias MehungryWeb.DietaryHistory.Labels
   alias MehungryWeb.MeasurementChart
 
   # ── Zone 0: header ──────────────────────────────────────────────────────────────
 
-  attr :client, :any, required: true
-  attr :client_id, :any, required: true
+  attr(:client, :any, required: true)
+  attr(:client_id, :any, required: true)
+  attr(:unread_count, :integer, default: 0)
 
   def client_header(assigns) do
     ~H"""
@@ -55,7 +56,17 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         <p class="text-parchment-dim text-sm truncate">{@client.email}</p>
       </div>
 
-      <div class="ml-auto flex flex-wrap gap-2">
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <.link
+          :if={@unread_count > 0}
+          patch={~p"/nutritionist/clients/#{@client_id}?#{[tab: "messages"]}"}
+          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-paprika/15 text-paprika-soft text-xs font-semibold hover:bg-paprika/25"
+        >
+          <.icon name="hero-chat-bubble-left-right" class="w-3.5 h-3.5" />
+          {ngettext("%{count} unread message", "%{count} unread messages", @unread_count,
+            count: @unread_count
+          )}
+        </.link>
         <.action variant={:primary} size={:sm} href={"/nutritionist/clients/#{@client_id}/calendar"}>
           <.icon name="hero-calendar-days" class="w-4 h-4" /> {gettext("View Plan")}
         </.action>
@@ -66,34 +77,195 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         >
           {gettext("Schedule Appointment")}
         </.action>
-        <.action variant={:secondary} size={:sm} phx-click="open_full_record">
-          {gettext("Open full record")}
+        <.action variant={:secondary} size={:sm} phx-click="edit_client_details">
+          {gettext("Edit details")}
         </.action>
       </div>
     </div>
     """
   end
 
+  # ── Tab bar ───────────────────────────────────────────────────────────────────────
+
+  attr(:tab, :string, required: true)
+  attr(:client_id, :any, required: true)
+  attr(:unread_count, :integer, default: 0)
+
+  @tabs [
+    {"overview", "hero-squares-2x2"},
+    {"record", "hero-clipboard-document-list"},
+    {"messages", "hero-chat-bubble-left-right"},
+    {"planning", "hero-clipboard-document-check"}
+  ]
+
+  # Each tab is one of the nutritionist's jobs. `patch` keeps it a URL so back /
+  # forward / deep-links work; the Messages tab carries the unread badge.
+  def client_tabs(assigns) do
+    assigns = assign(assigns, :tabs, @tabs)
+
+    ~H"""
+    <div class="border-b border-ink-panel2 mb-6">
+      <nav class="flex gap-1 overflow-x-auto" aria-label={gettext("Client sections")}>
+        <.link
+          :for={{key, icon} <- @tabs}
+          patch={~p"/nutritionist/clients/#{@client_id}?#{[tab: key]}"}
+          aria-current={@tab == key && "page"}
+          class={[
+            "flex-shrink-0 inline-flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika",
+            if(@tab == key,
+              do: "border-basil text-parchment",
+              else: "border-transparent text-parchment-dim hover:text-parchment"
+            )
+          ]}
+        >
+          <.icon name={icon} class="w-4 h-4 flex-shrink-0" />
+          <span>{tab_label(key)}</span>
+          <span
+            :if={key == "messages" and @unread_count > 0}
+            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-paprika text-ink text-[11px] font-bold tabular-nums"
+          >
+            {@unread_count}
+          </span>
+        </.link>
+      </nav>
+    </div>
+    """
+  end
+
+  defp tab_label("overview"), do: gettext("Overview")
+  defp tab_label("record"), do: gettext("Record")
+  defp tab_label("messages"), do: gettext("Messages")
+  defp tab_label("planning"), do: gettext("Planning")
+
+  # ── Session ribbon — the "you have X shortly" prep strip ────────────────────────────
+
+  attr(:next_session, :any, default: nil)
+  attr(:summary, :map, required: true)
+  attr(:client_id, :any, required: true)
+
+  # Opens the Overview when there's an appointment within the window: the whole
+  # prep job compressed to one glance — when, what kind, what was agreed last
+  # time, and the button to log the visit. No appointment → nothing renders.
+  def session_ribbon(assigns) do
+    ~H"""
+    <div
+      :if={@next_session}
+      class="mb-6 rounded-xl border border-paprika/40 bg-paprika/10 border-l-4 border-l-paprika p-4 flex flex-wrap items-center gap-x-6 gap-y-2"
+    >
+      <div class="min-w-0">
+        <p class="text-[11px] uppercase tracking-wide font-semibold text-paprika-soft inline-flex items-center gap-1.5">
+          <.icon name="hero-clock" class="w-3.5 h-3.5" /> {session_when(@next_session.scheduled_at)}
+        </p>
+        <p class="text-parchment font-medium truncate">
+          {@next_session.title}
+          <span class="text-parchment-dim font-normal">· {appointment_modality(@next_session)}</span>
+        </p>
+      </div>
+
+      <div :if={@summary.last_visit} class="min-w-0 text-sm">
+        <span class="text-parchment-dim">{gettext("Last time")}:</span>
+        <span class="text-parchment">
+          {if @summary.last_visit.visit_date,
+            do: Calendar.strftime(@summary.last_visit.visit_date, "%b %d"),
+            else: "—"}
+        </span>
+        <span :if={present?(@summary.next_steps)} class="text-parchment-dim">
+          — "<span class="text-parchment italic">{@summary.next_steps}</span>"
+        </span>
+      </div>
+
+      <.action variant={:primary} size={:sm} phx-click="new_visit" class="ml-auto whitespace-nowrap">
+        <.icon name="hero-plus" class="w-4 h-4" /> {gettext("Log visit")}
+      </.action>
+    </div>
+    """
+  end
+
+  # "Today 14:00" / "Tomorrow 09:30" / "Thu, Mar 12 · 10:00" from a naive UTC stamp.
+  defp session_when(%NaiveDateTime{} = at) do
+    date = NaiveDateTime.to_date(at)
+    time = Calendar.strftime(at, "%H:%M")
+
+    cond do
+      date == Date.utc_today() -> gettext("Today %{time}", time: time)
+      date == Date.add(Date.utc_today(), 1) -> gettext("Tomorrow %{time}", time: time)
+      true -> "#{Calendar.strftime(at, "%a, %b %d")} · #{time}"
+    end
+  end
+
+  defp session_when(_), do: nil
+
+  # Appointments carry no modality column — one with a meeting link is online.
+  defp appointment_modality(%{meeting_url: url}) when is_binary(url) and url != "",
+    do: gettext("Online")
+
+  defp appointment_modality(_), do: gettext("In person")
+
   # ── Zone 1: at-a-glance summary strip ─────────────────────────────────────────────
 
-  attr :summary, :map, required: true
+  attr(:summary, :map, required: true)
+  attr(:goal_editing?, :boolean, default: false)
 
   def client_summary(assigns) do
+    assigns =
+      assigns
+      |> assign(:bmi_dot, band_tone(assigns.summary.bmi, assigns.summary.bmi_band))
+      |> assign(:reference_items, reference_items(assigns.summary.intake))
+
     ~H"""
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6">
-      <!-- Goal -->
+    <div class="mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+      <!-- Goal — edits inline; one sentence shouldn't open the whole intake form -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
         <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim inline-flex items-center gap-1">
           <.icon name="hero-flag" class="w-3 h-3 text-paprika" /> {gettext("Goal")}
         </span>
-        <%= if present?(@summary.goal) do %>
-          <span class="text-parchment text-sm font-medium leading-snug line-clamp-2">
-            {@summary.goal}
-          </span>
-        <% else %>
-          <.action variant={:ghost} size={:sm} phx-click="edit_intake" class="self-start px-0 mt-0.5">
-            {gettext("Set a goal")}
-          </.action>
+        <%= cond do %>
+          <% @goal_editing? -> %>
+            <form phx-submit="save_goal" class="flex items-center gap-1 mt-0.5">
+              <input
+                type="text"
+                name="goal"
+                value={@summary.goal}
+                autofocus
+                aria-label={gettext("Goal")}
+                class="w-full min-w-0 bg-ink border border-ink-panel2 rounded-lg px-2 py-1 text-parchment text-xs focus:outline-none focus:border-paprika"
+              />
+              <button
+                type="submit"
+                aria-label={gettext("Save goal")}
+                class="text-basil hover:text-parchment shrink-0"
+              >
+                <.icon name="hero-check" class="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                phx-click="cancel_goal"
+                aria-label={gettext("Cancel")}
+                class="text-parchment-dim hover:text-parchment shrink-0"
+              >
+                <.icon name="hero-x-mark" class="w-4 h-4" />
+              </button>
+            </form>
+          <% present?(@summary.goal) -> %>
+            <button
+              type="button"
+              phx-click="edit_goal"
+              title={gettext("Edit goal")}
+              class="text-left group/goal"
+            >
+              <span class="text-parchment text-sm font-medium leading-snug line-clamp-2">
+                {@summary.goal}
+                <.icon
+                  name="hero-pencil"
+                  class="w-3 h-3 inline text-parchment-dim opacity-0 group-hover/goal:opacity-100"
+                />
+              </span>
+            </button>
+          <% true -> %>
+            <.action variant={:ghost} size={:sm} phx-click="edit_goal" class="self-start px-0 mt-0.5">
+              {gettext("Set a goal")}
+            </.action>
         <% end %>
       </div>
 
@@ -109,7 +281,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
           <span class={["text-xs font-semibold tabular-nums", tone_text(@summary.weight_card.tone)]}>
             {@summary.weight_card.arrow} {@summary.weight_card.delta_abs}
             <span :if={@summary.ideal_weight_kg} class="text-parchment-dim font-normal">
-              {gettext("/ goal %{w} kg", w: @summary.ideal_weight_kg)}
+              {gettext("/ goal %{w} kg", w: MeasurementChart.fmt_num(@summary.ideal_weight_kg))}
             </span>
           </span>
         <% else %>
@@ -126,14 +298,33 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
           <span class="font-display text-xl text-parchment leading-tight tabular-nums inline-flex items-center gap-1.5">
             {@summary.bmi}
             <span
-              :if={band_tone(@summary.bmi, @summary.bmi_band)}
+              :if={@bmi_dot}
               class={[
                 "w-2 h-2 rounded-full",
-                band_tone(@summary.bmi, @summary.bmi_band) == :good && "bg-basil",
-                band_tone(@summary.bmi, @summary.bmi_band) == :warn && "bg-warning-500"
+                @bmi_dot == :good && "bg-basil",
+                @bmi_dot == :warn && "bg-warning-500"
               ]}
-              title={band_label(band_tone(@summary.bmi, @summary.bmi_band))}
+              title={band_label(@bmi_dot)}
             ></span>
+          </span>
+        <% else %>
+          <span class="text-parchment-dim text-sm">—</span>
+        <% end %>
+      </div>
+
+      <!-- Energy needs from the latest intake: TDEE leads, BMR rides along -->
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
+          {gettext("Energy")}
+        </span>
+        <%= if @summary.intake && (@summary.intake.tdee_kcal || @summary.intake.bmr_kcal) do %>
+          <span :if={@summary.intake.tdee_kcal} class="font-display text-xl text-parchment leading-tight tabular-nums">
+            {@summary.intake.tdee_kcal}<span class="text-xs text-parchment-dim ml-0.5 font-sans">
+              {gettext("kcal TDEE")}
+            </span>
+          </span>
+          <span :if={@summary.intake.bmr_kcal} class="text-parchment-dim text-xs tabular-nums">
+            {gettext("BMR %{kcal} kcal", kcal: @summary.intake.bmr_kcal)}
           </span>
         <% else %>
           <span class="text-parchment-dim text-sm">—</span>
@@ -147,23 +338,74 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         </span>
         <%= if @summary.last_visit do %>
           <span class="text-parchment text-sm font-medium">
-            {Calendar.strftime(@summary.last_visit.visit_date, "%b %d, %Y")}
+            {if @summary.last_visit.visit_date,
+              do: Calendar.strftime(@summary.last_visit.visit_date, "%b %d, %Y"),
+              else: "—"}
           </span>
           <span class="text-parchment-dim text-xs">{modality_label(@summary.last_visit.modality)}</span>
         <% else %>
           <span class="text-parchment-dim text-sm">{gettext("No visits yet")}</span>
         <% end %>
       </div>
+
+      <!-- Next steps — the to-do agreed at the last visit, surfaced for prep -->
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim inline-flex items-center gap-1">
+          <.icon name="hero-arrow-right-circle" class="w-3 h-3 text-paprika" /> {gettext("Next steps")}
+        </span>
+        <%= if present?(@summary.next_steps) do %>
+          <span
+            class="text-parchment text-sm font-medium leading-snug line-clamp-2"
+            title={@summary.next_steps}
+          >
+            {@summary.next_steps}
+          </span>
+        <% else %>
+          <span class="text-parchment-dim text-sm">
+            {if @summary.last_visit, do: gettext("Nothing recorded"), else: "—"}
+          </span>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Reference values from the latest intake -->
+    <div
+      :if={@reference_items != []}
+      class="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 px-1 text-xs text-parchment-dim"
+    >
+      <span :for={{label, value} <- @reference_items} class="whitespace-nowrap">
+        {label} <span class="text-parchment font-medium tabular-nums">{value}</span>
+      </span>
+    </div>
     </div>
     """
   end
 
+  # The compact reference line under the KPI strip — only the intake fields that
+  # are actually filled in, as `{label, formatted value}` pairs.
+  defp reference_items(nil), do: []
+
+  defp reference_items(intake) do
+    [
+      {gettext("Sex"), intake.sex && AnthropometricLabels.sex_label(intake.sex)},
+      {gettext("Age"), intake.age && "#{intake.age} #{gettext("yrs")}"},
+      {gettext("Activity"),
+       intake.activity_level && AnthropometricLabels.activity_label(intake.activity_level)},
+      {gettext("Height"), intake.height_m && "#{intake.height_m} m"},
+      {gettext("Weight at intake"), intake.weight_kg && "#{intake.weight_kg} kg"},
+      {gettext("Ideal wt"), intake.ideal_weight_kg && "#{intake.ideal_weight_kg} kg"},
+      {gettext("Usual wt"), intake.usual_weight_kg && "#{intake.usual_weight_kg} kg"},
+      {gettext("Adjusted wt"), intake.adjusted_weight_kg && "#{intake.adjusted_weight_kg} kg"}
+    ]
+    |> Enum.filter(fn {_label, value} -> value end)
+  end
+
   # ── Zone 2: progress ──────────────────────────────────────────────────────────────
 
-  attr :progress_cards, :list, required: true
-  attr :selected_metric, :string, default: nil
-  attr :progress_chart_svg, :any, default: nil
-  attr :progress_legend, :list, default: []
+  attr(:progress_cards, :list, required: true)
+  attr(:selected_metric, :string, default: nil)
+  attr(:progress_chart_svg, :any, default: nil)
+  attr(:progress_legend, :list, default: [])
 
   def progress_panel(assigns) do
     ~H"""
@@ -196,11 +438,11 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 2b: the client's own shared self-tracking journal (read-only) ──────────────
 
-  attr :shared_journal, :any, default: nil
-  attr :shared_cards, :list, default: []
-  attr :shared_selected, :string, default: nil
-  attr :shared_chart_svg, :any, default: nil
-  attr :shared_legend, :list, default: []
+  attr(:shared_journal, :any, default: nil)
+  attr(:shared_cards, :list, default: [])
+  attr(:shared_selected, :string, default: nil)
+  attr(:shared_chart_svg, :any, default: nil)
+  attr(:shared_legend, :list, default: [])
 
   def shared_journal_panel(assigns) do
     ~H"""
@@ -241,18 +483,30 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 3 (left): dietary history / intake ─────────────────────────────────────────
 
-  attr :record, :any, default: nil
-  attr :intake, :any, default: nil
-  attr :intake_editing?, :boolean, default: false
-  attr :intake_form, :any, default: nil
-  attr :conditions, :list, default: []
-  attr :all_conditions, :list, default: []
-  attr :measurement_context, :map, default: %{}
+  attr(:record, :any, default: nil)
+  attr(:intake, :any, default: nil)
+  attr(:intakes, :list, default: [])
+  attr(:selected_intake_id, :any, default: nil)
+  attr(:intake_editing?, :boolean, default: false)
+  attr(:intake_form, :any, default: nil)
+  attr(:conditions, :list, default: [])
+  attr(:all_conditions, :list, default: [])
+  attr(:onboarding_answers, :list, default: [])
+  attr(:onboarding_locale, :string, default: "en")
 
   def intake_panel(assigns) do
+    latest_id =
+      case assigns.intakes do
+        [latest | _] -> latest.id
+        _ -> nil
+      end
+
+    assigns =
+      assign(assigns, :viewing_latest?, assigns.selected_intake_id == latest_id and latest_id != nil)
+
     ~H"""
     <.panel_card class="mb-6">
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center justify-between mb-4 gap-3">
         <div>
           <h2 class="font-display text-base font-semibold text-parchment inline-flex items-center gap-2">
             <.icon name="hero-clipboard-document-list" class="w-4 h-4 text-basil" />
@@ -263,41 +517,157 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
             navigate={~p"/nutritionist/records/#{@record.id}"}
             class="text-parchment-dim hover:text-parchment text-xs"
           >
-            {gettext("Open full record →")}
+            {gettext("Printable record →")}
           </.link>
         </div>
-        <.action :if={not @intake_editing?} variant={:secondary} size={:sm} phx-click="edit_intake">
-          {if @intake, do: gettext("Edit"), else: gettext("Add dietary history")}
-        </.action>
+        <div :if={not @intake_editing?} class="flex items-center gap-2 shrink-0">
+          <.action
+            :if={@intake && @viewing_latest?}
+            variant={:secondary}
+            size={:sm}
+            phx-click="edit_intake"
+          >
+            {gettext("Edit")}
+          </.action>
+          <.action
+            :if={@intakes != []}
+            variant={:ghost}
+            size={:sm}
+            phx-click="new_assessment"
+          >
+            {gettext("New assessment")}
+          </.action>
+          <.action
+            :if={@intakes == []}
+            variant={:secondary}
+            size={:sm}
+            phx-click="edit_intake"
+          >
+            {gettext("Add dietary history")}
+          </.action>
+        </div>
       </div>
 
+      <!-- Assessment history: switch between dated assessments (latest editable,
+           older ones read-only). -->
+      <div :if={not @intake_editing? and length(@intakes) > 1} class="flex flex-wrap gap-1.5 mb-4">
+        <button
+          :for={a <- @intakes}
+          type="button"
+          phx-click="select_assessment"
+          phx-value-id={a.id}
+          class={[
+            "px-2.5 py-1 rounded-full text-xs border transition-colors",
+            if(a.id == @selected_intake_id,
+              do: "bg-basil/15 text-basil border-basil/40",
+              else: "border-ink-panel2 text-parchment-dim hover:text-parchment"
+            )
+          ]}
+        >
+          {assessment_date_label(a)}
+        </button>
+      </div>
+
+      <p
+        :if={not @intake_editing? and @intake && not @viewing_latest?}
+        class="text-xs text-parchment-dim italic mb-3"
+      >
+        {gettext("Viewing a past assessment (read-only). Open the latest to edit.")}
+      </p>
+
       <%= cond do %>
+        <% @intake_editing? and @onboarding_answers != [] -> %>
+          <!-- During intake, the client's own onboarding answers sit beside the
+               form (copy into a field instead of re-typing their words). -->
+          <div class="grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-6">
+            <div class="min-w-0">
+              <.intake_form intake={@intake} intake_form={@intake_form} />
+            </div>
+            <.onboarding_copy_aside
+              onboarding_answers={@onboarding_answers}
+              onboarding_locale={@onboarding_locale}
+            />
+          </div>
         <% @intake_editing? -> %>
-          {intake_form(assigns)}
+          <.intake_form intake={@intake} intake_form={@intake_form} />
         <% @intake -> %>
-          {intake_display(assigns)}
+          <.intake_display
+            intake={@intake}
+            conditions={@conditions}
+            all_conditions={@all_conditions}
+          />
         <% true -> %>
           <p class="text-parchment-dim text-sm mb-2">{gettext("No dietary history recorded yet.")}</p>
-          {conditions_panel(assigns)}
+          <.conditions_panel conditions={@conditions} all_conditions={@all_conditions} />
       <% end %>
     </.panel_card>
     """
   end
 
+  attr(:onboarding_answers, :list, default: [])
+  attr(:onboarding_locale, :string, default: "en")
+
+  # The client's own onboarding answers, each with a one-click copy (the Copy
+  # hook reads the hidden input's value) so the nutritionist lifts the client's
+  # exact words into the matching intake field instead of re-typing them.
+  defp onboarding_copy_aside(assigns) do
+    ~H"""
+    <aside class="bg-ink border border-ink-panel2 rounded-lg p-3 self-start lg:sticky lg:top-4">
+      <h3 class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim mb-3">
+        {gettext("Client's onboarding answers")}
+      </h3>
+      <dl class="space-y-3 max-h-[32rem] overflow-y-auto overscroll-contain pr-1">
+        <div :for={{{q, a}, idx} <- Enum.with_index(@onboarding_answers)}>
+          <dt class="text-xs text-parchment-dim">{onboarding_prompt(q, a, @onboarding_locale)}</dt>
+          <dd class="flex items-start gap-2 mt-0.5">
+            <span class="text-parchment text-sm flex-1 min-w-0 whitespace-pre-line break-words">
+              {onboarding_answer_text(q, a, @onboarding_locale)}
+            </span>
+            <input
+              type="hidden"
+              id={"onb-ans-#{idx}"}
+              value={onboarding_answer_text(q, a, @onboarding_locale)}
+            />
+            <button
+              type="button"
+              id={"onb-copy-#{idx}"}
+              phx-hook="Copy"
+              data-to={"#onb-ans-#{idx}"}
+              class="shrink-0 text-xs text-basil hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika"
+              title={gettext("Copy answer")}
+            >
+              <span>{gettext("Copy")}</span>
+            </button>
+          </dd>
+        </div>
+      </dl>
+    </aside>
+    """
+  end
+
+  attr(:intake, :any, required: true)
+  attr(:conditions, :list, default: [])
+  attr(:all_conditions, :list, default: [])
+
+  # Chip label for an assessment — its assessed date, falling back to when it was
+  # recorded.
+  defp assessment_date_label(%{assessed_on: %Date{} = d}), do: Calendar.strftime(d, "%b %d, %Y")
+  defp assessment_date_label(%{inserted_at: %_{} = at}), do: Calendar.strftime(at, "%b %d, %Y")
+  defp assessment_date_label(_), do: gettext("Assessment")
+
+  # Measurements and reference values live in the summary strip at the top of
+  # the page (`client_summary`) — this panel is only the qualitative history,
+  # grouped by lifecycle: conditions + clinical-flag chips stay always visible
+  # (the every-visit safety layer), everything else folds into sections with
+  # filled-field counts (lifestyle / medical / story & goals / 24h recall).
   defp intake_display(assigns) do
+    {flags, sections} = grouped_details(assigns.intake)
+
     assigns =
       assigns
-      |> assign(
-        :bmi_tone,
-        band_tone(assigns.intake.bmi, MeasurementChart.band(assigns.measurement_context, "bmi"))
-      )
-      |> assign(
-        :weight_tone,
-        band_tone(
-          assigns.intake.weight_kg,
-          MeasurementChart.band(assigns.measurement_context, "weight_kg")
-        )
-      )
+      |> assign(:flag_items, flags)
+      |> assign(:sections, sections)
+      |> assign(:recall_items, recall_items(assigns.intake))
 
     ~H"""
     <div>
@@ -305,63 +675,165 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         {gettext("Assessed %{date}", date: Calendar.strftime(@intake.assessed_on, "%b %d, %Y"))}
       </p>
 
-      <!-- Clinical numbers the nutritionist acts on -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
-        <.clinical_metric label={gettext("BMI")} value={@intake.bmi} unit="" dot={@bmi_tone} />
-        <.clinical_metric label={gettext("TDEE")} value={@intake.tdee_kcal} unit="kcal" />
-        <.clinical_metric label={gettext("BMR")} value={@intake.bmr_kcal} unit="kcal" />
-        <.clinical_metric
-          label={gettext("Weight")}
-          value={@intake.weight_kg}
-          unit="kg"
-          dot={@weight_tone}
-        />
+      <.conditions_panel conditions={@conditions} all_conditions={@all_conditions} />
+
+      <div :if={@flag_items != []} class="flex flex-wrap gap-2 mb-4">
+        <span
+          :for={{label, val} <- @flag_items}
+          class="inline-flex items-baseline gap-1.5 max-w-full px-2.5 py-1 rounded-lg bg-ink border border-ink-panel2 text-xs"
+          title={"#{label}: #{val}"}
+        >
+          <span class="text-parchment-dim shrink-0">{label}</span>
+          <span class="text-parchment truncate">{val}</span>
+        </span>
       </div>
 
-      <!-- Reference values -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-        <.metric label={gettext("Sex")} value={Anthropometrics.sex_label(@intake.sex)} unit="" />
-        <.metric label={gettext("Age")} value={@intake.age} unit="yrs" />
-        <.metric
-          label={gettext("Activity")}
-          value={Anthropometrics.activity_label(@intake.activity_level)}
-          unit=""
+      <div class="space-y-2">
+        <.intake_section
+          :for={{group, items} <- @sections}
+          title={section_title(group)}
+          items={items}
         />
-        <.metric label={gettext("Height")} value={@intake.height_m} unit="m" />
-        <.metric label={gettext("Ideal wt")} value={@intake.ideal_weight_kg} unit="kg" />
-        <.metric label={gettext("Usual wt")} value={@intake.usual_weight_kg} unit="kg" />
-        <.metric label={gettext("Adjusted wt")} value={@intake.adjusted_weight_kg} unit="kg" />
+        <.intake_section title={gettext("24-hour recall")} items={@recall_items} />
       </div>
-
-      {conditions_panel(assigns)}
-
-      <p :if={present?(@intake.goal)} class="text-sm text-parchment mb-4">
-        <span class="text-parchment-dim">{gettext("Goal:")}</span> {@intake.goal}
-      </p>
-
-      <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-        <%= for {key, label} <- Fields.detail_labels(), val = @intake.details[key], present?(val) do %>
-          <div>
-            <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
-            <dd class="text-parchment whitespace-pre-line">{val}</dd>
-          </div>
-        <% end %>
-      </dl>
-
-      <%= if recall = @intake.details["recall_24h"] do %>
-        <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          <%= for {key, label} <- Fields.recall_labels(), val = recall[key], present?(val) do %>
-            <div>
-              <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
-              <dd class="text-parchment whitespace-pre-line">{val}</dd>
-            </div>
-          <% end %>
-        </dl>
-      <% end %>
     </div>
     """
   end
+
+  attr(:title, :string, required: true)
+  attr(:items, :list, required: true)
+
+  # One collapsible lifecycle section — native <details>, same visual language
+  # as the visit rows; the count tells what's inside before opening.
+  defp intake_section(assigns) do
+    ~H"""
+    <details :if={@items != []} class="group border border-ink-panel2 rounded-lg overflow-hidden">
+      <summary class="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none hover:bg-black/20 list-none">
+        <h3 class="text-sm font-semibold text-parchment">{@title}</h3>
+        <span class="text-parchment-dim text-xs tabular-nums">({length(@items)})</span>
+        <.icon
+          name="hero-chevron-down"
+          class="w-4 h-4 text-parchment-dim ml-auto shrink-0 transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm px-3 pb-3 pt-2 border-t border-ink-panel2">
+        <div :for={{label, val} <- @items}>
+          <dt class="text-parchment-dim text-xs">{label}</dt>
+          <dd class="text-parchment whitespace-pre-line">{val}</dd>
+        </div>
+      </dl>
+    </details>
+    """
+  end
+
+  attr(:title, :string, required: true)
+  attr(:filled, :integer, required: true)
+  attr(:total, :integer, required: true)
+  slot(:inner_block, required: true)
+
+  # Collapsible group inside the intake edit form — same visual language as the
+  # display sections. Inputs inside a closed <details> still submit with the
+  # form, so folding is purely visual; the filled/total badge shows where data
+  # already lives before opening.
+  defp form_section(assigns) do
+    ~H"""
+    <details class="group border border-ink-panel2 rounded-lg overflow-hidden">
+      <summary class="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none hover:bg-black/20 list-none">
+        <h3 class="text-sm font-semibold text-parchment">{@title}</h3>
+        <span class="text-parchment-dim text-xs tabular-nums">{@filled}/{@total}</span>
+        <.icon
+          name="hero-chevron-down"
+          class="w-4 h-4 text-parchment-dim ml-auto shrink-0 transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 px-3 pb-3 pt-2 border-t border-ink-panel2">
+        {render_slot(@inner_block)}
+      </div>
+    </details>
+    """
+  end
+
+  defp filled_count(intake, fields),
+    do: Enum.count(fields, fn {key, _label} -> present?(detail_value(intake, key)) end)
+
+  defp recall_filled_count(intake),
+    do: Enum.count(Fields.recall_labels(), fn {key, _} -> present?(recall_value(intake, key)) end)
+
+  # Group the filled questionnaire fields by lifecycle (`Fields.detail_groups/0`):
+  # returns `{flag_items, [{group, items}]}` with labels already translated.
+  # Keys not assigned to a group fall back to :story so nothing ever vanishes;
+  # the structured goal opens the :story section.
+  defp grouped_details(intake) do
+    details = if is_map(intake.details), do: intake.details, else: %{}
+
+    key_group =
+      for {group, keys} <- Fields.detail_groups(), key <- keys, into: %{}, do: {key, group}
+
+    by_group =
+      Fields.detail_labels()
+      |> Enum.filter(fn {key, _label} -> present?(details[key]) end)
+      |> Enum.group_by(
+        fn {key, _label} -> Map.get(key_group, key, :story) end,
+        fn {key, label} -> {Labels.translate(label), details[key]} end
+      )
+
+    goal = if present?(intake.goal), do: [{gettext("Goal"), intake.goal}], else: []
+
+    sections =
+      for group <- [:lifestyle, :medical, :story],
+          items = section_items(group, by_group, goal),
+          items != [],
+          do: {group, items}
+
+    {Map.get(by_group, :flags, []), sections}
+  end
+
+  defp section_items(:story, by_group, goal), do: goal ++ Map.get(by_group, :story, [])
+  defp section_items(group, by_group, _goal), do: Map.get(by_group, group, [])
+
+  defp recall_items(%{details: details}) when is_map(details) do
+    case details["recall_24h"] do
+      recall when is_map(recall) ->
+        for {key, label} <- Fields.recall_labels(),
+            val = recall[key],
+            present?(val),
+            do: {Labels.translate(label), val}
+
+      _ ->
+        []
+    end
+  end
+
+  defp recall_items(_), do: []
+
+  @doc false
+  # Shared with the read-only record view (`ClientRecord`).
+  def section_title(:flags), do: gettext("Clinical flags")
+  def section_title(:lifestyle), do: gettext("Lifestyle & eating habits")
+  def section_title(:medical), do: gettext("Medical background")
+  def section_title(:story), do: gettext("Story & goals")
+
+  @doc false
+  # The edit form and the read-only record view mirror the display grouping —
+  # `{group, [{key, label}]}` in group order; keys missing from the grouping
+  # land in :story (same fallback as the display, so every questionnaire field
+  # is always editable and rendered).
+  def detail_field_groups do
+    labels = Map.new(Fields.detail_labels())
+
+    grouped_keys =
+      Fields.detail_groups() |> Keyword.values() |> List.flatten() |> MapSet.new()
+
+    leftover = for {key, _label} <- Fields.detail_labels(), key not in grouped_keys, do: key
+
+    for {group, keys} <- Fields.detail_groups() do
+      keys = if group == :story, do: keys ++ leftover, else: keys
+      {group, for(key <- keys, Map.has_key?(labels, key), do: {key, labels[key]})}
+    end
+  end
+
+  attr(:intake, :any, default: nil)
+  attr(:intake_form, :any, required: true)
 
   defp intake_form(assigns) do
     ~H"""
@@ -382,7 +854,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
             field={f[:sex]}
             type="select"
             prompt="—"
-            options={for {v, l} <- Anthropometrics.sexes(), do: {l, v}}
+            options={AnthropometricLabels.sex_options()}
           />
         </.labeled>
         <.labeled label={gettext("Age")}>
@@ -393,7 +865,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
             field={f[:activity_level]}
             type="select"
             prompt="—"
-            options={for {v, l, _f} <- Anthropometrics.activity_levels(), do: {l, v}}
+            options={AnthropometricLabels.activity_options()}
           />
         </.labeled>
         <.labeled label={gettext("Height (m)")}>
@@ -431,31 +903,39 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         <.input field={f[:goal]} type="text" />
       </.labeled>
 
-      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("Questionnaire")}</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-        <%= for {key, label} <- Fields.detail_labels() do %>
-          <.labeled label={Labels.translate(label)}>
-            <textarea
-              name={"intake[details][#{key}]"}
-              rows="2"
-              class="w-full bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
-            >{detail_value(@intake, key)}</textarea>
-          </.labeled>
-        <% end %>
-      </div>
+      <div class="space-y-2 mt-5">
+        <.form_section
+          :for={{group, fields} <- detail_field_groups()}
+          title={section_title(group)}
+          filled={filled_count(@intake, fields)}
+          total={length(fields)}
+        >
+          <%= for {key, label} <- fields do %>
+            <.labeled label={Labels.translate(label)}>
+              <textarea
+                name={"intake[details][#{key}]"}
+                rows="2"
+                class="w-full bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
+              >{detail_value(@intake, key)}</textarea>
+            </.labeled>
+          <% end %>
+        </.form_section>
 
-      <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-        <%= for {key, label} <- Fields.recall_labels() do %>
-          <.labeled label={Labels.translate(label)}>
-            <input
-              type="text"
-              name={"intake[details][recall_24h][#{key}]"}
-              value={recall_value(@intake, key)}
-              class="w-full bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
-            />
-          </.labeled>
-        <% end %>
+        <.form_section
+          title={gettext("24-hour recall")}
+          filled={recall_filled_count(@intake)}
+          total={length(Fields.recall_labels())}
+        >
+          <%= for {key, label} <- Fields.recall_labels() do %>
+            <.labeled label={Labels.translate(label)}>
+              <textarea
+                name={"intake[details][recall_24h][#{key}]"}
+                rows="2"
+                class="w-full bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
+              >{recall_value(@intake, key)}</textarea>
+            </.labeled>
+          <% end %>
+        </.form_section>
       </div>
 
       <div class="flex gap-2 mt-5">
@@ -472,6 +952,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # Health conditions render as one more field in the Dietary History card: a
   # small label, the linked conditions as pills, and a minimal picker.
+  attr(:conditions, :list, default: [])
+  attr(:all_conditions, :list, default: [])
+
   defp conditions_panel(assigns) do
     linked_ids = Enum.map(assigns.conditions, & &1.id)
 
@@ -483,7 +966,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       )
 
     ~H"""
-    <div class="mt-6 mb-2 pt-5 border-t border-ink-panel2">
+    <div class="mb-4">
       <h3 class="text-xs font-semibold uppercase tracking-wide text-parchment-dim mb-3">
         {gettext("Health conditions")}
       </h3>
@@ -538,8 +1021,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 3 (left): visits ───────────────────────────────────────────────────────────
 
-  attr :visits, :list, required: true
-  attr :record, :any, default: nil
+  attr(:visits, :list, required: true)
+  attr(:record, :any, default: nil)
 
   def visits_panel(assigns) do
     assigns = assign(assigns, :newest_id, newest_visit_id(assigns.visits))
@@ -557,7 +1040,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
             navigate={~p"/nutritionist/records/#{@record.id}"}
             class="text-parchment-dim hover:text-parchment text-xs"
           >
-            {gettext("View full dietary history →")}
+            {gettext("Printable record →")}
           </.link>
           <p :if={is_nil(@record)} class="text-parchment-dim text-xs">
             {gettext("No dietary-history record yet.")}
@@ -579,8 +1062,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     """
   end
 
-  attr :visit, :any, required: true
-  attr :open, :boolean, default: false
+  attr(:visit, :any, required: true)
+  attr(:open, :boolean, default: false)
 
   # Native <details>/<summary> disclosure — keyboard- and screen-reader-accessible
   # for free (replaces the old JS.toggle-on-a-div).
@@ -639,6 +1122,21 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
             )}
           </p>
         </div>
+        <div class="flex gap-2 mt-3 pt-3 border-t border-ink-panel2">
+          <.action variant={:ghost} size={:sm} phx-click="edit_visit" phx-value-id={@visit.id}>
+            <.icon name="hero-pencil-square" class="w-3.5 h-3.5" /> {gettext("Edit")}
+          </.action>
+          <.action
+            variant={:ghost}
+            size={:sm}
+            phx-click="delete_visit"
+            phx-value-id={@visit.id}
+            data-confirm={gettext("Delete this visit?")}
+            class="text-error-500 hover:text-error-500"
+          >
+            <.icon name="hero-trash" class="w-3.5 h-3.5" /> {gettext("Delete")}
+          </.action>
+        </div>
       </div>
     </details>
     """
@@ -646,70 +1144,196 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 3 (left): new-visit modal ──────────────────────────────────────────────────
 
-  attr :visit_form, :any, required: true
-  attr :appointments, :list, default: []
+  attr(:visit_form, :any, required: true)
+  attr(:appointments, :list, default: [])
+  attr(:editing, :boolean, default: false)
+  attr(:reference_visit, :any, default: nil)
 
+  # The form never covers its own context: the previous visit rides along in a
+  # reference pane, and each measurement input carries a "last: X" hint — the
+  # delta is the whole point of measuring.
   def visit_form_modal(assigns) do
     ~H"""
     <.modal id="new-visit-modal" show on_cancel={JS.push("cancel_visit")}>
-      <h2 class="text-lg font-display font-bold text-parchment mb-4">{gettext("New visit")}</h2>
-      <.form
-        for={@visit_form}
-        id="new-visit-form"
-        phx-change="validate_visit"
-        phx-submit="save_visit"
-        class="space-y-4"
-      >
-        <div class="grid grid-cols-2 gap-4">
-          <.labeled label={gettext("Visit date")}>
-            <.input field={@visit_form[:visit_date]} type="date" />
-          </.labeled>
-          <.labeled label={gettext("Visit #")}>
-            <.input field={@visit_form[:visit_number]} type="number" />
-          </.labeled>
-          <.labeled label={gettext("Modality")}>
+      <h2 class="text-lg font-display font-bold text-parchment mb-4">
+        {if @editing, do: gettext("Edit visit"), else: gettext("New visit")}
+      </h2>
+      <div class={["grid grid-cols-1 gap-5", @reference_visit && "md:grid-cols-[1fr_14rem]"]}>
+        <.form
+          for={@visit_form}
+          id="new-visit-form"
+          phx-change="validate_visit"
+          phx-submit="save_visit"
+          class="space-y-4 min-w-0"
+        >
+          <div class="grid grid-cols-2 gap-4">
+            <.labeled label={gettext("Visit date")}>
+              <.input field={@visit_form[:visit_date]} type="date" />
+            </.labeled>
+            <.labeled label={gettext("Visit #")}>
+              <.input field={@visit_form[:visit_number]} type="number" />
+            </.labeled>
+            <.labeled label={gettext("Modality")}>
+              <.input
+                field={@visit_form[:modality]}
+                type="select"
+                options={[
+                  {gettext("In person"), "in_person"},
+                  {gettext("Phone"), "phone"},
+                  {gettext("Online"), "online"}
+                ]}
+              />
+            </.labeled>
+            <.labeled label={gettext("Weight (kg)")}>
+              <.input field={@visit_form[:weight_kg]} type="number" step="any" />
+              <.ref_hint value={@reference_visit && @reference_visit.weight_kg} unit="kg" />
+            </.labeled>
+            <.labeled label={gettext("Body fat (%)")}>
+              <.input field={@visit_form[:body_fat_percentage]} type="number" step="any" />
+              <.ref_hint value={@reference_visit && @reference_visit.body_fat_percentage} unit="%" />
+            </.labeled>
+            <.labeled label={gettext("Waist (cm)")}>
+              <.input field={@visit_form[:waist_cm]} type="number" step="any" />
+              <.ref_hint value={@reference_visit && @reference_visit.waist_cm} unit="cm" />
+            </.labeled>
+            <.labeled label={gettext("Muscle mass (kg)")}>
+              <.input field={@visit_form[:muscle_mass_kg]} type="number" step="any" />
+              <.ref_hint value={@reference_visit && @reference_visit.muscle_mass_kg} unit="kg" />
+            </.labeled>
+          </div>
+          <.labeled :if={@appointments != []} label={gettext("Linked appointment")}>
             <.input
-              field={@visit_form[:modality]}
+              field={@visit_form[:appointment_id]}
               type="select"
-              options={[
-                {gettext("In person"), "in_person"},
-                {gettext("Phone"), "phone"},
-                {gettext("Online"), "online"}
-              ]}
+              prompt={gettext("— none —")}
+              options={appointment_options(@appointments)}
             />
           </.labeled>
-          <.labeled label={gettext("Weight (kg)")}>
-            <.input field={@visit_form[:weight_kg]} type="number" step="any" />
+          <.labeled label={gettext("Notes")}>
+            <.input field={@visit_form[:body]} type="textarea" />
           </.labeled>
-          <.labeled label={gettext("Body fat (%)")}>
-            <.input field={@visit_form[:body_fat_percentage]} type="number" step="any" />
+          <.labeled label={gettext("To do")}>
+            <.input field={@visit_form[:todo]} type="textarea" />
           </.labeled>
-          <.labeled label={gettext("Waist (cm)")}>
-            <.input field={@visit_form[:waist_cm]} type="number" step="any" />
+          <div class="flex gap-2 pt-1">
+            <.action variant={:primary} size={:sm} type="submit" phx-disable-with={gettext("Saving…")}>
+              {if @editing, do: gettext("Save changes"), else: gettext("Save visit")}
+            </.action>
+            <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_visit">
+              {gettext("Cancel")}
+            </.action>
+          </div>
+        </.form>
+
+        <.visit_reference :if={@reference_visit} visit={@reference_visit} />
+      </div>
+    </.modal>
+    """
+  end
+
+  attr(:value, :any, default: nil)
+  attr(:unit, :string, default: "")
+
+  # "last: 82.4 kg" under a measurement input — the previous reading, so a new
+  # value is typed against a reference, not into a void.
+  defp ref_hint(assigns) do
+    ~H"""
+    <span :if={@value} class="block text-[11px] text-parchment-dim mt-0.5 tabular-nums">
+      {gettext("last: %{value} %{unit}", value: @value, unit: @unit)}
+    </span>
+    """
+  end
+
+  attr(:visit, :any, required: true)
+
+  # Read-only pane beside the visit form: the previous visit's measurements,
+  # note excerpt and agreed to-dos — what the session is checking in on.
+  defp visit_reference(assigns) do
+    assigns = assign(assigns, :measurements, reference_measurements(assigns.visit))
+
+    ~H"""
+    <aside class="bg-ink border border-ink-panel2 rounded-lg p-3 self-start text-sm">
+      <p class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim mb-2">
+        {gettext("Last visit")}
+        <span :if={@visit.visit_date} class="normal-case font-normal">
+          · {Calendar.strftime(@visit.visit_date, "%b %d, %Y")}
+        </span>
+      </p>
+
+      <dl :if={@measurements != []} class="space-y-1 mb-3">
+        <div :for={{label, value, unit} <- @measurements} class="flex justify-between gap-2">
+          <dt class="text-parchment-dim text-xs">{label}</dt>
+          <dd class="text-parchment text-xs tabular-nums">{value} {unit}</dd>
+        </div>
+      </dl>
+
+      <p :if={present?(@visit.body)} class="text-parchment-dim text-xs whitespace-pre-line line-clamp-6">
+        {@visit.body}
+      </p>
+
+      <div :if={present?(@visit.todo)} class="mt-2 pt-2 border-t border-ink-panel2">
+        <p class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim mb-1">
+          {gettext("To do")}
+        </p>
+        <p class="text-parchment text-xs whitespace-pre-line line-clamp-4">{@visit.todo}</p>
+      </div>
+    </aside>
+    """
+  end
+
+  defp reference_measurements(visit) do
+    [
+      {gettext("Weight"), visit.weight_kg, "kg"},
+      {gettext("Body fat"), visit.body_fat_percentage, "%"},
+      {gettext("Waist"), visit.waist_cm, "cm"},
+      {gettext("Muscle mass"), visit.muscle_mass_kg, "kg"}
+    ]
+    |> Enum.filter(fn {_label, value, _unit} -> value end)
+  end
+
+  # ── Zone 0: client-details (record PII) modal ───────────────────────────────────────
+
+  attr(:client_form, :any, required: true)
+
+  def client_details_modal(assigns) do
+    ~H"""
+    <.modal id="client-details-modal" show on_cancel={JS.push("cancel_client_details")}>
+      <h2 class="text-lg font-display font-bold text-parchment mb-4">{gettext("Client details")}</h2>
+      <.form
+        for={@client_form}
+        id="client-details-form"
+        phx-change="validate_client_details"
+        phx-submit="save_client_details"
+        class="space-y-4"
+      >
+        <.labeled label={gettext("Full name")}>
+          <.input field={@client_form[:full_name]} type="text" />
+        </.labeled>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <.labeled label={gettext("Date of birth")}>
+            <.input field={@client_form[:date_of_birth]} type="date" />
           </.labeled>
-          <.labeled label={gettext("Muscle mass (kg)")}>
-            <.input field={@visit_form[:muscle_mass_kg]} type="number" step="any" />
+          <.labeled label={gettext("Email")}>
+            <.input field={@client_form[:email]} type="text" />
+          </.labeled>
+          <.labeled label={gettext("Phone")}>
+            <.input field={@client_form[:phone]} type="text" />
+          </.labeled>
+          <.labeled label={gettext("Postal code")}>
+            <.input field={@client_form[:postal_code]} type="text" />
           </.labeled>
         </div>
-        <.labeled :if={@appointments != []} label={gettext("Linked appointment")}>
-          <.input
-            field={@visit_form[:appointment_id]}
-            type="select"
-            prompt={gettext("— none —")}
-            options={appointment_options(@appointments)}
-          />
+        <.labeled label={gettext("Address")}>
+          <.input field={@client_form[:address]} type="text" />
         </.labeled>
-        <.labeled label={gettext("Notes")}>
-          <.input field={@visit_form[:body]} type="textarea" />
-        </.labeled>
-        <.labeled label={gettext("To do")}>
-          <.input field={@visit_form[:todo]} type="textarea" />
+        <.labeled label={gettext("Work / schedule")}>
+          <.input field={@client_form[:work_schedule]} type="text" />
         </.labeled>
         <div class="flex gap-2 pt-1">
           <.action variant={:primary} size={:sm} type="submit" phx-disable-with={gettext("Saving…")}>
-            {gettext("Save visit")}
+            {gettext("Save details")}
           </.action>
-          <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_visit">
+          <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_client_details">
             {gettext("Cancel")}
           </.action>
         </div>
@@ -720,8 +1344,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 3 (left): onboarding answers (read-only reference, collapsed) ────────────────
 
-  attr :onboarding_answers, :list, default: []
-  attr :onboarding_locale, :string, default: "en"
+  attr(:onboarding_answers, :list, default: [])
+  attr(:onboarding_locale, :string, default: "en")
 
   def onboarding_answers_panel(assigns) do
     ~H"""
@@ -753,23 +1377,35 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 3 (right): messages ─────────────────────────────────────────────────────────
 
-  attr :messages, :list, required: true
-  attr :current_user_id, :integer, required: true
-  attr :message_body, :string, default: ""
-  attr :client_name, :string, default: nil
+  attr(:messages, :list, required: true)
+  attr(:current_user_id, :integer, required: true)
+  attr(:message_body, :string, default: "")
+  attr(:client_name, :string, default: nil)
+  attr(:unread_count, :integer, default: 0)
 
+  # Opening this tab is the read receipt (handled server-side in
+  # `handle_params`), so the thread is never marked read just by loading the
+  # client file on another tab.
   def messages_panel(assigns) do
     ~H"""
     <.panel_card class="mb-6">
-      <h2 class="font-display text-base font-semibold text-parchment inline-flex items-center gap-2 mb-3">
-        <.icon name="hero-chat-bubble-left-right" class="w-4 h-4 text-basil" />
-        {gettext("Messages with %{name}", name: @client_name)}
-      </h2>
+      <div class="flex items-center gap-2 mb-3">
+        <h2 class="font-display text-base font-semibold text-parchment inline-flex items-center gap-2">
+          <.icon name="hero-chat-bubble-left-right" class="w-4 h-4 text-basil" />
+          {gettext("Messages with %{name}", name: @client_name)}
+        </h2>
+        <span
+          :if={@unread_count > 0}
+          class="px-2 py-0.5 rounded-full bg-paprika/15 text-paprika-soft text-xs font-semibold tabular-nums"
+        >
+          {gettext("%{count} new", count: @unread_count)}
+        </span>
+      </div>
       <.message_thread
         messages={@messages}
         current_user_id={@current_user_id}
         body={@message_body}
-        height_class="max-h-[28rem]"
+        height_class="max-h-[32rem]"
         placeholder={gettext("Message your client…")}
       />
     </.panel_card>
@@ -778,12 +1414,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 3 (right): AI meal-plan assistant ───────────────────────────────────────────
 
-  attr :ai_running, :boolean, default: false
-  attr :ai_steps, :list, default: []
-  attr :ai_result, :any, default: nil
-  attr :ai_error, :any, default: nil
-  attr :ai_preferences, :string, default: ""
-  attr :client_id, :any, required: true
+  attr(:ai_running, :boolean, default: false)
+  attr(:ai_steps, :list, default: [])
+  attr(:ai_result, :any, default: nil)
+  attr(:ai_error, :any, default: nil)
+  attr(:ai_preferences, :string, default: "")
+  attr(:client_id, :any, required: true)
 
   def ai_assist_panel(assigns) do
     assigns = assign(assigns, :state, ai_state(assigns))
@@ -873,10 +1509,11 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   # ── Zone 3 (right): assign a saved plan ──────────────────────────────────────────────
 
-  attr :plan_options, :list, default: []
-  attr :assign_plan_form, :any, required: true
-  attr :client_name, :string, default: nil
-  attr :assign_confirm_msg, :string, default: nil
+  attr(:plan_options, :list, default: [])
+  attr(:assign_plan_form, :any, required: true)
+  attr(:client_name, :string, default: nil)
+  attr(:assign_confirm_msg, :string, default: nil)
+  attr(:plan_preview, :any, default: nil)
 
   def assign_plan_panel(assigns) do
     ~H"""
@@ -931,15 +1568,38 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
             {gettext("Add to calendar")}
           </.action>
         </.form>
+
+        <!-- What this plan lays down — shown before the replace, not after -->
+        <div :if={@plan_preview} class="mt-4 pt-4 border-t border-ink-panel2">
+          <p class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim mb-2">
+            {gettext("This plan lays down")}
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <div :for={day <- @plan_preview}>
+              <p class="text-xs font-semibold text-parchment mb-1">
+                {gettext("Day %{n}", n: day.day)}
+              </p>
+              <ul class="space-y-0.5">
+                <li :for={item <- day.items} class="text-xs text-parchment-dim flex gap-1.5">
+                  <span class="text-paprika-soft shrink-0">
+                    {MehungryWeb.MealTypeLabels.label(item.meal_type)}
+                  </span>
+                  <span class="text-parchment truncate">{item.title}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       <% end %>
     </.panel_card>
     """
   end
 
+
   # ── Zone 4: history (appointments / ratings / plans) ──────────────────────────────────
 
-  attr :appointments, :list, required: true
-  attr :noted_appointment_ids, :any, required: true
+  attr(:appointments, :list, required: true)
+  attr(:noted_appointment_ids, :any, required: true)
 
   def appointment_history(assigns) do
     ~H"""
@@ -972,7 +1632,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     """
   end
 
-  attr :ratings, :list, required: true
+  attr(:ratings, :list, required: true)
 
   def ratings_panel(assigns) do
     ~H"""
@@ -1010,7 +1670,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     """
   end
 
-  attr :score, :integer, required: true
+  attr(:score, :integer, required: true)
 
   defp rating_stars(assigns) do
     ~H"""
@@ -1025,7 +1685,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     """
   end
 
-  attr :meal_plans, :list, required: true
+  attr(:meal_plans, :list, required: true)
 
   def meal_plan_history(assigns) do
     ~H"""
@@ -1055,64 +1715,17 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     """
   end
 
-  # ── small shared metric cards ─────────────────────────────────────────────────────────
+  attr(:label, :string, required: true)
+  slot(:inner_block, required: true)
 
-  attr :label, :string, required: true
-  attr :value, :any, required: true
-  attr :unit, :string, default: ""
-
-  defp metric(assigns) do
-    ~H"""
-    <div class="bg-ink rounded-lg p-2 text-center">
-      <p class="text-parchment-dim text-xs">{@label}</p>
-      <p class="text-parchment font-semibold text-sm tabular-nums">
-        {if is_nil(@value), do: "—", else: "#{@value} #{@unit}"}
-      </p>
-    </div>
-    """
-  end
-
-  attr :label, :string, required: true
-  attr :value, :any, required: true
-  attr :unit, :string, default: ""
-  attr :dot, :atom, default: nil
-
-  defp clinical_metric(assigns) do
-    ~H"""
-    <div class="bg-ink rounded-lg p-3 text-center">
-      <p class="text-parchment-dim text-[11px] uppercase tracking-wide font-semibold inline-flex items-center justify-center gap-1.5">
-        {@label}
-        <span
-          :if={@dot}
-          class={[
-            "w-1.5 h-1.5 rounded-full",
-            @dot == :good && "bg-basil",
-            @dot == :warn && "bg-warning-500"
-          ]}
-          title={band_label(@dot)}
-        ></span>
-      </p>
-      <p class="text-parchment font-display text-lg tabular-nums">
-        {if is_nil(@value),
-          do: "—",
-          else:
-            raw(
-              "#{@value}<span class=\"text-xs text-parchment-dim ml-0.5 font-sans\">#{@unit}</span>"
-            )}
-      </p>
-    </div>
-    """
-  end
-
-  attr :label, :string, required: true
-  slot :inner_block, required: true
-
+  # The control is nested inside the <label> so it's programmatically labelled
+  # (screen readers / click-to-focus) without threading ids through call sites.
   def labeled(assigns) do
     ~H"""
-    <div>
-      <label class="block text-sm text-parchment-dim mb-1">{@label}</label>
+    <label class="block">
+      <span class="block text-sm text-parchment-dim mb-1">{@label}</span>
       {render_slot(@inner_block)}
-    </div>
+    </label>
     """
   end
 

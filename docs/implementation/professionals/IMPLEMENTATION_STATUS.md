@@ -82,10 +82,11 @@ done, what's stubbed, what's next).
   (`/nutritionist/articles/:id/edit`, incremental persistence) + public
   `PublicNutritionistLive.Article` (`/nutritionists/:slug/articles/:article_slug`, dead-render body
   + `Article` JSON-LD + numbered bibliography). See `docs/professionals/articles.md`.
-- **Client records** (`live_session :nutritionist`): `Records` (`/nutritionist/records`, roster +
-  CSV import), `ClientRecord` (read-only view), and `ClientRecordEditor`
-  (`/nutritionist/records/new` + `/records/:id/edit`) — manual authoring at full parity with
-  import, with external-vs-platform-user association. See `docs/professionals/client_records.md`.
+- **Client records** (`live_session :nutritionist`): roster + CSV import folded into `Clients`
+  (`/nutritionist/clients`), `ClientRecord` (`/nutritionist/records/:id`, read-only view), and all
+  editing on the client Overview (`ClientDetail`, `/nutritionist/clients/:id` — PII modal, inline
+  intake, visit create/edit/delete) at full parity with import; records are always linked to a
+  platform user. See `docs/professionals/client_records.md`.
 
 ## Verification
 

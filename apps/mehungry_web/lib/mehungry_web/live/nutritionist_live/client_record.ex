@@ -7,9 +7,10 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
   use MehungryWeb, :live_view
 
   alias Mehungry.Professionals
-  alias Mehungry.Professionals.Anthropometrics
+  alias MehungryWeb.AnthropometricLabels
   alias Mehungry.Professionals.DietaryHistory.Fields
   alias MehungryWeb.DietaryHistory.Labels
+  alias MehungryWeb.NutritionistLive.ClientDetailComponents
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -47,26 +48,52 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
   @impl true
   def render(assigns) do
     assigns =
-      assign(assigns, :detail_labels, Fields.detail_labels())
+      assign(assigns, :detail_groups, ClientDetailComponents.detail_field_groups())
       |> assign(:recall_labels, Fields.recall_labels())
 
     ~H"""
-    <div class="max-w-4xl mx-auto">
-      <div class="flex items-center justify-between">
+    <%!-- Print only the record itself, regardless of the surrounding app chrome.
+          The chrome is collapsed with display:none (so it reserves no space) and
+          the record subtree is kept in NORMAL FLOW — no position:absolute, which
+          clips long multi-page records in some print engines. `break-inside` keeps
+          each section/visit from splitting across a page. --%>
+    <style>
+      @media print {
+        @page { margin: 1.5cm; }
+        .mobile_header, nav, [role="alert"], #printable .no-print { display: none !important; }
+        body * { visibility: hidden; }
+        #printable, #printable * { visibility: visible; }
+        #printable { color: #000; }
+        #printable section, #printable li { break-inside: avoid; }
+      }
+    </style>
+    <div id="printable" class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between no-print">
         <.link
           navigate={~p"/nutritionist/clients"}
           class="text-parchment-dim hover:text-parchment text-sm"
         >
           {gettext("← Back to clients")}
         </.link>
-        <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/records/#{@record.id}/edit"}>
-          {gettext("Edit")}
-        </.action>
+        <div class="flex items-center gap-2">
+          <.action variant={:secondary} size={:sm} onclick="window.print()">
+            <.icon name="hero-printer" class="w-4 h-4" /> {gettext("Print / Save as PDF")}
+          </.action>
+          <.action
+            variant={:primary}
+            size={:sm}
+            navigate={~p"/nutritionist/clients/#{@record.user_id}"}
+          >
+            {gettext("Edit on client overview")}
+          </.action>
+        </div>
       </div>
 
       <div class="flex items-center gap-2 mt-2 mb-1">
         <h1 class="text-2xl font-display font-bold text-parchment">{@record.full_name}</h1>
-        <span class="px-2 py-0.5 rounded-full bg-basil/20 text-basil text-xs">{gettext("m3hungry client")}</span>
+        <span class="px-2 py-0.5 rounded-full bg-basil/20 text-basil text-xs">{gettext(
+          "m3hungry client"
+        )}</span>
       </div>
       <p class="text-parchment-dim text-sm mb-6">
         {[@record.email, @record.phone, @record.address]
@@ -76,7 +103,9 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
 
       <%= unless Enum.empty?(@conditions) do %>
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
-          <h2 class="text-lg font-display font-bold text-parchment mb-3">{gettext("Health conditions")}</h2>
+          <h2 class="text-lg font-display font-bold text-parchment mb-3">
+            {gettext("Health conditions")}
+          </h2>
           <div class="flex flex-wrap gap-2">
             <%= for condition <- @conditions do %>
               <span class="px-3 py-1 rounded-full bg-paprika/20 text-paprika text-sm">
@@ -99,9 +128,17 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
           </h2>
 
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <.metric label={gettext("Sex")} value={Anthropometrics.sex_label(@intake.sex)} unit="" />
+            <.metric
+              label={gettext("Sex")}
+              value={AnthropometricLabels.sex_label(@intake.sex)}
+              unit=""
+            />
             <.metric label={gettext("Age")} value={@intake.age} unit={gettext("yrs")} />
-            <.metric label={gettext("Activity")} value={Anthropometrics.activity_label(@intake.activity_level)} unit="" />
+            <.metric
+              label={gettext("Activity")}
+              value={AnthropometricLabels.activity_label(@intake.activity_level)}
+              unit=""
+            />
             <.metric label={gettext("Height")} value={@intake.height_m} unit="m" />
             <.metric label={gettext("Weight")} value={@intake.weight_kg} unit="kg" />
             <.metric label={gettext("BMI")} value={@intake.bmi} unit="" />
@@ -118,17 +155,26 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
             </p>
           <% end %>
 
-          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-            <%= for {key, label} <- @detail_labels, val = @intake.details[key], present?(val) do %>
-              <div>
-                <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
-                <dd class="text-parchment whitespace-pre-line">{val}</dd>
-              </div>
-            <% end %>
-          </dl>
+          <%= for {group, fields} <- @detail_groups,
+                  items = filled_items(fields, @intake.details),
+                  items != [] do %>
+            <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">
+              {ClientDetailComponents.section_title(group)}
+            </h3>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <%= for {label, val} <- items do %>
+                <div>
+                  <dt class="text-parchment-dim text-xs">{Labels.translate(label)}</dt>
+                  <dd class="text-parchment whitespace-pre-line">{val}</dd>
+                </div>
+              <% end %>
+            </dl>
+          <% end %>
 
           <%= if recall = @intake.details["recall_24h"] do %>
-            <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">{gettext("24-hour recall")}</h3>
+            <h3 class="text-sm font-semibold text-parchment mt-5 mb-2">
+              {gettext("24-hour recall")}
+            </h3>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
               <%= for {key, label} <- @recall_labels, val = recall[key], present?(val) do %>
                 <div>
@@ -201,6 +247,12 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
   end
 
   defp present?(val), do: is_binary(val) and String.trim(val) != ""
+
+  defp filled_items(fields, details) when is_map(details) do
+    for {key, label} <- fields, val = details[key], present?(val), do: {label, val}
+  end
+
+  defp filled_items(_fields, _details), do: []
 
   defp modality_label("phone"), do: gettext("Phone")
   defp modality_label("online"), do: gettext("Online")

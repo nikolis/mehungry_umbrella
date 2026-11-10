@@ -153,8 +153,8 @@ Tracked in code. `[code]` = app change, `[ops]` = console/DNS (human-applied).
 ### C. Parity credibility (earns the seat)
 - **C1 [code/ops]** One real booking flow (availability → request → accept → branded email + `.ics`)
   plus Stripe Connect onboarding completed by a real nutritionist.
-- **C2 [code]** CSV import + by-hand `ClientRecordEditor` path verified so a nutritionist can bring a
-  real roster (BMI/BMR/TDEE auto-calc, visit timeline).
+- **C2 [code]** CSV import + by-hand client-file editing (`ClientDetail` overview) verified so a
+  nutritionist can bring a real roster (BMI/BMR/TDEE auto-calc, visit timeline).
 
 ### D. Signup funnel (nutritionists + their clients still have to confirm)
 - **D1 [ops]** Audit SPF/DKIM/DMARC on `m3hungry.com` for **Mailgun EU**; confirm the domain is

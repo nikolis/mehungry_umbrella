@@ -103,8 +103,11 @@ defmodule MehungryWeb.NutritionistLive.OnboardingQuestionsTest do
       [uq]
     )
 
+    # Onboarding answers live on the client file's Record tab.
     {:ok, _view, html} =
-      conn |> log_in_user(nutritionist) |> live(~p"/nutritionist/clients/#{client.id}")
+      conn
+      |> log_in_user(nutritionist)
+      |> live(~p"/nutritionist/clients/#{client.id}?tab=record")
 
     assert html =~ "Onboarding answers"
     assert html =~ "What is your main goal?"

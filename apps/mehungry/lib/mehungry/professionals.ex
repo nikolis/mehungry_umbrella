@@ -429,9 +429,7 @@ defmodule Mehungry.Professionals do
                inv |> TutorInvitation.changeset(%{status: "accepted"}) |> Repo.update(),
              # Remove any existing assignment for this client (one nutritionist max)
              _ <-
-               Repo.delete_all(
-                 from a in TutorClientAssignment, where: a.client_id == ^client_id
-               ),
+               Repo.delete_all(from a in TutorClientAssignment, where: a.client_id == ^client_id),
              {:ok, assignment} <-
                %TutorClientAssignment{}
                |> TutorClientAssignment.changeset(%{
@@ -705,6 +703,16 @@ defmodule Mehungry.Professionals do
       )
 
     count
+  end
+
+  @doc "Unread messages in one thread that `reader_user_id` received (did not send)."
+  def count_unread_in_thread(professional_id, client_id, reader_user_id) do
+    Repo.one(
+      from m in AssignmentMessage,
+        where: m.professional_id == ^professional_id and m.client_id == ^client_id,
+        where: m.sender_user_id != ^reader_user_id and is_nil(m.read_at),
+        select: count(m.id)
+    )
   end
 
   @doc "Total unread messages addressed to this user across all their threads (as client or as professional)."
@@ -1118,7 +1126,12 @@ defmodule Mehungry.Professionals do
   # window's start/end are the professional's local wall-clock, so iterate in
   # local time and convert each kept start to the canonical UTC the rest of the
   # engine (booked set, busy intervals, storage) works in.
-  defp window_slots(date, %ProfessionalAvailability{start_time: st, end_time: et}, slot_minutes, tz) do
+  defp window_slots(
+         date,
+         %ProfessionalAvailability{start_time: st, end_time: et},
+         slot_minutes,
+         tz
+       ) do
     start_dt = NaiveDateTime.new!(date, st) |> NaiveDateTime.truncate(:second)
     end_dt = NaiveDateTime.new!(date, et) |> NaiveDateTime.truncate(:second)
 
@@ -2563,7 +2576,31 @@ defmodule Mehungry.Professionals do
   def create_consultation_note(attrs) do
     %ConsultationNote{}
     |> ConsultationNote.changeset(fill_measurement_energy(attrs))
+    |> validate_note_appointment()
     |> Repo.insert()
+  end
+
+  # A note may only link an appointment that is actually this record's meeting:
+  # same professional, booked with the record's platform user. The FK alone
+  # would accept any professional's appointment id arriving from the visit
+  # form — and `list_consultation_notes/1` preloads `:appointment`, so an
+  # unchecked id would render another professional's appointment on the page.
+  defp validate_note_appointment(changeset) do
+    with id when not is_nil(id) <- Ecto.Changeset.get_change(changeset, :appointment_id),
+         pcid when not is_nil(pcid) <-
+           Ecto.Changeset.get_field(changeset, :professional_client_id) do
+      record = Repo.get(ProfessionalClient, pcid)
+      appointment = Repo.get(Appointment, id)
+
+      if record && appointment && appointment.professional_id == record.professional_id &&
+           appointment.client_id == record.user_id do
+        changeset
+      else
+        Ecto.Changeset.add_error(changeset, :appointment_id, "is not this client's appointment")
+      end
+    else
+      _ -> changeset
+    end
   end
 
   @doc """
@@ -2611,6 +2648,7 @@ defmodule Mehungry.Professionals do
   def update_consultation_note(%ConsultationNote{} = note, attrs) do
     note
     |> ConsultationNote.changeset(fill_measurement_energy(attrs))
+    |> validate_note_appointment()
     |> Repo.update()
   end
 

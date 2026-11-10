@@ -14,9 +14,11 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias Mehungry.Posts
   alias Mehungry.Professionals
   alias Mehungry.Professionals.ProfessionalProfile
+  alias Mehungry.History
   alias Mehungry.Progress
   alias Mehungry.Progress.Period
   alias MehungryWeb.MeasurementChart
+  alias MehungryWeb.ProgressOverlayChart
 
   @impl true
   def mount(_params, session, socket) do
@@ -41,13 +43,13 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_ingredients, [])
      |> assign(:user_meal_plans, [])
      |> assign(:nutritionist_assignment, nil)
-     |> assign(:measurement_history, [])
-     |> assign(:measurement_context, %{})
-     |> assign(:available_metrics, [])
-     |> assign(:selected_metric, nil)
      |> assign(:progress_cards, [])
-     |> assign(:progress_chart_svg, nil)
-     |> assign(:progress_legend, [])
+     |> assign(:series_specs, [])
+     # nil (not an empty MapSet) = "no explicit choice yet" — sanitize_selection
+     # then defaults the first chart to the first body series.
+     |> assign(:selected_series, nil)
+     |> assign(:overlay_chart_svg, nil)
+     |> assign(:overlay_legend, [])
      |> assign(:progress_periods, [])
      |> assign(:active_period, nil)
      |> assign(:viewing_period, nil)
@@ -57,6 +59,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:comparison, nil)
      |> assign(:show_period_settings, false)
      |> assign(:entry_form_version, 0)
+     |> assign(:entry_draft, %{})
      |> assign(:lightbox_photo, nil)
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
@@ -363,53 +366,52 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:photo_markers, [])
     |> assign(:photo_axis, nil)
     |> assign(:comparison, nil)
-    |> assign(:measurement_history, [])
-    |> assign(:measurement_context, %{})
-    |> assign(:available_metrics, [])
-    |> assign(:selected_metric, nil)
     |> assign(:progress_cards, [])
-    |> assign(:progress_chart_svg, nil)
-    |> assign(:progress_legend, [])
+    |> assign(:series_specs, [])
+    |> assign(:selected_series, nil)
+    |> assign(:overlay_chart_svg, nil)
+    |> assign(:overlay_legend, [])
   end
 
   defp assign_progress_view(socket, %Period{} = period) do
     user = socket.assigns.current_user
     history = Progress.measurement_history_for_period(period)
-    context = Progress.progress_context(user.id, period)
-    available = MeasurementChart.available_metrics(history)
-    selected = MeasurementChart.pick_metric(socket.assigns[:selected_metric], available)
+    nutrition = load_nutrition_history(user.id, period, history)
+    specs = ProgressOverlayChart.series_specs(history, nutrition)
+    selected = ProgressOverlayChart.sanitize_selection(socket.assigns[:selected_series], specs)
+    bounds = period_axis_bounds(period)
 
     socket
     |> assign(:viewing_period, period)
     # Diary reads newest-first; the chart gets the ascending history.
     |> assign(:period_entries, user.id |> Progress.list_entries(period.id) |> Enum.reverse())
     |> assign(:photo_markers, Progress.photo_markers(period))
-    |> assign(:photo_axis, chart_date_range(history, selected))
+    |> assign(:photo_axis, ProgressOverlayChart.axis(specs, selected, bounds))
     |> assign(:comparison, Progress.comparison(period))
-    |> assign(:measurement_history, history)
-    |> assign(:measurement_context, context)
-    |> assign(:available_metrics, available)
-    |> assign(:selected_metric, selected)
     |> assign(:progress_cards, MeasurementChart.cards(history))
-    |> assign(:progress_chart_svg, MeasurementChart.chart_svg(history, selected, context))
-    |> assign(:progress_legend, MeasurementChart.legend_items(context, selected, period_sources(period)))
+    |> assign(:series_specs, specs)
+    |> assign(:selected_series, selected)
+    |> assign(:overlay_chart_svg, ProgressOverlayChart.overlay_svg(specs, selected, bounds))
+    |> assign(:overlay_legend, ProgressOverlayChart.legend_entries(specs, selected))
   end
 
-  # Which point sources a period's chart draws, for the legend.
-  defp period_sources(%Period{kind: "self"}), do: [:self]
-  defp period_sources(_), do: [:intake, :visit]
+  # The date span to pull nutrition-intake series for: the viewed period's own
+  # range — meals logged before the period belong to an earlier chapter and
+  # must not plot on its diagram. Periods without a lower bound fall back to a
+  # trailing 90-day window, which also caps the fetch cost.
+  defp load_nutrition_history(user_id, %Period{} = period, _history) do
+    today = Date.utc_today()
+    range_end = [period.ended_on, today] |> Enum.reject(&is_nil/1) |> Enum.min(Date)
+    range_start = period.started_on || Date.add(range_end, -90)
 
-  # The selected metric's charted date span — the photo strip pins thumbnails
-  # against the same axis the chart draws. nil when the metric has no points.
-  defp chart_date_range(_history, nil), do: nil
+    History.daily_nutrition_history(user_id, range_start, range_end)
+  end
 
-  defp chart_date_range(history, metric) do
-    atom = String.to_existing_atom(metric)
-
-    case history |> Enum.filter(& &1[atom]) |> Enum.map(& &1.date) do
-      [] -> nil
-      dates -> {Enum.min(dates, Date), Enum.max(dates, Date)}
-    end
+  # The viewed period's own date range, used to widen the chart's date axis so
+  # the diagram spans the whole period even where no data lands (an active
+  # period always reaches today).
+  defp period_axis_bounds(%Period{} = period) do
+    {period.started_on, period.ended_on || Date.utc_today()}
   end
 
   # A pro user has a canonical public page; used by apply_action(:show) to
@@ -484,17 +486,27 @@ defmodule MehungryWeb.ProfileLive.Index do
   defp plural(1, word), do: word
   defp plural(_, word), do: word <> "s"
 
-  def handle_event("select_metric", %{"metric" => metric}, socket) do
-    context = socket.assigns.measurement_context
-    history = socket.assigns.measurement_history
-    sources = period_sources(socket.assigns.viewing_period)
+  def handle_event("toggle_series", %{"series" => key}, socket) do
+    specs = socket.assigns.series_specs
 
-    {:noreply,
-     socket
-     |> assign(:selected_metric, metric)
-     |> assign(:photo_axis, chart_date_range(history, metric))
-     |> assign(:progress_chart_svg, MeasurementChart.chart_svg(history, metric, context))
-     |> assign(:progress_legend, MeasurementChart.legend_items(context, metric, sources))}
+    # phx-value is user-controlled — only toggle keys that exist as specs.
+    if Enum.any?(specs, &(&1.key == key)) do
+      sel = socket.assigns.selected_series
+
+      sel =
+        if MapSet.member?(sel, key), do: MapSet.delete(sel, key), else: MapSet.put(sel, key)
+
+      bounds = period_axis_bounds(socket.assigns.viewing_period)
+
+      {:noreply,
+       socket
+       |> assign(:selected_series, sel)
+       |> assign(:photo_axis, ProgressOverlayChart.axis(specs, sel, bounds))
+       |> assign(:overlay_chart_svg, ProgressOverlayChart.overlay_svg(specs, sel, bounds))
+       |> assign(:overlay_legend, ProgressOverlayChart.legend_entries(specs, sel))}
+    else
+      {:noreply, socket}
+    end
   end
 
   # ── Progress journal events ─────────────────────────────────────────────────
@@ -506,9 +518,12 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
-  def handle_event("validate_entry", _params, socket) do
-    # Uploads are auto_upload/external — this phx-change exists to drive them.
-    {:noreply, socket}
+  def handle_event("validate_entry", params, socket) do
+    # Uploads are auto_upload/external, so picking a photo re-renders the form
+    # mid-edit — the draft keeps the typed values on screen through those
+    # patches (unbound inputs would reset to blank and the entry would save
+    # empty next to its photo).
+    {:noreply, assign(socket, :entry_draft, Map.get(params, "entry", socket.assigns.entry_draft))}
   end
 
   def handle_event("log_entry", %{"entry" => entry_params}, socket) do
@@ -528,15 +543,21 @@ defmodule MehungryWeb.ProfileLive.Index do
         {:noreply,
          socket
          |> update(:entry_form_version, &(&1 + 1))
+         |> assign(:entry_draft, %{})
          |> refresh_journal()
          |> put_flash(:info, gettext("Entry saved."))}
 
       {:error, %Ecto.Changeset{}} ->
-        {:noreply, put_flash(socket, :error, gettext("Could not save that entry — check the values."))}
+        {:noreply,
+         put_flash(socket, :error, gettext("Could not save that entry — check the values."))}
 
       {:error, :not_self_period} ->
         {:noreply,
-         put_flash(socket, :error, gettext("Your nutritionist tracks this period — logging is paused."))}
+         put_flash(
+           socket,
+           :error,
+           gettext("Your nutritionist tracks this period — logging is paused.")
+         )}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, gettext("Could not save that entry."))}
@@ -598,9 +619,12 @@ defmodule MehungryWeb.ProfileLive.Index do
       {:ok, %{opened: opened}} ->
         {:noreply,
          socket
-         |> assign(:selected_metric, nil)
+         |> assign(:selected_series, nil)
          |> refresh_journal(opened)
-         |> put_flash(:info, gettext("Fresh start! Your previous progress is saved under past periods."))}
+         |> put_flash(
+           :info,
+           gettext("Fresh start! Your previous progress is saved under past periods.")
+         )}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, gettext("Could not reset right now."))}
@@ -651,7 +675,10 @@ defmodule MehungryWeb.ProfileLive.Index do
         {:noreply,
          socket
          |> assign(:lightbox_photo, lightbox(photo, socket.assigns.lightbox_photo[:date]))
-         |> put_flash(:info, gettext("Share link created — anyone with the link can view this photo."))}
+         |> put_flash(
+           :info,
+           gettext("Share link created — anyone with the link can view this photo.")
+         )}
 
       _ ->
         {:noreply, put_flash(socket, :error, gettext("Could not create the share link."))}
@@ -722,8 +749,7 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> Mehungry.RecipeImageWorker.new()
       |> Oban.insert()
 
-      {:noreply,
-       put_flash(socket, :info, "Queued image regeneration via #{provider}.")}
+      {:noreply, put_flash(socket, :info, "Queued image regeneration via #{provider}.")}
     else
       {:noreply, put_flash(socket, :error, "Not allowed.")}
     end
@@ -997,7 +1023,10 @@ defmodule MehungryWeb.ProfileLive.Index do
 
       <%!-- Nutritionist-aligned notice: the active period is tracked for you --%>
       <div
-        :if={@viewing_period && @viewing_period.kind == "nutritionist_aligned" && is_nil(@viewing_period.ended_on)}
+        :if={
+          @viewing_period && @viewing_period.kind == "nutritionist_aligned" &&
+            is_nil(@viewing_period.ended_on)
+        }
         class="bg-basil/10 border border-basil/40 rounded-xl p-4 text-sm text-parchment flex gap-3"
       >
         <.icon name="hero-information-circle" class="w-5 h-5 text-basil shrink-0 mt-0.5" />
@@ -1060,7 +1089,8 @@ defmodule MehungryWeb.ProfileLive.Index do
                 "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
                 if(@viewing_period.shared_with_nutritionist,
                   do: "bg-basil/15 border-basil/40 text-basil",
-                  else: "border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim"
+                  else:
+                    "border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim"
                 )
               ]}
             >
@@ -1099,25 +1129,33 @@ defmodule MehungryWeb.ProfileLive.Index do
         </div>
 
         <div class="mt-4">
-          <MeasurementChart.before_now comparison={@comparison} />
-
-          <%= if @progress_cards != [] do %>
-            <span class="block text-parchment-dim text-xs mb-2">
-              {gettext("tap a metric to chart it")}
-            </span>
-            <MeasurementChart.progress_dashboard
-              cards={@progress_cards}
-              selected={@selected_metric}
-              chart={@progress_chart_svg}
-              legend={@progress_legend}
-            />
+          <%= if @series_specs != [] do %>
+            <div class="w-full">{@overlay_chart_svg}</div>
+            <p :if={is_nil(@overlay_chart_svg)} class="text-parchment-dim text-sm">
+              {gettext("Pick a metric below to chart it.")}
+            </p>
             <MeasurementChart.photo_strip
-              :if={@photo_axis && @progress_chart_svg}
+              :if={@photo_axis && @overlay_chart_svg}
               markers={@photo_markers}
               min_date={elem(@photo_axis, 0)}
               max_date={elem(@photo_axis, 1)}
             />
+            <ProgressOverlayChart.overlay_legend legend={@overlay_legend} />
+            <span class="block text-parchment-dim text-xs mt-4 mb-2">
+              {gettext(
+                "Tap metrics to overlay them — each line is scaled to its own range; latest values show in the legend."
+              )}
+            </span>
+            <ProgressOverlayChart.series_toggles
+              cards={@progress_cards}
+              nutrition_specs={Enum.filter(@series_specs, &(&1.kind == :nutrition))}
+              selected={@selected_series}
+            />
+            <div class="mt-5">
+              <MeasurementChart.before_now comparison={@comparison} />
+            </div>
           <% else %>
+            <MeasurementChart.before_now comparison={@comparison} />
             <p class="text-parchment-dim text-sm">
               <%= if self_logging?(@viewing_period) do %>
                 {gettext(
@@ -1134,13 +1172,18 @@ defmodule MehungryWeb.ProfileLive.Index do
       </div>
 
       <%!-- Goals & tracking settings (self periods only) --%>
-      <div :if={self_logging?(@viewing_period)} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+      <div
+        :if={self_logging?(@viewing_period)}
+        class="bg-ink-panel border border-ink-panel2 rounded-xl p-5"
+      >
         <button
           type="button"
           phx-click="toggle_period_settings"
           class="w-full flex items-center justify-between text-left"
         >
-          <h3 class="text-parchment font-display font-medium">{gettext("Goals & tracked metrics")}</h3>
+          <h3 class="text-parchment font-display font-medium">
+            {gettext("Goals & tracked metrics")}
+          </h3>
           <.icon
             name={if @show_period_settings, do: "hero-chevron-up", else: "hero-chevron-down"}
             class="w-4 h-4 text-parchment-dim"
@@ -1171,7 +1214,9 @@ defmodule MehungryWeb.ProfileLive.Index do
               </label>
             </div>
             <p class="text-parchment-dim text-xs mt-2">
-              {gettext("BMI and BMR are worked out automatically when your height (and age) are set below.")}
+              {gettext(
+                "BMI and BMR are worked out automatically when your height (and age) are set below."
+              )}
             </p>
           </div>
 
@@ -1223,7 +1268,9 @@ defmodule MehungryWeb.ProfileLive.Index do
                   class="mt-1 w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
                 >
                   <option value="">{gettext("—")}</option>
-                  <option value="male" selected={@viewing_period.sex == "male"}>{gettext("Male")}</option>
+                  <option value="male" selected={@viewing_period.sex == "male"}>
+                    {gettext("Male")}
+                  </option>
                   <option value="female" selected={@viewing_period.sex == "female"}>
                     {gettext("Female")}
                   </option>
@@ -1270,7 +1317,7 @@ defmodule MehungryWeb.ProfileLive.Index do
               <input
                 type="date"
                 name="entry[entry_date]"
-                value={Date.to_iso8601(Date.utc_today())}
+                value={@entry_draft["entry_date"] || Date.to_iso8601(Date.utc_today())}
                 max={Date.to_iso8601(Date.utc_today())}
                 class="mt-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
               />
@@ -1284,6 +1331,7 @@ defmodule MehungryWeb.ProfileLive.Index do
                 step="0.1"
                 min="0"
                 name={"entry[#{metric}]"}
+                value={@entry_draft[metric]}
                 placeholder={MeasurementChart.metric_unit(metric)}
                 class="mt-1 w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
               />
@@ -1295,7 +1343,7 @@ defmodule MehungryWeb.ProfileLive.Index do
             rows="2"
             placeholder={gettext("How did it go? (optional note)")}
             class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:border-paprika focus:ring-0"
-          ></textarea>
+          >{@entry_draft["note"]}</textarea>
 
           <div>
             <label class="inline-flex items-center gap-2 text-sm text-parchment-dim cursor-pointer hover:text-parchment transition">
@@ -1319,7 +1367,10 @@ defmodule MehungryWeb.ProfileLive.Index do
                 >
                   ✕
                 </button>
-                <p :for={err <- upload_errors(@uploads.progress_photo, entry)} class="text-red-400 text-xs mt-1">
+                <p
+                  :for={err <- upload_errors(@uploads.progress_photo, entry)}
+                  class="text-red-400 text-xs mt-1"
+                >
                   {upload_error_label(err)}
                 </p>
               </div>
@@ -1407,7 +1458,10 @@ defmodule MehungryWeb.ProfileLive.Index do
       </div>
 
       <%!-- Past periods --%>
-      <div :if={length(@progress_periods) > 1} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+      <div
+        :if={length(@progress_periods) > 1}
+        class="bg-ink-panel border border-ink-panel2 rounded-xl p-5"
+      >
         <h3 class="text-parchment font-display font-medium mb-3">{gettext("Progress history")}</h3>
         <ul class="space-y-2">
           <li :for={period <- @progress_periods}>
@@ -1428,7 +1482,10 @@ defmodule MehungryWeb.ProfileLive.Index do
                 <span :if={period.title} class="text-parchment-dim">· {period.title}</span>
               </span>
               <span class="flex items-center gap-2 shrink-0">
-                <span :if={period.shared_with_nutritionist} title={gettext("Shared with nutritionist")}>
+                <span
+                  :if={period.shared_with_nutritionist}
+                  title={gettext("Shared with nutritionist")}
+                >
                   <.icon name="hero-eye" class="w-3.5 h-3.5 text-basil" />
                 </span>
                 <span class={[

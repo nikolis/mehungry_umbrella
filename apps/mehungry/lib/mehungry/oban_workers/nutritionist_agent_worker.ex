@@ -15,8 +15,10 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorker do
 
   use Oban.Worker, queue: :ai_agents, max_attempts: 1
 
+  import Ecto.Query
   require Logger
   alias Mehungry.AI.Agents.NutritionistAgent
+  alias Mehungry.Repo
 
   @tool_labels %{
     "get_client_record" => "Reading client file…",
@@ -81,6 +83,23 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorker do
 
   @doc "PubSub topic for a given professional."
   def topic(professional_id), do: "nutritionist_agent:#{professional_id}"
+
+  @active_states ~w(available scheduled executing retryable)
+
+  @doc """
+  Is a draft still in flight for this professional+client? Lets a LiveView that
+  re-mounts mid-run restore its "running" state instead of flashing the idle
+  form (PubSub steps resume once the next tool fires).
+  """
+  def running?(professional_id, client_id) do
+    Repo.exists?(
+      from j in Oban.Job,
+        where: j.worker == "Mehungry.ObanWorkers.NutritionistAgentWorker",
+        where: j.state in @active_states,
+        where: fragment("?->>'professional_id' = ?", j.args, ^to_string(professional_id)),
+        where: fragment("?->>'client_id' = ?", j.args, ^to_string(client_id))
+    )
+  end
 
   defp broadcast(topic, event) do
     Phoenix.PubSub.broadcast(Mehungry.PubSub, topic, {:nutritionist_agent, event})

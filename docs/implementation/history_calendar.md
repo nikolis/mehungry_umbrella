@@ -112,7 +112,12 @@ in-memory sum rather than an N-recipe recomputation. See memory *Calendar Perfor
 
 - **Read:** `list_calendar_user_meals/3` (week-scoped, the calendar's main read),
   `list_user_meals_in_range/_`, `get_user_meal!/1` (+ `_raw!`), `format_user_meals/1`
-  (shaping + nutrition), `get_available_portions_for_user_meal/_`.
+  (shaping + nutrition), `daily_nutrition_history/3` (per-day totals over a date
+  range — one calendar-pipeline fetch grouped by day via
+  `NutrientUtils.summarize_meals_nutrients/1` + `nutrition_series_summary/1`
+  [macros + poly/mono/trans fat], days with no meals skipped; feeds the profile
+  progress tab's nutrition overlay chart — see
+  `docs/features/progress_journal.md`), `get_available_portions_for_user_meal/_`.
 - **Write:** `create_user_meal/1`, `update_user_meal/2`, `delete_user_meal/1`,
   `delete_user_meals_in_date_range/_`, `duplicate_user_meal/_` ("copy a meal to today"),
   `change_user_meal/_`.

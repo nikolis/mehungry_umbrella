@@ -32,6 +32,9 @@ defmodule MehungryWeb.MeasurementChart do
   @c_bad "#EF4444"
 
   # ── chart geometry (viewBox units; the <svg> scales to 100% width) ─────────────
+  # MIRRORED in MehungryWeb.ProgressOverlayChart: photo_strip/1 pins thumbnails
+  # to whichever chart renders above it via this margin math, so the two modules'
+  # geometry constants must stay identical.
   @w 680
   @h 280
   @ml 52
@@ -48,6 +51,13 @@ defmodule MehungryWeb.MeasurementChart do
     {"bmi", {"BMI", nil}},
     {"bmr_kcal", {"BMR", "kcal"}}
   ]
+
+  # key => atom, fixed at compile time — history points are atom-keyed maps, but
+  # `String.to_existing_atom/1` at runtime would depend on which modules happen
+  # to have been loaded (it broke in isolated unit tests). Unknown keys raise.
+  @metric_atoms Map.new(@metrics, fn {key, _} -> {key, String.to_atom(key)} end)
+
+  defp metric_atom(key), do: Map.fetch!(@metric_atoms, key)
 
   # Which direction of change reads as progress, so a delta can be tinted. `:none`
   # metrics (BMR) are never judged — the arrow still shows the real direction.
@@ -94,7 +104,7 @@ defmodule MehungryWeb.MeasurementChart do
   """
   def available_metrics(history) do
     Enum.filter(metric_keys(), fn key ->
-      Enum.count(history, fn point -> point[String.to_existing_atom(key)] end) >= 2
+      Enum.count(history, fn point -> point[metric_atom(key)] end) >= 2
     end)
   end
 
@@ -141,9 +151,11 @@ defmodule MehungryWeb.MeasurementChart do
   end
 
   defp tone(key, delta) do
+    # `d == 0` (not a literal `0` pattern): float deltas arrive as 0.0, which a
+    # literal integer pattern would miss and mis-tint flat progress as :bad.
     case {@good_direction[key], delta} do
       {:none, _} -> :flat
-      {_, 0} -> :flat
+      {_, d} when d == 0 -> :flat
       {:down, d} when d < 0 -> :good
       {:up, d} when d > 0 -> :good
       _ -> :bad
@@ -259,7 +271,7 @@ defmodule MehungryWeb.MeasurementChart do
 
     band = band(context, metric)
     goal = goal(context, metric)
-    extras = (if band, do: Tuple.to_list(band), else: []) ++ List.wrap(goal)
+    extras = if(band, do: Tuple.to_list(band), else: []) ++ List.wrap(goal)
     all = Enum.map(pts, &(&1.value * 1.0)) ++ extras
     {lo0, hi0} = Enum.min_max(all)
     pad = if hi0 - lo0 == 0, do: max(abs(hi0) * 0.05, 1.0), else: (hi0 - lo0) * 0.14
@@ -268,7 +280,11 @@ defmodule MehungryWeb.MeasurementChart do
     y_of = fn v -> @mt + (hi - v) / (hi - lo) * plot_h end
 
     coords = Enum.map(pts, fn p -> {x_of.(p.date), y_of.(p.value * 1.0)} end)
-    title = if metric_unit(metric), do: "#{metric_label(metric)} (#{metric_unit(metric)})", else: metric_label(metric)
+
+    title =
+      if metric_unit(metric),
+        do: "#{metric_label(metric)} (#{metric_unit(metric)})",
+        else: metric_label(metric)
 
     svg =
       ~s(<svg viewBox="0 0 #{@w} #{@h}" class="w-full h-auto block" font-family="ui-sans-serif, system-ui, sans-serif" role="img" aria-label="#{title} over time">) <>
@@ -326,7 +342,9 @@ defmodule MehungryWeb.MeasurementChart do
     line_d =
       coords
       |> Enum.with_index()
-      |> Enum.map_join(" ", fn {{x, y}, i} -> "#{if i == 0, do: "M", else: "L"}#{f(x)} #{f(y)}" end)
+      |> Enum.map_join(" ", fn {{x, y}, i} ->
+        "#{if i == 0, do: "M", else: "L"}#{f(x)} #{f(y)}"
+      end)
 
     {x0, _} = List.first(coords)
     {xl, _} = List.last(coords)
@@ -384,6 +402,7 @@ defmodule MehungryWeb.MeasurementChart do
 
   defp y_title_svg(title, plot_h) do
     cy = @mt + plot_h / 2
+
     ~s|<text x="14" y="#{f(cy)}" text-anchor="middle" fill="#{@c_dim}" font-size="11" transform="rotate(-90 14 #{f(cy)})">#{title}</text>|
   end
 
@@ -421,7 +440,7 @@ defmodule MehungryWeb.MeasurementChart do
   # ── shared internals ───────────────────────────────────────────────────────────
 
   defp present_points(history, key) do
-    atom = String.to_existing_atom(key)
+    atom = metric_atom(key)
 
     history
     |> Enum.filter(&(&1[atom] && &1.date))
@@ -433,11 +452,19 @@ defmodule MehungryWeb.MeasurementChart do
   defp maybe_unit(""), do: ""
   defp maybe_unit(u), do: " " <> u
 
-  defp fmt_num(v) when is_integer(v), do: Integer.to_string(v)
+  @doc """
+  Format a reading the way the KPI cards do (1 dp, trailing `.0` dropped) —
+  public so companion surfaces (e.g. the client-file summary strip) display
+  numbers consistently with the dashboard.
+  """
+  def fmt_num(v) when is_integer(v), do: Integer.to_string(v)
 
-  defp fmt_num(v) when is_float(v) do
+  def fmt_num(v) when is_float(v) do
     r = Float.round(v, 1)
-    if r == Float.round(r, 0), do: Integer.to_string(trunc(r)), else: :erlang.float_to_binary(r, decimals: 1)
+
+    if r == Float.round(r, 0),
+      do: Integer.to_string(trunc(r)),
+      else: :erlang.float_to_binary(r, decimals: 1)
   end
 
   # Format a number as a 1-decimal SVG coordinate string.
@@ -457,7 +484,8 @@ defmodule MehungryWeb.MeasurementChart do
   attr :legend, :list, default: []
 
   def progress_dashboard(assigns) do
-    assigns = assign(assigns, :selected_card, Enum.find(assigns.cards, &(&1.key == assigns.selected)))
+    assigns =
+      assign(assigns, :selected_card, Enum.find(assigns.cards, &(&1.key == assigns.selected)))
 
     ~H"""
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
@@ -493,7 +521,9 @@ defmodule MehungryWeb.MeasurementChart do
 
     <div :if={@selected_card} class="flex items-baseline gap-x-3 gap-y-1 flex-wrap mb-1">
       <span class="font-display text-parchment font-semibold">{@selected_card.label}</span>
-      <span class="text-parchment-dim text-sm tabular-nums">{gettext("%{value} now", value: @selected_card.current_display)}</span>
+      <span class="text-parchment-dim text-sm tabular-nums">{gettext("%{value} now",
+        value: @selected_card.current_display
+      )}</span>
       <span class={["text-sm font-semibold tabular-nums", tone_text(@selected_card.tone)]}>
         {@selected_card.arrow} {gettext("%{delta} since start", delta: @selected_card.delta_abs)}
       </span>
@@ -506,16 +536,22 @@ defmodule MehungryWeb.MeasurementChart do
         <span class="w-2.5 h-2.5 rounded-full" style="background:#45C4AE"></span>{gettext("intake")}
       </span>
       <span :if={:visit in @legend} class="inline-flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full" style="background:#211D16;border:1.5px solid #45C4AE"></span>{gettext("visit")}
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#211D16;border:1.5px solid #45C4AE"></span>{gettext(
+          "visit"
+        )}
       </span>
       <span :if={:self in @legend} class="inline-flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full" style="background:#E8622C;opacity:0.85"></span>{gettext("logged by you")}
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#E8622C;opacity:0.85"></span>{gettext(
+          "logged by you"
+        )}
       </span>
       <span :if={:goal in @legend} class="inline-flex items-center gap-1.5">
         <span class="inline-block w-4" style="border-top:2px dashed #E8622C"></span>{gettext("goal")}
       </span>
       <span :if={:band in @legend} class="inline-flex items-center gap-1.5">
-        <span class="inline-block w-3.5 h-2.5 rounded-sm" style="background:rgba(69,196,174,0.18)"></span>{gettext("healthy range")}
+        <span class="inline-block w-3.5 h-2.5 rounded-sm" style="background:rgba(69,196,174,0.18)"></span>{gettext(
+          "healthy range"
+        )}
       </span>
     </div>
     """
@@ -586,7 +622,12 @@ defmodule MehungryWeb.MeasurementChart do
     ~H"""
     <div :if={@comparison} class="mb-5">
       <div class="grid grid-cols-2 gap-3">
-        <figure :for={{label, side} <- [{gettext("Before"), @comparison.before}, {gettext("Now"), @comparison.now}]}>
+        <figure :for={
+          {label, side} <- [
+            {gettext("Before"), @comparison.before},
+            {gettext("Now"), @comparison.now}
+          ]
+        }>
           <button
             type="button"
             phx-click="open_photo"
@@ -624,7 +665,7 @@ defmodule MehungryWeb.MeasurementChart do
   # both sides), reusing the KPI cards' tone/arrow/format rules.
   defp comparison_deltas(%{before: %{entry: before_e}, now: %{entry: now_e}}) do
     Enum.flat_map(metric_keys(), fn key ->
-      atom = String.to_existing_atom(key)
+      atom = metric_atom(key)
       b = Map.get(before_e, atom)
       n = Map.get(now_e, atom)
 

@@ -171,6 +171,21 @@ So a nutrient map is localized once per layer: the web accordion walks a **list*
 nodes (`translate_names/2`); the REST serializer translates the **keyed map**
 (`translate_tree/2`). Both share the one vocabulary in `NutrientLabels`.
 
+## Gate 3 — anthropometric labels (sex + activity level)
+
+`Mehungry.Professionals.Anthropometrics` carries the canonical `sex` /
+`activity_level` values and their English display labels, but the core app has
+no Gettext backend — so **`MehungryWeb.AnthropometricLabels`**
+(`apps/mehungry_web/lib/mehungry_web/components/anthropometric_labels.ex`) is
+the web-side gate, same shape as `NutrientLabels`: one `gettext/1` clause per
+canonical label (extract-discoverable), unknown labels fall through unchanged.
+`sex_label/1` · `activity_label/1` for display, `sex_options/0` ·
+`activity_options/0` for the form selects. Routed through by the client-file
+summary strip and intake form pickers (`ClientDetailComponents`) and the
+read-only record view (`ClientRecord`). Never render `Anthropometrics.sex_label/1` /
+`activity_label/1` (or the raw `sexes()` / `activity_levels()` tuples) directly
+in a template.
+
 ## Adding a new nutrient-rendering or ingredient-search surface
 
 1. **Nutrient breakdown:** render through `NutritionAccordion.nutrition_accordion/1`

@@ -1039,6 +1039,94 @@ defmodule Mehungry.ProfessionalsTest do
     end
   end
 
+  describe "consultation note appointment ownership" do
+    setup do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, record} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Maria Papadaki"
+        })
+
+      %{professional: professional, client: client, record: record}
+    end
+
+    defp appointment_for(professional_id, client_id) do
+      {:ok, appointment} =
+        Professionals.create_appointment(%{
+          professional_id: professional_id,
+          client_id: client_id,
+          scheduled_at: ~N[2026-06-01 10:00:00],
+          title: "Follow-up",
+          status: "accepted"
+        })
+
+      appointment
+    end
+
+    test "links an appointment belonging to this professional and client", ctx do
+      appointment = appointment_for(ctx.professional.id, ctx.client.id)
+
+      assert {:ok, note} =
+               Professionals.create_consultation_note(%{
+                 "professional_client_id" => ctx.record.id,
+                 "visit_date" => "2026-06-01",
+                 "appointment_id" => appointment.id
+               })
+
+      assert note.appointment_id == appointment.id
+    end
+
+    test "rejects another professional's appointment", ctx do
+      other_professional = user_fixture()
+      foreign_appointment = appointment_for(other_professional.id, ctx.client.id)
+
+      assert {:error, changeset} =
+               Professionals.create_consultation_note(%{
+                 "professional_client_id" => ctx.record.id,
+                 "visit_date" => "2026-06-01",
+                 "appointment_id" => foreign_appointment.id
+               })
+
+      assert %{appointment_id: _} = errors_on(changeset)
+    end
+
+    test "rejects the professional's appointment with a different client", ctx do
+      other_client = user_fixture()
+      other_appointment = appointment_for(ctx.professional.id, other_client.id)
+
+      assert {:error, changeset} =
+               Professionals.create_consultation_note(%{
+                 "professional_client_id" => ctx.record.id,
+                 "visit_date" => "2026-06-01",
+                 "appointment_id" => other_appointment.id
+               })
+
+      assert %{appointment_id: _} = errors_on(changeset)
+    end
+
+    test "update cannot relink the note to a foreign appointment", ctx do
+      {:ok, note} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => ctx.record.id,
+          "visit_date" => "2026-06-01"
+        })
+
+      other_professional = user_fixture()
+      foreign_appointment = appointment_for(other_professional.id, ctx.client.id)
+
+      assert {:error, changeset} =
+               Professionals.update_consultation_note(note, %{
+                 "appointment_id" => foreign_appointment.id
+               })
+
+      assert %{appointment_id: _} = errors_on(changeset)
+    end
+  end
+
   describe "upsert_consultation_note_for_appointment/1 (one note per meeting)" do
     setup do
       professional = user_fixture()

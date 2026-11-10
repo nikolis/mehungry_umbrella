@@ -388,6 +388,54 @@ defmodule MehungryApi.HistoryTest do
       assert Repo.get!(IngredientUserMeal, ium.id).nutrients == stored
     end
 
+    test "daily_nutrition_history/3 totals per day with the calendar pipeline, skipping empty days",
+         %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user)
+
+      # Pin a known nutrient tree on the recipe (fixture ingredients carry none),
+      # including a trans-fat leaf nested under Total Fat like the real hierarchy.
+      recipe
+      |> Ecto.Changeset.change(
+        nutrients: %{
+          "Energy" => %{"name" => "Energy", "amount" => 500.0, "measurement_unit" => "kcal"},
+          "Protein" => %{"name" => "Protein", "amount" => 30.0, "measurement_unit" => "g"},
+          "Total Fat" => %{
+            "name" => "Total Fat",
+            "amount" => 20.0,
+            "measurement_unit" => "g",
+            "children" => [
+              %{"name" => "Fatty acids, total trans", "amount" => 0.5, "measurement_unit" => "g"}
+            ]
+          }
+        }
+      )
+      |> Repo.update!()
+
+      # Whole-recipe consumption (consume_portions == servings → fraction 1).
+      rums = [%{recipe_id: recipe.id, consume_portions: recipe.servings, cooking_portions: recipe.servings}]
+
+      # Two meals on Mar 4, one on Mar 6, nothing on Mar 5/7.
+      for dt <- [~N[2026-03-04 08:00:00], ~N[2026-03-04 20:00:00], ~N[2026-03-06 12:00:00]] do
+        user_meal_fixture(%{user_id: user.id, start_dt: dt, recipe_user_meals: rums})
+      end
+
+      # Outside the queried range — must not leak in.
+      user_meal_fixture(%{user_id: user.id, start_dt: ~N[2026-03-10 12:00:00], recipe_user_meals: rums})
+
+      history = History.daily_nutrition_history(user.id, ~D[2026-03-04], ~D[2026-03-07])
+
+      # Ascending, empty days absent (not zero entries), range bound respected.
+      assert Enum.map(history, & &1.date) == [~D[2026-03-04], ~D[2026-03-06]]
+
+      [day4, day6] = history
+      assert day4.energy_kcal == 1000
+      assert day4.protein_g == 60.0
+      assert day4.total_fat_g == 40.0
+      assert day4.trans_fat_g == 1.0
+      assert day6.energy_kcal == 500
+      assert day6.trans_fat_g == 0.5
+    end
+
     # Persists an ingredient carrying one real `IngredientNutrient` (Iron) plus the
     # "gram" unit `gram_unit_ids/0` recognises, so a logged 100 g quantity resolves
     # to a non-empty nutrient tree through the real nutrition engine.

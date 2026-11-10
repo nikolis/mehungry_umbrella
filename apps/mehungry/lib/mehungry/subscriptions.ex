@@ -70,8 +70,23 @@ defmodule Mehungry.Subscriptions do
   paid subscription (no `stripe_subscription_id`).
   """
   def grant_nutritionist(user_id) do
+    grant_tier(user_id, "pro")
+  end
+
+  @doc """
+  Grants a user the consumer "m3hungry_plus" tier manually, without Stripe billing.
+
+  Used by admins to comp Plus access from the user management page. Like
+  `grant_nutritionist/1`, Stripe fields stay untouched so the grant is
+  distinguishable from a paid subscription.
+  """
+  def grant_plus(user_id) do
+    grant_tier(user_id, "m3hungry_plus")
+  end
+
+  defp grant_tier(user_id, tier) do
     upsert_subscription(user_id, %{
-      tier: "pro",
+      tier: tier,
       status: "active",
       period_start: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
     })

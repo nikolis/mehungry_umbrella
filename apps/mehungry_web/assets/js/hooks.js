@@ -981,6 +981,15 @@ Hooks.EnterToSend = {
         if (this.el.form) this.el.form.requestSubmit()
       }
     })
+    // Clear the compose box after submit. The server-side @body is "" before
+    // and after a send, so LiveView emits no diff for this textarea and the
+    // typed text would otherwise linger (inviting a double-send). Deferred a
+    // frame so LiveView serializes the form before the value is wiped.
+    if (this.el.form) {
+      this.el.form.addEventListener("submit", () => {
+        requestAnimationFrame(() => { this.el.value = "" })
+      })
+    }
   }
 }
 

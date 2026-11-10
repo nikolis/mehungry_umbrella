@@ -14,6 +14,11 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
+  @impl true
+  def handle_event("toggle_claims", _, socket) do
+    {:noreply, assign(socket, :show_all_claims, !socket.assigns.show_all_claims)}
+  end
+
   # cancel_comment_reply
   @impl true
   def handle_event("cancel_comment_reply", _, socket) do
@@ -219,6 +224,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     |> Enum.filter(&(&1["level"] in ["high", "source"]))
     |> Enum.sort_by(fn b -> {b["level"] == "source", -(b["percent_nrv"] || 0)} end)
   end
+
+  # Nutrient-dense recipes can carry 10+ claims (the NRV table has 22 entries),
+  # which pushes Ingredients/Method below the fold. Show the strongest
+  # @claims_collapsed_count (sort above guarantees "high in" / top-%NRV first)
+  # behind a "Show all" toggle.
+  @claims_collapsed_count 6
+  defp claims_collapsed_count, do: @claims_collapsed_count
 
   # Whole-number formatting for the at-a-glance macro tiles. RecipeInsight.macros/1
   # always returns numbers (0 when a recipe has no computed nutrition).
@@ -488,9 +500,11 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             </span>
           </div>
 
+          <% visible_claims =
+            if @show_all_claims, do: claims, else: Enum.take(claims, claims_collapsed_count()) %>
           <div>
             <div
-              :for={claim <- claims}
+              :for={claim <- visible_claims}
               class="grid grid-cols-[1fr_auto] sm:grid-cols-[140px_1fr_96px] items-center gap-x-4 gap-y-1.5 py-2.5 border-t border-ink-panel2 last:border-b"
             >
               <span class="font-semibold text-parchment">
@@ -520,6 +534,22 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               </span>
             </div>
           </div>
+
+          <button
+            :if={length(claims) > claims_collapsed_count()}
+            type="button"
+            phx-click="toggle_claims"
+            phx-target={@myself}
+            class="w-full flex items-center justify-center gap-1.5 py-2.5 font-mono text-[0.7rem] tracking-[0.14em] uppercase text-basil hover:text-basil-soft transition-colors"
+          >
+            <%= if @show_all_claims do %>
+              {gettext("Show fewer")}
+              <.icon name="hero-chevron-up" class="w-3.5 h-3.5" />
+            <% else %>
+              {gettext("Show all %{count} claims", count: length(claims))}
+              <.icon name="hero-chevron-down" class="w-3.5 h-3.5" />
+            <% end %>
+          </button>
 
           <p class="text-xs text-parchment-dim mt-4 pt-4 border-t border-dashed border-ink-panel2">
             {gettext(
@@ -719,6 +749,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign_new(:graphic_running, fn -> false end)
       |> assign_new(:graphic_result, fn -> nil end)
       |> assign_new(:graphic_error, fn -> nil end)
+      |> assign_new(:show_all_claims, fn -> false end)
       |> assign(
         :comment,
         get_when_first_exists(assigns.current_user, fn ->

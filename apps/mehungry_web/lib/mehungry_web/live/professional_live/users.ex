@@ -80,14 +80,25 @@ defmodule MehungryWeb.ProfessionalLive.Users do
   end
 
   @impl true
-  def handle_event("revoke_nutritionist", %{"id" => id}, socket) do
+  def handle_event("grant_plus", %{"id" => id}, socket) do
+    user_id = String.to_integer(id)
+    {:ok, sub} = Subscriptions.grant_plus(user_id)
+
+    {:noreply,
+     socket
+     |> update_subscription(user_id, sub)
+     |> put_flash(:info, "Mehungry Plus tier granted.")}
+  end
+
+  @impl true
+  def handle_event("revoke_subscription", %{"id" => id}, socket) do
     user_id = String.to_integer(id)
     {:ok, sub} = Subscriptions.revoke_subscription(user_id)
 
     {:noreply,
      socket
      |> update_subscription(user_id, sub)
-     |> put_flash(:info, "Nutritionist tier revoked.")}
+     |> put_flash(:info, "Subscription revoked.")}
   end
 
   @impl true

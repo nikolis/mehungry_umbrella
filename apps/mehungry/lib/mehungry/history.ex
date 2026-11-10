@@ -201,6 +201,36 @@ defmodule Mehungry.History do
     Enum.map(meals, &format_user_meal(&1, ctx))
   end
 
+  @doc """
+  Per-day nutrition totals from the user's logged meals in the inclusive
+  `start_date..end_date` span, ascending by date — the data series behind the
+  profile progress tab's nutrition overlay chart.
+
+  Days with no logged meals are **skipped** (no zero entries), so a plotted line
+  bridges the gap instead of dipping. One `list_calendar_user_meals/3` range
+  fetch (denormalized-jsonb nutrients, ~constant query count regardless of span),
+  shaped by `format_user_meals/1` and aggregated per day with the exact calendar
+  pipeline (`NutrientUtils.summarize_meals_nutrients/1` →
+  `nutrition_series_summary/1`) so the numbers always match the calendar's.
+
+  Returns `[%{date: ~D[...], energy_kcal:, protein_g:, carbs_g:, sugars_g:,
+  fiber_g:, total_fat_g:, polyunsaturated_fat_g:, monounsaturated_fat_g:,
+  trans_fat_g:}]`. Locale-independent (numbers only).
+  """
+  def daily_nutrition_history(user_id, %Date{} = start_date, %Date{} = end_date) do
+    user_id
+    |> list_calendar_user_meals(start_date, end_date)
+    |> format_user_meals()
+    |> Enum.group_by(&NaiveDateTime.to_date(&1.start_dt))
+    |> Enum.map(fn {date, meals} ->
+      meals
+      |> Mehungry.NutrientUtils.summarize_meals_nutrients()
+      |> Mehungry.NutrientUtils.nutrition_series_summary()
+      |> Map.put(:date, date)
+    end)
+    |> Enum.sort_by(& &1.date, Date)
+  end
+
   # A batched `%{ingredient_id => emoji}` for every logged ingredient in the set,
   # so the calendar cards show a species-aware icon without an N+1 (see
   # `Mehungry.Food.ingredient_icons/1`). Locale-independent — the emoji derives

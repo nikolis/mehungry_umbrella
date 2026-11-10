@@ -46,11 +46,39 @@ each openable read-only.
 
 - **Diary**: one entry per date (re-logging a day updates it) with the tracked
   measurements + a note. Presented newest-first as a diary; the trend chart
-  reads the same entries oldest-first.
-- **Chart**: the shared `MehungryWeb.MeasurementChart` server-SVG dashboard
-  (KPI cards + focused trend). Self-logged points get their own style/legend
-  ("logged by you"); the user's **per-metric goals draw dashed goal lines**
-  (any metric — not just weight).
+  reads the same entries oldest-first. The log form round-trips its in-flight
+  values through an `entry_draft` assign (`validate_entry`) because the photo
+  auto-upload re-renders the form mid-edit — unbound inputs would silently
+  reset and the entry would save empty next to its photo.
+- **Chart**: the Progress tab **leads with a multi-series overlay chart**
+  (`MehungryWeb.ProgressOverlayChart`, server-SVG) plotting the logged body
+  measurements and — toggleable onto the **same diagram** — per-day
+  **nutrition-intake series from the user's logged meals**: Total Fat,
+  Polyunsaturated / Monounsaturated / Trans Fat, Carbohydrates, Sugars, Fiber,
+  Protein, Energy (kcal). Because the series span incompatible units
+  (kg/%/cm/g/kcal), each line is **min–max normalized to its own range** — the
+  plot compares trends, and the legend carries each series' **latest absolute
+  value**; with exactly one series selected the y-axis shows that series' real
+  numbers. Selection is multi-select: the body-metric KPI cards and a
+  "From your logged meals" chip row both toggle series on/off
+  (`toggle_series` event, `MapSet` of keys, default = weight).
+  Nutrition values come from the calendar's exact pipeline
+  (`History.daily_nutrition_history/3` →
+  `list_calendar_user_meals` + `format_user_meals` +
+  `NutrientUtils.summarize_meals_nutrients/nutrition_series_summary` — REST↔
+  LiveView parity, numbers always match the calendar), windowed to the
+  **viewed period's own range** (`started_on` → `ended_on`/today) so meals
+  logged before the period stay off its diagram; a period with no lower bound
+  falls back to a trailing 90-day window. The chart's **date axis is widened
+  to the period's range** too (union with the data — aligned-period history
+  from before `started_on` stays on-plot), so the diagram always spans the
+  whole period. Days with no
+  logged meals are **skipped** (the line bridges the gap — no zero dips).
+  Goal lines/healthy bands don't transfer to a normalized plot: goals stay
+  visible as the header chips, and absolute deltas live in the KPI cards /
+  Before → Now. The nutritionist `ClientDetail` keeps the original
+  single-metric `MeasurementChart` dashboard unchanged (the two modules share
+  geometry constants so `photo_strip` pins align — mirror comments in both).
 - **Photos**: up to 4 per entry. Thumbnails are **pinned under the trend chart
   at their entry's date** (same x-axis math as the SVG), and the period's
   earliest/latest photo-carrying entries render as a **Before → Now**

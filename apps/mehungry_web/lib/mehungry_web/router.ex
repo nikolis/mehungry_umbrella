@@ -401,7 +401,6 @@ defmodule MehungryWeb.Router do
       # Legacy roster path — the Records page folded into Clients; redirect bookmarks.
       live("/records", NutritionistLive.Clients, :legacy_redirect)
       live("/records/:id", NutritionistLive.ClientRecord, :show)
-      live("/records/:id/edit", NutritionistLive.ClientRecordEditor, :edit)
       live("/clients/:id", NutritionistLive.ClientDetail, :show)
       live("/clients/:id/calendar", NutritionistLive.ClientCalendar, :index)
       live("/clients/:id/calendar/edit/:meal_id", NutritionistLive.ClientCalendar, :edit)

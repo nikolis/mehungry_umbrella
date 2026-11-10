@@ -73,6 +73,12 @@ defmodule Mehungry.NutrientUtils do
     "total polyunsaturated fatty acids" => "Polyunsaturated Fat",
     "pufa" => "Polyunsaturated Fat",
 
+    # Trans Fat variations
+    "trans fat" => "Trans Fat",
+    "fatty acids, total trans" => "Trans Fat",
+    "total trans fatty acids" => "Trans Fat",
+    "trans fatty acids" => "Trans Fat",
+
     # Cholesterol variations
     "cholesterol" => "Cholesterol",
     "total cholesterol" => "Cholesterol",
@@ -522,6 +528,31 @@ defmodule Mehungry.NutrientUtils do
       fiber_g: macro_nested_g(total_nutrients, "Fiber", amount.(:fiber)),
       sodium_mg: nutrient_grams(total_nutrients, "Sodium") |> Kernel.*(1000) |> round(),
       saturated_fat_g: nutrient_grams(total_nutrients, "Saturated Fat") |> Float.round(1)
+    }
+  end
+
+  @doc """
+  The per-day values the progress nutrition overlay charts: `macro_summary/1`'s
+  macros plus the three fat subtypes (poly/mono/trans), which nest under
+  `Total Fat` in the hierarchy and are resolved the same way saturated fat is
+  (`find_nutrient/2` tree walk + gram conversion). Every key is present; absent
+  nutrients read `0.0`.
+  """
+  def nutrition_series_summary(total_nutrients) do
+    base = macro_summary(total_nutrients)
+
+    %{
+      energy_kcal: base.energy_kcal,
+      protein_g: base.protein_g,
+      carbs_g: base.carbs_g,
+      sugars_g: base.sugars_g,
+      fiber_g: base.fiber_g,
+      total_fat_g: base.fat_g,
+      polyunsaturated_fat_g:
+        nutrient_grams(total_nutrients, "Polyunsaturated Fat") |> Float.round(1),
+      monounsaturated_fat_g:
+        nutrient_grams(total_nutrients, "Monounsaturated Fat") |> Float.round(1),
+      trans_fat_g: nutrient_grams(total_nutrients, "Trans Fat") |> Float.round(1)
     }
   end
 

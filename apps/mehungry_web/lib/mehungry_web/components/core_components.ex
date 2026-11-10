@@ -849,7 +849,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :patch, :string, default: nil
   attr :href, :string, default: nil
   attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(type disabled name value form)
+  attr :rest, :global, include: ~w(type disabled name value form onclick)
   slot :inner_block, required: true
 
   def action(assigns) do
@@ -1943,7 +1943,9 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   defp nutritionist_fee_label(cents) when is_integer(cents) do
-    gettext("%{amount} / session", amount: "€" <> :erlang.float_to_binary(cents / 100, decimals: 2))
+    gettext("%{amount} / session",
+      amount: "€" <> :erlang.float_to_binary(cents / 100, decimals: 2)
+    )
   end
 
   defp nutritionist_fee_label(_), do: nil
@@ -1959,7 +1961,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :messages, :list, required: true
   attr :current_user_id, :integer, required: true
   attr :body, :string, default: ""
-  attr :placeholder, :string, default: "Write a message…"
+  attr :placeholder, :string, default: nil
   attr :height_class, :string, default: "max-h-96"
 
   attr :target, :any,
@@ -1971,7 +1973,9 @@ defmodule MehungryWeb.CoreComponents do
     <div>
       <div class={["overflow-y-auto pr-1 space-y-2", @height_class]}>
         <%= if Enum.empty?(@messages) do %>
-          <p class="text-parchment-dim text-sm py-6 text-center">No messages yet. Say hello 👋</p>
+          <p class="text-parchment-dim text-sm py-6 text-center">
+            {gettext("No messages yet. Say hello 👋")}
+          </p>
         <% else %>
           <%= for message <- @messages do %>
             <% mine = message.sender_user_id == @current_user_id %>
@@ -1999,10 +2003,10 @@ defmodule MehungryWeb.CoreComponents do
           phx-hook="EnterToSend"
           name="body"
           rows="2"
-          placeholder={@placeholder}
+          placeholder={@placeholder || gettext("Write a message…")}
           class="flex-1 bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm placeholder-parchment-dim focus:outline-none focus:border-paprika"
         >{@body}</textarea>
-        <.action variant={:primary} size={:sm} type="submit">Send</.action>
+        <.action variant={:primary} size={:sm} type="submit">{gettext("Send")}</.action>
       </form>
     </div>
     """

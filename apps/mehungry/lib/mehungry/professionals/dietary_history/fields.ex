@@ -4,7 +4,7 @@ defmodule Mehungry.Professionals.DietaryHistory.Fields do
   human labels, in display order.
 
   Both the read-only record view (`MehungryWeb.NutritionistLive.ClientRecord`) and
-  the manual editor (`MehungryWeb.NutritionistLive.ClientRecordEditor`) render
+  the client-file intake form (`MehungryWeb.NutritionistLive.ClientDetail`) render
   from these lists, and the keys line up with what `DietaryHistory.CsvParser`
   routes into `details` / `details["recall_24h"]`, so an imported record and a
   hand-authored one carry the same shape.
@@ -64,8 +64,30 @@ defmodule Mehungry.Professionals.DietaryHistory.Fields do
     {"fruit_intake", "Fruit intake", "Κατανάλωση φρούτων"}
   ]
 
+  # Lifecycle grouping of the questionnaire keys for the client-file display:
+  # `:flags` are the safety-critical facts kept always visible (chip row);
+  # the rest render as collapsible sections. Every key in `@detail_labels`
+  # MUST be assigned to exactly one group (unit-tested) — when adding a new
+  # questionnaire key, add it to a group here too. Group titles are web-side
+  # gettext (the group keys are the contract).
+  @detail_groups [
+    flags: ~w(allergies food_intolerances food_aversions medications),
+    medical:
+      ~w(gi_function blood_biochem thyroid_tests gynecological_history hereditary_conditions family_weight_history),
+    lifestyle:
+      ~w(alcohol fluids smoking sleep physical_activity special_eating_habits unconscious_eating emotional_overeating overconsumption),
+    story:
+      ~w(reason_for_visit reason_justification marital_status milestone_events weight_fluctuations past_attempts expectations_assessment observations notes)
+  ]
+
   @doc "Questionnaire `details` keys with English labels, in display order."
   def detail_labels, do: Enum.map(@detail_labels, fn {k, en, _el} -> {k, en} end)
+
+  @doc """
+  Lifecycle grouping of the questionnaire keys — `[{group_key, [detail_key]}]`
+  in display order (`:flags`, `:medical`, `:lifestyle`, `:story`).
+  """
+  def detail_groups, do: @detail_groups
 
   @doc "24-hour recall keys with English labels, in display order."
   def recall_labels, do: Enum.map(@recall_labels, fn {k, en, _el} -> {k, en} end)

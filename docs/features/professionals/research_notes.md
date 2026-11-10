@@ -148,7 +148,7 @@ condition." Two things to resolve before building this:
 1. **Prerequisite — ✅ RESOLVED (2026-10-27): the structured `client ↔ Health.Condition` link now
    exists.** A `ProfessionalClient` can be linked to several existing `Health.Condition`s via the
    `professional_client_conditions` join (`Mehungry.Professionals.ClientCondition`,
-   `many_to_many :conditions`), recorded nutritionist-only in the client record editor — see
+   `many_to_many :conditions`), recorded nutritionist-only on the client Overview — see
    [`client_records.md`](client_records.md) § Health conditions. Phase 3 can now join a client's
    linked conditions against this nutritionist's `research_notes` (`notes_for_user_and_condition/2`)
    directly, rather than resolving the intake's free-text conditions. *(The free-text
@@ -194,7 +194,7 @@ condition." Two things to resolve before building this:
   `ResearchNotes.suggested_attrs_from_claim/3`.
 - **Phase 3 — client surfacing. ✅ FIRST SURFACE SHIPPED 2026-10-27.** §6.1 is resolved (the
   `professional_client_conditions` link — see [`client_records.md`](client_records.md)). A
-  nutritionist assigns a client's conditions from the **User Overview** (and the record editor),
+  nutritionist assigns a client's conditions from the **User Overview**,
   and each condition chip deep-links to the condition-scoped "My notes"
   (`/nutritionist/research/notes?condition_id=<id>`, §3c). Richer surfaces (inline overview panel,
   consultation-note composer suggestions) remain open (§6.2).

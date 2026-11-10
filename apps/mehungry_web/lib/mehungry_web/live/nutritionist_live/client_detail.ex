@@ -50,20 +50,29 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         meal_plans = PlansCtx.list_meal_plans_for_user(client_id_int)
         record = Professionals.get_client_record_by_user(professional_id, client_id_int)
 
-        # Opening the thread reads the client's messages.
-        Professionals.mark_thread_read(professional_id, client_id_int, professional_id)
+        # Deliberately NOT marked read here: opening the client file to check a
+        # weight must not tell the client "seen". The thread is marked read only
+        # when the nutritionist actually opens the Messages tab (handle_params).
         messages = Professionals.list_messages(professional_id, client_id_int)
+
+        unread_count =
+          Professionals.count_unread_in_thread(professional_id, client_id_int, professional_id)
+
+        # Re-mounting mid-draft (e.g. a reconnect) should resume the running
+        # state, not flash the idle form.
+        ai_running? = NutritionistAgentWorker.running?(professional_id, client_id_int)
 
         {:ok,
          socket
          |> assign(:client, client)
          |> assign(:client_id, client_id_int)
          |> assign(:appointments, appointments)
+         |> assign(:next_session, next_session(appointments))
          |> assign(:ratings, ratings)
          |> assign(:meal_plans, meal_plans)
          |> assign(:page_title, gettext("Client: %{name}", name: client.name || client.email))
-         |> assign(:ai_running, false)
-         |> assign(:ai_steps, [])
+         |> assign(:ai_running, ai_running?)
+         |> assign(:ai_steps, if(ai_running?, do: [gettext("Drafting in progress…")], else: []))
          |> assign(:ai_result, nil)
          |> assign(:ai_error, nil)
          |> assign(:ai_preferences, "")
@@ -74,6 +83,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:all_conditions, Health.list_conditions())
          |> assign(:show_visit_form, false)
          |> assign(:visit_form, nil)
+         |> assign(:editing_visit, nil)
+         |> assign(:show_client_form, false)
+         |> assign(:client_form, nil)
          |> assign(:intake_editing?, false)
          |> assign(:intake_form, nil)
          |> assign(:plan_options, load_plan_options(professional_id))
@@ -81,6 +93,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:assign_confirm_msg, nil)
          |> assign(:messages, messages)
          |> assign(:message_body, "")
+         |> assign(:unread_count, unread_count)
+         |> assign(:messages_visible?, false)
+         |> assign(:tab, "overview")
+         |> assign(:goal_editing?, false)
+         |> assign(:reference_visit, nil)
+         |> assign(:plan_preview, nil)
          |> load_intake()
          |> load_visits()
          |> load_weight_history()
@@ -88,6 +106,37 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign_summary()}
     end
   end
+
+  @valid_tabs ~w(overview record messages planning)
+
+  # The client file is organised into tabs (`?tab=`), each a distinct job:
+  # overview (today's work), record (the clinical file), messages, planning.
+  # Opening the Messages tab is the read receipt — the one honest signal that
+  # the nutritionist actually looked at the thread (never fired just by loading
+  # the file on another tab).
+  @impl true
+  def handle_params(params, _uri, socket) do
+    tab = if params["tab"] in @valid_tabs, do: params["tab"], else: "overview"
+    {:noreply, apply_tab(socket, tab)}
+  end
+
+  # Opening the Messages tab is the read receipt — but only on a live socket,
+  # never the disconnected HTTP render / link-prefetch / reconnect reload, or it
+  # would mark the thread "seen" with no real presence. The write is also skipped
+  # when nothing is unread.
+  defp apply_tab(socket, "messages") do
+    socket = assign(socket, tab: "messages", messages_visible?: true)
+
+    if connected?(socket) and socket.assigns.unread_count > 0 do
+      professional_id = socket.assigns.current_user.id
+      Professionals.mark_thread_read(professional_id, socket.assigns.client_id, professional_id)
+      assign(socket, :unread_count, 0)
+    else
+      socket
+    end
+  end
+
+  defp apply_tab(socket, tab), do: assign(socket, tab: tab, messages_visible?: false)
 
   # ── AI Assist events ──────────────────────────────────────────────────────────
 
@@ -181,13 +230,18 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     end
   end
 
-  # Open the full dietary-history editor, creating the record first if needed —
-  # the platform user is implied by the client being viewed, so there is no picker.
+  # ── Client details (record PII) ─────────────────────────────────────────────────
+
+  # Edit the record's PII in place, creating the record first if needed — the
+  # platform user is implied by the client being viewed, so there is no picker.
   @impl true
-  def handle_event("open_full_record", _params, socket) do
+  def handle_event("edit_client_details", _params, socket) do
     case ensure_record(socket) do
       {:ok, socket, record} ->
-        {:noreply, push_navigate(socket, to: ~p"/nutritionist/records/#{record.id}/edit")}
+        {:noreply,
+         socket
+         |> assign(:show_client_form, true)
+         |> assign(:client_form, to_form(Professionals.change_client_record(record), as: :client))}
 
       {:error, reason} ->
         Logger.error("Could not open client record: #{inspect(reason)}")
@@ -197,16 +251,49 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     end
   end
 
+  @impl true
+  def handle_event("validate_client_details", %{"client" => params}, socket) do
+    changeset =
+      socket.assigns.record
+      |> Professionals.change_client_record(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :client_form, to_form(changeset, as: :client))}
+  end
+
+  @impl true
+  def handle_event("save_client_details", %{"client" => params}, socket) do
+    case Professionals.update_client_record(socket.assigns.record, params) do
+      {:ok, record} ->
+        {:noreply,
+         socket
+         |> assign(:record, record)
+         |> assign(:show_client_form, false)
+         |> put_flash(:info, gettext("Client saved."))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :client_form, to_form(changeset, as: :client))}
+    end
+  end
+
+  @impl true
+  def handle_event("cancel_client_details", _params, socket) do
+    {:noreply, assign(socket, :show_client_form, false)}
+  end
+
   # ── Assign a saved plan to THIS client's calendar ───────────────────────────────
 
-  # Recompute the destructive-confirm message as the chosen week changes: the
-  # confirm only fires when that week actually has meals to replace.
+  # As the chosen plan/week changes, recompute two previews: the destructive
+  # confirm (only when that week already has meals to replace) and the 7-day
+  # meal digest, so the nutritionist sees what they're about to lay down before
+  # a replace — not a blind pick.
   @impl true
   def handle_event("preview_assign", %{"assign" => params}, socket) do
     {:noreply,
      socket
      |> assign(:assign_plan_form, to_form(params, as: :assign))
-     |> assign_plan_preview(params["start_date"])}
+     |> assign_plan_preview(params["start_date"])
+     |> assign_plan_digest(params["plan_id"])}
   end
 
   @impl true
@@ -224,6 +311,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       {:noreply,
        socket
        |> assign(:assign_plan_form, new_assign_plan_form())
+       |> assign(:plan_preview, nil)
        |> assign_plan_preview(Date.utc_today())
        |> put_flash(:info, assign_plan_message(created, skipped, deleted, client))}
     else
@@ -239,11 +327,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   @impl true
   def handle_event("new_visit", _params, socket) do
-    next_number = length(socket.assigns.visits) + 1
-
     changeset =
       Professionals.change_consultation_note(%ConsultationNote{
-        visit_number: next_number,
+        visit_number: next_visit_number(socket.assigns.visits),
         visit_date: Date.utc_today(),
         modality: "in_person"
       })
@@ -251,18 +337,56 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     {:noreply,
      socket
      |> assign(:show_visit_form, true)
+     |> assign(:editing_visit, nil)
+     |> assign(:reference_visit, reference_visit(socket.assigns.visits, nil))
      |> assign_visit_form(changeset)}
+  end
+
+  # Reopen an existing visit in the same modal, prefilled. The note is looked up
+  # in the already-loaded (ownership-scoped) list, so a forged id is a no-op.
+  @impl true
+  def handle_event("edit_visit", %{"id" => id}, socket) do
+    case find_visit(socket, id) do
+      nil ->
+        {:noreply, socket}
+
+      note ->
+        {:noreply,
+         socket
+         |> assign(:show_visit_form, true)
+         |> assign(:editing_visit, note)
+         |> assign(:reference_visit, reference_visit(socket.assigns.visits, note))
+         |> assign_visit_form(Professionals.change_consultation_note(note))}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_visit", %{"id" => id}, socket) do
+    case find_visit(socket, id) do
+      nil ->
+        {:noreply, socket}
+
+      note ->
+        {:ok, _} = Professionals.delete_consultation_note(note)
+
+        {:noreply,
+         socket
+         |> load_visits()
+         |> load_weight_history()
+         |> assign_summary()
+         |> put_flash(:info, gettext("Visit deleted."))}
+    end
   end
 
   @impl true
   def handle_event("cancel_visit", _params, socket) do
-    {:noreply, assign(socket, :show_visit_form, false)}
+    {:noreply, socket |> assign(:show_visit_form, false) |> assign(:editing_visit, nil)}
   end
 
   @impl true
   def handle_event("validate_visit", %{"consultation_note" => params} = payload, socket) do
     changeset =
-      %ConsultationNote{}
+      (socket.assigns.editing_visit || %ConsultationNote{})
       |> Professionals.change_consultation_note(params)
       |> Map.put(:action, :validate)
       |> prefill_from_appointment(payload["_target"], socket.assigns.appointments)
@@ -272,29 +396,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   @impl true
   def handle_event("save_visit", %{"consultation_note" => params}, socket) do
-    case ensure_record(socket) do
-      {:ok, socket, record} ->
-        attrs = Map.put(params, "professional_client_id", record.id)
-
-        case Professionals.create_consultation_note(attrs) do
-          {:ok, _note} ->
-            {:noreply,
-             socket
-             |> assign(:show_visit_form, false)
-             |> load_visits()
-             |> load_weight_history()
-             |> assign_summary()
-             |> put_flash(:info, gettext("Visit recorded."))}
-
-          {:error, changeset} ->
-            {:noreply, assign_visit_form(socket, changeset)}
-        end
-
-      {:error, reason} ->
-        Logger.error("Could not save visit: #{inspect(reason)}")
-
-        {:noreply,
-         put_flash(socket, :error, gettext("Could not save the visit. Please try again."))}
+    case socket.assigns.editing_visit do
+      nil -> create_visit(params, socket)
+      note -> update_visit(note, params, socket)
     end
   end
 
@@ -323,10 +427,14 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   def handle_event("edit_intake", _params, socket) do
     case ensure_record(socket) do
       {:ok, socket, record} ->
-        intake = socket.assigns.intake || %ClientIntake{professional_client_id: record.id}
+        # Edit always targets the latest assessment, never a browsed historical
+        # row — so the form (which reads `@intake`) is pointed back at it.
+        intake = socket.assigns.latest_intake || %ClientIntake{professional_client_id: record.id}
 
         {:noreply,
          socket
+         |> assign(:intake, intake)
+         |> assign(:selected_intake_id, intake.id)
          |> assign(:intake_editing?, true)
          |> assign(:intake_form, to_form(new_intake_changeset(intake, record), as: :intake))}
 
@@ -349,9 +457,52 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     {:noreply, assign(socket, :intake_form, to_form(changeset, as: :intake))}
   end
 
+  # Start a NEW assessment: a fresh intake dated today, prefilled from the latest
+  # so the nutritionist adjusts what changed rather than re-entering a stable
+  # history. `@intake` has no id → `save_intake` creates a second assessment,
+  # keeping the prior one as history.
+  @impl true
+  def handle_event("new_assessment", _params, socket) do
+    case ensure_record(socket) do
+      {:ok, socket, record} ->
+        fresh = prefilled_assessment(socket.assigns.latest_intake, record)
+
+        {:noreply,
+         socket
+         |> assign(:intake, fresh)
+         |> assign(:selected_intake_id, nil)
+         |> assign(:intake_editing?, true)
+         |> assign(:intake_form, to_form(Professionals.change_intake(fresh), as: :intake))}
+
+      {:error, reason} ->
+        Logger.error("Could not start a new assessment: #{inspect(reason)}")
+
+        {:noreply,
+         put_flash(socket, :error, gettext("Could not start a new assessment. Please try again."))}
+    end
+  end
+
+  # View a past assessment read-only (only the latest is editable).
+  @impl true
+  def handle_event("select_assessment", %{"id" => id}, socket) do
+    id = String.to_integer(to_string(id))
+
+    case Enum.find(socket.assigns.intakes, &(&1.id == id)) do
+      nil ->
+        {:noreply, socket}
+
+      intake ->
+        {:noreply,
+         socket
+         |> assign(:intake_editing?, false)
+         |> assign(:intake, intake)
+         |> assign(:selected_intake_id, id)}
+    end
+  end
+
   @impl true
   def handle_event("cancel_intake", _params, socket) do
-    {:noreply, assign(socket, :intake_editing?, false)}
+    {:noreply, socket |> assign(:intake_editing?, false) |> load_intake()}
   end
 
   @impl true
@@ -370,11 +521,11 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
           end
 
         case result do
-          {:ok, intake} ->
+          {:ok, _intake} ->
             {:noreply,
              socket
-             |> assign(:intake, intake)
              |> assign(:intake_editing?, false)
+             |> load_intake()
              |> load_weight_history()
              |> assign_summary()
              |> put_flash(:info, gettext("Dietary history saved."))}
@@ -393,6 +544,120 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
            gettext("Could not save the dietary history. Please try again.")
          )}
     end
+  end
+
+  # ── Inline goal edit (summary strip) ────────────────────────────────────────────
+
+  # The goal is one sentence — editing it inline on its summary card beats
+  # opening the whole 40-field intake form. Saves onto the latest intake,
+  # lazily creating the record (and a goal-only intake) on first use.
+  @impl true
+  def handle_event("edit_goal", _params, socket) do
+    {:noreply, assign(socket, :goal_editing?, true)}
+  end
+
+  @impl true
+  def handle_event("cancel_goal", _params, socket) do
+    {:noreply, assign(socket, :goal_editing?, false)}
+  end
+
+  @impl true
+  def handle_event("save_goal", %{"goal" => goal}, socket) do
+    with {:ok, socket, record} <- ensure_record(socket),
+         {:ok, _intake} <- upsert_goal(socket.assigns.latest_intake, record, goal) do
+      {:noreply,
+       socket
+       |> assign(:goal_editing?, false)
+       |> load_intake()
+       |> assign_summary()
+       |> put_flash(:info, gettext("Goal saved."))}
+    else
+      {:error, reason} ->
+        Logger.error("Could not save goal: #{inspect(reason)}")
+        {:noreply, put_flash(socket, :error, gettext("Could not save the goal. Please try again."))}
+    end
+  end
+
+  defp upsert_goal(%ClientIntake{id: id} = intake, _record, goal) when not is_nil(id),
+    do: Professionals.update_intake(intake, %{"goal" => goal})
+
+  defp upsert_goal(_intake, record, goal),
+    do: Professionals.create_intake(%{"goal" => goal, "professional_client_id" => record.id})
+
+  defp create_visit(params, socket) do
+    case ensure_record(socket) do
+      {:ok, socket, record} ->
+        attrs = Map.put(params, "professional_client_id", record.id)
+
+        case Professionals.create_consultation_note(attrs) do
+          {:ok, _note} ->
+            {:noreply,
+             socket
+             |> close_visit_form()
+             |> put_flash(:info, gettext("Visit recorded."))}
+
+          {:error, changeset} ->
+            {:noreply, assign_visit_form(socket, changeset)}
+        end
+
+      {:error, reason} ->
+        Logger.error("Could not save visit: #{inspect(reason)}")
+
+        {:noreply,
+         put_flash(socket, :error, gettext("Could not save the visit. Please try again."))}
+    end
+  end
+
+  defp update_visit(note, params, socket) do
+    case Professionals.update_consultation_note(note, params) do
+      {:ok, _note} ->
+        {:noreply,
+         socket
+         |> close_visit_form()
+         |> put_flash(:info, gettext("Visit updated."))}
+
+      {:error, changeset} ->
+        {:noreply, assign_visit_form(socket, changeset)}
+    end
+  end
+
+  defp close_visit_form(socket) do
+    socket
+    |> assign(:show_visit_form, false)
+    |> assign(:editing_visit, nil)
+    |> load_visits()
+    |> load_weight_history()
+    |> assign_summary()
+  end
+
+  defp find_visit(socket, id) do
+    id = String.to_integer(to_string(id))
+    Enum.find(socket.assigns.visits, &(&1.id == id))
+  end
+
+  # Highest existing number + 1, not count + 1 — deleting a middle visit must
+  # never produce a duplicate "Visit N" (the numbers are the nutritionist's own
+  # vocabulary: "as we discussed in visit 3…").
+  defp next_visit_number(visits) do
+    visits
+    |> Enum.map(& &1.visit_number)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(fn -> 0 end)
+    |> Kernel.+(1)
+  end
+
+  # The visit shown as reference beside the form: the latest visit when
+  # creating, the latest *earlier* visit when editing — the comparison is
+  # against what came before, never the visit being edited.
+  defp reference_visit(visits, nil), do: newest_visit(visits)
+
+  defp reference_visit(visits, editing) do
+    edited_date = editing.visit_date || ~D[9999-12-31]
+
+    visits
+    |> Enum.reject(&(&1.id == editing.id))
+    |> Enum.filter(&(Date.compare(&1.visit_date || ~D[0001-01-01], edited_date) != :gt))
+    |> newest_visit()
   end
 
   # Lazily create the client's ProfessionalClient record on the first visit.
@@ -424,19 +689,28 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   end
 
   # When the nutritionist picks an appointment this visit corresponds to, stamp
-  # the visit date from it (only on the appointment-field change, so an edited
-  # date is never clobbered). Appointments are already scoped to this
-  # professional+client, so only a legitimately-owned appointment can be linked.
+  # the visit date (and modality, when the appointment implies one) from it —
+  # only on the appointment-field change, so an edited value is never clobbered.
+  # Appointments are already scoped to this professional+client, so only a
+  # legitimately-owned appointment can be linked.
   defp prefill_from_appointment(changeset, ["consultation_note", "appointment_id"], appointments) do
     with id when not is_nil(id) <- Ecto.Changeset.get_field(changeset, :appointment_id),
-         %{scheduled_at: %NaiveDateTime{} = at} <- Enum.find(appointments, &(&1.id == id)) do
-      Ecto.Changeset.put_change(changeset, :visit_date, NaiveDateTime.to_date(at))
+         %{scheduled_at: %NaiveDateTime{} = at} = appt <- Enum.find(appointments, &(&1.id == id)) do
+      changeset
+      |> Ecto.Changeset.put_change(:visit_date, NaiveDateTime.to_date(at))
+      |> prefill_modality(appt)
     else
       _ -> changeset
     end
   end
 
   defp prefill_from_appointment(changeset, _target, _appointments), do: changeset
+
+  # An appointment carrying a meeting link is an online consult.
+  defp prefill_modality(changeset, %{meeting_url: url}) when is_binary(url) and url != "",
+    do: Ecto.Changeset.put_change(changeset, :modality, "online")
+
+  defp prefill_modality(changeset, _appointment), do: changeset
 
   # Select options for every importable (status "completed") plan the
   # nutritionist owns, labelled "Blueprint — Plan", newest plan first.
@@ -492,6 +766,39 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     assign(socket, :assign_confirm_msg, msg)
   end
 
+  # The 7-day meal digest for the chosen plan — `[%{day, items: [%{meal_type,
+  # title}]}]` — so the nutritionist sees what a plan lays down before replacing
+  # a week. Owner-scoped (`safe_get_plan`); nil clears the preview.
+  defp assign_plan_digest(socket, plan_id) do
+    professional_id = socket.assigns.current_user.id
+
+    digest =
+      with {id, ""} <- Integer.parse(plan_id || ""),
+           %_{} = plan <- safe_get_plan(professional_id, id) do
+        build_plan_digest(plan.id)
+      else
+        _ -> nil
+      end
+
+    assign(socket, :plan_preview, digest)
+  end
+
+  defp build_plan_digest(plan_id) do
+    MealBlueprints.list_plan_meals(plan_id)
+    |> Enum.group_by(& &1.day_index)
+    |> Enum.sort_by(fn {day, _meals} -> day end)
+    |> Enum.map(fn {day, meals} ->
+      %{day: day, items: Enum.map(meals, &%{meal_type: &1.meal_type, title: plan_meal_title(&1)})}
+    end)
+  end
+
+  defp plan_meal_title(%{recipe: %{title: title}}) when is_binary(title), do: title
+
+  defp plan_meal_title(%{ingredients: [%{ingredient: %{name: name}} | _]}) when is_binary(name),
+    do: name
+
+  defp plan_meal_title(_), do: gettext("—")
+
   defp parse_date(%Date{} = date), do: {:ok, date}
   defp parse_date(str) when is_binary(str), do: Date.from_iso8601(str)
   defp parse_date(_), do: :error
@@ -518,14 +825,27 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   defp assign_visit_form(socket, changeset),
     do: assign(socket, :visit_form, to_form(changeset))
 
+  # Loads every assessment (newest first) and selects the latest for display.
+  # The summary/progress still read `@intake` (the latest); `@intakes` drives the
+  # assessment-history switcher.
   defp load_intake(socket) do
-    intake =
+    intakes =
       case socket.assigns.record do
-        nil -> nil
-        record -> Professionals.get_latest_intake(record.id)
+        nil -> []
+        record -> Professionals.list_intakes(record.id)
       end
 
-    assign(socket, :intake, intake)
+    latest = List.first(intakes)
+
+    socket
+    |> assign(:intakes, intakes)
+    # `@latest_intake` is the current clinical picture — it drives the Overview
+    # (summary, inline goal, new-assessment prefill) and never changes to a
+    # browsed historical row. `@intake` is the display/edit focus on the Record
+    # tab (defaults to latest; `select_assessment` points it at an older one).
+    |> assign(:latest_intake, latest)
+    |> assign(:intake, latest)
+    |> assign(:selected_intake_id, latest && latest.id)
   end
 
   # Loads the client's full body-measurement history + intake reference values and
@@ -594,14 +914,22 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   # new queries. Call after anything that changes intake / visits / measurements.
   defp assign_summary(socket) do
     a = socket.assigns
+    last_visit = newest_visit(a.visits)
+    # Always the latest assessment — never a historical row browsed on the
+    # Record tab (that is `@intake`).
+    li = a.latest_intake
 
     summary = %{
-      goal: a.intake && a.intake.goal,
+      goal: li && li.goal,
       weight_card: Enum.find(a.progress_cards, &(&1.key == "weight_kg")),
-      ideal_weight_kg: a.intake && a.intake.ideal_weight_kg,
-      bmi: a.intake && a.intake.bmi,
+      ideal_weight_kg: li && li.ideal_weight_kg,
+      bmi: li && li.bmi,
       bmi_band: MeasurementChart.band(a.measurement_context, "bmi"),
-      last_visit: newest_visit(a.visits)
+      last_visit: last_visit,
+      # The agreed follow-ups from the last visit — the single most useful
+      # pre-session fact, so it earns a card instead of hiding in the timeline.
+      next_steps: last_visit && last_visit.todo,
+      intake: li
     }
 
     assign(socket, :summary, summary)
@@ -611,6 +939,24 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   defp newest_visit(visits),
     do: Enum.max_by(visits, &(&1.visit_date || ~D[0001-01-01]), Date, fn -> nil end)
+
+  # The appointment the session ribbon highlights: the soonest accepted one
+  # that is still ahead and within the next ~48h — "you have Maria shortly".
+  # Derived from the already-loaded appointment list, no extra query.
+  @session_window_hours 48
+  defp next_session(appointments) do
+    now = NaiveDateTime.utc_now()
+    horizon = NaiveDateTime.add(now, @session_window_hours * 3600, :second)
+
+    appointments
+    |> Enum.filter(fn a ->
+      a.status in ["accepted", "confirmed"] and
+        match?(%NaiveDateTime{}, a.scheduled_at) and
+        NaiveDateTime.compare(a.scheduled_at, now) != :lt and
+        NaiveDateTime.compare(a.scheduled_at, horizon) != :gt
+    end)
+    |> Enum.min_by(& &1.scheduled_at, NaiveDateTime, fn -> nil end)
+  end
 
   # ── PubSub messages ───────────────────────────────────────────────────────────
 
@@ -643,15 +989,34 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
      |> assign(:ai_error, reason)}
   end
 
-  # A new message in the thread currently open: append it and (since the
-  # nutritionist is looking) mark the client's messages read.
+  # A new message in this thread: append it, then mark it read only if the
+  # Messages tab is the one currently open — otherwise it counts as unread and
+  # lights the badge (the client's read receipt stays honest).
   def handle_info({:assignment_message, %{client_id: cid} = message}, socket) do
-    if cid == socket.assigns.client_id do
-      professional_id = socket.assigns.current_user.id
-      Professionals.mark_thread_read(professional_id, cid, professional_id)
-      {:noreply, assign(socket, :messages, append_message(socket.assigns.messages, message))}
-    else
-      {:noreply, socket}
+    professional_id = socket.assigns.current_user.id
+
+    cond do
+      cid != socket.assigns.client_id ->
+        {:noreply, socket}
+
+      message.sender_user_id == professional_id ->
+        # Echo of the nutritionist's own send (already appended optimistically).
+        {:noreply, assign(socket, :messages, append_message(socket.assigns.messages, message))}
+
+      socket.assigns.messages_visible? ->
+        Professionals.mark_thread_read(professional_id, cid, professional_id)
+        {:noreply, assign(socket, :messages, append_message(socket.assigns.messages, message))}
+
+      # Already in the list — it was counted at mount (a message that raced the
+      # subscribe/count window); appending is a no-op and must NOT re-increment.
+      Enum.any?(socket.assigns.messages, &(&1.id == message.id)) ->
+        {:noreply, socket}
+
+      true ->
+        {:noreply,
+         socket
+         |> assign(:messages, socket.assigns.messages ++ [message])
+         |> update(:unread_count, &(&1 + 1))}
     end
   end
 
@@ -682,6 +1047,32 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     else
       changeset
     end
+  end
+
+  # A fresh assessment carried forward from the latest: a new row (id nil) dated
+  # today, copying the stable picture (anthropometrics, goal, questionnaire) so
+  # the nutritionist edits the deltas. No prior intake → a blank one.
+  defp prefilled_assessment(nil, record),
+    do: %ClientIntake{professional_client_id: record.id, assessed_on: Date.utc_today()}
+
+  defp prefilled_assessment(%ClientIntake{} = latest, record) do
+    %ClientIntake{
+      professional_client_id: record.id,
+      assessed_on: Date.utc_today(),
+      height_m: latest.height_m,
+      weight_kg: latest.weight_kg,
+      bmi: latest.bmi,
+      usual_weight_kg: latest.usual_weight_kg,
+      ideal_weight_kg: latest.ideal_weight_kg,
+      adjusted_weight_kg: latest.adjusted_weight_kg,
+      bmr_kcal: latest.bmr_kcal,
+      tdee_kcal: latest.tdee_kcal,
+      sex: latest.sex,
+      age: latest.age,
+      activity_level: latest.activity_level,
+      goal: latest.goal,
+      details: latest.details || %{}
+    }
   end
 
   # New intake: prefill `age` from the client record's date of birth when known.
@@ -718,81 +1109,101 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   def render(assigns) do
     ~H"""
     <main class="max-w-6xl mx-auto">
-      <.client_header client={@client} client_id={@client_id} />
+      <.client_header client={@client} client_id={@client_id} unread_count={@unread_count} />
 
-      <.client_summary summary={@summary} />
+      <.client_tabs tab={@tab} client_id={@client_id} unread_count={@unread_count} />
 
-      <.progress_panel
-        progress_cards={@progress_cards}
-        selected_metric={@selected_metric}
-        progress_chart_svg={@progress_chart_svg}
-        progress_legend={@progress_legend}
-      />
+      <!-- ── Overview: today's work ────────────────────────────────────────── -->
+      <div :if={@tab == "overview"}>
+        <.session_ribbon next_session={@next_session} summary={@summary} client_id={@client_id} />
 
-      <.shared_journal_panel
-        shared_journal={@shared_journal}
-        shared_cards={@shared_cards}
-        shared_selected={@shared_selected}
-        shared_chart_svg={@shared_chart_svg}
-        shared_legend={@shared_legend}
-      />
+        <.client_summary summary={@summary} goal_editing?={@goal_editing?} />
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Clinical record -->
-        <div class="lg:col-span-2">
-          <.intake_panel
-            record={@record}
-            intake={@intake}
-            intake_editing?={@intake_editing?}
-            intake_form={@intake_form}
-            conditions={@conditions}
-            all_conditions={@all_conditions}
-            measurement_context={@measurement_context}
-          />
-          <.visits_panel visits={@visits} record={@record} />
-          <.onboarding_answers_panel
-            onboarding_answers={@onboarding_answers}
-            onboarding_locale={@onboarding_locale}
-          />
-        </div>
+        <.progress_panel
+          progress_cards={@progress_cards}
+          selected_metric={@selected_metric}
+          progress_chart_svg={@progress_chart_svg}
+          progress_legend={@progress_legend}
+        />
 
-        <!-- Communicate & plan -->
-        <div class="lg:col-span-1">
-          <.messages_panel
-            messages={@messages}
-            current_user_id={@current_user.id}
-            message_body={@message_body}
-            client_name={@client.name || @client.email}
-          />
-          <.ai_assist_panel
-            ai_running={@ai_running}
-            ai_steps={@ai_steps}
-            ai_result={@ai_result}
-            ai_error={@ai_error}
-            ai_preferences={@ai_preferences}
-            client_id={@client_id}
-          />
-          <.assign_plan_panel
-            plan_options={@plan_options}
-            assign_plan_form={@assign_plan_form}
-            client_name={@client.name || @client.email}
-            assign_confirm_msg={@assign_confirm_msg}
-          />
-        </div>
-      </div>
+        <.shared_journal_panel
+          shared_journal={@shared_journal}
+          shared_cards={@shared_cards}
+          shared_selected={@shared_selected}
+          shared_chart_svg={@shared_chart_svg}
+          shared_legend={@shared_legend}
+        />
 
-      <.visit_form_modal :if={@show_visit_form} visit_form={@visit_form} appointments={@appointments} />
+        <.visits_panel visits={@visits} record={@record} />
 
-      <!-- History -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <.appointment_history
           appointments={@appointments}
           noted_appointment_ids={@noted_appointment_ids}
         />
+      </div>
+
+      <!-- ── Record: the clinical file ─────────────────────────────────────── -->
+      <div :if={@tab == "record"}>
+        <.intake_panel
+          record={@record}
+          intake={@intake}
+          intakes={@intakes}
+          selected_intake_id={@selected_intake_id}
+          intake_editing?={@intake_editing?}
+          intake_form={@intake_form}
+          conditions={@conditions}
+          all_conditions={@all_conditions}
+          onboarding_answers={@onboarding_answers}
+          onboarding_locale={@onboarding_locale}
+        />
+        <.onboarding_answers_panel
+          :if={not @intake_editing?}
+          onboarding_answers={@onboarding_answers}
+          onboarding_locale={@onboarding_locale}
+        />
+      </div>
+
+      <!-- ── Messages ──────────────────────────────────────────────────────── -->
+      <div :if={@tab == "messages"}>
+        <.messages_panel
+          messages={@messages}
+          current_user_id={@current_user.id}
+          message_body={@message_body}
+          client_name={@client.name || @client.email}
+          unread_count={@unread_count}
+        />
+      </div>
+
+      <!-- ── Planning: plans, AI, ratings ──────────────────────────────────── -->
+      <div :if={@tab == "planning"}>
+        <.ai_assist_panel
+          ai_running={@ai_running}
+          ai_steps={@ai_steps}
+          ai_result={@ai_result}
+          ai_error={@ai_error}
+          ai_preferences={@ai_preferences}
+          client_id={@client_id}
+        />
+        <.assign_plan_panel
+          plan_options={@plan_options}
+          assign_plan_form={@assign_plan_form}
+          client_name={@client.name || @client.email}
+          assign_confirm_msg={@assign_confirm_msg}
+          plan_preview={@plan_preview}
+        />
+        <.meal_plan_history meal_plans={@meal_plans} />
         <.ratings_panel ratings={@ratings} />
       </div>
 
-      <.meal_plan_history meal_plans={@meal_plans} />
+      <.visit_form_modal
+        :if={@show_visit_form}
+        visit_form={@visit_form}
+        appointments={@appointments}
+        editing={@editing_visit != nil}
+        reference_visit={@reference_visit}
+      />
+
+      <.client_details_modal :if={@show_client_form} client_form={@client_form} />
     </main>
     """
   end
