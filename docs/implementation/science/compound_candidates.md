@@ -1,9 +1,17 @@
 # Compound Candidates — the curation step
 
-> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The admin review UI
-> (`/professional/compound-candidates`) and the derivation trigger were **removed**; the context,
-> Oban worker, schemas, and tables remain **dormant (not dropped)**, so this doc still describes code
-> that exists but is no longer wired to any UI/cron. Reference only — see
+> **Reactivated 2026-11-10 (species-only).** The admin review UI
+> (`/professional/compound-candidates`, `MehungryWeb.ProfessionalLive.CompoundCandidates`) is **live
+> again**, linked from `/professional/usda-schema`. It drives **only** the `Food.CompoundCandidates`
+> (species↔compound) branch — derive/promote/reject/flag candidates, audit + purge facts, and a manual
+> **Add measurement** form (the one live way to grow evidence now that the automated full-text
+> extraction feeder is retired). The dead local-AI **extracted** measurement-candidate review was
+> **not** restored. The condition↔compound `Health.RecommendationCandidates` side stays decommissioned.
+>
+> Caveat: the derivation reads **accumulated** evidence — the species-seeded crawl + PubTator
+> annotation that *refresh* `study_entity_mentions` / `study_ingredients` are still dormant, so
+> re-running derivation re-derives over a frozen literature corpus (good for a backfill/cleanup pass;
+> it won't grow on its own except via the manual measurement path). See
 > `docs/features/professionals/research_search.md`.
 
 A **two-stage candidate → curated pipeline** that turns accumulated evidence into

@@ -18,20 +18,56 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
   @doc """
   Full species detail. `compounds` is a list of `%{compound, summary}` where
   `summary` is `{:ok, IngredientCompoundSummary} | {:error, _}`; `ingredients`
-  is the resolved list.
+  is the resolved list; `facts` is the `fact_key => SpeciesFact` map from
+  `Food.promoted_species_facts_for_species/2` (promoted enrichment facts).
   """
-  def species_detail(species, compounds, ingredients) do
+  def species_detail(species, compounds, ingredients, facts \\ %{}) do
     %{
       data:
         species_summary(species)
         |> Map.merge(%{
           compounds: Enum.map(compounds, &compound/1),
-          ingredients: Enum.map(ingredients, &%{id: &1.id, name: &1.name})
+          ingredients: Enum.map(ingredients, &%{id: &1.id, name: &1.name}),
+          facts: facts_block(facts)
         })
     }
   end
 
   # ── parts ────────────────────────────────────────────────────────────────
+
+  # Promoted enrichment facts (Wikidata CC0 + FAOSTAT CC BY). Producers carry the
+  # required FAOSTAT attribution; only ranked country names + year are exposed (no tonnage).
+  defp facts_block(facts) do
+    %{
+      origin_region: fact_text(facts, "origin_region"),
+      description: fact_text(facts, "description"),
+      wikipedia_url: fact_text(facts, "wikipedia_url"),
+      top_producers: producers_block(facts["top_producers"])
+    }
+  end
+
+  defp fact_text(facts, key) do
+    case facts[key] do
+      %{value_text: text} when is_binary(text) and text != "" -> text
+      _ -> nil
+    end
+  end
+
+  defp producers_block(%{value_json: %{"producers" => producers}}) when is_list(producers) do
+    year =
+      case producers do
+        [%{"year" => year} | _] -> year
+        _ -> nil
+      end
+
+    %{
+      countries: producers |> Enum.map(& &1["country"]) |> Enum.reject(&is_nil/1),
+      year: year,
+      source: "FAO FAOSTAT (CC BY 4.0)"
+    }
+  end
+
+  defp producers_block(_), do: nil
 
   defp compound(%{compound: compound, summary: {:ok, s}}) do
     %{

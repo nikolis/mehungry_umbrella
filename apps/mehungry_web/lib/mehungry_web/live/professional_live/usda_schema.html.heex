@@ -13,14 +13,22 @@
         and it moves into the Foundemental Foods accordion.
       </p>
     </div>
-    <button
-      type="button"
-      phx-click="recompute"
-      disabled={@loading}
-      class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90 disabled:opacity-50"
-    >
-      Recompute
-    </button>
+    <div class="flex items-center gap-2">
+      <.link
+        navigate={~p"/professional/compound-candidates"}
+        class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+      >
+        Compound candidates
+      </.link>
+      <button
+        type="button"
+        phx-click="recompute"
+        disabled={@loading}
+        class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90 disabled:opacity-50"
+      >
+        Recompute
+      </button>
+    </div>
   </div>
 
   <div
@@ -226,7 +234,15 @@
           </span>
           <span class="text-lg shrink-0" aria-hidden="true">{Mehungry.Food.species_icon(species)}</span>
           <div class="flex-1 min-w-0">
-            <div class="text-parchment font-medium truncate">{species_label(species)}</div>
+            <div class="flex items-center gap-2">
+              <span class="text-parchment font-medium truncate">{species_label(species)}</span>
+              <span
+                :if={species.private}
+                class="inline-block px-2 py-0.5 rounded text-xs border bg-paprika/20 text-paprika border-paprika/40 shrink-0"
+              >
+                Private
+              </span>
+            </div>
             <div class="text-parchment-dim text-xs mt-1 truncate">
               {[species.scientific_name, species.family]
               |> Enum.reject(&(&1 in [nil, ""]))
@@ -264,6 +280,20 @@
             </button>
             <span class="text-parchment-dim text-xs">Blank = auto ({Mehungry.Food.SpeciesIcons.default_icon(species)})</span>
           </form>
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-ink-panel2">
+            <label class="text-parchment-dim text-xs">Visibility</label>
+            <span class="text-parchment text-xs">
+              {if species.private, do: "Private — hidden from /foods", else: "Public — shown on /foods"}
+            </span>
+            <button
+              type="button"
+              phx-click="toggle_species_private"
+              phx-value-species_id={species.id}
+              class="text-parchment-dim text-xs hover:text-parchment px-2 py-1 rounded border border-ink-panel2"
+            >
+              {if species.private, do: "Make public", else: "Make private"}
+            </button>
+          </div>
           <p
             :if={species.foundemental_foods == []}
             class="px-4 py-3 text-parchment-dim text-sm"
@@ -326,6 +356,11 @@
         label="Scientific name (optional)"
       />
       <.input field={@species_form[:family]} type="text" label="Family (optional)" />
+      <.input
+        field={@species_form[:private]}
+        type="checkbox"
+        label="Private (hide from the public /foods browser)"
+      />
 
       <:actions>
         <.button phx-disable-with="Creating...">Create species</.button>

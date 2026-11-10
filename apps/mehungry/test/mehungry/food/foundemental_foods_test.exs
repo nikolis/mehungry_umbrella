@@ -135,6 +135,65 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
     test "empty term returns []", do: assert(SpeciesSearch.search("") == [])
   end
 
+  describe "private species are hidden from public surfaces" do
+    setup %{} do
+      {:ok, hidden} =
+        Food.create_foundemental_species(%{
+          "name" => "Secret Kale",
+          "alternative_name" => "hidden greens",
+          "private" => true,
+          "translations" => [%{"name" => "Κρυφό", "language_name" => "el"}]
+        })
+
+      %{hidden: hidden}
+    end
+
+    test "excluded from the paginated feed", %{hidden: hidden} do
+      {entries, _} = Food.list_species_paginated()
+      refute Enum.any?(entries, &(&1.id == hidden.id))
+    end
+
+    test "excluded from the Greek translated feed", %{hidden: hidden} do
+      {entries, _} = Food.list_species_paginated_translated("el")
+      refute Enum.any?(entries, &(&1.id == hidden.id))
+    end
+
+    test "excluded from the compound filter / browse list", %{hidden: hidden, species: public} do
+      ids = Food.filter_species([]) |> Enum.map(& &1.id)
+      assert public.id in ids
+      refute hidden.id in ids
+    end
+
+    test "excluded from the A–Z directory", %{hidden: hidden} do
+      refute Enum.any?(Food.list_species_for_directory(), &(&1.id == hidden.id))
+    end
+
+    test "excluded from name search (EN) and translation search (EL)", %{hidden: hidden} do
+      refute Enum.any?(SpeciesSearch.search("Secret"), &(&1.id == hidden.id))
+      refute Enum.any?(SpeciesSearch.search("hidden"), &(&1.id == hidden.id))
+      refute Enum.any?(SpeciesSearch.search_in_language("Κρυφ", "el"), &(&1.id == hidden.id))
+    end
+
+    test "its detail page / API show 404s (slug lookup returns nil)", %{hidden: hidden} do
+      assert Food.get_species_by_slug("Secret-Kale") == nil
+      assert Food.get_species_by_slug("Κρυφό") == nil
+      # Sanity: a public species still resolves.
+      refute is_nil(Food.get_species_by_slug("Spinach"))
+      _ = hidden
+    end
+
+    test "the mobile-API public list/search exclude it but admin scope includes it", %{
+      hidden: hidden
+    } do
+      refute Enum.any?(Food.list_public_foundemental_species(), &(&1.id == hidden.id))
+      refute Enum.any?(Food.search_public_species("Secret"), &(&1.id == hidden.id))
+
+      # Admin curation surfaces still see private species.
+      assert Enum.any?(Food.list_foundemental_species(), &(&1.id == hidden.id))
+      assert Enum.any?(Food.search_species("Secret"), &(&1.id == hidden.id))
+    end
+  end
+
   describe "cross-context aggregations" do
     test "Literature.list_studies_for_species unions studies across the species' ingredients",
          %{species: species, spinach: spinach} do

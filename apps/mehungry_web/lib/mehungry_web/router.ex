@@ -49,7 +49,6 @@ defmodule MehungryWeb.Router do
     plug(:accepts, ["json"])
   end
 
-
   # Prometheus scrape endpoint (text exposition format), token-guarded.
   pipeline :metrics do
     plug(MehungryWeb.Plugs.RequireMetricsToken)
@@ -279,7 +278,6 @@ defmodule MehungryWeb.Router do
     get("/beam_scope/metrics", MetricsController, :beam_scope)
   end
 
-
   scope "/auth", MehungryWeb do
     pipe_through(:browser)
 
@@ -335,6 +333,18 @@ defmodule MehungryWeb.Router do
       # the decommissioned species crawl that used to consume its scientific_name
       # (a new way to power it is TBD).
       live("/usda-schema", ProfessionalLive.UsdaSchema, :index)
+
+      # Reactivated (species-only): review/derive FoundementalFoodSpecies↔Compound
+      # candidate facts from the accumulated literature + measurement evidence.
+      # This is ONLY the `Food.CompoundCandidates` branch — the condition↔compound
+      # `Health.RecommendationCandidates` side is deliberately NOT surfaced. The
+      # dead local-AI extracted-measurement review was dropped; the manual
+      # "Add measurement" form is the one live way to grow the evidence.
+      live("/compound-candidates", ProfessionalLive.CompoundCandidates, :index)
+
+      # Review queue for species enrichment facts (Wikidata CC0 + FAOSTAT CC BY)
+      # fetched by `mix species.enrich` — see docs/implementation/science/species_enrichment.md.
+      live("/species-enrichment", ProfessionalLive.SpeciesEnrichmentReview, :index)
 
       live("/languages", Professional.LanguageLive.Index, :index)
       live("/languages/new", Professional.LanguageLive.Index, :new)
@@ -601,7 +611,11 @@ defmodule MehungryWeb.Router do
     end
 
     live_session :maybe,
-      on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.MaybeUserAuthLive, MehungryWeb.SessionMetrics] do
+      on_mount: [
+        MehungryWeb.RestoreLocale,
+        MehungryWeb.MaybeUserAuthLive,
+        MehungryWeb.SessionMetrics
+      ] do
       get("/", HomePageController, :home)
 
       localized_live("/home", HomeLive.Index, :index)

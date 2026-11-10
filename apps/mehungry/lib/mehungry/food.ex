@@ -40,6 +40,7 @@ defmodule Mehungry.Food do
     ParserVocabulary,
     Recipes,
     SpeciesCompounds,
+    SpeciesEnrichment,
     SpeciesIcons,
     Taxonomies,
     TaxonomyClassificationRuns
@@ -475,11 +476,37 @@ defmodule Mehungry.Food do
     to: GlycemicIndex,
     as: :rederived_by_species
 
+  # ── Species enrichment facts (Wikidata CC0 + FAOSTAT CC BY) ─────────────────
+
+  defdelegate record_species_wikidata_facts(species_id, result),
+    to: SpeciesEnrichment,
+    as: :record_wikidata_facts
+
+  defdelegate record_species_faostat_facts(species_id, producers),
+    to: SpeciesEnrichment,
+    as: :record_faostat_facts
+
+  defdelegate upsert_species_fact(attrs), to: SpeciesEnrichment, as: :upsert_fact
+  defdelegate promote_species_fact(fact_or_id), to: SpeciesEnrichment, as: :promote_fact
+  defdelegate reject_species_fact(fact_or_id), to: SpeciesEnrichment, as: :reject_fact
+  defdelegate update_species_fact_value(fact, value_text), to: SpeciesEnrichment, as: :update_fact_value
+  defdelegate list_pending_species_facts(opts \\ []), to: SpeciesEnrichment, as: :list_pending_facts
+  defdelegate list_promoted_species_facts(opts \\ []), to: SpeciesEnrichment, as: :list_promoted_facts
+  defdelegate get_species_fact!(id), to: SpeciesEnrichment, as: :get_fact!
+  defdelegate count_pending_species_facts(), to: SpeciesEnrichment, as: :count_pending_facts
+  defdelegate count_promoted_species_facts(), to: SpeciesEnrichment, as: :count_promoted_facts
+
+  defdelegate promoted_species_facts_for_species(species_id, locale \\ "en"),
+    to: SpeciesEnrichment,
+    as: :promoted_facts_for_species
+
   # ── Foundemental foods ─────────────────────────────────────────────────────
 
   defdelegate list_foundemental_species(), to: FoundementalFoods, as: :list_species
+  defdelegate list_public_foundemental_species(), to: FoundementalFoods, as: :list_public_species
 
   defdelegate search_species(term, limit \\ 20), to: FoundementalFoods
+  defdelegate search_public_species(term, limit \\ 20), to: FoundementalFoods
 
   defdelegate list_foundemental_species_with_foods(),
     to: FoundementalFoods,

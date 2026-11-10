@@ -19,6 +19,8 @@ are the key the compound facts and health advice hinge on.
 | `scientific_name` | string | optional taxonomy — **drives the crawl** |
 | `family` | string | optional taxonomy |
 | `icon` | string | optional emoji **override**. When blank, `Mehungry.Food.species_icon/1` derives a default emoji from name/variety/family via `Mehungry.Food.SpeciesIcons` (name keyword → `family` → generic 🥗). Editable per species in the `/professional/usda-schema` tree; served on the `/api/v1/species` payloads. **Ingredient-level resolution:** `Mehungry.Food.ingredient_icons/1` maps logged/searched ingredients to an emoji through this species (override-aware), falling back to the ingredient's own English name when it isn't curated onto a species — drives the calendar meal cards and the ingredient search pickers. |
+| `faostat_item_code` | string | optional **curated crosswalk** to a FAOSTAT crop/livestock item code — the key the top-producers enrichment (FAOSTAT, CC BY 4.0) joins on. Nullable: many species have no FAOSTAT item. Suggested by `mix species.faostat_crosswalk`. See [`../science/species_enrichment.md`](../science/species_enrichment.md). |
+| `private` | boolean | default `false`. When `true` the species is **hidden from every public/consumer surface** — the `/foods` browse feed (EN/EL), name search, compound filter, A–Z directory, its `/foods/:slug` detail page (resolves to a 404), the sitemap, and the mobile API (`/api/v1/species` list + show) — while staying visible in the admin `/professional/usda-schema` "Foundemental Foods" view for curation. Enforced at the query layer: the `/foods`-only reads compose a `public_only` scope, the shared reads have explicit public variants (`Food.list_public_foundemental_species/0`, `Food.search_public_species/2`) the API uses, and `get_species_by_slug/1` filters private out so detail/API `show` 404. Toggled per species in the USDA-schema accordion ("Make private"/"Make public") or via the "Private" checkbox on the new-species modal. |
 
 ## Relationships
 
@@ -27,6 +29,23 @@ are the key the compound facts and health advice hinge on.
 - Compound facts attach to species via `SpeciesCompoundRelationship` — see
   [`../science/food_compounds.md`](../science/food_compounds.md) and
   [`../science/compound_candidates.md`](../science/compound_candidates.md)
+- Enrichment facts attach to species via `SpeciesFact` (below)
+
+### SpeciesFact
+
+Provenance-cited "Origins & cultivation" enrichment surfaced on `/foods/:slug`.
+`Mehungry.Food.SpeciesFact` (`food/schemas/species_fact.ex`, table `species_facts`):
+
+- `belongs_to :species` (FK `foundemental_species_id`, required), `belongs_to
+  :enrichment_source` (shared `IngredientEnrichmentSource` citation registry).
+- `fact_key` ∈ `origin_region | description | wikipedia_url | top_producers`;
+  `value_text` / `value_json` (producers list); `locale` (`"en"`/`"el"`, or `""` for
+  locale-independent facts — NOT NULL so the natural key dedups); `status`
+  (`pending → promoted | rejected`); `confidence`; `retrieved_at`.
+- Unique `(foundemental_species_id, fact_key, locale, source)`.
+- Populated from **Wikidata (CC0)** + **FAOSTAT (CC BY 4.0)** by `mix species.enrich`,
+  review-gated at `/professional/species-enrichment`. Only `promoted` facts surface. See
+  [`../science/species_enrichment.md`](../science/species_enrichment.md).
 
 ### FoundementalFood
 

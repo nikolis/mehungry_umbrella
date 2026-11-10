@@ -148,8 +148,10 @@ per-call locale is needed.
 example; the public **`/foods` browse page** (`foods_live`) has its full static chrome
 (headings, search/filter placeholders, result-count line, empty states, "Load more") and
 SEO `page_title`/`page_description` gettext-wrapped and Greek-translated — so with its
-already-localized DB content it is end-to-end localized. The remaining ~60 templates
-follow the identical pattern (see "Remaining work").
+already-localized DB content it is end-to-end localized; the species detail page's
+"Origins & cultivation" enrichment section (`SpeciesDetailLive`) is likewise gettext-wrapped
++ Greek-translated, and its facts are locale-resolved per request. The remaining ~60
+templates follow the identical pattern (see "Remaining work").
 
 ---
 

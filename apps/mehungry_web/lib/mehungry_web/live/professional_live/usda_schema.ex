@@ -224,6 +224,26 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
      |> assign(:pending_assignment, nil)}
   end
 
+  # Per-species visibility toggle. A private species is hidden from every public
+  # surface (/foods browse, search, filter, directory, detail page, sitemap,
+  # mobile API) but stays here for curation.
+  def handle_event("toggle_species_private", %{"species_id" => id}, socket) do
+    species = Food.get_foundemental_species!(id)
+
+    case Food.update_foundemental_species(species, %{"private" => !species.private}) do
+      {:ok, updated} ->
+        flash =
+          if updated.private,
+            do: "“#{updated.name}” is now private (hidden from /foods)",
+            else: "“#{updated.name}” is now public"
+
+        {:noreply, socket |> reload_species() |> put_flash(:info, flash)}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not update visibility")}
+    end
+  end
+
   # Per-species emoji override. A blank value clears the override, so the row
   # falls back to the name/family-derived default from `Food.species_icon/1`.
   def handle_event("update_species_icon", %{"species_id" => id, "icon" => icon}, socket) do

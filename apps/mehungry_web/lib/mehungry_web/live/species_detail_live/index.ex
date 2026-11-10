@@ -137,6 +137,11 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     language = socket.assigns[:current_language] || "en"
     ingredient_ids = Enum.map(socket.assigns.ingredients, & &1.id)
 
+    # Enrichment facts (origin / producers / description) are a tiny read and must be in
+    # the dead render crawlers index, so they're assigned synchronously on both renders
+    # (unlike the heavier compounds/recipes, which go async when connected).
+    socket = assign(socket, :facts, Food.promoted_species_facts_for_species(species.id, language))
+
     if connected?(socket) do
       assign_async(socket, [:compounds, :recipes], fn ->
         rels = SpeciesCompounds.list_species_relationships(species.id)
@@ -157,6 +162,44 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
         AsyncResult.ok(Food.list_sample_recipes_for_ingredients(ingredient_ids))
       )
     end
+  end
+
+  # ── Enrichment facts (Origins & cultivation section) ─────────────────────────
+  # `@facts` is a fact_key => SpeciesFact map from `promoted_species_facts_for_species/2`.
+
+  @doc "The text of a single-value fact (origin_region / description / wikipedia_url), else nil."
+  def fact_text(facts, key) do
+    case facts[key] do
+      %{value_text: text} when is_binary(text) and text != "" -> text
+      _ -> nil
+    end
+  end
+
+  @doc "Ranked producing-country names from the top_producers fact (names only — tonnage isn't shown)."
+  def producer_countries(facts) do
+    case facts["top_producers"] do
+      %{value_json: %{"producers" => producers}} when is_list(producers) ->
+        producers |> Enum.map(& &1["country"]) |> Enum.reject(&(&1 in [nil, ""]))
+
+      _ ->
+        []
+    end
+  end
+
+  @doc "The source year of the top_producers fact, for the FAOSTAT credit line."
+  def producers_year(facts) do
+    case facts["top_producers"] do
+      %{value_json: %{"producers" => [%{"year" => year} | _]}} -> year
+      _ -> nil
+    end
+  end
+
+  @doc "Whether any enrichment fact is present, to decide whether to render the section."
+  def enrichment?(facts) do
+    not is_nil(fact_text(facts, "origin_region")) or
+      not is_nil(fact_text(facts, "description")) or
+      not is_nil(fact_text(facts, "wikipedia_url")) or
+      producer_countries(facts) != []
   end
 
   # Overlay each compound's translated name for the current locale (from the

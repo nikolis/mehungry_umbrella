@@ -520,6 +520,10 @@ language and are not translated.
 
 ### `GET /api/v1/species` 🔓 `?q=apple&page=`
 Foods tab list. Each row: name, family/variety tag, slug, `icon`.
+Species an admin has marked **private** (`FoundementalFoodSpecies.private = true`)
+are **omitted** from both the list and search, and their `:slug` detail 404s —
+they exist only in the admin curation view, never in the app. See
+`docs/implementation/entities/foundemental_food_species.md`.
 ```json
 { "data": [ {"id":1,"name":"Acerola","slug":"acerola","icon":"🍒","variety":"west indian cherry","family":null,"scientific_name":"Malpighia emarginata"},
              {"id":2,"name":"Agave","slug":"agave","icon":"🥗","family":"Asparagaceae"} ],
@@ -537,13 +541,28 @@ summaries via `Food.EvidenceAggregation`), ingredients.
   "family": "Amaranthaceae", "variety": null,
   "compounds": [ { "name": "Oxalate", "mean": 750.0, "unit": "mg/100g",
     "range": [600,900], "variance": 12.3, "evidence_score": 0.82, "study_count": 5 } ],
-  "ingredients": [ {"id":412,"name":"Spinach, raw"} ]
+  "ingredients": [ {"id":412,"name":"Spinach, raw"} ],
+  "facts": {
+    "origin_region": "Central Asia",
+    "description": "species of flowering plant",
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Spinach",
+    "top_producers": { "countries": ["China","United States of America"], "year": 2022,
+                       "source": "FAO FAOSTAT (CC BY 4.0)" }
+  }
 } }
 ```
 Each compound's `name` is **localized to the request locale** (§Language) from the
 curated `compound_translations` (same data the web species page's Bioactive
 Compounds section uses), with the English compound name as fallback when no
 translation exists.
+
+`facts` are **promoted species enrichment facts** (the web page's "Origins & cultivation"
+section) — Wikidata (CC0) + FAOSTAT (CC BY 4.0). Every key is nullable (absent/unpromoted
+→ `null`; `top_producers` → `null` when there's no FAOSTAT crosswalk). `origin_region`,
+`description`, `wikipedia_url` are localized to the request locale with an `en` fallback.
+`top_producers` exposes **ranked country names only** (no tonnage) + the source year, and
+its `source` string is the **required FAOSTAT attribution** — render it wherever the
+producers are shown. See `docs/implementation/science/species_enrichment.md`.
 
 ---
 

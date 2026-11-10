@@ -22,19 +22,42 @@ defmodule Mehungry.Food.FoundementalFoods do
 
   # ── Species ────────────────────────────────────────────────────────────────
 
-  @doc "All species ordered by name (then variety)."
+  @doc "All species ordered by name (then variety). Admin scope — includes private."
   def list_species do
     Repo.all(from s in FoundementalFoodSpecies, order_by: [asc: s.name, asc: s.variety])
   end
 
   @doc """
-  All species with `:translations` preloaded, name-ordered — the lightweight feed
-  for the crawlable `/foods` A–Z directory (every food linked so link equity
-  reaches the ~140 detail pages the paginated feed never renders on first paint).
+  Public scope — only species not marked `private`. The mobile API's species list
+  reads this (the admin USDA Schema view reads `list_species/0`, which includes
+  private rows so they stay curatable).
+  """
+  def list_public_species do
+    Repo.all(
+      from s in FoundementalFoodSpecies,
+        where: s.private == false,
+        order_by: [asc: s.name, asc: s.variety]
+    )
+  end
+
+  # Composable "public browse" scope: drop species an admin has marked private.
+  # Applied to every consumer-facing read (feed, search, filter, directory) so a
+  # private species is invisible outside the admin curation view.
+  defp public_only(query), do: from(s in query, where: s.private == false)
+
+  @doc """
+  All **public** species with `:translations` preloaded, name-ordered — the
+  lightweight feed for the crawlable `/foods` A–Z directory (every food linked so
+  link equity reaches the ~140 detail pages the paginated feed never renders on
+  first paint). Private species are excluded so they aren't linked or crawlable.
   """
   def list_species_for_directory do
     Repo.all(
-      from(s in FoundementalFoodSpecies, order_by: [asc: s.name], preload: :translations)
+      from(s in FoundementalFoodSpecies,
+        where: s.private == false,
+        order_by: [asc: s.name],
+        preload: :translations
+      )
     )
   end
 
@@ -47,22 +70,38 @@ defmodule Mehungry.Food.FoundementalFoods do
   def search_species(term, _limit) when term in [nil, ""], do: []
 
   def search_species(term, limit) do
-    like = "%#{String.trim(term)}%"
-
-    Repo.all(
-      from s in FoundementalFoodSpecies,
-        where:
-          ilike(s.name, ^like) or ilike(s.scientific_name, ^like) or
-            ilike(s.alternative_name, ^like),
-        order_by: [asc: s.name, asc: s.variety],
-        limit: ^limit
-    )
+    Repo.all(search_species_query(term, limit))
   end
 
   @doc """
-  Fetch a species by its URL slug (hyphens → spaces), matching on `name` first and
-  falling back to a translated name. Preloads its curated foods (with ingredient) and
-  its translations. Returns `nil` when nothing matches. Mirrors
+  Public variant of `search_species/2` — excludes species marked `private`.
+  Backs the mobile API's species search (the admin article-reference picker uses
+  `search_species/2`, which still sees private rows).
+  """
+  def search_public_species(term, limit \\ 20)
+  def search_public_species(term, _limit) when term in [nil, ""], do: []
+
+  def search_public_species(term, limit) do
+    Repo.all(public_only(search_species_query(term, limit)))
+  end
+
+  defp search_species_query(term, limit) do
+    like = "%#{String.trim(term)}%"
+
+    from s in FoundementalFoodSpecies,
+      where:
+        ilike(s.name, ^like) or ilike(s.scientific_name, ^like) or
+          ilike(s.alternative_name, ^like),
+      order_by: [asc: s.name, asc: s.variety],
+      limit: ^limit
+  end
+
+  @doc """
+  Fetch a **public** species by its URL slug (hyphens → spaces), matching on
+  `name` first and falling back to a translated name. Preloads its curated foods
+  (with ingredient) and its translations. Returns `nil` when nothing matches —
+  including when the match is a `private` species, so its detail page (and the
+  mobile API `show`) 404 rather than leak. Mirrors
   `Mehungry.Food.Ingredients.get_ingredient_by_slug/1`.
   """
   def get_species_by_slug(slug) do
@@ -71,7 +110,7 @@ defmodule Mehungry.Food.FoundementalFoods do
     species =
       Repo.one(
         from(s in FoundementalFoodSpecies,
-          where: fragment("lower(?) = lower(?)", s.name, ^name),
+          where: fragment("lower(?) = lower(?)", s.name, ^name) and s.private == false,
           order_by: [asc: s.variety],
           limit: 1
         )
@@ -94,7 +133,7 @@ defmodule Mehungry.Food.FoundementalFoods do
       from(t in FoundementalFoodSpeciesTranslation,
         join: s in FoundementalFoodSpecies,
         on: s.id == t.foundemental_species_id,
-        where: fragment("lower(?) = lower(?)", t.name, ^name),
+        where: fragment("lower(?) = lower(?)", t.name, ^name) and s.private == false,
         select: s,
         limit: 1
       )
@@ -111,12 +150,17 @@ defmodule Mehungry.Food.FoundementalFoods do
     )
   end
 
-  @doc "A cursor page (20) of species, oldest first, ordered like the ingredient browse."
+  @doc """
+  A cursor page (20) of **public** species, oldest first, ordered like the
+  ingredient browse. Backs the `/foods` English feed.
+  """
   def list_species_paginated(cursor_after \\ nil) do
-    paginate_species(from(s in FoundementalFoodSpecies), cursor_after)
+    from(s in FoundementalFoodSpecies)
+    |> public_only()
+    |> paginate_species(cursor_after)
   end
 
-  @doc "A cursor page (20) of only the species that have a translation in `language_name`."
+  @doc "A cursor page (20) of only the **public** species that have a translation in `language_name`."
   def list_species_paginated_translated(language_name, cursor_after \\ nil) do
     translated_ids =
       from(t in FoundementalFoodSpeciesTranslation,
@@ -125,6 +169,7 @@ defmodule Mehungry.Food.FoundementalFoods do
       )
 
     from(s in FoundementalFoodSpecies, where: s.id in subquery(translated_ids))
+    |> public_only()
     |> paginate_species(cursor_after)
   end
 
@@ -153,6 +198,7 @@ defmodule Mehungry.Food.FoundementalFoods do
     limit = Keyword.get(opts, :limit, 200)
 
     from(s in FoundementalFoodSpecies, order_by: [asc: s.name, asc: s.variety], limit: ^limit)
+    |> public_only()
     |> filter_species_by_condition(condition_compound_ids, condition_species_ids)
     |> filter_species_by_compounds(compound_ids)
     |> filter_species_by_name(query_str)

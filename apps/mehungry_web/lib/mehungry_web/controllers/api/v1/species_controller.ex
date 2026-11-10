@@ -17,10 +17,12 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
   action_fallback MehungryWeb.Api.V1.FallbackController
 
   def index(conn, params) do
+    # Public scope only — species an admin marked private are hidden from the app
+    # (the admin curation view uses the non-public variants).
     species =
       case params["q"] do
-        q when is_binary(q) and q != "" -> Food.search_species(q)
-        _ -> Food.list_foundemental_species()
+        q when is_binary(q) and q != "" -> Food.search_public_species(q)
+        _ -> Food.list_public_foundemental_species()
       end
 
     {page, meta} = Pagination.paginate_list(species, Pagination.params(params))
@@ -34,9 +36,11 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
         {:error, :not_found}
 
       species ->
-        compounds = compound_evidence(species.id, Locale.resolve(conn, params))
+        locale = Locale.resolve(conn, params)
+        compounds = compound_evidence(species.id, locale)
         ingredients = species_ingredients(species.id)
-        json(conn, FoodJSON.species_detail(species, compounds, ingredients))
+        facts = Food.promoted_species_facts_for_species(species.id, locale)
+        json(conn, FoodJSON.species_detail(species, compounds, ingredients, facts))
     end
   end
 

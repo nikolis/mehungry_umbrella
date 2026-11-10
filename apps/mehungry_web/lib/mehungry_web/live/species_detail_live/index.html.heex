@@ -105,6 +105,72 @@
       </section>
     <% end %>
 
+    <%!-- ── Origins & cultivation (enrichment facts) ───────────────────────── --%>
+    <%!-- Promoted Wikidata (CC0) + FAOSTAT (CC BY) facts. Rendered in the dead render
+          (assigned synchronously) so the origin/producers content is crawlable. --%>
+    <section :if={enrichment?(@facts)} class="mb-10">
+      <h2 class="text-lg font-display font-medium text-parchment mb-4">
+        {gettext("Origins & cultivation")}
+      </h2>
+      <dl class="grid gap-4 sm:grid-cols-2">
+        <div :if={fact_text(@facts, "origin_region")} class="bg-ink-panel border border-ink-panel2 rounded-xl p-4">
+          <dt class="text-xs font-semibold uppercase tracking-wide text-parchment-dim/60">
+            {gettext("Origin")}
+          </dt>
+          <dd class="mt-1 text-parchment">{fact_text(@facts, "origin_region")}</dd>
+        </div>
+
+        <div :if={producer_countries(@facts) != []} class="bg-ink-panel border border-ink-panel2 rounded-xl p-4">
+          <dt class="text-xs font-semibold uppercase tracking-wide text-parchment-dim/60">
+            {gettext("Top producing countries")}
+          </dt>
+          <dd class="mt-1 text-parchment">{Enum.join(producer_countries(@facts), " · ")}</dd>
+          <%!-- FAOSTAT is CC BY 4.0 — attribution is required where its data is shown. --%>
+          <p class="mt-2 text-xs text-parchment-dim/60">
+            {gettext("Production data")}: FAO FAOSTAT{if year = producers_year(@facts),
+              do: " (#{year})"} · CC BY 4.0
+          </p>
+        </div>
+
+        <div
+          :if={fact_text(@facts, "description")}
+          class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 sm:col-span-2"
+        >
+          <dt class="text-xs font-semibold uppercase tracking-wide text-parchment-dim/60">
+            {gettext("About")}
+          </dt>
+          <dd class="mt-1 text-parchment">
+            {fact_text(@facts, "description")}
+            <a
+              :if={fact_text(@facts, "wikipedia_url")}
+              href={fact_text(@facts, "wikipedia_url")}
+              target="_blank"
+              rel="noopener"
+              class="ml-1 text-sm text-basil-soft hover:text-basil whitespace-nowrap"
+            >
+              {gettext("Read more on Wikipedia")} ↗
+            </a>
+          </dd>
+        </div>
+
+        <div
+          :if={is_nil(fact_text(@facts, "description")) and not is_nil(fact_text(@facts, "wikipedia_url"))}
+          class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 sm:col-span-2"
+        >
+          <dd class="text-parchment">
+            <a
+              href={fact_text(@facts, "wikipedia_url")}
+              target="_blank"
+              rel="noopener"
+              class="text-sm text-basil-soft hover:text-basil"
+            >
+              {gettext("Read more on Wikipedia")} ↗
+            </a>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
     <%!-- ── Bioactive compounds ─────────────────────────────────────────── --%>
     <section class="mb-10">
       <h2 class="text-lg font-display font-medium text-parchment mb-4">

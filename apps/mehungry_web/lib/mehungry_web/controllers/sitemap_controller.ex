@@ -40,7 +40,7 @@ defmodule MehungryWeb.SitemapController do
     species =
       Repo.all(
         from(s in FoundementalFoodSpecies,
-          where: not is_nil(s.name) and s.name != "",
+          where: not is_nil(s.name) and s.name != "" and s.private == false,
           distinct: s.name,
           select: %{name: s.name, updated_at: s.updated_at},
           order_by: [asc: s.name, desc: s.updated_at]

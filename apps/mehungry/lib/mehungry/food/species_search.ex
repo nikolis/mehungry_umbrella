@@ -28,8 +28,9 @@ defmodule Mehungry.Food.SpeciesSearch do
 
       from(s in FoundementalFoodSpecies,
         where:
-          fragment("unaccent(?) ILIKE unaccent(?)", s.name, ^pattern) or
-            fragment("unaccent(?) ILIKE unaccent(?)", s.alternative_name, ^pattern),
+          (fragment("unaccent(?) ILIKE unaccent(?)", s.name, ^pattern) or
+             fragment("unaccent(?) ILIKE unaccent(?)", s.alternative_name, ^pattern)) and
+            s.private == false,
         order_by: [
           desc:
             fragment(
@@ -58,7 +59,9 @@ defmodule Mehungry.Food.SpeciesSearch do
 
     base =
       from(t in FoundementalFoodSpeciesTranslation,
-        where: t.language_name == ^language_name,
+        join: s in FoundementalFoodSpecies,
+        on: s.id == t.foundemental_species_id,
+        where: t.language_name == ^language_name and s.private == false,
         order_by: [
           desc:
             fragment(

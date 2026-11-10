@@ -118,7 +118,7 @@ msgid "Avoid"
 msgstr ""
 
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:655
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:111
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:177
 #, elixir-autogen, elixir-format
 msgid "Bioactive Compounds"
 msgstr ""
@@ -152,7 +152,7 @@ msgid "Conditions"
 msgstr ""
 
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:663
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:119
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:185
 #, elixir-autogen, elixir-format
 msgid "Couldn't load compounds."
 msgstr ""
@@ -324,7 +324,7 @@ msgstr ""
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:329
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:747
 #: lib/mehungry_web/live/landing_live.ex:820
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:208
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:274
 #, elixir-autogen, elixir-format
 msgid "min"
 msgstr ""
@@ -2060,52 +2060,52 @@ msgstr ""
 msgid "Full Nutrition Breakdown"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:603
+#: lib/mehungry_web/live/species_detail_live/index.ex:646
 #, elixir-autogen, elixir-format
 msgid "Absent"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:599
+#: lib/mehungry_web/live/species_detail_live/index.ex:642
 #, elixir-autogen, elixir-format
 msgid "Contains"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:600
+#: lib/mehungry_web/live/species_detail_live/index.ex:643
 #, elixir-autogen, elixir-format
 msgid "High in"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:601
+#: lib/mehungry_web/live/species_detail_live/index.ex:644
 #, elixir-autogen, elixir-format
 msgid "Low in"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:250
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:316
 #, elixir-autogen, elixir-format
 msgid "No PubMed papers are on file for this link yet."
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:122
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:188
 #, elixir-autogen, elixir-format
 msgid "No compounds linked to this species yet."
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:244
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:310
 #, elixir-autogen, elixir-format
 msgid "Research supporting this compound link."
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:602
+#: lib/mehungry_web/live/species_detail_live/index.ex:645
 #, elixir-autogen, elixir-format
 msgid "Trace"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:262
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:328
 #, elixir-autogen, elixir-format
 msgid "Untitled study"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:134
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:200
 #, elixir-autogen, elixir-format
 msgid "View the research supporting this"
 msgstr ""
@@ -2561,7 +2561,7 @@ msgstr ""
 msgid "Could not post your comment. Please try again."
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:166
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:232
 #, elixir-autogen, elixir-format
 msgid "Couldn't load recipes for this food."
 msgstr ""
@@ -2623,7 +2623,7 @@ msgstr ""
 msgid "No comments yet — be the first to share your thoughts."
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:168
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:234
 #, elixir-autogen, elixir-format
 msgid "No recipes use this food yet."
 msgstr ""
@@ -2643,7 +2643,7 @@ msgstr ""
 msgid "Quota reached for your plan"
 msgstr ""
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:148
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:214
 #, elixir-autogen, elixir-format
 msgid "Recipes with %{food}"
 msgstr ""
@@ -8806,4 +8806,35 @@ msgstr ""
 #: lib/mehungry_web/live/foods_live/index.html.heex:208
 #, elixir-autogen, elixir-format
 msgid "species"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:140
+#, elixir-autogen, elixir-format
+msgid "About"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:118
+#, elixir-autogen, elixir-format
+msgid "Origin"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:113
+#, elixir-autogen, elixir-format
+msgid "Origins & cultivation"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:130
+#, elixir-autogen, elixir-format
+msgid "Production data"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:151
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:167
+#, elixir-autogen, elixir-format
+msgid "Read more on Wikipedia"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:125
+#, elixir-autogen, elixir-format
+msgid "Top producing countries"
 msgstr ""
