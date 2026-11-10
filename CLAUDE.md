@@ -221,7 +221,7 @@ All authenticated UI is built with **Phoenix LiveView**. Live sessions in `route
 | `:maybe` | `MaybeUserAuthLive` | `/home`, `/browse`, `/search`, `/profile`, `/foods` |
 | `:default3` | none | `/welcome` (landing) |
 
-**Authentication** uses Ueberauth with Facebook, Google, and Instagram OAuth. Session state is injected via `on_mount` callbacks. `BotOAuthController` handles OAuth for bot social accounts (`/auth/bot/target/:bot_user_id/:provider`).
+**Authentication** uses Ueberauth with Facebook, Google, and Instagram OAuth. Session state is injected via `on_mount` callbacks. **Login vs. social-connect share the single `/auth/:provider` request + `/auth/:provider/callback` handler (`AuthController`), so intent is carried explicitly, never inferred from "is someone logged in?":** connecting a social account (for the publishing pipeline) goes through `SocialOAuthController` — `/auth/connect/:provider` (self-connect, profile page) or `/auth/bot/target/:bot_user_id/:provider` (admin-gated, a managed bot user) — which writes an `oauth_intent` session map (`%{"action" => "connect", "target" => id}`, last-write-wins so an abandoned connect can't bind to the wrong user) and requests the Facebook `pages_*` publishing scopes per-request via `?scope=`. Plain login hits `/auth/:provider` directly with no intent and only the login-safe Facebook scope (`public_profile,email` in config). The callback authorizes the connect target (connect your own account; only the admin may connect a bot user's) and treats a missing/foreign intent as login/needs-login/forbidden, never a silent connect.
 
 **Presence** (`MehungryWeb.Presence`) tracks active users and records visits. Live views opt in with `use MehungryWeb.Presence, :user_tracking`.
 

@@ -375,9 +375,16 @@ defmodule MehungryWeb.Router do
     end
   end
 
+  # Connect the logged-in user's own social account (profile page).
+  scope "/auth", MehungryWeb do
+    pipe_through([:browser, :require_authenticated_user])
+    get("/connect/:provider", SocialOAuthController, :connect)
+  end
+
+  # Connect a managed bot user's social account (admin AI-bot social page).
   scope "/auth/bot", MehungryWeb do
-    pipe_through([:admin_browser, :require_authenticated_user])
-    get("/target/:bot_user_id/:provider", BotOAuthController, :set_target)
+    pipe_through([:admin_browser, :require_authenticated_user, :require_admin])
+    get("/target/:bot_user_id/:provider", SocialOAuthController, :set_target)
   end
 
   scope "/nutritionist", MehungryWeb do

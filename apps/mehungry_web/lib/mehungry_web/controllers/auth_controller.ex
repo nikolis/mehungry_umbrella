@@ -39,12 +39,12 @@ defmodule MehungryWeb.AuthController do
         Accounts.update_user_tokens(target_user, %{"pinterest_token" => token_data})
 
         conn
-        |> delete_session("oauth_target_user_id")
+        |> delete_session("oauth_intent")
         |> put_flash(:info, "Pinterest account connected successfully.")
         |> redirect(to: redirect_path)
 
-      :needs_login ->
-        redirect_needs_login(conn)
+      error ->
+        handle_connect_error(conn, error)
     end
   end
 
@@ -68,71 +68,41 @@ defmodule MehungryWeb.AuthController do
           end
 
         conn
-        |> delete_session("oauth_target_user_id")
+        |> delete_session("oauth_intent")
         |> redirect(to: redirect_path)
 
-      :needs_login ->
-        redirect_needs_login(conn)
+      error ->
+        handle_connect_error(conn, error)
     end
   end
 
+  # Facebook is the one provider used for BOTH login and connect, so it branches
+  # on the explicit connect intent (not on "is someone logged in?"): a connect
+  # intent attaches the Page token to the resolved target; anything else is a
+  # normal Facebook login / account claim.
   def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
-    if conn.assigns[:current_user] do
-      {:ok, target_user, redirect_path} = resolve_token_target(conn)
-      token = auth.extra.raw_info.token.access_token
+    case resolve_token_target(conn) do
+      {:ok, target_user, redirect_path} ->
+        token = auth.extra.raw_info.token.access_token
 
-      Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
-        Mehungry.Social.Facebook.get_user_pages(
-          target_user,
-          token,
-          auth.extra.raw_info.user["id"]
-        )
-      end)
+        Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
+          Mehungry.Social.Facebook.get_user_pages(
+            target_user,
+            token,
+            auth.extra.raw_info.user["id"]
+          )
+        end)
 
-      conn
-      |> delete_session("oauth_target_user_id")
-      |> put_flash(:info, "Facebook account connected successfully.")
-      |> redirect(to: redirect_path)
-    else
-      case get_session(conn, "claim_token") do
-        nil ->
-          case Accounts.find_or_create(auth) do
-            {:ok, user, status} ->
-              token = auth.extra.raw_info.token.access_token
+        conn
+        |> delete_session("oauth_intent")
+        |> put_flash(:info, "Facebook account connected successfully.")
+        |> redirect(to: redirect_path)
 
-              Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
-                Accounts.put_user_token(user, token, "facebook")
+      :no_connect_intent ->
+        facebook_login_or_claim(conn, auth)
 
-                Mehungry.Social.Facebook.get_user_pages(
-                  user,
-                  token,
-                  auth.extra.raw_info.user["id"]
-                )
-              end)
-
-              conn
-              # renew_session in log_in_user wipes the session, so the sign_up
-              # GA flash must be set *after* it (same as the :info flash below).
-              |> UserAuth.log_in_user(user, %{})
-              |> maybe_track_signup(status, :facebook)
-              |> put_flash(:info, "Successfully logged in with Facebook.")
-              |> redirect(to: "/profile")
-
-            {:error, reason} ->
-              conn
-              |> put_flash(:error, reason)
-              |> redirect(to: "/")
-          end
-
-        claim_token ->
-          fb_token = auth.extra.raw_info.token.access_token
-
-          claim_via_oauth(conn, claim_token, auth, fn user ->
-            Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
-              Accounts.put_user_token(user, fb_token, "facebook")
-            end)
-          end)
-      end
+      error ->
+        handle_connect_error(conn, error)
     end
   end
 
@@ -149,6 +119,48 @@ defmodule MehungryWeb.AuthController do
 
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
     login_or_claim(conn, auth)
+  end
+
+  defp facebook_login_or_claim(conn, auth) do
+    case get_session(conn, "claim_token") do
+      nil ->
+        case Accounts.find_or_create(auth) do
+          {:ok, user, status} ->
+            token = auth.extra.raw_info.token.access_token
+
+            Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
+              Accounts.put_user_token(user, token, "facebook")
+
+              Mehungry.Social.Facebook.get_user_pages(
+                user,
+                token,
+                auth.extra.raw_info.user["id"]
+              )
+            end)
+
+            conn
+            # renew_session in log_in_user wipes the session, so the sign_up
+            # GA flash must be set *after* it (same as the :info flash below).
+            |> UserAuth.log_in_user(user, %{})
+            |> maybe_track_signup(status, :facebook)
+            |> put_flash(:info, "Successfully logged in with Facebook.")
+            |> redirect(to: "/profile")
+
+          {:error, reason} ->
+            conn
+            |> put_flash(:error, reason)
+            |> redirect(to: "/")
+        end
+
+      claim_token ->
+        fb_token = auth.extra.raw_info.token.access_token
+
+        claim_via_oauth(conn, claim_token, auth, fn user ->
+          Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
+            Accounts.put_user_token(user, fb_token, "facebook")
+          end)
+        end)
+    end
   end
 
   defp login_or_claim(conn, auth) do
@@ -272,28 +284,52 @@ defmodule MehungryWeb.AuthController do
     end
   end
 
-  # When oauth_target_user_id is in session, save the token to that user (bot user)
-  # and redirect back to the admin social accounts page. Otherwise save to the
-  # logged-in user. Returns `:needs_login` when neither is present, so a connect
-  # attempt with a missing/dropped session is sent to log in rather than raising
-  # a 500 on a nil user (which read to users as a failed connect / logout).
+  # Resolve which user a connect callback should attach the token to, from the
+  # explicit `oauth_intent` set by SocialOAuthController. There is no implicit
+  # "logged-in ⇒ connect" path: a callback with no connect intent is a login
+  # (`:no_connect_intent`), a connect with a dropped session needs login
+  # (`:needs_login`), and a connect whose target isn't yours — unless you're an
+  # admin connecting a managed bot user — is refused (`:forbidden`). You may
+  # always connect your own account; only an admin may connect a bot user's.
   defp resolve_token_target(conn) do
-    case get_session(conn, "oauth_target_user_id") do
-      nil ->
-        case conn.assigns[:current_user] do
-          nil -> :needs_login
-          user -> {:ok, user, "/profile"}
+    case get_session(conn, "oauth_intent") do
+      %{"action" => "connect", "target" => target} ->
+        current = conn.assigns[:current_user]
+
+        cond do
+          is_nil(current) -> :needs_login
+          to_string(current.id) == target -> {:ok, current, "/profile"}
+          admin?(current) -> {:ok, Accounts.get_user!(target), "/professional/ai-bot/social"}
+          true -> :forbidden
         end
 
-      bot_user_id ->
-        bot_user = Accounts.get_user!(bot_user_id)
-        {:ok, bot_user, "/professional/ai-bot/social"}
+      _ ->
+        :no_connect_intent
     end
   end
 
+  defp admin?(%{email: email}) do
+    admin_email = Application.get_env(:mehungry, :admin_email)
+    is_binary(admin_email) and email == admin_email
+  end
+
+  defp admin?(_), do: false
+
+  # A connect callback that couldn't resolve a valid target. `:no_connect_intent`
+  # on a connect-only provider (Instagram/Pinterest) means the request arrived
+  # without going through SocialOAuthController, so treat it as a login prompt.
+  defp handle_connect_error(conn, :forbidden) do
+    conn
+    |> delete_session("oauth_intent")
+    |> put_flash(:error, "You are not allowed to connect that account.")
+    |> redirect(to: "/profile")
+  end
+
+  defp handle_connect_error(conn, _needs_login_or_no_intent), do: redirect_needs_login(conn)
+
   defp redirect_needs_login(conn) do
     conn
-    |> delete_session("oauth_target_user_id")
+    |> delete_session("oauth_intent")
     |> put_flash(:error, "Please log in before connecting an account.")
     |> redirect(to: "/users/log_in")
   end

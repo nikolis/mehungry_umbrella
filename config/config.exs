@@ -321,11 +321,15 @@ config :mehungry, :storage,
 
 config :ueberauth, Ueberauth,
   providers: [
+    # Login-only scope. The Facebook *connect* flow (attaching a Page for the
+    # social-publishing pipeline) requests the extra `pages_*` scopes per-request
+    # via `?scope=` from SocialOAuthController — so a plain "Log in with Facebook"
+    # never asks for Page-management permissions.
     facebook:
       {Ueberauth.Strategy.Facebook,
        [
          profile_fields: "name,email,first_name,last_name, picture",
-         scope: "pages_manage_engagement, pages_manage_posts, pages_read_engagement "
+         scope: "public_profile,email"
        ]},
     instagram:
       {Ueberauth.Strategy.Instagram,

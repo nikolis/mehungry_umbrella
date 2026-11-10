@@ -147,7 +147,7 @@ Scoped to the **active config's bot user** for the current month.
 
 - Connection-status cards for Instagram / Facebook / Pinterest with Connect /
   Reconnect links to `/auth/bot/target/:bot_user_id/:provider`
-  (`BotOAuthController`). IG status via `Social.Instagram.token_status/1`.
+  (`SocialOAuthController.set_target/2`, admin-gated). IG status via `Social.Instagram.token_status/1`.
 - `fetch_boards/1` distinguishes an auth failure (`:fetch_failed` → surface
   "reconnect") from a genuinely empty board list (→ "create your first board").
 - Per-language **Facebook page** and **Pinterest board** selectors persist to
