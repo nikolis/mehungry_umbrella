@@ -69,12 +69,22 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     {:noreply, socket |> load() |> assign(:loading, false)}
   end
 
-  @impl true
-  def handle_event("recompute", _params, socket) do
+  # Recompute reruns the full-corpus parse, which is as heavy as the initial
+  # load. Defer it off the event handler (same async hop as mount) so the socket
+  # paints the "Computing…" state first instead of freezing, and so the
+  # @loading-gated button can't queue a second parse mid-run.
+  def handle_info(:recompute, socket) do
     {:noreply,
      socket
      |> load()
+     |> assign(:loading, false)
      |> put_flash(:info, "Recomputed from current ingredients")}
+  end
+
+  @impl true
+  def handle_event("recompute", _params, socket) do
+    send(self(), :recompute)
+    {:noreply, assign(socket, :loading, true)}
   end
 
   # Species-foods accordions (bottom section) — small, plain expand/collapse.
@@ -193,25 +203,14 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     case Food.create_foundemental_species(params) do
       {:ok, species} ->
         pending = socket.assigns.pending_assignment
-        maybe_assign_pending(socket, species)
 
         socket =
           socket
           |> assign(:show_species_modal, false)
           |> assign(:pending_assignment, nil)
+          |> finish_create_species(species, pending)
 
-        socket =
-          case pending do
-            %{ingredient_id: ingredient_id} ->
-              # New species now exists — re-stream the visible rows so their
-              # dropdowns include it, dropping the just-assigned one.
-              socket |> after_assign_data(ingredient_id) |> restream_active()
-
-            _ ->
-              reload_species(socket)
-          end
-
-        {:noreply, put_flash(socket, :info, "Created species \"#{species.name}\"")}
+        {:noreply, socket}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :species_form, to_form(changeset))}
@@ -382,15 +381,37 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:species_with_foods, Food.list_foundemental_species_with_foods())
   end
 
-  defp maybe_assign_pending(socket, species) do
-    case socket.assigns.pending_assignment do
-      %{ingredient_id: ingredient_id, usda_name: usda_name} ->
-        Food.assign_foundemental_ingredient(species.id, ingredient_id, usda_name)
+  # Wire up a freshly created species: if it was created from a row's "+ New
+  # species…" flow, assign that ingredient to it (checking the result so a failed
+  # assign doesn't masquerade as success), then patch the lists. Otherwise just
+  # reload the species tables.
+  defp finish_create_species(socket, species, %{
+         ingredient_id: ingredient_id,
+         usda_name: usda_name
+       }) do
+    case Food.assign_foundemental_ingredient(species.id, ingredient_id, usda_name) do
+      {:ok, _} ->
+        # New species now exists — re-stream the visible rows so their dropdowns
+        # include it, dropping the just-assigned one.
         socket
+        |> after_assign_data(ingredient_id)
+        |> restream_active()
+        |> put_flash(:info, "Created species \"#{species.name}\" and assigned ingredient")
 
-      nil ->
+      {:error, _changeset} ->
         socket
+        |> reload_species()
+        |> put_flash(
+          :error,
+          "Created species \"#{species.name}\", but could not assign the ingredient"
+        )
     end
+  end
+
+  defp finish_create_species(socket, species, _pending) do
+    socket
+    |> reload_species()
+    |> put_flash(:info, "Created species \"#{species.name}\"")
   end
 
   defp new_species_form do
