@@ -1,9 +1,11 @@
 <div class="foods-page min-h-screen bg-ink text-parchment pb-16">
   <div class="container max-w-4xl mx-auto px-4 py-8">
     <div class="mb-6">
-      <h1 class="text-3xl font-display font-medium text-parchment mb-2">Foods & Nutrition</h1>
+      <h1 class="text-3xl font-display font-medium text-parchment mb-2">{gettext("Foods & Nutrition")}</h1>
       <p class="text-parchment-dim max-w-[60ch]">
-        Browse food species for nutrition facts, the research behind them, and the bioactive compounds they carry.
+        {gettext(
+          "Browse food species for nutrition facts, the research behind them, and the bioactive compounds they carry."
+        )}
       </p>
 
       <%!-- Professional rail — frames the database as the working tool of the
@@ -45,7 +47,7 @@
             type="text"
             name="q"
             value={@query}
-            placeholder="Search species — e.g. apple, spinach, cattle..."
+            placeholder={gettext("Search species — e.g. apple, spinach, cattle...")}
             phx-debounce="300"
             class="w-full bg-ink-panel border border-ink-panel2 rounded-xl pl-10 pr-4 py-3 text-parchment placeholder-parchment-dim focus:outline-none focus:border-paprika focus:ring-1 focus:ring-paprika transition-colors"
             autocomplete="off"
@@ -71,7 +73,7 @@
             d="M3 4h18M6 12h12M10 20h4"
           />
         </svg>
-        Filters
+        {gettext("Filters")}
         <%= if filters_active?(assigns) do %>
           <span class="ml-0.5 min-w-5 h-5 px-1.5 inline-flex items-center justify-center text-xs font-bold rounded-full bg-paprika text-white [font-variant-numeric:tabular-nums]">
             {MapSet.size(@selected_compound_ids)}
@@ -114,9 +116,9 @@
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 space-y-4">
         <!-- Biochemical compounds — multi-search select -->
         <div>
-          <p class="text-sm font-display font-medium text-parchment">Contains a compound</p>
+          <p class="text-sm font-display font-medium text-parchment">{gettext("Contains a compound")}</p>
           <p class="text-xs text-parchment-dim mt-0.5 mb-2">
-            Search and pick bioactive compounds; foods containing any of them are shown.
+            {gettext("Search and pick bioactive compounds; foods containing any of them are shown.")}
           </p>
 
           <!-- Selected compound chips -->
@@ -144,7 +146,7 @@
                 type="text"
                 name="q"
                 value={@compound_query}
-                placeholder="Search compounds — e.g. Quercetin, Iron, Potassium..."
+                placeholder={gettext("Search compounds — e.g. Quercetin, Iron, Potassium...")}
                 phx-debounce="150"
                 class="w-full bg-ink border border-ink-panel2 rounded-xl px-4 py-2.5 text-sm text-parchment placeholder-parchment-dim focus:outline-none focus:border-paprika focus:ring-1 focus:ring-paprika transition-colors"
               />
@@ -157,7 +159,7 @@
               class="m3-scrollbar absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-ink-panel2 border border-ink-panel2 rounded-xl shadow-lg"
             >
               <div :if={@compound_results == []} class="px-4 py-3 text-sm text-parchment-dim">
-                No compounds match "{@compound_query}".
+                {gettext("No compounds match \"%{query}\".", query: @compound_query)}
               </div>
               <button
                 :for={compound <- @compound_results}
@@ -179,14 +181,14 @@
             phx-click="clear_filters"
             class="px-4 py-1.5 rounded-full text-sm font-medium text-parchment-dim hover:text-parchment transition"
           >
-            Clear all
+            {gettext("Clear all")}
           </button>
           <button
             type="button"
             phx-click="toggle_filters"
             class="px-5 py-1.5 rounded-full text-sm font-semibold bg-paprika text-white hover:opacity-90 transition"
           >
-            Done
+            {gettext("Done")}
           </button>
         </div>
       </div>
@@ -196,14 +198,14 @@
       <%= cond do %>
         <% @query != "" -> %>
           <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
-          results for "<span class="text-parchment">{@query}</span>"<%= if filters_active?(assigns), do: " (filtered)" %>
+          {gettext("results for")} "<span class="text-parchment">{@query}</span>"<%= if filters_active?(assigns), do: " " <> gettext("(filtered)") %>
         <% filters_active?(assigns) -> %>
           <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
-          filtered species
+          {gettext("filtered species")}
         <% true -> %>
-          Showing
+          {gettext("Showing")}
           <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
-          species
+          {gettext("species")}
       <% end %>
     </div>
 
@@ -223,9 +225,9 @@
           />
         </svg>
         <%= if @query != "" do %>
-          <p>No species found for "<span class="text-parchment-dim">{@query}</span>"</p>
+          <p>{gettext("No species found for")} "<span class="text-parchment-dim">{@query}</span>"</p>
         <% else %>
-          <p>No species match the selected filters.</p>
+          <p>{gettext("No species match the selected filters.")}</p>
         <% end %>
       </div>
     <% else %>
@@ -258,7 +260,7 @@
           <% end %>
 
           <a
-            href={"/foods/#{species_slug(species)}"}
+            href={"/#{@language}/foods/#{species_slug(species)}"}
             class="group flex flex-col bg-ink-panel border border-ink-panel2 rounded-2xl p-4 hover:border-paprika/50 hover:bg-ink-panel2/80 hover:-translate-y-0.5 transition-all"
           >
             <span class="block text-[2.5rem] leading-none" aria-hidden="true">
@@ -286,7 +288,7 @@
             phx-click="load_more"
             class="px-6 py-2.5 bg-ink-panel border border-ink-panel2 rounded-xl text-parchment-dim hover:text-parchment hover:border-basil/40 transition-colors text-sm font-medium"
           >
-            Load more
+            {gettext("Load more")}
           </button>
         </div>
       <% end %>
@@ -296,7 +298,7 @@
   <%!-- Crawlable A–Z directory: links every food so link equity reaches the
         detail pages the paginated feed never renders on the dead render. Shown
         only in the default browse state (not during an active search/filter). --%>
-  <%= if @directory != [] and @query == "" and MapSet.size(@selected_compound_ids) == 0 do %>
+  <%= if @directory != [] and default_browse?(assigns) do %>
     <section class="mt-12 border-t border-ink-panel2 pt-8">
       <details class="group">
         <summary class="cursor-pointer select-none text-sm font-medium text-parchment-dim hover:text-parchment">

@@ -489,6 +489,8 @@ defmodule Mehungry.Food do
 
   defdelegate get_foundemental_species!(id), to: FoundementalFoods, as: :get_species!
 
+  defdelegate species_by_ids(ids), to: FoundementalFoods
+
   defdelegate get_species_with_ingredients!(id), to: FoundementalFoods
 
   defdelegate change_foundemental_species(species, attrs \\ %{}),

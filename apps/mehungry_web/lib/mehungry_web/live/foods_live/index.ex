@@ -33,10 +33,12 @@ defmodule MehungryWeb.FoodsLive.Index do
      |> assign(:quick_compounds, quick_compounds(all_compounds))
      |> assign(:compound_query, "")
      |> assign(:compound_results, [])
-     |> assign(:page_title, "Foods & Nutrition Database")
+     |> assign(:page_title, gettext("Foods & Nutrition Database"))
      |> assign(
        :page_description,
-       "Browse our database of food species with detailed nutrition facts, the research behind them, and the bioactive compounds they carry."
+       gettext(
+         "Browse our database of food species with detailed nutrition facts, the research behind them, and the bioactive compounds they carry."
+       )
      )
      |> assign(:directory, build_directory(language))}
   end
@@ -107,13 +109,15 @@ defmodule MehungryWeb.FoodsLive.Index do
 
   def filters_active?(assigns), do: MapSet.size(assigns.selected_compound_ids) > 0
 
+  # The default feed state: no name search and no compound filter active. Drives
+  # both the spotlight card and the crawlable A–Z directory (shown only here).
+  def default_browse?(assigns),
+    do: assigns.query == "" and MapSet.size(assigns.selected_compound_ids) == 0
+
   # Whether to weave the "find a nutritionist" spotlight into the species grid —
-  # only in the default browse state (no search, no filter) and once there are
-  # enough cards that it reads as part of the collection, not a lonely banner.
-  def spotlight?(assigns) do
-    assigns.query == "" and MapSet.size(assigns.selected_compound_ids) == 0 and
-      length(assigns.species) > 8
-  end
+  # only in the default browse state and once there are enough cards that it
+  # reads as part of the collection, not a lonely banner.
+  def spotlight?(assigns), do: default_browse?(assigns) and length(assigns.species) > 8
 
   # Whether a compound is in the active filter set — drives the quick-pick chip
   # pressed state and which toggle event it fires.
@@ -127,11 +131,11 @@ defmodule MehungryWeb.FoodsLive.Index do
     |> Enum.sort_by(& &1.name)
   end
 
-  # The URL slug for a species — Greek `display_name` when set, else the English name.
-  def species_slug(%{display_name: name}) when is_binary(name),
-    do: URI.encode(String.replace(name, " ", "-"))
-
-  def species_slug(%{name: name}), do: String.replace(name, " ", "-")
+  # The URL slug for a species — Greek `display_name` when set, else the English
+  # name, spaces hyphenated. Raw/unencoded to match `SpeciesDetailLive`'s canonical
+  # slug byte-for-byte (the browser percent-encodes any non-ASCII on request), so a
+  # card links to the detail page's own canonical URL rather than an encoded variant.
+  def species_slug(species), do: String.replace(species_label(species) || "", " ", "-")
 
   # The label shown on a card — the injected Greek name, else the English name.
   def species_label(species), do: Map.get(species, :display_name) || species.name
@@ -226,10 +230,19 @@ defmodule MehungryWeb.FoodsLive.Index do
   end
 
   defp search_species(query, "el") do
-    SpeciesSearch.search_in_language(query, "el")
+    hits = SpeciesSearch.search_in_language(query, "el")
+    by_id = Food.species_by_ids(Enum.map(hits, & &1.id))
+
+    # Resolve all hits in one query (not an N+1 of get_species!/1), keeping the
+    # search ranking order and injecting each hit's Greek name as display_name.
+    hits
     |> Enum.map(fn %{id: id, name: greek_name} ->
-      Map.put(Food.get_foundemental_species!(id), :display_name, greek_name)
+      case Map.get(by_id, id) do
+        nil -> nil
+        species -> Map.put(species, :display_name, greek_name)
+      end
     end)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp search_species(query, _language), do: SpeciesSearch.search(query)

@@ -145,7 +145,11 @@ string). Locale is already set process-wide by `SetLocale`/`RestoreLocale`, so n
 per-call locale is needed.
 
 **Status:** the shared navigation chrome (`main_menu`) is migrated as the worked
-example. The remaining ~60 templates follow the identical pattern (see "Remaining work").
+example; the public **`/foods` browse page** (`foods_live`) has its full static chrome
+(headings, search/filter placeholders, result-count line, empty states, "Load more") and
+SEO `page_title`/`page_description` gettext-wrapped and Greek-translated — so with its
+already-localized DB content it is end-to-end localized. The remaining ~60 templates
+follow the identical pattern (see "Remaining work").
 
 ---
 

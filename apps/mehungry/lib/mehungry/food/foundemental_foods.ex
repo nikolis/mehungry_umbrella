@@ -220,6 +220,17 @@ defmodule Mehungry.Food.FoundementalFoods do
   def get_species!(id), do: Repo.get!(FoundementalFoodSpecies, id)
 
   @doc """
+  Fetch species for a list of ids in a single query, returned as an
+  `%{id => species}` map (unordered). Lets callers resolve a batch of search hits
+  without an N+1 of `get_species!/1`.
+  """
+  def species_by_ids(ids) when is_list(ids) do
+    from(s in FoundementalFoodSpecies, where: s.id in ^ids)
+    |> Repo.all()
+    |> Map.new(&{&1.id, &1})
+  end
+
+  @doc """
   Fetches a species by id with its ingredients preloaded. Mirrors the preload
   `get_species_by_slug/1` uses, so callers holding only an id can reach the
   species' curated ingredients (e.g. for nutrition + sample-recipe lookups).
