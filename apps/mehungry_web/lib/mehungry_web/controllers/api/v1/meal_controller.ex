@@ -121,7 +121,7 @@ defmodule MehungryWeb.Api.V1.MealController do
           "start_dt" => start_dt,
           "end_dt" => NaiveDateTime.add(start_dt, 1800, :second)
         }
-        |> put_if(params, "recipe_user_meals", &recipe_user_meals/1)
+        |> put_if(params, "recipe_user_meals", &recipe_user_meals(&1, existing_recipe_user_meals(existing)))
         |> put_if(params, "ingredient_user_meals", &ingredient_user_meals/1)
         |> put_if(params, "free_food_user_meals", &free_food_user_meals/1)
 
@@ -145,17 +145,49 @@ defmodule MehungryWeb.Api.V1.MealController do
 
   # Map the spec's `{recipe_id, servings}` onto the schema's required
   # consume_portions/cooking_portions.
-  defp recipe_user_meals(list) when is_list(list) do
-    Enum.map(list, fn rum ->
-      servings = rum["servings"] || rum["consume_portions"] || 1
+  #
+  # On edit the mobile body carries no child id, so we reconcile each incoming
+  # recipe against the meal's existing `recipe_user_meals` (by `recipe_id`) and
+  # carry forward the matched row's `id`. That makes `cast_assoc` *update* the row
+  # in place instead of `on_replace: :delete`-ing and re-inserting it — which
+  # would otherwise raise an FK violation when a `consume_recipe_user_meals` row
+  # still references the deleted recipe_user_meal (a meal the user already logged
+  # as eaten), and would also drop that consume history. `existing` is `[]` on
+  # create, so new meals behave exactly as before.
+  defp recipe_user_meals(list, existing) when is_list(list) do
+    {mapped, _remaining} =
+      Enum.map_reduce(list, existing, fn rum, remaining ->
+        servings = rum["servings"] || rum["consume_portions"] || 1
+        {matched, remaining} = pop_by_recipe(remaining, rum["recipe_id"])
 
-      %{
-        "recipe_id" => rum["recipe_id"],
-        "consume_portions" => servings,
-        "cooking_portions" => rum["cooking_portions"] || servings
-      }
-    end)
+        attrs =
+          %{
+            "recipe_id" => rum["recipe_id"],
+            "consume_portions" => servings,
+            "cooking_portions" => rum["cooking_portions"] || servings
+          }
+          |> maybe_put_id(matched)
+
+        {attrs, remaining}
+      end)
+
+    mapped
   end
+
+  # Pop the first existing recipe_user_meal matching `recipe_id` (so duplicates of
+  # the same recipe each bind to a distinct existing row), returning it + the rest.
+  defp pop_by_recipe(existing, recipe_id) do
+    case Enum.find_index(existing, &(&1.recipe_id == recipe_id)) do
+      nil -> {nil, existing}
+      idx -> {Enum.at(existing, idx), List.delete_at(existing, idx)}
+    end
+  end
+
+  defp maybe_put_id(attrs, %{id: id}), do: Map.put(attrs, "id", id)
+  defp maybe_put_id(attrs, _), do: attrs
+
+  defp existing_recipe_user_meals(%{recipe_user_meals: rums}) when is_list(rums), do: rums
+  defp existing_recipe_user_meals(_), do: []
 
   # A logged ingredient resolves to a unit the same way the calendar form does:
   # the client may send the signed `unit_selection` (positive → measurement unit,

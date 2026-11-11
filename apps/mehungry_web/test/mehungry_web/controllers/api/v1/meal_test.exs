@@ -27,6 +27,82 @@ defmodule MehungryWeb.Api.V1.MealTest do
     assert conn |> delete(~p"/api/v1/meals/#{meal_id}") |> response(204)
   end
 
+  test "update a recipe meal's servings via the mobile edit body", %{conn: conn, user: user} do
+    recipe = FoodFixtures.recipe_fixture(user)
+
+    created =
+      conn
+      |> post(~p"/api/v1/meals", %{
+        "date" => "2026-08-12",
+        "meal_type" => "dinner",
+        "recipe_user_meals" => [%{"recipe_id" => recipe.id, "servings" => 2}]
+      })
+      |> json_response(201)
+
+    %{"data" => %{"id" => meal_id}} = created
+
+    # Mirrors the mobile RecordDetailModal edit: PUT replaces the whole meal and
+    # carries empty ingredient/free-food arrays. Regression — the update fetch
+    # didn't preload free_food_user_meals, so the changeset's
+    # `cast_assoc(:free_food_user_meals, on_replace: :delete)` raised on the
+    # NotLoaded association and the edit 500'd.
+    update_body = %{
+      "date" => "2026-08-12",
+      "meal_type" => "dinner",
+      "title" => "Dinner",
+      "recipe_user_meals" => [%{"recipe_id" => recipe.id, "servings" => 3}],
+      "ingredient_user_meals" => [],
+      "free_food_user_meals" => []
+    }
+
+    updated = conn |> put(~p"/api/v1/meals/#{meal_id}", update_body) |> json_response(200)
+    assert %{"data" => %{"recipes" => [%{"recipe_id" => rid, "servings" => 3}]}} = updated
+    assert rid == recipe.id
+  end
+
+  test "update a meal that has been consumed does not 500", %{conn: conn, user: user} do
+    recipe = FoodFixtures.recipe_fixture(user, %{servings: 4})
+
+    created =
+      conn
+      |> post(~p"/api/v1/meals", %{
+        "date" => "2026-08-12",
+        "meal_type" => "dinner",
+        "recipe_user_meals" => [%{"recipe_id" => recipe.id, "servings" => 4}]
+      })
+      |> json_response(201)
+
+    %{"data" => %{"id" => meal_id}} = created
+
+    # Record a consume against the meal's recipe_user_meal (mirrors tapping
+    # "I ate this" in the app). This creates a history_consume_recipe_user_meals
+    # row FK'd to the recipe_user_meal.
+    rum =
+      Mehungry.Repo.get_by!(Mehungry.History.RecipeUserMeal, user_meal_id: meal_id)
+
+    Mehungry.Repo.insert!(%Mehungry.History.ConsumeRecipeUserMeal{
+      recipe_user_meal_id: rum.id,
+      user_meal_id: meal_id,
+      consume_portions: 1
+    })
+
+    # Now edit the meal. The mobile body replaces recipe_user_meals wholesale
+    # (no child id), so on_replace: :delete would delete the consumed
+    # recipe_user_meal and violate the consume row's FK -> 500 regression.
+    update_body = %{
+      "date" => "2026-08-12",
+      "meal_type" => "dinner",
+      "title" => "Dinner",
+      "recipe_user_meals" => [%{"recipe_id" => recipe.id, "servings" => 3}],
+      "ingredient_user_meals" => [],
+      "free_food_user_meals" => []
+    }
+
+    updated = conn |> put(~p"/api/v1/meals/#{meal_id}", update_body) |> json_response(200)
+    assert %{"data" => %{"recipes" => [%{"recipe_id" => rid}]}} = updated
+    assert rid == recipe.id
+  end
+
   test "create an unsorted (nil meal_type) meal", %{conn: conn} do
     body = %{"date" => "2026-08-12", "meal_type" => nil, "title" => "Snacks"}
     created = conn |> post(~p"/api/v1/meals", body) |> json_response(201)

@@ -549,7 +549,11 @@ defmodule Mehungry.History do
       ],
       ingredient_user_meals: [
         :ingredient
-      ]
+      ],
+      # Symmetric with the owner-scoped arity above — keep free food loaded so the
+      # edit changeset's `cast_assoc(:free_food_user_meals, on_replace: :delete)`
+      # can diff existing rows instead of raising on a NotLoaded association.
+      free_food_user_meals: []
     )
   end
 
@@ -567,7 +571,11 @@ defmodule Mehungry.History do
       ],
       ingredient_user_meals: [
         :ingredient
-      ]
+      ],
+      # Must be loaded so `cast_assoc(:free_food_user_meals, on_replace: :delete)`
+      # in the edit changeset can diff against existing rows — otherwise updating
+      # a meal whose body carries `free_food_user_meals` raises (NotLoaded) → 500.
+      free_food_user_meals: []
     )
   end
 
