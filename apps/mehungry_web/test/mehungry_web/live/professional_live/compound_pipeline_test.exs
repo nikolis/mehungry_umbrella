@@ -1,4 +1,4 @@
-defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
+defmodule MehungryWeb.ProfessionalLive.CompoundPipelineTest do
   use MehungryWeb.ConnCase
   use Oban.Testing, repo: Mehungry.Repo
 
@@ -7,11 +7,12 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
   import Mehungry.AccountsFixtures
 
   alias Mehungry.Food
-  alias Mehungry.Food.CandidateDerivationRun
-  alias Mehungry.Food.CandidateDerivationRuns
-  alias Mehungry.Food.CompoundCandidates
+  alias Mehungry.CompoundPipeline, as: Pipeline
+  alias Mehungry.CompoundPipeline.DerivationRun
+  alias Mehungry.CompoundPipeline.DerivationRuns
+  alias Mehungry.CompoundPipeline.Candidates
   alias Mehungry.Food.SpeciesCompounds
-  alias Mehungry.ObanWorkers.CompoundCandidateDerivationWorker, as: Worker
+  alias Mehungry.CompoundPipeline.DerivationWorker, as: Worker
 
   @admin_email Application.compile_env(:mehungry, :admin_email)
 
@@ -31,15 +32,15 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
 
     {:ok, candidate} =
-      CompoundCandidates.import_manual_candidate(species.id, oxalate.id, %{notes: "expert"})
+      Candidates.import_manual_candidate(species.id, oxalate.id, %{notes: "expert"})
 
     %{conn: conn, spinach: spinach, species: species, oxalate: oxalate, candidate: candidate}
   end
 
   test "renders the derive controls and the pending candidate", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, _view, html} = live(conn, ~p"/professional/compound-pipeline")
 
-    assert html =~ "Compound Candidates"
+    assert html =~ "Compound pipeline"
     assert html =~ "Derive candidates"
     assert html =~ "Spinach"
     assert html =~ "Oxalate"
@@ -51,7 +52,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     candidate: candidate,
     species: species
   } do
-    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
     assert render(view) =~ "Oxalate"
 
@@ -61,7 +62,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
 
     assert [rel] = SpeciesCompounds.list_species_relationships(species.id)
     assert rel.source == "manual"
-    assert Food.get_candidate!(candidate.id).status == "promoted"
+    assert Pipeline.get_candidate!(candidate.id).status == "promoted"
   end
 
   test "Reject drops the row and writes no fact", %{
@@ -69,7 +70,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     candidate: candidate,
     species: species
   } do
-    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
     view
     |> element("button[phx-click='reject'][phx-value-id='#{candidate.id}']")
@@ -77,31 +78,31 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
 
     # The candidate leaves the pending queue (checked via the context — "Oxalate"
     # also appears in the measurement form's compound dropdown).
-    assert Food.list_pending_candidates() == []
+    assert Pipeline.list_pending_candidates() == []
     assert SpeciesCompounds.list_species_relationships(species.id) == []
-    assert Food.get_candidate!(candidate.id).status == "rejected"
+    assert Pipeline.get_candidate!(candidate.id).status == "rejected"
   end
 
   test "Derive opens a run and enqueues the worker", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
-    assert CandidateDerivationRuns.latest_run() == nil
+    assert DerivationRuns.latest_run() == nil
 
     html = view |> element("button", "Derive candidates") |> render_click()
 
     assert html =~ "Derivation started"
-    assert CandidateDerivationRuns.latest_run()
+    assert DerivationRuns.latest_run()
     assert_enqueued(worker: Worker)
   end
 
   test "a broadcast run update moves the progress bar", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
-    run = %CandidateDerivationRun{status: "processing", processed: 3, total: 4, promoted_count: 1}
+    run = %DerivationRun{status: "processing", processed: 3, total: 4, promoted_count: 1}
 
     Phoenix.PubSub.broadcast(
       Mehungry.PubSub,
-      CandidateDerivationRuns.topic(),
+      DerivationRuns.topic(),
       {:candidate_derivation_run, run}
     )
 
@@ -116,7 +117,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     conn = log_in_user(conn, user)
 
     assert {:error, {:redirect, %{to: "/home"}}} =
-             live(conn, ~p"/professional/compound-candidates")
+             live(conn, ~p"/professional/compound-pipeline")
   end
 
   test "curated facts list a promoted species fact and Undo removes it", %{
@@ -124,8 +125,8 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     candidate: candidate,
     species: species
   } do
-    {:ok, _} = Food.promote_candidate(candidate.id)
-    {:ok, view, html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, _} = Pipeline.promote_candidate(candidate.id)
+    {:ok, view, html} = live(conn, ~p"/professional/compound-pipeline")
 
     assert html =~ "Curated facts"
     assert html =~ "Oxalate"
@@ -136,16 +137,16 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     |> render_click()
 
     assert SpeciesCompounds.list_species_relationships(species.id) == []
-    assert Food.get_candidate!(candidate.id).status == "rejected"
+    assert Pipeline.get_candidate!(candidate.id).status == "rejected"
   end
 
   test "Purge non-dietary deletes non_dietary facts", %{conn: conn, species: species} do
     {:ok, dpph} = Food.upsert_compound(%{name: "DPPH", compound_type: "other"})
     {:ok, _} = Food.set_dietary_relevance(dpph.id, "non_dietary")
-    {:ok, cand} = Food.import_manual_candidate(species.id, dpph.id, %{})
-    {:ok, _} = Food.promote_candidate(cand.id)
+    {:ok, cand} = Pipeline.import_manual_candidate(species.id, dpph.id, %{})
+    {:ok, _} = Pipeline.promote_candidate(cand.id)
 
-    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
     view |> element("button", "Purge non-dietary") |> render_click()
 
     assert Enum.filter(
@@ -173,7 +174,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
 
     assert other
 
-    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
     view
     |> element("button[phx-click='mark_non_dietary'][phx-value-id='#{candidate.id}']")
@@ -183,7 +184,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     # The fact for the now-non-dietary compound is purged...
     assert SpeciesCompounds.list_species_relationships(species.id) == []
     # ...and the pending candidate for it is gone from the queue.
-    assert Food.list_pending_candidates() == []
+    assert Pipeline.list_pending_candidates() == []
   end
 
   test "Add measurement records it and re-scores the species candidate", %{
@@ -192,7 +193,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     species: species,
     oxalate: oxalate
   } do
-    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
     view
     |> form("form[phx-submit=add_measurement]",
@@ -214,7 +215,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
 
     # The species candidate now carries the measurement as evidence.
     candidate =
-      Food.list_candidates_for_species(species.id)
+      Pipeline.list_candidates_for_species(species.id)
       |> Enum.find(&(&1.compound_id == oxalate.id))
 
     assert candidate
@@ -228,9 +229,9 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     end
 
     test "Audit facts enqueues the audit worker", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+      {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
       view |> element("button", "Audit facts") |> render_click()
-      assert_enqueued(worker: Mehungry.ObanWorkers.CompoundFactAuditWorker)
+      assert_enqueued(worker: Mehungry.CompoundPipeline.FactAuditWorker)
     end
 
     test "a flagged fact renders with its reason and can be marked non-dietary", %{
@@ -263,16 +264,16 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
       end
 
       {:ok, %{promoted: true}} =
-        CompoundCandidates.derive_candidate(species.id, oxalate.id, skip_plausibility: true)
+        Candidates.derive_candidate(species.id, oxalate.id, skip_plausibility: true)
 
       Application.put_env(:mehungry, :compound_plausibility_stub, fn _s, _c, _st ->
         {:ok, %{verdict: :implausible, reason: "co-occurrence, not containment"}}
       end)
 
-      {1, 1} = CompoundCandidates.audit_promoted_facts_batch(10)
-      [flagged] = CompoundCandidates.list_flagged_facts()
+      {1, 1} = Candidates.audit_promoted_facts_batch(10)
+      [flagged] = Candidates.list_flagged_facts()
 
-      {:ok, view, html} = live(conn, ~p"/professional/compound-candidates")
+      {:ok, view, html} = live(conn, ~p"/professional/compound-pipeline")
       assert html =~ "Flagged facts"
       assert html =~ "co-occurrence, not containment"
 

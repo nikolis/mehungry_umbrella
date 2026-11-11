@@ -1,12 +1,12 @@
-defmodule Mehungry.Food.CandidateDerivationRuns do
+defmodule Mehungry.CompoundPipeline.DerivationRuns do
   @moduledoc """
   Lifecycle + progress tracking for candidate-derivation passes.
 
-  Mirrors `Mehungry.Food.IdentityResolutionRuns`: a single `CandidateDerivationRun`
-  row carries a `processed`/`total` coverage snapshot refreshed each batch (plus a
-  running `promoted_count`), transitions `pending → processing → completed` (or
-  `failed`), and broadcasts every change on `Mehungry.PubSub` under `topic/0` so an
-  admin view can render live progress.
+  A single `CompoundPipeline.DerivationRun` row carries a `processed`/`total`
+  coverage snapshot refreshed each batch (plus a running `promoted_count`),
+  transitions `pending → processing → completed` (or `failed`), and broadcasts
+  every change on `Mehungry.PubSub` under `topic/0` so the pipeline's admin view
+  can render live progress.
 
   `update_status/2` is tolerant of a missing row (logs + no-ops) so a job whose run
   record was deleted mid-pass doesn't crash into pointless retries.
@@ -17,8 +17,8 @@ defmodule Mehungry.Food.CandidateDerivationRuns do
   require Logger
 
   alias Mehungry.Repo
-  alias Mehungry.Food.CompoundCandidates
-  alias Mehungry.Food.CandidateDerivationRun, as: Run
+  alias Mehungry.CompoundPipeline.Candidates
+  alias Mehungry.CompoundPipeline.DerivationRun, as: Run
 
   @topic "candidate_derivation_runs"
 
@@ -26,7 +26,7 @@ defmodule Mehungry.Food.CandidateDerivationRuns do
 
   @doc "Opens a run seeded with the current coverage snapshot and `started_at`."
   def start_run do
-    %{processed: processed, total: total} = CompoundCandidates.candidate_derivation_progress()
+    %{processed: processed, total: total} = Candidates.candidate_derivation_progress()
 
     {:ok, run} =
       %Run{}
@@ -90,7 +90,7 @@ defmodule Mehungry.Food.CandidateDerivationRuns do
   defp update_status(run_id, attrs) do
     case Repo.get(Run, run_id) do
       nil ->
-        Logger.debug("CandidateDerivationRuns: run #{run_id} missing, skipping #{inspect(attrs)}")
+        Logger.debug("DerivationRuns: run #{run_id} missing, skipping #{inspect(attrs)}")
         nil
 
       run ->

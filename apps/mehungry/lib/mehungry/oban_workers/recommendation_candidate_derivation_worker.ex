@@ -3,7 +3,7 @@ defmodule Mehungry.ObanWorkers.RecommendationCandidateDerivationWorker do
   Derives condition↔compound recommendation candidates from `study_entity_relations`,
   one batch per run tick.
 
-  Mirrors `CompoundCandidateDerivationWorker`: a single job threads a `run_id` (and an
+  Mirrors `CompoundPipeline.DerivationWorker`: a single job threads a `run_id` (and an
   `offset`) through a self-re-enqueueing chain, deriving/refreshing a window of
   `RecommendationCandidates` relation pairs each tick and refreshing the run's
   progress — until the offset runs past the pairs, then marking the run `completed`.

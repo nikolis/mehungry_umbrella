@@ -3,7 +3,7 @@
 > **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The *generation* pipeline
 > described below — species-seeded literature crawl, PubTator annotation, compound/recommendation
 > **candidate derivation**, Chemistry/PubChem resolution, glycemic-index derivation — has had its
-> admin UIs (`/professional/{science,literature,compound-candidates}`) and the inbound
+> admin UIs (`/professional/{science,literature,compound-pipeline}`) and the inbound
 > `/api/local_ai/*` seam **removed**, and the pipeline watchdog/reconciler trimmed to condition-crawl
 > only. The contexts, Oban workers, schemas, and **tables remain dormant** (not dropped), so this doc
 > still describes code that exists. What's *live*: the **condition-seeded crawl** + extractor
@@ -32,7 +32,7 @@ invariants.
 | DISCOVER | Qualitative compound facts | "Spinach contains Oxalate" (`Food.Compounds`) | `Food.Compounds` | [`food_compounds.md`](food_compounds.md) |
 | DISCOVER | Quantitative measurements | "Spinach, Oxalate, Raw: 750 mg/100g" (immutable) | `Food.CompoundMeasurements` | [`compound_measurements.md`](compound_measurements.md) |
 | — | Evidence summaries | Read-only mean/range/variance + auditable evidence score | `Food.EvidenceAggregation.summarize/2` | [`evidence_aggregation.md`](evidence_aggregation.md) |
-| CURATE | Fact promotion | Scored `species_compound_candidates` → `species_compound_relationships` | `Food.CompoundCandidates` · `CompoundCandidateDerivationWorker` | [`compound_candidates.md`](compound_candidates.md) |
+| CURATE | Fact promotion | Scored `species_compound_candidates` → `species_compound_relationships` | `CompoundPipeline.Candidates` · `CompoundPipeline.DerivationWorker` | [`compound_pipeline.md`](../compound_pipeline.md) |
 | ADVISE | Dietary recommendations | Conditions ↔ compounds ("Kidney Stones: avoid Oxalate") | `Mehungry.Health` · `RecommendationCandidateDerivationWorker` | [`health_recommendations.md`](health_recommendations.md) · [`pubtator_relations_recommendations.md`](pubtator_relations_recommendations.md) |
 
 ## External authorities & configuration
@@ -76,7 +76,7 @@ Other parts of the project the pipeline leans on (integration surface / blast ra
   `RunReconciler`.
 - Admin/curation UIs: `apps/mehungry_web/.../professional_live/`. **Decommissioned in Phase 1**
   (removed): `science_pipeline.ex`, `studies.ex`, `entities.ex`, `literature_runs.ex`,
-  `compound_candidates.ex`. **Still live:** `health_conditions.ex` (`/professional/health` — the
+  `compound_pipeline/candidates.ex`. **Still live:** `health_conditions.ex` (`/professional/health` — the
   condition-crawl + analyze + claim-curation acquisition surface) and `usda_schema.ex`
   (`/professional/usda-schema` — foundemental-food/species curation).
 
@@ -86,7 +86,7 @@ The invariants that keep the subsystem legible (elaborated in
 [`scientific_pipeline.md`](scientific_pipeline.md)):
 
 1. **Evidence never writes facts directly.** PubTator mentions and literature
-   co-occurrence are *evidence*; only `Food.CompoundCandidates` writes
+   co-occurrence are *evidence*; only `CompoundPipeline.Candidates` writes
    `species_compound_relationships` facts.
 2. **Facts, then advice — never mixed.** All `Food.*` compound layers are facts only;
    dietary guidance lives solely in `Mehungry.Health`, which reads those facts.
@@ -111,7 +111,7 @@ The invariants that keep the subsystem legible (elaborated in
 - [`food_compounds.md`](food_compounds.md) — qualitative compound facts (`Food.Compounds`).
 - [`compound_measurements.md`](compound_measurements.md) — immutable quantitative measurements.
 - [`evidence_aggregation.md`](evidence_aggregation.md) — read-only evidence summaries + scores.
-- [`compound_candidates.md`](compound_candidates.md) — the curation step that promotes evidence to facts.
+- [`compound_pipeline.md`](../compound_pipeline.md) — the curation step that promotes evidence to facts.
 - [`health_recommendations.md`](health_recommendations.md) — the advice layer (conditions ↔ compounds).
 - [`pubtator_relations_recommendations.md`](pubtator_relations_recommendations.md) — literature relations → review-gated recommendations.
 - [`glycemic_index.md`](glycemic_index.md) — Glycemic Index re-derived from primary literature (path B; the 2021 International Tables aren't commercially licensable), fanned over species, review-gated. Licensing/provenance rationale: [`glycemic_index_licensing.md`](glycemic_index_licensing.md).

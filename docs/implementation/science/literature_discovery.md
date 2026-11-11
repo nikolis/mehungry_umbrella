@@ -261,8 +261,8 @@ studies appear linked to the ingredient and the run reaches `completed`.
 
 - No LiveView progress bar yet — the data + PubSub broadcasts are in place.
 - No promotion of studies into `IngredientCompoundRelationship` facts — the crawler never
-  asserts a dietary fact. That curation step now exists as `Food.CompoundCandidates`
-  (**`docs/science/compound_candidates.md`**); promoted relationships feed back into
+  asserts a dietary fact. That curation step now exists as `CompoundPipeline.Candidates`
+  (**`docs/implementation/compound_pipeline.md`**); promoted relationships feed back into
   `search_terms_for_species/1` as targeted crawl terms.
 - Additional literature sources (Europe PMC, Semantic Scholar, CrossRef) reuse the
   `study_ingredients.source` field and the raw-cache layer.

@@ -86,7 +86,7 @@ Two conclusions:
    value from the corpus already annotated (no re-fetch), plus wire it into
    `PubTator.annotate_study/2` going forward.
 4. **Recommendation candidates** — a `CompoundRecommendationCandidate` layer mirroring
-   `Food.CompoundCandidates`: aggregate compound↔condition relations (blend score +
+   `CompoundPipeline.Candidates`: aggregate compound↔condition relations (blend score +
    count), map relation type → suggested direction, cite reference PMIDs, and queue
    for admin promotion into `Health.CompoundRecommendation` on `/professional/health`.
 
@@ -94,8 +94,8 @@ Two conclusions:
 
 - `Literature.PubTator.Client.parse_biocjson/1` + `pubtator_responses` (raw payloads).
 - `Chemistry.Resolver` (chemical MeSH → compound) — already used for chemical mentions.
-- The candidate → review → promote pattern (`Food.CompoundCandidates`,
-  `SpeciesCompoundCandidateStudy` provenance, the `/professional/health` admin page).
+- The candidate → review → promote pattern (`CompoundPipeline.Candidates`,
+  `CompoundPipeline.CandidateStudy` provenance, the `/professional/health` admin page).
 
 ## Safety stance
 

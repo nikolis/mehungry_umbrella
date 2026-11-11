@@ -1,13 +1,13 @@
-defmodule Mehungry.ObanWorkers.CompoundFactAuditWorker do
+defmodule Mehungry.CompoundPipeline.FactAuditWorker do
   @moduledoc """
   Re-runs the plausibility gate over already-promoted `literature`
   `SpeciesCompoundRelationship` facts that predate the gate (their backing candidate
   has no `plausibility_verdict`). Each implausible fact is **flagged** — the verdict
   is recorded on the candidate so it surfaces in the "Flagged facts" review list on
-  `/professional/compound-candidates`. The audit never deletes a fact; a human
+  `/professional/compound-pipeline`. The audit never deletes a fact; a human
   decides via Undo or "Non-dietary".
 
-  Mirrors `CompoundCandidateDerivationWorker`'s self-re-enqueueing chain, but each
+  Mirrors `CompoundPipeline.DerivationWorker`'s self-re-enqueueing chain, but each
   tick makes LLM calls, so batches are small and the terminating condition is
   progress-based: a tick that audits at least one fact enqueues the next; a tick that
   audits none — because nothing is left, OR because the judge is unavailable and every
@@ -19,20 +19,23 @@ defmodule Mehungry.ObanWorkers.CompoundFactAuditWorker do
 
   require Logger
 
-  alias Mehungry.Food.CompoundCandidates
+  alias Mehungry.CompoundPipeline.Candidates
 
   # LLM calls per tick — keep modest.
   @batch_size 20
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    case CompoundCandidates.audit_promoted_facts_batch(@batch_size) do
+    case Candidates.audit_promoted_facts_batch(@batch_size) do
       {0, _flagged} ->
-        Logger.info("CompoundFactAuditWorker: audit pass complete (no further progress)")
+        Logger.info("CompoundPipeline.FactAuditWorker: audit pass complete (no further progress)")
         :ok
 
       {audited, flagged} ->
-        Logger.info("CompoundFactAuditWorker: audited #{audited} fact(s), flagged #{flagged}")
+        Logger.info(
+          "CompoundPipeline.FactAuditWorker: audited #{audited} fact(s), flagged #{flagged}"
+        )
+
         %{} |> new() |> Oban.insert!()
         :ok
     end

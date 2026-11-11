@@ -28,7 +28,7 @@ are the key the compound facts and health advice hinge on.
 - `has_many :translations` (FoundementalFoodSpeciesTranslation)
 - Compound facts attach to species via `SpeciesCompoundRelationship` — see
   [`../science/food_compounds.md`](../science/food_compounds.md) and
-  [`../science/compound_candidates.md`](../science/compound_candidates.md)
+  [`../compound_pipeline.md`](../compound_pipeline.md)
 - Enrichment facts attach to species via `SpeciesFact` (below)
 
 ### SpeciesFact

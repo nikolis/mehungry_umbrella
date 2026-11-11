@@ -1,23 +1,25 @@
-defmodule Mehungry.Food.SpeciesCompoundCandidate do
+defmodule Mehungry.CompoundPipeline.Candidate do
   @moduledoc """
   A *proposed* `FoundementalFoodSpecies`↔`Compound` relationship derived from
   evidence (PubTator co-occurrence aggregated across the species' ingredients,
   species measurements, or manual import), scored and staged through
   `pending → promoted | rejected`.
 
-  Species-keyed successor of `IngredientCompoundCandidate`: one suggestion per
-  species instead of one per USDA ingredient variant. The reference studies a
-  suggestion was extracted from are linked via `SpeciesCompoundCandidateStudy`.
+  The input proposal of the `CompoundPipeline` — one suggestion per species
+  (not per USDA ingredient variant). The reference studies a suggestion was
+  extracted from are linked via `CompoundPipeline.CandidateStudy`. Promotion
+  writes the curated fact into `Food.SpeciesCompoundRelationship`.
   """
 
   use Ecto.Schema
 
   import Ecto.Changeset
 
+  alias Mehungry.CompoundPipeline.CandidateStudy
+
   alias Mehungry.Food.{
     Compound,
     FoundementalFoodSpecies,
-    SpeciesCompoundCandidateStudy,
     SpeciesCompoundRelationship
   }
 
@@ -48,7 +50,7 @@ defmodule Mehungry.Food.SpeciesCompoundCandidate do
     belongs_to :compound, Compound
     belongs_to :promoted_relationship, SpeciesCompoundRelationship
 
-    has_many :candidate_studies, SpeciesCompoundCandidateStudy, foreign_key: :candidate_id
+    has_many :candidate_studies, CandidateStudy, foreign_key: :candidate_id
     has_many :studies, through: [:candidate_studies, :study]
 
     timestamps()

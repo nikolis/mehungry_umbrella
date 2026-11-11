@@ -1,36 +1,38 @@
-defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
+defmodule MehungryWeb.ProfessionalLive.CompoundPipeline do
   @moduledoc """
-  Admin review of species↔compound candidate relationships (the
-  `Food.CompoundCandidates` branch). Derives candidates from the accumulated
-  literature co-occurrence + measurement evidence, auto-promotes the strong ones
-  past the plausibility gate, and lets a curator promote/reject/flag the rest.
+  The admin front door for `Mehungry.CompoundPipeline` — the isolated pipeline that
+  turns accumulated evidence into curated species↔compound facts, presented as a
+  numbered flow: ① Evidence → ② Derive & score → ③ Review → ④ Curated facts.
 
-  Scope: the **FoundementalFoodSpecies ↔ Compound** facts only — it never touches
-  conditions or `Health.RecommendationCandidates` (that condition↔compound advice
-  branch has its own worker and is deliberately left out). The dead local-AI
-  *extracted* measurement-candidate review (full-text extraction feeder was
-  decommissioned in the research-search reshape, Phase 1) is intentionally not
-  surfaced here; the manual "Add measurement" form is the one live way to grow
-  the measurement evidence.
+  Derives candidates from the accumulated literature co-occurrence + measurement
+  evidence, auto-promotes the strong ones past the plausibility gate, and lets a
+  curator promote/reject/flag the rest. Scope: the **FoundementalFoodSpecies ↔
+  Compound** facts only — it never touches conditions or the dormant condition↔compound
+  advice branch. The manual "Add measurement" form is the one live way to grow the
+  measurement evidence.
+
+  The curated facts it produces (⑤) live in `Mehungry.Food` (`Food.SpeciesCompounds`);
+  this view reads evidence/facts through `Mehungry.Food` and drives the pipeline
+  through `Mehungry.CompoundPipeline`.
   """
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
-  alias Mehungry.Food.CandidateDerivationRuns
+  alias Mehungry.CompoundPipeline, as: Pipeline
 
   @per_page 25
 
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(Mehungry.PubSub, CandidateDerivationRuns.topic())
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, Pipeline.runs_topic())
     end
 
-    run = CandidateDerivationRuns.latest_run()
+    run = Pipeline.latest_run()
 
     socket =
       socket
-      |> assign(:page_title, "Compound Candidates")
+      |> assign(:page_title, "Compound pipeline")
       |> assign(:page, 1)
       |> assign(:rel_page, 1)
       |> assign(:rel_count, Food.count_relationships())
@@ -38,9 +40,9 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
       |> assign(:progress, progress_for(run))
       |> assign(:compounds, Food.list_compounds())
       |> assign(:measurable, Food.list_curated_ingredients())
-      |> assign(:audit_pending, Food.count_promoted_facts_to_audit())
-      |> assign(:flagged, Food.list_flagged_facts())
-      |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0))
+      |> assign(:audit_pending, Pipeline.count_promoted_facts_to_audit())
+      |> assign(:flagged, Pipeline.list_flagged_facts())
+      |> stream(:candidates, Pipeline.list_pending_candidates(limit: @per_page, offset: 0))
       |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0))
       |> stream(:measurements, Food.list_recent_measurements(limit: @per_page))
 
@@ -51,7 +53,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   @impl true
   def handle_event("derive", _params, socket) do
-    {:ok, run} = Food.enqueue_candidate_derivation()
+    {:ok, run} = Pipeline.enqueue_candidate_derivation()
 
     {:noreply,
      socket
@@ -61,20 +63,20 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   @impl true
   def handle_event("promote", %{"id" => id}, socket) do
-    {:ok, _} = Food.promote_candidate(String.to_integer(id))
+    {:ok, _} = Pipeline.promote_candidate(String.to_integer(id))
     {:noreply, stream_delete_by_dom_id(socket, :candidates, "candidates-#{id}")}
   end
 
   @impl true
   def handle_event("reject", %{"id" => id}, socket) do
-    {:ok, _} = Food.reject_candidate(String.to_integer(id))
+    {:ok, _} = Pipeline.reject_candidate(String.to_integer(id))
     {:noreply, stream_delete_by_dom_id(socket, :candidates, "candidates-#{id}")}
   end
 
   @impl true
   def handle_event("mark_non_dietary", %{"id" => id, "compound-id" => compound_id}, socket) do
     {:ok, _} = Food.set_dietary_relevance(String.to_integer(compound_id), "non_dietary")
-    {rels, _cands} = Food.purge_non_dietary()
+    {rels, _cands} = Pipeline.purge_non_dietary()
 
     {:noreply,
      socket
@@ -94,7 +96,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   @impl true
   def handle_event("audit_facts", _params, socket) do
-    {:ok, _job} = Food.enqueue_fact_audit()
+    {:ok, _job} = Pipeline.enqueue_fact_audit()
 
     {:noreply,
      put_flash(
@@ -106,7 +108,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   @impl true
   def handle_event("flagged_undo", %{"rel-id" => rel_id, "id" => cand_id}, socket) do
-    {:ok, _} = Food.unpromote_relationship(String.to_integer(rel_id))
+    {:ok, _} = Pipeline.unpromote_relationship(String.to_integer(rel_id))
 
     {:noreply,
      socket
@@ -126,7 +128,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
         socket
       ) do
     {:ok, _} = Food.set_dietary_relevance(String.to_integer(compound_id), "non_dietary")
-    {rels, _cands} = Food.purge_non_dietary()
+    {rels, _cands} = Pipeline.purge_non_dietary()
 
     {:noreply,
      socket
@@ -135,7 +137,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
        "Marked compound non-dietary — excluded everywhere; purged #{rels} fact#{if rels == 1, do: "", else: "s"}."
      )
      |> assign(:rel_count, Food.count_relationships())
-     |> assign(:flagged, Food.list_flagged_facts())
+     |> assign(:flagged, Pipeline.list_flagged_facts())
      |> assign(:rel_page, 1)
      |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
        reset: true
@@ -150,14 +152,14 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
     {:noreply,
      socket
      |> assign(:page, page)
-     |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: offset))}
+     |> stream(:candidates, Pipeline.list_pending_candidates(limit: @per_page, offset: offset))}
   end
 
   # ── Curated facts (promoted relationships) ─────────────────────────────────
 
   @impl true
   def handle_event("undo", %{"id" => id}, socket) do
-    {:ok, _} = Food.unpromote_relationship(String.to_integer(id))
+    {:ok, _} = Pipeline.unpromote_relationship(String.to_integer(id))
 
     {:noreply,
      socket
@@ -167,7 +169,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   @impl true
   def handle_event("purge", _params, socket) do
-    {rels, _cands} = Food.purge_non_dietary()
+    {rels, _cands} = Pipeline.purge_non_dietary()
 
     {:noreply,
      socket
@@ -205,7 +207,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
       # Re-score the species candidate so the new measurement is reflected at once.
       case Food.species_id_for_ingredient(ingredient_id) do
         nil -> :ok
-        species_id -> Food.derive_candidate(species_id, compound_id)
+        species_id -> Pipeline.derive_candidate(species_id, compound_id)
       end
 
       {:noreply,
@@ -214,7 +216,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
        |> assign(:page, 1)
        |> assign(:rel_page, 1)
        |> assign(:rel_count, Food.count_relationships())
-       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
+       |> stream(:candidates, Pipeline.list_pending_candidates(limit: @per_page, offset: 0),
          reset: true
        )
        |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
@@ -233,7 +235,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   @impl true
   def handle_event("refresh", _params, socket) do
-    run = CandidateDerivationRuns.latest_run()
+    run = Pipeline.latest_run()
 
     {:noreply,
      socket
@@ -242,9 +244,9 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
      |> assign(:rel_count, Food.count_relationships())
      |> assign(:run, run)
      |> assign(:progress, progress_for(run))
-     |> assign(:audit_pending, Food.count_promoted_facts_to_audit())
-     |> assign(:flagged, Food.list_flagged_facts())
-     |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
+     |> assign(:audit_pending, Pipeline.count_promoted_facts_to_audit())
+     |> assign(:flagged, Pipeline.list_flagged_facts())
+     |> stream(:candidates, Pipeline.list_pending_candidates(limit: @per_page, offset: 0),
        reset: true
      )
      |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
@@ -265,7 +267,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   # ── View helpers ───────────────────────────────────────────────────────
 
-  defp non_dietary_names, do: Food.non_dietary_compound_names()
+  defp non_dietary_names, do: Pipeline.non_dietary_compound_names()
 
   defp drop_flagged(flagged, id) do
     id = to_string(id)
@@ -332,7 +334,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
     |> Enum.join("; ")
   end
 
-  defp progress_for(nil), do: Food.candidate_derivation_progress()
+  defp progress_for(nil), do: Pipeline.candidate_derivation_progress()
   defp progress_for(run), do: %{processed: run.processed || 0, total: run.total || 0}
 
   defp percent(%{total: total}) when total in [0, nil], do: 0

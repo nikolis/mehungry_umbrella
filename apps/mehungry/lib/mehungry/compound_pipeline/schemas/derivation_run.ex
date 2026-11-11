@@ -1,11 +1,10 @@
-defmodule Mehungry.Food.CandidateDerivationRun do
+defmodule Mehungry.CompoundPipeline.DerivationRun do
   @moduledoc """
   Aggregate progress record for one candidate-derivation pass over the evidence
-  pairs. Mirrors `IngredientIdentityResolutionRun`: `processed`/`total` are a
-  coverage snapshot refreshed each batch, `promoted_count` accumulates the
-  auto-promotions, and `status` moves `pending → processing → completed` (or
-  `failed`). Broadcast on every transition so an admin view can render live
-  progress.
+  pairs. `processed`/`total` are a coverage snapshot refreshed each batch,
+  `promoted_count` accumulates the auto-promotions, and `status` moves
+  `pending → processing → completed` (or `failed`). Broadcast on every transition
+  so the pipeline's admin view can render live progress.
   """
 
   use Ecto.Schema

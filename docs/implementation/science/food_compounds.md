@@ -159,7 +159,7 @@ never here.
 
 **How relationships get here.** A relationship is never asserted directly from raw
 evidence (PubTator mentions, literature co-occurrence). The curation step
-`Food.CompoundCandidates` (**`docs/science/compound_candidates.md`**) derives scored *candidates*
+`CompoundPipeline.Candidates` (**`docs/implementation/compound_pipeline.md`**) derives scored *candidates*
 from that evidence and promotes the strong ones — automatically over a config threshold or
 by admin review — writing curated rows here via `upsert_compound_relationship/1`.
 

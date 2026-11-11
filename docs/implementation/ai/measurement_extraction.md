@@ -73,7 +73,7 @@ unset), pipeline `:local_ai_api`, `scope "/api/local_ai"`:
   runs `Extractor.gi_findings/1` over the **same** full text in one pass. See
   `docs/science/glycemic_index_licensing.md`.
 
-Review is unchanged: `/professional/compound-candidates` → **Accept** materializes a
+Review is unchanged: `/professional/compound-pipeline` → **Accept** materializes a
 `CompoundMeasurement` via `Food.record_measurement/1` against a representative curated
 ingredient of the species; **Reject** drops it. `/professional/science` shows a
 read-only "Full-text extraction" status (unfetched count + pending-candidate count).

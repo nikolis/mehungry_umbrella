@@ -3,7 +3,7 @@ defmodule Mehungry.Food.NutrientRecalculationRuns do
   Lifecycle + progress tracking for the "recompute all recipe nutrients" admin
   action.
 
-  Mirrors `Mehungry.Food.CandidateDerivationRuns`, but the unit of progress is an
+  Mirrors `Mehungry.CompoundPipeline.DerivationRuns`, but the unit of progress is an
   Oban job: `start_run/1` opens a `NutrientRecalculationRun` with a fixed `total`,
   and each `RecipePutNutrientsWorker` job reports its outcome via
   `record_success/1` or `record_failure/2`. Those use an atomic `update_all`

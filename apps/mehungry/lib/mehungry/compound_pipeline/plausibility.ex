@@ -1,4 +1,4 @@
-defmodule Mehungry.Food.CompoundPlausibility do
+defmodule Mehungry.CompoundPipeline.Plausibility do
   @moduledoc """
   The LLM "reality check" that gates auto-promotion of a `(species, compound)`
   candidate into a curated `contains` fact.
@@ -12,10 +12,10 @@ defmodule Mehungry.Food.CompoundPlausibility do
 
   One JSON prompt via `AI.Client.request/1`, fence-strip + `Jason.decode`, mirroring
   `Mehungry.AI.TaxonomyClassifier`. Behind the `:compound_plausibility_judge` config
-  seam so tests stub it. See `docs/implementation/science/compound_candidates.md`.
+  seam so tests stub it. See `docs/implementation/compound_pipeline.md`.
   """
 
-  @behaviour Mehungry.Food.CompoundPlausibilityBehaviour
+  @behaviour Mehungry.CompoundPipeline.PlausibilityBehaviour
 
   require Logger
 
@@ -25,7 +25,7 @@ defmodule Mehungry.Food.CompoundPlausibility do
   @max_studies 6
   @abstract_chars 600
 
-  @impl Mehungry.Food.CompoundPlausibilityBehaviour
+  @impl Mehungry.CompoundPipeline.PlausibilityBehaviour
   def judge(species, compound, studies) do
     case call_api(system_prompt(), user_prompt(species, compound, studies)) do
       {:ok, text} -> parse(text)
@@ -82,8 +82,11 @@ defmodule Mehungry.Food.CompoundPlausibility do
   defp compound_label(compound) do
     syn =
       case Map.get(compound, :synonyms) do
-        list when is_list(list) and list != [] -> " — also: #{Enum.join(Enum.take(list, 5), ", ")}"
-        _ -> ""
+        list when is_list(list) and list != [] ->
+          " — also: #{Enum.join(Enum.take(list, 5), ", ")}"
+
+        _ ->
+          ""
       end
 
     type = Map.get(compound, :compound_type)

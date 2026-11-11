@@ -75,7 +75,7 @@ config :mehungry, :pinterest_http_client, Mehungry.Social.PinterestHttpStub
 config :mehungry, :taxonomy_classifier, Mehungry.AI.TaxonomyClassifierStub
 
 # Compound plausibility gate is stubbed in tests — no AI/API calls (default :plausible)
-config :mehungry, :compound_plausibility_judge, Mehungry.Food.CompoundPlausibilityStub
+config :mehungry, :compound_plausibility_judge, Mehungry.CompoundPipeline.PlausibilityStub
 
 # S3 seed-file fetcher is stubbed in tests — no S3/network calls
 config :mehungry, :seed_file_fetcher, Mehungry.FoodData.Usda.SeedFileFetcherStub

@@ -191,7 +191,7 @@ keyed on the ISSN we now capture.
 - `Chemistry.*` (PubChem resolver, `compound_sources`, `pubchem_responses`) — compound identity from mentions.
 - `Literature.PubTator.*`, `study_entity_mention`, `study_entity_relation`, `annotation_run(s)`/`annotation_attempt`, `pubtator_responses`.
 - `Literature.Entrez` **species/compound-seeded** crawl path + `crawl_run(s)`/`crawl_attempt` (species ledger). **Keep the condition path.**
-- `Food.CompoundCandidates`, `Food.CompoundMeasurements`, `Food.EvidenceAggregation`, `Food.CompoundPlausibility`, `Food.SpeciesCompounds` **writers**, `species_search`, `ingredient_compound_summary`; tables `compound(_identifier/_translation/_measurement/_measurement_candidate)`, `species_compound_candidate(_study)`, `ingredient_compound_relationship`, `candidate_derivation_runs`.
+- `CompoundPipeline.Candidates`, `Food.CompoundMeasurements`, `Food.EvidenceAggregation`, `CompoundPipeline.Plausibility`, `Food.SpeciesCompounds` **writers**, `species_search`, `ingredient_compound_summary`; tables `compound(_identifier/_translation/_measurement/_measurement_candidate)`, `species_compound_candidate(_study)`, `ingredient_compound_relationship`, `candidate_derivation_runs`.
 - `Health.RecommendationCandidates`, `Health.ConditionRecCandidates`, `Health.ClaimRules`, `condition_rec_extraction_attempt`, `compound_recommendation_candidate(_study)`, `condition_recommendation_candidate(_study)`, `recommendation_derivation_run(s)`, `condition_state_recommendation(_study)`.
 - Glycemic-index derivation path (`gi_candidates`).
 - `Science.PipelineWatchdog` (trim to the condition-crawl topic only), `Science.PipelineReset`, `Science.RunReconciler` (trim).
@@ -315,7 +315,7 @@ Elixir side). Not in v1.
 - **Phase 1 — decommission generation machinery: ✅ DELIVERED 2026-10-26.** Reversible
   (contexts, Oban workers, schemas, and **tables all kept dormant** — nothing dropped). Removed:
   - **Admin UIs + routes** `/professional/{science, science/studies, science/entities, literature,
-    compound-candidates}` and their LiveViews (`SciencePipeline`, `Studies`, `Entities`,
+    compound-pipeline}` and their LiveViews (`SciencePipeline`, `Studies`, `Entities`,
     `LiteratureRuns`, `CompoundCandidates`) + their tests + the matching sidebar nav links.
     *(Deviation from §6: `Studies`/`Entities` were cut too — their only entry point was the removed
     `SciencePipeline`, and they aren't needed for the feature. Trivially re-addable.)*

@@ -1,15 +1,15 @@
-defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
+defmodule Mehungry.CompoundPipeline.DerivationWorkerTest do
   use Mehungry.DataCase
   use Oban.Testing, repo: Mehungry.Repo
 
   import Mehungry.FoodFixtures
 
   alias Mehungry.Food
-  alias Mehungry.Food.CandidateDerivationRuns
-  alias Mehungry.Food.CandidateDerivationRun, as: Run
+  alias Mehungry.CompoundPipeline.DerivationRuns
+  alias Mehungry.CompoundPipeline.DerivationRun, as: Run
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Literature
-  alias Mehungry.ObanWorkers.CompoundCandidateDerivationWorker, as: Worker
+  alias Mehungry.CompoundPipeline.DerivationWorker, as: Worker
   alias Mehungry.Repo
 
   # A spinach ingredient curated onto a Spinach species — evidence linked to the
@@ -54,7 +54,7 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
     for _ <- 1..5, do: cooccur(spinach, oxalate)
 
-    run = CandidateDerivationRuns.start_run()
+    run = DerivationRuns.start_run()
     assert :ok = perform_job(Worker, %{"run_id" => run.id})
 
     # Strong (5-study) species candidate auto-promoted → curated species fact written.
@@ -69,7 +69,7 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
   end
 
   test "completes the run and stops chaining once the offset runs past the evidence pairs" do
-    run = CandidateDerivationRuns.start_run()
+    run = DerivationRuns.start_run()
 
     # No evidence pairs at all → first tick derives nothing → completed.
     assert :ok = perform_job(Worker, %{"run_id" => run.id})
@@ -83,7 +83,7 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
     for _ <- 1..5, do: cooccur(spinach, oxalate)
 
-    run = CandidateDerivationRuns.start_run()
+    run = DerivationRuns.start_run()
     # First tick processes the single pair; second tick (offset 100) is past the end.
     assert :ok = perform_job(Worker, %{"run_id" => run.id})
     assert :ok = perform_job(Worker, %{"run_id" => run.id, "offset" => 100})

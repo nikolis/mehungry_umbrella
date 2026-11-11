@@ -149,8 +149,9 @@ config :mehungry,
   pubtator_pace_ms: 300,
   # Upper bound (s) applied to a PubTator rate-limit Retry-After before snoozing.
   pubtator_max_snooze_seconds: 3600,
-  # Evidence-score cutoff (0.0–1.0) at/above which a derived ingredient↔compound
-  # candidate is auto-promoted to a curated relationship; below it waits for review.
+  # CompoundPipeline — evidence-score cutoff (0.0–1.0) at/above which a derived
+  # species↔compound candidate is auto-promoted to a curated relationship (still
+  # subject to the dietary-relevance + plausibility gates); below it waits for review.
   candidate_promotion_threshold: 0.75,
   # Assay reagents / non-food chemicals that PubTator extracts as "chemicals" but
   # must never become dietary facts — excluded from derivation and purged on derive.

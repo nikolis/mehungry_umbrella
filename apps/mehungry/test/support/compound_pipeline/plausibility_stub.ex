@@ -1,6 +1,6 @@
-defmodule Mehungry.Food.CompoundPlausibilityStub do
+defmodule Mehungry.CompoundPipeline.PlausibilityStub do
   @moduledoc """
-  Test stand-in for `Mehungry.Food.CompoundPlausibility` (wired via the
+  Test stand-in for `Mehungry.CompoundPipeline.Plausibility` (wired via the
   `:compound_plausibility_judge` config key in `config/test.exs`) so candidate
   derivation makes no AI/API calls.
 
@@ -14,7 +14,7 @@ defmodule Mehungry.Food.CompoundPlausibilityStub do
       on_exit(fn -> Application.delete_env(:mehungry, :compound_plausibility_stub) end)
   """
 
-  @behaviour Mehungry.Food.CompoundPlausibilityBehaviour
+  @behaviour Mehungry.CompoundPipeline.PlausibilityBehaviour
 
   @impl true
   def judge(species, compound, studies) do

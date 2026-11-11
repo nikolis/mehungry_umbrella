@@ -334,13 +334,15 @@ defmodule MehungryWeb.Router do
       # (a new way to power it is TBD).
       live("/usda-schema", ProfessionalLive.UsdaSchema, :index)
 
-      # Reactivated (species-only): review/derive FoundementalFoodSpecies↔Compound
-      # candidate facts from the accumulated literature + measurement evidence.
-      # This is ONLY the `Food.CompoundCandidates` branch — the condition↔compound
-      # `Health.RecommendationCandidates` side is deliberately NOT surfaced. The
-      # dead local-AI extracted-measurement review was dropped; the manual
-      # "Add measurement" form is the one live way to grow the evidence.
-      live("/compound-candidates", ProfessionalLive.CompoundCandidates, :index)
+      # The Compound pipeline (species-only) — its own isolated context
+      # `Mehungry.CompoundPipeline`: derive/review FoundementalFoodSpecies↔Compound
+      # candidate facts from accumulated literature + measurement evidence, presented
+      # as a numbered ①→④ flow. The curated facts it writes live in `Food.SpeciesCompounds`
+      # (read by Health advice + the /foods filter). The condition↔compound advice branch
+      # is a separate, dormant concern and is NOT surfaced here.
+      live("/compound-pipeline", ProfessionalLive.CompoundPipeline, :index)
+      # Legacy alias — preserves bookmarks of the former /compound-candidates URL.
+      live("/compound-candidates", ProfessionalLive.CompoundPipeline, :index)
 
       # Review queue for species enrichment facts (Wikidata CC0 + FAOSTAT CC BY)
       # fetched by `mix species.enrich` — see docs/implementation/science/species_enrichment.md.

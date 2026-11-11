@@ -45,7 +45,7 @@ IngredientScientificProperty(property_key:"glycemic_index", source:"external_db"
 The *value* is authoritative, but the *match* of a table food ("Apples, raw") to one
 of our `FoundementalFoodSpecies` is not. So a `GlycemicIndexCandidate` stages the
 proposed match, scored by **name-match confidence** (not evidence strength), and never
-becomes a fact until reviewed. This mirrors `Food.CompoundCandidates`.
+becomes a fact until reviewed. This mirrors `CompoundPipeline.Candidates`.
 
 ## Matching (`Food.GlycemicIndex.match_record/2`)
 

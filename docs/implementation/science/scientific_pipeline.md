@@ -2,7 +2,7 @@
 
 > **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The generation stages and
 > admin control panel in this runbook (`/professional/science` "Run crawl / Run annotation / Derive",
-> `/professional/{compound-candidates,literature}`) were **removed** (the **USDA Schema** view at
+> `/professional/{compound-pipeline,literature}`) were **removed** (the **USDA Schema** view at
 > `/professional/usda-schema` was **kept** — foundemental-food curation outlives the crawl), along with the
 > inbound `/api/local_ai/*` seam; `PipelineWatchdog`/`RunReconciler` now cover only the
 > condition-seeded crawl. Contexts, workers, schemas, and tables are **dormant, not dropped**. The
@@ -22,7 +22,7 @@ Detailed layer docs (read these for the internals of any single stage):
 [`food_compounds.md`](food_compounds.md) ·
 [`compound_measurements.md`](compound_measurements.md) ·
 [`evidence_aggregation.md`](evidence_aggregation.md) ·
-[`compound_candidates.md`](compound_candidates.md) ·
+[`compound_pipeline.md`](../compound_pipeline.md) ·
 [`health_recommendations.md`](health_recommendations.md).
 
 ---
@@ -44,7 +44,7 @@ The subsystem has **three phases** and one iron rule that keeps them legible:
                                   │  raw evidence — NO dietary facts yet
                                   ▼
   ┌─────────────────────────── CURATE ─────────────────────────────┐
-  │  Food.CompoundCandidates — the ONLY layer allowed to write facts │
+  │  CompoundPipeline.Candidates — the ONLY layer allowed to write facts │
   │                                                                  │
   │   evidence ──score (noisy-OR)──▶ species_compound_candidates     │
   │      (co-occurrence + measurements,  + reference-study links)     │
@@ -67,7 +67,7 @@ The subsystem has **three phases** and one iron rule that keeps them legible:
 **Two invariants make the whole design legible:**
 
 1. **Evidence never writes facts directly.** PubTator mentions and literature
-   co-occurrence are *evidence*, not assertions. Only `Food.CompoundCandidates`
+   co-occurrence are *evidence*, not assertions. Only `CompoundPipeline.Candidates`
    (the curation step) may write an `IngredientCompoundRelationship`.
 2. **`Food.*` is facts-only; advice is quarantined in `Health`.** Nothing under
    `Food` encodes a recommendation, limit, or severity. Conditions reference
@@ -89,7 +89,7 @@ Following one fact through every table:
 | 1 | `scientific_studies` + `study_ingredients` | a PubMed paper, linked to each ingredient curated onto Spinach with `search_term` | `Literature.Entrez` crawl (per species) |
 | 2 | `study_entity_mentions` + `compounds` | `Chemical "oxalate"` mention → resolved to compound **Oxalic acid** (CID 971) | `Literature.PubTator` + `Chemistry.Resolver` |
 | 3 | `compound_measurements` *(optional)* | `Spinach, Oxalate, Raw: 750 mg/100g` (PMID …) | `Food.record_measurement/1` |
-| 4 | `species_compound_candidates` (+ `species_compound_candidate_studies`) | `Spinach‑species/Oxalate` scored **1.0 (strong)**, `pending`, citing its reference PMIDs | `Food.CompoundCandidates` derive |
+| 4 | `species_compound_candidates` (+ `species_compound_candidate_studies`) | `Spinach‑species/Oxalate` scored **1.0 (strong)**, `pending`, citing its reference PMIDs | `CompoundPipeline.Candidates` derive |
 | 5 | `species_compound_relationships` | `Spinach‑species contains Oxalate` (`source: literature`) | auto-promote (≥0.75) or admin |
 | 6 | `compound_recommendations` + `conditions` | `Kidney Stones → avoid → Oxalate` | `Health.add_recommendation/3` (manual) |
 | → | *(derived, not stored)* | `Health.species_for_condition(kidney, :avoid)` yields the **Spinach species** (its ingredients derived through it) | join at read time |
@@ -125,7 +125,7 @@ curated ingredient is crawlable.
 
 The two original focused pages still exist and do the same work for a single stage:
 - `/professional/literature` — "Run crawl" and "Run annotation" (steps 1 & 2)
-- `/professional/compound-candidates` — "Derive" + the Promote/Reject queue (step 4)
+- `/professional/compound-pipeline` — "Derive" + the Promote/Reject queue (step 4)
 
 ### Step 0 — Prereq: curate species + scientific names
 
@@ -186,7 +186,7 @@ Details: [`compound_measurements.md`](compound_measurements.md).
 
 ### Step 4 — Create the connections (derive + promote candidates)
 
-UI: `/professional/science` (or `/professional/compound-candidates`) → **Derive**. Or:
+UI: `/professional/science` (or `/professional/compound-pipeline`) → **Derive**. Or:
 
 ```elixir
 {:ok, _run} = Mehungry.Food.enqueue_candidate_derivation()
@@ -200,7 +200,7 @@ studies on each candidate. Candidates scoring ≥ `:candidate_promotion_threshol
 (config, **default 0.75**) **auto-promote** into `species_compound_relationships`;
 everything else waits in the Promote/Reject queue on the same page. This is the
 **only** step that writes curated facts. Details:
-[`compound_candidates.md`](compound_candidates.md).
+[`compound_pipeline.md`](../compound_pipeline.md).
 
 ### Step 5 — Close the loop (re-crawl)
 
@@ -273,7 +273,7 @@ shared compound. Details: [`health_recommendations.md`](health_recommendations.m
 - **Frozen result provenance (PubMed link survives to the user).** A candidate's
   reference-study links (`*_candidate_studies`) are *refreshed* (delete + reinsert) on
   every re-derivation, so they can't be the citation shown to a user. At **promotion**,
-  the candidate's studies are **copied once** onto the result row — `Food.CompoundCandidates.promote_candidate`
+  the candidate's studies are **copied once** onto the result row — `CompoundPipeline.Candidates.promote_candidate`
   → `species_compound_relationship_studies`, `Health.RecommendationCandidates.promote_candidate`
   → `compound_recommendation_studies` — and re-derivation never touches those tables, so
   the fact/recommendation keeps citing exactly the papers the human validated. The read

@@ -1,4 +1,4 @@
-defmodule Mehungry.Food.CompoundPlausibilityBehaviour do
+defmodule Mehungry.CompoundPipeline.PlausibilityBehaviour do
   @moduledoc """
   Seam for the compound-plausibility gate so tests can stub it (config key
   `:compound_plausibility_judge`), mirroring `:taxonomy_classifier` /

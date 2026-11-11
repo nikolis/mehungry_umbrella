@@ -1,7 +1,7 @@
-defmodule Mehungry.Food.CompoundPlausibilityTest do
+defmodule Mehungry.CompoundPipeline.PlausibilityTest do
   use ExUnit.Case, async: false
 
-  alias Mehungry.Food.CompoundPlausibility
+  alias Mehungry.CompoundPipeline.Plausibility
 
   # Stubs Mehungry.AI.Client via the `:ai_client` seam. Each test scripts one
   # canned response (or an error) under a persistent_term key.
@@ -34,42 +34,44 @@ defmodule Mehungry.Food.CompoundPlausibilityTest do
 
   defp species, do: %{name: "Acerola", scientific_name: "Malpighia emarginata"}
   defp compound, do: %{name: "Ethanol", synonyms: ["ethyl alcohol"], compound_type: "other"}
-  defp studies, do: [%{title: "Ethanol extract of acerola", abstract: "Extracted in 80% ethanol."}]
+
+  defp studies,
+    do: [%{title: "Ethanol extract of acerola", abstract: "Extracted in 80% ethanol."}]
 
   test "parses a plausible verdict + reason" do
     respond({:text, ~s({"verdict": "plausible", "reason": "real phytochemical"})})
 
     assert {:ok, %{verdict: :plausible, reason: "real phytochemical"}} =
-             CompoundPlausibility.judge(species(), compound(), studies())
+             Plausibility.judge(species(), compound(), studies())
   end
 
   test "parses an implausible verdict" do
     respond({:text, ~s({"verdict": "implausible", "reason": "extraction solvent"})})
 
     assert {:ok, %{verdict: :implausible, reason: "extraction solvent"}} =
-             CompoundPlausibility.judge(species(), compound(), studies())
+             Plausibility.judge(species(), compound(), studies())
   end
 
   test "tolerates markdown fences around the JSON" do
     respond({:text, "```json\n{\"verdict\": \"uncertain\", \"reason\": \"unclear\"}\n```"})
 
     assert {:ok, %{verdict: :uncertain}} =
-             CompoundPlausibility.judge(species(), compound(), studies())
+             Plausibility.judge(species(), compound(), studies())
   end
 
   test "unparseable output is an error (fail-safe upstream)" do
     respond({:text, "I think this is probably fine, honestly."})
-    assert {:error, :unparseable} = CompoundPlausibility.judge(species(), compound(), studies())
+    assert {:error, :unparseable} = Plausibility.judge(species(), compound(), studies())
   end
 
   test "a client error is propagated" do
     respond({:error, :timeout})
-    assert {:error, :timeout} = CompoundPlausibility.judge(species(), compound(), studies())
+    assert {:error, :timeout} = Plausibility.judge(species(), compound(), studies())
   end
 
   test "prompt includes the species, compound, and study context" do
     respond({:text, ~s({"verdict": "plausible", "reason": "ok"})})
-    CompoundPlausibility.judge(species(), compound(), studies())
+    Plausibility.judge(species(), compound(), studies())
 
     user = last_params().messages |> hd() |> Map.get(:content)
     assert user =~ "Acerola"

@@ -1,7 +1,7 @@
 defmodule Mehungry.Health.RecommendationCandidates do
   @moduledoc """
   The two-stage candidate → curated pipeline for **condition↔compound
-  recommendations** — the ADVISE-layer analogue of `Food.CompoundCandidates`.
+  recommendations** — the ADVISE-layer analogue of `Mehungry.CompoundPipeline.Candidates`.
 
   **Candidates** are *proposed* recommendations derived from the directional
   `study_entity_relations` PubTator extracted (a chemical↔disease relation whose

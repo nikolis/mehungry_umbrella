@@ -1,19 +1,22 @@
-defmodule Mehungry.Food.CompoundCandidates do
+defmodule Mehungry.CompoundPipeline.Candidates do
   @moduledoc """
-  The two-stage candidate → curated pipeline for **species**↔compound relationships.
+  The two-stage candidate → curated pipeline for **species**↔compound relationships —
+  the heart of `Mehungry.CompoundPipeline`.
 
   **Candidates** are *proposed* relationships derived from existing evidence —
   PubTator co-occurrence aggregated to the `FoundementalFoodSpecies` level (a resolved
   chemical mentioned in a paper linked to any ingredient of the species), species
   measurements, or manual import — scored 0.0–1.0 and staged `pending → promoted |
   rejected`. Each candidate links to the **reference studies** the co-occurrence was
-  extracted from (`SpeciesCompoundCandidateStudy`). **Promotion** writes the curated
-  fact into `SpeciesCompoundRelationship` (via `Food.SpeciesCompounds`), automatically
-  when the score clears `candidate_promotion_threshold` or by admin review.
+  extracted from (`CompoundPipeline.CandidateStudy`). **Promotion** writes the curated
+  fact into `Food.SpeciesCompoundRelationship` (via `Food.SpeciesCompounds`),
+  automatically when the score clears `candidate_promotion_threshold` or by admin review.
 
   Working at the species level yields one suggestion/fact per species rather than one
   per USDA ingredient variant. The candidate table stays separate from the facts table
-  so unreviewed proposals never masquerade as facts.
+  so unreviewed proposals never masquerade as facts. Reads evidence from `Food`
+  (`EvidenceAggregation`, `CompoundMeasurement`) and `Literature`; writes its output
+  (curated facts) back into `Food.SpeciesCompounds`, which `Health` and `/foods` read.
   """
 
   import Ecto.Query, warn: false
@@ -23,15 +26,16 @@ defmodule Mehungry.Food.CompoundCandidates do
   alias Mehungry.Repo
   alias Mehungry.Literature
 
+  alias Mehungry.CompoundPipeline.Candidate
+  alias Mehungry.CompoundPipeline.CandidateStudy
+  alias Mehungry.CompoundPipeline.Plausibility
+
   alias Mehungry.Food.Compound
   alias Mehungry.Food.CompoundMeasurement
-  alias Mehungry.Food.CompoundPlausibility
   alias Mehungry.Food.EvidenceAggregation
   alias Mehungry.Food.FoundementalFood
   alias Mehungry.Food.FoundementalFoodSpecies
   alias Mehungry.Food.SpeciesCompounds
-  alias Mehungry.Food.SpeciesCompoundCandidate, as: Candidate
-  alias Mehungry.Food.SpeciesCompoundCandidateStudy
   alias Mehungry.Food.SpeciesCompoundRelationship
   alias Mehungry.Food.SpeciesCompoundRelationshipStudy
 
@@ -199,9 +203,7 @@ defmodule Mehungry.Food.CompoundCandidates do
 
   # Refresh the candidate's reference-study provenance to the current co-occurrence set.
   defp replace_candidate_studies(candidate_id, study_ids) do
-    Repo.delete_all(
-      from(cs in SpeciesCompoundCandidateStudy, where: cs.candidate_id == ^candidate_id)
-    )
+    Repo.delete_all(from(cs in CandidateStudy, where: cs.candidate_id == ^candidate_id))
 
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
@@ -211,7 +213,7 @@ defmodule Mehungry.Food.CompoundCandidates do
       end)
 
     if entries != [] do
-      Repo.insert_all(SpeciesCompoundCandidateStudy, entries, on_conflict: :nothing)
+      Repo.insert_all(CandidateStudy, entries, on_conflict: :nothing)
     end
 
     :ok
@@ -289,7 +291,7 @@ defmodule Mehungry.Food.CompoundCandidates do
   end
 
   defp run_judge(species, compound, studies) do
-    judge = Application.get_env(:mehungry, :compound_plausibility_judge, CompoundPlausibility)
+    judge = Application.get_env(:mehungry, :compound_plausibility_judge, Plausibility)
     judge.judge(species, compound, studies)
   rescue
     e ->
@@ -400,7 +402,7 @@ defmodule Mehungry.Food.CompoundCandidates do
   @doc "Enqueue the fact-audit worker to re-judge un-audited promoted literature facts."
   def enqueue_fact_audit do
     %{}
-    |> Mehungry.ObanWorkers.CompoundFactAuditWorker.new()
+    |> Mehungry.CompoundPipeline.FactAuditWorker.new()
     |> Oban.insert()
   end
 
@@ -442,7 +444,7 @@ defmodule Mehungry.Food.CompoundCandidates do
 
     study_ids =
       Repo.all(
-        from(cs in SpeciesCompoundCandidateStudy,
+        from(cs in CandidateStudy,
           where: cs.candidate_id == ^candidate_id,
           select: cs.study_id
         )
@@ -601,7 +603,7 @@ defmodule Mehungry.Food.CompoundCandidates do
   @doc "The reference studies a candidate was derived from, newest first."
   def list_candidate_studies(candidate_id) do
     Repo.all(
-      from(cs in SpeciesCompoundCandidateStudy,
+      from(cs in CandidateStudy,
         join: s in assoc(cs, :study),
         where: cs.candidate_id == ^candidate_id,
         order_by: [desc: s.id],
@@ -626,11 +628,11 @@ defmodule Mehungry.Food.CompoundCandidates do
   def enqueue_candidate_derivation do
     # Clear out any facts/candidates for newly-flagged non-dietary compounds first.
     purge_non_dietary()
-    run = Mehungry.Food.CandidateDerivationRuns.start_run()
+    run = Mehungry.CompoundPipeline.DerivationRuns.start_run()
 
     {:ok, _job} =
       %{"run_id" => run.id}
-      |> Mehungry.ObanWorkers.CompoundCandidateDerivationWorker.new()
+      |> Mehungry.CompoundPipeline.DerivationWorker.new()
       |> Oban.insert()
 
     {:ok, run}

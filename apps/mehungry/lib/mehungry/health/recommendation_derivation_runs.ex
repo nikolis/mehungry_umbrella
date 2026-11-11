@@ -2,7 +2,7 @@ defmodule Mehungry.Health.RecommendationDerivationRuns do
   @moduledoc """
   Lifecycle + progress tracking for recommendation-candidate derivation passes.
 
-  Mirrors `Mehungry.Food.CandidateDerivationRuns`: a single `RecommendationDerivationRun`
+  Mirrors `Mehungry.CompoundPipeline.DerivationRuns`: a single `RecommendationDerivationRun`
   row carries a `processed`/`total` coverage snapshot refreshed each batch, transitions
   `pending → processing → completed` (or `failed`), and broadcasts every change on
   `Mehungry.PubSub` under `topic/0` so an admin view can render live progress. There is

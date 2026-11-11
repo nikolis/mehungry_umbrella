@@ -280,7 +280,7 @@ mix test apps/mehungry/test/mehungry/health_test.exs
 ## 7. Out of scope / follow-ons
 
 - **Literature-derived recommendations — BUILT.** Recommendations no longer have to be
-  hand-entered: `Health.RecommendationCandidates` (mirroring `Food.CompoundCandidates`)
+  hand-entered: `Health.RecommendationCandidates` (mirroring `CompoundPipeline.Candidates`)
   aggregates PubTator's directional chemical↔disease relations
   (`Literature.StudyEntityRelation`) into scored, **review-gated**
   `CompoundRecommendationCandidate`s. Relation valence maps to a *suggested* direction

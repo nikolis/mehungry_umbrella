@@ -1,14 +1,14 @@
-defmodule Mehungry.ObanWorkers.CompoundFactAuditWorkerTest do
+defmodule Mehungry.CompoundPipeline.FactAuditWorkerTest do
   use Mehungry.DataCase
   use Oban.Testing, repo: Mehungry.Repo
 
   import Mehungry.FoodFixtures
 
   alias Mehungry.Food
-  alias Mehungry.Food.CompoundCandidates
+  alias Mehungry.CompoundPipeline.Candidates
   alias Mehungry.Food.SpeciesCompoundRelationship
   alias Mehungry.Literature
-  alias Mehungry.ObanWorkers.CompoundFactAuditWorker, as: Worker
+  alias Mehungry.CompoundPipeline.FactAuditWorker, as: Worker
   alias Mehungry.Repo
 
   setup do
@@ -55,7 +55,7 @@ defmodule Mehungry.ObanWorkers.CompoundFactAuditWorkerTest do
     for _ <- 1..5, do: cooccur(ctx.spinach, ctx.oxalate)
 
     {:ok, %{candidate: cand, promoted: true}} =
-      CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id, skip_plausibility: true)
+      Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id, skip_plausibility: true)
 
     cand
   end
@@ -69,7 +69,7 @@ defmodule Mehungry.ObanWorkers.CompoundFactAuditWorkerTest do
 
     # The tick audits the one fact (progress) → flags it → chains a follow-up.
     assert :ok = perform_job(Worker, %{})
-    assert [flagged] = CompoundCandidates.list_flagged_facts()
+    assert [flagged] = Candidates.list_flagged_facts()
     assert flagged.id == cand.id
     # The fact still exists — audit only flags, never deletes.
     assert Repo.get(SpeciesCompoundRelationship, cand.promoted_relationship_id)
@@ -79,7 +79,7 @@ defmodule Mehungry.ObanWorkers.CompoundFactAuditWorkerTest do
   test "stops chaining once every fact has a verdict", ctx do
     ungated_fact(ctx)
     # Pre-audit it (default stub → :plausible) so no un-audited fact remains.
-    assert {1, 0} = CompoundCandidates.audit_promoted_facts_batch(10)
+    assert {1, 0} = Candidates.audit_promoted_facts_batch(10)
 
     assert :ok = perform_job(Worker, %{})
     refute_enqueued(worker: Worker)

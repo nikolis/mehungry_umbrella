@@ -1,10 +1,10 @@
-defmodule Mehungry.Food.CompoundCandidatesTest do
+defmodule Mehungry.CompoundPipeline.CandidatesTest do
   use Mehungry.DataCase
 
   import Mehungry.FoodFixtures
 
   alias Mehungry.Food
-  alias Mehungry.Food.CompoundCandidates
+  alias Mehungry.CompoundPipeline.Candidates
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Food.SpeciesCompoundRelationship
   alias Mehungry.Literature
@@ -74,7 +74,9 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
 
   # Stub the plausibility judge (config seam) to return a fixed result.
   defp stub_verdict(result) do
-    Application.put_env(:mehungry, :compound_plausibility_stub, fn _species, _compound, _studies ->
+    Application.put_env(:mehungry, :compound_plausibility_stub, fn _species,
+                                                                   _compound,
+                                                                   _studies ->
       result
     end)
   end
@@ -91,7 +93,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
     strong_cooccurrence(ctx)
 
     {:ok, %{candidate: cand, promoted: true}} =
-      CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id, skip_plausibility: true)
+      Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id, skip_plausibility: true)
 
     assert is_nil(cand.plausibility_verdict)
     cand
@@ -133,7 +135,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
   describe "score_candidate/2 — noisy-OR blend" do
     test "literature-only saturates at 5 studies → strong", ctx do
       for _ <- 1..5, do: cooccur(ctx.spinach, ctx.oxalate)
-      scored = CompoundCandidates.score_candidate(ctx.species.id, ctx.oxalate.id)
+      scored = Candidates.score_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert scored.evidence_score == 1.0
       assert scored.evidence_level == "strong"
@@ -143,7 +145,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
 
     test "two literature studies → 0.4 → limited", ctx do
       for _ <- 1..2, do: cooccur(ctx.spinach, ctx.oxalate)
-      scored = CompoundCandidates.score_candidate(ctx.species.id, ctx.oxalate.id)
+      scored = Candidates.score_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert scored.evidence_score == 0.4
       assert scored.evidence_level == "limited"
@@ -151,7 +153,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
 
     test "measurement-only (across the species' ingredients) scores positive", ctx do
       for v <- [740.0, 750.0, 760.0], do: measurement(ctx.spinach, ctx.oxalate, v)
-      scored = CompoundCandidates.score_candidate(ctx.species.id, ctx.oxalate.id)
+      scored = Candidates.score_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert scored.study_count == 0
       assert scored.measurement_study_count == 3
@@ -163,7 +165,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       for _ <- 1..2, do: cooccur(ctx.spinach, ctx.oxalate)
       for v <- [740.0, 750.0, 760.0], do: measurement(ctx.spinach, ctx.oxalate, v)
 
-      scored = CompoundCandidates.score_candidate(ctx.species.id, ctx.oxalate.id)
+      scored = Candidates.score_candidate(ctx.species.id, ctx.oxalate.id)
       assert scored.evidence_score > 0.4
       assert Enum.sort(scored.sources) == ["measurement", "pubtator"]
     end
@@ -174,7 +176,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       for _ <- 1..5, do: cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: candidate, promoted: true}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert candidate.status == "promoted"
       assert candidate.promoted_relationship_id
@@ -192,9 +194,9 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       s2 = cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: candidate}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
-      pmids = CompoundCandidates.list_candidate_studies(candidate.id) |> Enum.map(& &1.pmid)
+      pmids = Candidates.list_candidate_studies(candidate.id) |> Enum.map(& &1.pmid)
       assert Enum.sort(pmids) == Enum.sort([s1.pmid, s2.pmid])
     end
 
@@ -202,7 +204,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: candidate, promoted: false}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert candidate.status == "pending"
       assert species_rels(ctx.species.id) == []
@@ -212,15 +214,15 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: candidate}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
-      {:ok, rejected} = CompoundCandidates.reject_candidate(candidate)
+      {:ok, rejected} = Candidates.reject_candidate(candidate)
       assert rejected.status == "rejected"
 
       for _ <- 1..5, do: cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: re_derived, promoted: promoted}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert re_derived.status == "rejected"
       assert promoted == false
@@ -234,15 +236,15 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: candidate}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert candidate.status == "pending"
 
-      {:ok, promoted} = CompoundCandidates.promote_candidate(candidate)
+      {:ok, promoted} = Candidates.promote_candidate(candidate)
       assert promoted.status == "promoted"
       assert [_rel] = species_rels(ctx.species.id)
 
-      {:ok, _} = CompoundCandidates.promote_candidate(promoted)
+      {:ok, _} = Candidates.promote_candidate(promoted)
       assert length(species_rels(ctx.species.id)) == 1
     end
 
@@ -250,24 +252,24 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: candidate}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
-      {:ok, rejected} = CompoundCandidates.reject_candidate(candidate)
+      {:ok, rejected} = Candidates.reject_candidate(candidate)
       assert rejected.status == "rejected"
-      assert CompoundCandidates.list_pending_candidates() == []
+      assert Candidates.list_pending_candidates() == []
       assert species_rels(ctx.species.id) == []
     end
 
     test "import_manual_candidate creates a manual-source pending candidate", ctx do
       {:ok, candidate} =
-        CompoundCandidates.import_manual_candidate(ctx.species.id, ctx.oxalate.id, %{
+        Candidates.import_manual_candidate(ctx.species.id, ctx.oxalate.id, %{
           notes: "expert assertion"
         })
 
       assert candidate.status == "pending"
       assert candidate.sources == ["manual"]
 
-      {:ok, promoted} = CompoundCandidates.promote_candidate(candidate)
+      {:ok, promoted} = Candidates.promote_candidate(candidate)
       [rel] = species_rels(ctx.species.id)
       assert promoted.status == "promoted"
       assert rel.source == "manual"
@@ -279,11 +281,11 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(ctx.spinach, weak)
 
       {:ok, _} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id, threshold: 2.0)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id, threshold: 2.0)
 
-      {:ok, _} = CompoundCandidates.derive_candidate(ctx.species.id, weak.id, threshold: 2.0)
+      {:ok, _} = Candidates.derive_candidate(ctx.species.id, weak.id, threshold: 2.0)
 
-      [first, second] = CompoundCandidates.list_pending_candidates()
+      [first, second] = Candidates.list_pending_candidates()
       assert first.compound_id == ctx.oxalate.id
       assert first.evidence_score >= second.evidence_score
     end
@@ -325,7 +327,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(spinach, oxalate)
       cooccur(spinach, dpph)
 
-      pairs = CompoundCandidates.evidence_pairs()
+      pairs = Candidates.evidence_pairs()
       assert {species.id, oxalate.id} in pairs
       refute {species.id, dpph.id} in pairs
     end
@@ -337,7 +339,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       {:ok, novel} = Food.upsert_compound(%{name: "Novelchem", compound_type: "other"})
       cooccur(spinach, novel)
 
-      assert {species.id, novel.id} in CompoundCandidates.evidence_pairs()
+      assert {species.id, novel.id} in Candidates.evidence_pairs()
     end
 
     test "purge_non_dietary deletes species facts + candidates for non_dietary compounds", %{
@@ -345,15 +347,15 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
     } do
       {:ok, dpph} = Food.upsert_compound(%{name: "DPPH", compound_type: "other"})
       {:ok, _} = Food.set_dietary_relevance(dpph.id, "non_dietary")
-      {:ok, cand} = CompoundCandidates.import_manual_candidate(species.id, dpph.id, %{})
-      {:ok, _} = CompoundCandidates.promote_candidate(cand.id)
+      {:ok, cand} = Candidates.import_manual_candidate(species.id, dpph.id, %{})
+      {:ok, _} = Candidates.promote_candidate(cand.id)
 
       assert Repo.aggregate(
                from(r in SpeciesCompoundRelationship, where: r.compound_id == ^dpph.id),
                :count
              ) == 1
 
-      assert {rels, cands} = CompoundCandidates.purge_non_dietary()
+      assert {rels, cands} = Candidates.purge_non_dietary()
       assert rels >= 1 and cands >= 1
 
       assert Repo.aggregate(
@@ -374,7 +376,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       stub_verdict({:ok, %{verdict: :plausible, reason: "real phytochemical"}})
 
       {:ok, %{candidate: cand, promoted: true}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert cand.status == "promoted"
       assert cand.plausibility_verdict == "plausible"
@@ -390,7 +392,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       stub_verdict({:ok, %{verdict: :implausible, reason: "extraction solvent"}})
 
       {:ok, %{candidate: cand, promoted: false}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert cand.status == "pending"
       assert cand.plausibility_verdict == "implausible"
@@ -407,7 +409,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       stub_verdict({:error, :unavailable})
 
       {:ok, %{candidate: cand, promoted: false}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert cand.status == "pending"
       assert is_nil(cand.plausibility_verdict)
@@ -421,7 +423,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       stub_verdict({:ok, %{verdict: :implausible, reason: "should not be consulted"}})
 
       {:ok, %{candidate: cand, promoted: true}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert cand.status == "promoted"
       assert is_nil(cand.plausibility_verdict)
@@ -432,7 +434,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       stub_verdict({:ok, %{verdict: :implausible, reason: "solvent"}})
 
       {:ok, %{promoted: false}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       # If the judge were called again it would crash the test (nil fun would raise);
       # instead the cached "implausible" must hold the candidate without consulting it.
@@ -441,7 +443,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       end)
 
       {:ok, %{candidate: cand, promoted: false}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert cand.plausibility_verdict == "implausible"
     end
@@ -457,9 +459,9 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cand = ungated_fact(ctx)
       stub_verdict({:ok, %{verdict: :implausible, reason: "extraction solvent"}})
 
-      assert {1, 1} = CompoundCandidates.audit_promoted_facts_batch(10)
+      assert {1, 1} = Candidates.audit_promoted_facts_batch(10)
 
-      flagged = CompoundCandidates.list_flagged_facts()
+      flagged = Candidates.list_flagged_facts()
       assert Enum.map(flagged, & &1.id) == [cand.id]
       assert hd(flagged).plausibility_reason == "extraction solvent"
 
@@ -471,26 +473,26 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       ungated_fact(ctx)
       stub_verdict({:ok, %{verdict: :plausible, reason: "real phytochemical"}})
 
-      assert {1, 0} = CompoundCandidates.audit_promoted_facts_batch(10)
-      assert CompoundCandidates.list_flagged_facts() == []
-      assert CompoundCandidates.count_promoted_facts_to_audit() == 0
+      assert {1, 0} = Candidates.audit_promoted_facts_batch(10)
+      assert Candidates.list_flagged_facts() == []
+      assert Candidates.count_promoted_facts_to_audit() == 0
     end
 
     test "a judge error leaves the fact un-audited (retryable), not flagged", ctx do
       ungated_fact(ctx)
       stub_verdict({:error, :unavailable})
 
-      assert {0, 0} = CompoundCandidates.audit_promoted_facts_batch(10)
-      assert CompoundCandidates.count_promoted_facts_to_audit() == 1
-      assert CompoundCandidates.list_flagged_facts() == []
+      assert {0, 0} = Candidates.audit_promoted_facts_batch(10)
+      assert Candidates.count_promoted_facts_to_audit() == 1
+      assert Candidates.list_flagged_facts() == []
     end
 
     test "a `dietary`-curated compound's fact is not audited", ctx do
       ungated_fact(ctx)
       {:ok, _} = Food.set_dietary_relevance(ctx.oxalate.id, "dietary")
 
-      assert CompoundCandidates.count_promoted_facts_to_audit() == 0
-      assert {0, 0} = CompoundCandidates.audit_promoted_facts_batch(10)
+      assert Candidates.count_promoted_facts_to_audit() == 0
+      assert {0, 0} = Candidates.audit_promoted_facts_batch(10)
     end
   end
 
@@ -500,9 +502,9 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       s2 = cooccur(ctx.spinach, ctx.oxalate)
 
       {:ok, %{candidate: candidate, promoted: false}} =
-        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+        Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
-      {:ok, promoted} = CompoundCandidates.promote_candidate(candidate)
+      {:ok, promoted} = Candidates.promote_candidate(candidate)
       rel_id = promoted.promoted_relationship_id
 
       assert Enum.sort(relationship_study_pmids(rel_id)) == Enum.sort([s1.pmid, s2.pmid])
@@ -510,7 +512,7 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       # A later co-occurrence rewrites the CANDIDATE's studies (delete+insert), but the
       # fact's frozen citation set must not move.
       _s3 = cooccur(ctx.spinach, ctx.oxalate)
-      {:ok, _} = CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+      {:ok, _} = Candidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
 
       assert Enum.sort(relationship_study_pmids(rel_id)) == Enum.sort([s1.pmid, s2.pmid])
     end
@@ -525,15 +527,15 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(spinach, oxalate)
 
       {:ok, %{candidate: cand, promoted: true}} =
-        CompoundCandidates.derive_candidate(species.id, oxalate.id, threshold: 0.0)
+        Candidates.derive_candidate(species.id, oxalate.id, threshold: 0.0)
 
       rel_id = cand.promoted_relationship_id
       assert Repo.get(SpeciesCompoundRelationship, rel_id)
 
-      {:ok, _} = CompoundCandidates.unpromote_relationship(rel_id)
+      {:ok, _} = Candidates.unpromote_relationship(rel_id)
 
       refute Repo.get(SpeciesCompoundRelationship, rel_id)
-      assert CompoundCandidates.get_candidate!(cand.id).status == "rejected"
+      assert Candidates.get_candidate!(cand.id).status == "rejected"
     end
   end
 end

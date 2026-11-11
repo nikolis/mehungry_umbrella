@@ -23,7 +23,6 @@ defmodule Mehungry.Food do
 
   alias Mehungry.Food.{
     Categories,
-    CompoundCandidates,
     Compounds,
     CompoundMeasurements,
     Engagement,
@@ -404,36 +403,17 @@ defmodule Mehungry.Food do
   defdelegate summarize(ingredient_id, compound_id), to: EvidenceAggregation
   defdelegate summarize_for_ingredient(ingredient_id), to: EvidenceAggregation
 
-  # ── Compound candidates (derived → curated relationship pipeline) ──────────
+  # ── Species↔compound curated facts (the output of `Mehungry.CompoundPipeline`) ──
+  # The derive→curate pipeline that produces these facts lives in its own context,
+  # `Mehungry.CompoundPipeline`. Food keeps only the facts layer (`SpeciesCompounds`)
+  # that `Health` advice and the `/foods` filter read.
 
-  defdelegate enqueue_candidate_derivation(), to: CompoundCandidates
-  defdelegate derive_candidate(species_id, compound_id), to: CompoundCandidates
-  defdelegate derive_candidates_batch(offset, limit), to: CompoundCandidates
-  defdelegate score_candidate(species_id, compound_id), to: CompoundCandidates
-  defdelegate evidence_pairs(), to: CompoundCandidates
-  defdelegate count_evidence_pairs(), to: CompoundCandidates
-  defdelegate promote_candidate(candidate), to: CompoundCandidates
-  defdelegate reject_candidate(candidate), to: CompoundCandidates
-  defdelegate unpromote_relationship(relationship_id), to: CompoundCandidates
-  defdelegate import_manual_candidate(species_id, compound_id, attrs), to: CompoundCandidates
-  defdelegate list_pending_candidates(opts \\ []), to: CompoundCandidates
-  defdelegate list_candidates_for_species(species_id), to: CompoundCandidates
-  defdelegate list_candidate_studies(candidate_id), to: CompoundCandidates
-  defdelegate get_candidate!(id), to: CompoundCandidates
-  defdelegate candidate_derivation_progress(), to: CompoundCandidates
-  defdelegate non_dietary_compound_names(), to: CompoundCandidates
-  defdelegate purge_non_dietary(), to: CompoundCandidates
-  defdelegate purge_blocklisted(), to: CompoundCandidates
-  defdelegate enqueue_fact_audit(), to: CompoundCandidates
-  defdelegate audit_promoted_facts_batch(limit), to: CompoundCandidates
-  defdelegate count_promoted_facts_to_audit(), to: CompoundCandidates
-  defdelegate list_flagged_facts(opts \\ []), to: CompoundCandidates
   defdelegate count_relationships(), to: SpeciesCompounds
   defdelegate list_relationships_page(opts \\ []), to: SpeciesCompounds
 
   # ── Glycemic Index (path-B: re-derived from primary literature) ─────────────
-  # Distinct `*_glycemic_*` names so they don't collide with the compound
-  # candidate pipeline's same-shaped `promote_candidate`/`reject_candidate`/etc.
+  # Distinct `*_glycemic_*` names so they don't collide with `CompoundPipeline`'s
+  # same-shaped `promote_candidate`/`reject_candidate`/etc.
 
   defdelegate record_extracted_gi(study_id, findings, species_ids),
     to: GlycemicIndex
@@ -489,9 +469,19 @@ defmodule Mehungry.Food do
   defdelegate upsert_species_fact(attrs), to: SpeciesEnrichment, as: :upsert_fact
   defdelegate promote_species_fact(fact_or_id), to: SpeciesEnrichment, as: :promote_fact
   defdelegate reject_species_fact(fact_or_id), to: SpeciesEnrichment, as: :reject_fact
-  defdelegate update_species_fact_value(fact, value_text), to: SpeciesEnrichment, as: :update_fact_value
-  defdelegate list_pending_species_facts(opts \\ []), to: SpeciesEnrichment, as: :list_pending_facts
-  defdelegate list_promoted_species_facts(opts \\ []), to: SpeciesEnrichment, as: :list_promoted_facts
+
+  defdelegate update_species_fact_value(fact, value_text),
+    to: SpeciesEnrichment,
+    as: :update_fact_value
+
+  defdelegate list_pending_species_facts(opts \\ []),
+    to: SpeciesEnrichment,
+    as: :list_pending_facts
+
+  defdelegate list_promoted_species_facts(opts \\ []),
+    to: SpeciesEnrichment,
+    as: :list_promoted_facts
+
   defdelegate get_species_fact!(id), to: SpeciesEnrichment, as: :get_fact!
   defdelegate count_pending_species_facts(), to: SpeciesEnrichment, as: :count_pending_facts
   defdelegate count_promoted_species_facts(), to: SpeciesEnrichment, as: :count_promoted_facts
