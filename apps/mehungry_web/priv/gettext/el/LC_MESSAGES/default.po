@@ -8841,3 +8841,39 @@ msgstr "Διαβάστε περισσότερα στη Wikipedia"
 #, elixir-autogen, elixir-format
 msgid "Top producing countries"
 msgstr "Κορυφαίες χώρες παραγωγής"
+
+#: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1353
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1203
+#, elixir-autogen, elixir-format
+msgid "Hands (cm)"
+msgstr "Χέρια (cm)"
+
+#: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1357
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1207
+#, elixir-autogen, elixir-format
+msgid "Glutes (cm)"
+msgstr "Γλουτοί (cm)"
+
+#: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:1361
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1211
+#, elixir-autogen, elixir-format
+msgid "Feet (cm)"
+msgstr "Πόδια (cm)"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1302
+#: lib/mehungry_web/measurement_chart.ex:97
+#, elixir-autogen, elixir-format
+msgid "Hands"
+msgstr "Χέρια"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1303
+#: lib/mehungry_web/measurement_chart.ex:98
+#, elixir-autogen, elixir-format
+msgid "Glutes"
+msgstr "Γλουτοί"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1304
+#: lib/mehungry_web/measurement_chart.ex:99
+#, elixir-autogen, elixir-format
+msgid "Feet"
+msgstr "Πόδια"

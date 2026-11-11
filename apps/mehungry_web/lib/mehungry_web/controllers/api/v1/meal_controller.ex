@@ -248,22 +248,17 @@ defmodule MehungryWeb.Api.V1.MealController do
   defp normalize_per_100g(map) when is_map(map), do: map
   defp normalize_per_100g(_), do: %{}
 
+  # The mobile tick posts `{recipe_id}` (the serialized recipe carries `recipe_id`,
+  # not the internal `recipe_user_meal_id`). Resolve it against the meal's loaded
+  # recipe rows and toggle that recipe's consumed state. 404 if the meal has no
+  # such recipe.
   defp add_consume(user_id, id, params) do
     meal = History.get_user_meal_raw!(user_id, id)
 
-    consume =
-      (params["consume_recipe_user_meals"] || [params])
-      |> Enum.map(fn c ->
-        %{
-          "recipe_user_meal_id" => c["recipe_user_meal_id"],
-          "consume_portions" => c["portions"] || c["consume_portions"] || 1,
-          "start_dt" => meal.start_dt,
-          "end_dt" => meal.end_dt
-        }
-      end)
-      |> Enum.reject(&is_nil(&1["recipe_user_meal_id"]))
-
-    History.update_user_meal(meal, %{"consume_recipe_user_meals" => consume})
+    case Enum.find(meal.recipe_user_meals, &(&1.recipe_id == params["recipe_id"])) do
+      nil -> {:error, :not_found}
+      rum -> History.toggle_recipe_consumed(meal, rum)
+    end
   end
 
   # ── helpers ──────────────────────────────────────────────────────────────

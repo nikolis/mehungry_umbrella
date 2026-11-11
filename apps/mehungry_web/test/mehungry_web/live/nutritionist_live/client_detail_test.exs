@@ -104,7 +104,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
           visit_number: "1",
           visit_date: "2026-02-01",
           modality: "online",
-          body: "First online consult"
+          body: "First online consult",
+          hands_cm: "18.5",
+          glutes_cm: "96.0",
+          feet_cm: "24.5"
         }
       )
       |> render_submit()
@@ -117,6 +120,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     assert [note] = Professionals.list_consultation_notes(record.id)
     assert note.body == "First online consult"
     assert note.modality == "online"
+    assert note.hands_cm == 18.5
+    assert note.glutes_cm == 96.0
+    assert note.feet_cm == 24.5
   end
 
   test "'Edit details' lazily creates the record and saves the PII fields", %{

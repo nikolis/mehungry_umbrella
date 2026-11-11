@@ -316,6 +316,9 @@ defmodule MehungryWeb.Api.V1.NutritionistJSON do
     body_fat_percentage: {"Body fat", "%"},
     waist_cm: {"Waist", "cm"},
     muscle_mass_kg: {"Muscle mass", "kg"},
+    hands_cm: {"Hands", "cm"},
+    glutes_cm: {"Glutes", "cm"},
+    feet_cm: {"Feet", "cm"},
     bmi: {"BMI", nil},
     bmr_kcal: {"BMR", "kcal"}
   }

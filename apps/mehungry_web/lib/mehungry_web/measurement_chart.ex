@@ -48,6 +48,9 @@ defmodule MehungryWeb.MeasurementChart do
     {"body_fat_percentage", {"Body fat", "%"}},
     {"waist_cm", {"Waist", "cm"}},
     {"muscle_mass_kg", {"Muscle mass", "kg"}},
+    {"hands_cm", {"Hands", "cm"}},
+    {"glutes_cm", {"Glutes", "cm"}},
+    {"feet_cm", {"Feet", "cm"}},
     {"bmi", {"BMI", nil}},
     {"bmr_kcal", {"BMR", "kcal"}}
   ]
@@ -66,6 +69,11 @@ defmodule MehungryWeb.MeasurementChart do
     "body_fat_percentage" => :down,
     "waist_cm" => :down,
     "muscle_mass_kg" => :up,
+    # Circumference measurements with no universal "better" direction — show the
+    # real arrow but never tint it good/bad.
+    "hands_cm" => :none,
+    "glutes_cm" => :none,
+    "feet_cm" => :none,
     "bmi" => :down,
     "bmr_kcal" => :none
   }
@@ -86,6 +94,9 @@ defmodule MehungryWeb.MeasurementChart do
   defp translate_label("Body fat"), do: gettext("Body fat")
   defp translate_label("Waist"), do: gettext("Waist")
   defp translate_label("Muscle mass"), do: gettext("Muscle mass")
+  defp translate_label("Hands"), do: gettext("Hands")
+  defp translate_label("Glutes"), do: gettext("Glutes")
+  defp translate_label("Feet"), do: gettext("Feet")
   defp translate_label("BMI"), do: gettext("BMI")
   defp translate_label("BMR"), do: gettext("BMR")
   defp translate_label(other), do: other

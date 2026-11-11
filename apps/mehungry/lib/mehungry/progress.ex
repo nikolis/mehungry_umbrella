@@ -506,6 +506,12 @@ defmodule Mehungry.Progress do
         body_fat_percentage: e.body_fat_percentage,
         waist_cm: e.waist_cm,
         muscle_mass_kg: e.muscle_mass_kg,
+        # Nutritionist-visit-only circumference metrics — not self-tracked, but
+        # kept in the point so the shape stays in parity with
+        # `Professionals.measurement_metrics/0` (the chart simply omits them).
+        hands_cm: nil,
+        glutes_cm: nil,
+        feet_cm: nil,
         bmi: e.bmi,
         bmr_kcal: e.bmr_kcal
       }

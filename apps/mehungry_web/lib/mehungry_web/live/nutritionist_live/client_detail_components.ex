@@ -428,7 +428,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       <% else %>
         <p class="text-parchment-dim text-sm">
           {gettext(
-            "Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass) will chart here once there are at least two readings."
+            "Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass, hands, glutes, feet) will chart here once there are at least two readings."
           )}
         </p>
       <% end %>
@@ -1200,6 +1200,18 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
               <.input field={@visit_form[:muscle_mass_kg]} type="number" step="any" />
               <.ref_hint value={@reference_visit && @reference_visit.muscle_mass_kg} unit="kg" />
             </.labeled>
+            <.labeled label={gettext("Hands (cm)")}>
+              <.input field={@visit_form[:hands_cm]} type="number" step="any" />
+              <.ref_hint value={@reference_visit && @reference_visit.hands_cm} unit="cm" />
+            </.labeled>
+            <.labeled label={gettext("Glutes (cm)")}>
+              <.input field={@visit_form[:glutes_cm]} type="number" step="any" />
+              <.ref_hint value={@reference_visit && @reference_visit.glutes_cm} unit="cm" />
+            </.labeled>
+            <.labeled label={gettext("Feet (cm)")}>
+              <.input field={@visit_form[:feet_cm]} type="number" step="any" />
+              <.ref_hint value={@reference_visit && @reference_visit.feet_cm} unit="cm" />
+            </.labeled>
           </div>
           <.labeled :if={@appointments != []} label={gettext("Linked appointment")}>
             <.input
@@ -1286,7 +1298,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       {gettext("Weight"), visit.weight_kg, "kg"},
       {gettext("Body fat"), visit.body_fat_percentage, "%"},
       {gettext("Waist"), visit.waist_cm, "cm"},
-      {gettext("Muscle mass"), visit.muscle_mass_kg, "kg"}
+      {gettext("Muscle mass"), visit.muscle_mass_kg, "kg"},
+      {gettext("Hands"), visit.hands_cm, "cm"},
+      {gettext("Glutes"), visit.glutes_cm, "cm"},
+      {gettext("Feet"), visit.feet_cm, "cm"}
     ]
     |> Enum.filter(fn {_label, value, _unit} -> value end)
   end

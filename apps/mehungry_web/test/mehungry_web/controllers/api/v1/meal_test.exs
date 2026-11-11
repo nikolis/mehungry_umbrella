@@ -103,6 +103,67 @@ defmodule MehungryWeb.Api.V1.MealTest do
     assert rid == recipe.id
   end
 
+  test "consume tick toggles a recipe's consumed flag from just {recipe_id}", %{
+    conn: conn,
+    user: user
+  } do
+    recipe = FoodFixtures.recipe_fixture(user)
+
+    created =
+      conn
+      |> post(~p"/api/v1/meals", %{
+        "date" => "2026-08-12",
+        "meal_type" => "dinner",
+        "recipe_user_meals" => [%{"recipe_id" => recipe.id, "servings" => 2}]
+      })
+      |> json_response(201)
+
+    # Regression: the calendar serializer must load consume rows per recipe, so a
+    # freshly-planned recipe reads consumed:false (not NotLoaded → always false).
+    assert %{"data" => %{"id" => meal_id, "recipes" => [%{"consumed" => false}]}} = created
+
+    # The mobile tick posts ONLY {recipe_id} (the serialized recipe has no
+    # recipe_user_meal_id). Regression: the server used to ignore recipe_id and
+    # write an empty consume list, so the tick never registered.
+    consumed =
+      conn
+      |> post(~p"/api/v1/meals/#{meal_id}/consume", %{"recipe_id" => recipe.id})
+      |> json_response(200)
+
+    assert %{"data" => %{"recipes" => [%{"recipe_id" => rid, "consumed" => true}]}} = consumed
+    assert rid == recipe.id
+
+    # GET /meals (where the calendar actually reads consumed) reflects it too.
+    listed = conn |> get(~p"/api/v1/meals?start=2026-08-10&end=2026-08-16") |> json_response(200)
+    day = Enum.find(listed["data"]["days"], &(&1["date"] == "2026-08-12"))
+    assert [%{"consumed" => true}] = hd(day["meals"])["recipes"]
+
+    # Tapping again toggles it back off.
+    unconsumed =
+      conn
+      |> post(~p"/api/v1/meals/#{meal_id}/consume", %{"recipe_id" => recipe.id})
+      |> json_response(200)
+
+    assert %{"data" => %{"recipes" => [%{"consumed" => false}]}} = unconsumed
+  end
+
+  test "consume 404s when the meal has no such recipe", %{conn: conn, user: user} do
+    recipe = FoodFixtures.recipe_fixture(user)
+
+    %{"data" => %{"id" => meal_id}} =
+      conn
+      |> post(~p"/api/v1/meals", %{
+        "date" => "2026-08-12",
+        "meal_type" => "dinner",
+        "recipe_user_meals" => [%{"recipe_id" => recipe.id, "servings" => 1}]
+      })
+      |> json_response(201)
+
+    assert conn
+           |> post(~p"/api/v1/meals/#{meal_id}/consume", %{"recipe_id" => recipe.id + 9999})
+           |> json_response(404)
+  end
+
   test "create an unsorted (nil meal_type) meal", %{conn: conn} do
     body = %{"date" => "2026-08-12", "meal_type" => nil, "title" => "Snacks"}
     created = conn |> post(~p"/api/v1/meals", body) |> json_response(201)

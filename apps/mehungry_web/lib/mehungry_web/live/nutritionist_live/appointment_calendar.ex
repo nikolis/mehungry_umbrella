@@ -1349,6 +1349,18 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
               <label for="consultation_note_muscle_mass_kg" class="block text-sm text-parchment-dim mb-1">{gettext("Muscle mass (kg)")}</label>
               <.input field={@measurement_form[:muscle_mass_kg]} type="number" step="any" />
             </div>
+            <div>
+              <label for="consultation_note_hands_cm" class="block text-sm text-parchment-dim mb-1">{gettext("Hands (cm)")}</label>
+              <.input field={@measurement_form[:hands_cm]} type="number" step="any" />
+            </div>
+            <div>
+              <label for="consultation_note_glutes_cm" class="block text-sm text-parchment-dim mb-1">{gettext("Glutes (cm)")}</label>
+              <.input field={@measurement_form[:glutes_cm]} type="number" step="any" />
+            </div>
+            <div>
+              <label for="consultation_note_feet_cm" class="block text-sm text-parchment-dim mb-1">{gettext("Feet (cm)")}</label>
+              <.input field={@measurement_form[:feet_cm]} type="number" step="any" />
+            </div>
           </div>
           <div>
             <label for="consultation_note_body" class="block text-sm text-parchment-dim mb-1">{gettext("Notes (optional)")}</label>

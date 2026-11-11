@@ -60,7 +60,8 @@ It also carries the per-visit **body measurements** that drive the client progre
   `modality` (`in_person | phone | online`, via `ConsultationNote.modalities/0`), `body`, `todo`,
   `details`.
 - **Measurements** — directly entered: `weight_kg`, `body_fat_percentage` (validated 0–100),
-  `waist_cm`, `muscle_mass_kg` (all floats). **Auto-computed on save**: `bmi` (float) and
+  `waist_cm`, `muscle_mass_kg`, and the optional circumference metrics `hands_cm`, `glutes_cm`,
+  `feet_cm` (all floats, each validated `> 0`). **Auto-computed on save**: `bmi` (float) and
   `bmr_kcal` (integer), derived from the note's `weight_kg` + the client's **latest `ClientIntake`**
   (`height_m`/`sex`/`age`) via `Anthropometrics.compute/1`, filling only blanks the nutritionist
   left (never overwriting a typed value; both stay `nil` when the client has no intake). The fill
@@ -93,8 +94,9 @@ previously a client's conditions lived only as free text inside `ClientIntake.de
 - **Notes:** `list_consultation_notes/1` (chronological), `create_consultation_note/1`,
   `update_consultation_note/2`, `delete_consultation_note/1`, `change_consultation_note/2`.
 - **Progress / measurements:** `measurement_history/1` (per-client dated points, each carrying every
-  metric present — `weight_kg`, `body_fat_percentage`, `waist_cm`, `muscle_mass_kg`, `bmi`,
-  `bmr_kcal` — merged from intakes + consultation notes, sorted by date);
+  metric present — `weight_kg`, `body_fat_percentage`, `waist_cm`, `muscle_mass_kg`, `hands_cm`,
+  `glutes_cm`, `feet_cm`, `bmi`, `bmr_kcal` — merged from intakes + consultation notes, sorted by
+  date);
   `weight_history/1` (the legacy weight-only slice, still used where only weight is plotted);
   `measurement_history_for_user/1` (a **user-scoped**, cross-nutritionist aggregation powering the
   client's own "My progress" chart — pass only the viewer's own id); `measurement_metrics/0`.

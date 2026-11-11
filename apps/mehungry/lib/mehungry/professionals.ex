@@ -2435,6 +2435,9 @@ defmodule Mehungry.Professionals do
     :body_fat_percentage,
     :waist_cm,
     :muscle_mass_kg,
+    :hands_cm,
+    :glutes_cm,
+    :feet_cm,
     :bmi,
     :bmr_kcal
   ]
@@ -2467,6 +2470,9 @@ defmodule Mehungry.Professionals do
           body_fat_percentage: nil,
           waist_cm: nil,
           muscle_mass_kg: nil,
+          hands_cm: nil,
+          glutes_cm: nil,
+          feet_cm: nil,
           bmi: i.bmi,
           bmr_kcal: i.bmr_kcal
         }
@@ -2483,6 +2489,9 @@ defmodule Mehungry.Professionals do
           body_fat_percentage: n.body_fat_percentage,
           waist_cm: n.waist_cm,
           muscle_mass_kg: n.muscle_mass_kg,
+          hands_cm: n.hands_cm,
+          glutes_cm: n.glutes_cm,
+          feet_cm: n.feet_cm,
           bmi: n.bmi,
           bmr_kcal: n.bmr_kcal
         }

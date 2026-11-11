@@ -1261,15 +1261,20 @@ consented user with no records yet receives; see "Clinical-data consent").
     { "key": "body_fat_percentage", "label": "Body fat", "unit": "%" },
     { "key": "waist_cm", "label": "Waist", "unit": "cm" },
     { "key": "muscle_mass_kg", "label": "Muscle mass", "unit": "kg" },
+    { "key": "hands_cm", "label": "Hands", "unit": "cm" },
+    { "key": "glutes_cm", "label": "Glutes", "unit": "cm" },
+    { "key": "feet_cm", "label": "Feet", "unit": "cm" },
     { "key": "bmi", "label": "BMI", "unit": null },
     { "key": "bmr_kcal", "label": "BMR", "unit": "kcal" }
   ],
   "context": { "height_m": 1.75, "sex": "male", "ideal_weight_kg": 72.0 },
   "history": [
     { "date": "2026-09-01", "source": "intake", "weight_kg": 80.0, "body_fat_percentage": 22.0,
-      "waist_cm": 90.0, "muscle_mass_kg": null, "bmi": 26.1, "bmr_kcal": 1700 },
+      "waist_cm": 90.0, "muscle_mass_kg": null, "hands_cm": null, "glutes_cm": null, "feet_cm": null,
+      "bmi": 26.1, "bmr_kcal": 1700 },
     { "date": "2026-10-01", "source": "visit",  "weight_kg": 78.5, "body_fat_percentage": 21.0,
-      "waist_cm": 88.0, "muscle_mass_kg": 34.0, "bmi": 25.6, "bmr_kcal": 1680 }
+      "waist_cm": 88.0, "muscle_mass_kg": 34.0, "hands_cm": 19.0, "glutes_cm": 98.0, "feet_cm": 25.0,
+      "bmi": 25.6, "bmr_kcal": 1680 }
   ]
 } }
 ```

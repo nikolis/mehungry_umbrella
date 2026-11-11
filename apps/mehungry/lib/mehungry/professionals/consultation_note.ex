@@ -24,6 +24,9 @@ defmodule Mehungry.Professionals.ConsultationNote do
     field :body_fat_percentage, :float
     field :waist_cm, :float
     field :muscle_mass_kg, :float
+    field :hands_cm, :float
+    field :glutes_cm, :float
+    field :feet_cm, :float
     field :bmi, :float
     field :bmr_kcal, :integer
     field :details, :map, default: %{}
@@ -48,6 +51,9 @@ defmodule Mehungry.Professionals.ConsultationNote do
       :body_fat_percentage,
       :waist_cm,
       :muscle_mass_kg,
+      :hands_cm,
+      :glutes_cm,
+      :feet_cm,
       :bmi,
       :bmr_kcal,
       :details
@@ -61,6 +67,9 @@ defmodule Mehungry.Professionals.ConsultationNote do
     )
     |> validate_number(:waist_cm, greater_than: 0)
     |> validate_number(:muscle_mass_kg, greater_than: 0)
+    |> validate_number(:hands_cm, greater_than: 0)
+    |> validate_number(:glutes_cm, greater_than: 0)
+    |> validate_number(:feet_cm, greater_than: 0)
     |> foreign_key_constraint(:professional_client_id)
     |> foreign_key_constraint(:appointment_id)
   end

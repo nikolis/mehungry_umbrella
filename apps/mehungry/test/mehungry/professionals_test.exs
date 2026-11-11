@@ -876,7 +876,10 @@ defmodule Mehungry.ProfessionalsTest do
           "weight_kg" => "71.2",
           "body_fat_percentage" => "28.0",
           "waist_cm" => "84.0",
-          "muscle_mass_kg" => "30.0"
+          "muscle_mass_kg" => "30.0",
+          "hands_cm" => "18.5",
+          "glutes_cm" => "96.0",
+          "feet_cm" => "24.5"
         })
 
       # a note with a date but no metrics at all → dropped
@@ -904,6 +907,13 @@ defmodule Mehungry.ProfessionalsTest do
       assert visit_point.body_fat_percentage == 28.0
       assert visit_point.waist_cm == 84.0
       assert visit_point.muscle_mass_kg == 30.0
+      assert visit_point.hands_cm == 18.5
+      assert visit_point.glutes_cm == 96.0
+      assert visit_point.feet_cm == 24.5
+      # the new circumference metrics are visit-only → nil on the intake point
+      assert intake_point.hands_cm == nil
+      assert intake_point.glutes_cm == nil
+      assert intake_point.feet_cm == nil
     end
 
     test "weight_history/1 still returns the legacy weight-only shape", %{record: record} do

@@ -128,7 +128,10 @@ defmodule Mehungry.History do
   # and the single-arg / single-day `list_history_user_meals_for_user` loaders.
   defp preload_calendar_meals(meals) do
     Repo.preload(meals,
-      recipe_user_meals: [:recipe],
+      # `:consume_recipe_user_meals` feeds the serialized recipe's `consumed` flag
+      # (spec §9); without it the association is NotLoaded and `consumed` is always
+      # false on the single-day / calendar surfaces.
+      recipe_user_meals: [:recipe, :consume_recipe_user_meals],
       ingredient_user_meals: [:measurement_unit, :ingredient_portion, :ingredient],
       free_food_user_meals: []
     )
@@ -434,6 +437,10 @@ defmodule Mehungry.History do
     Repo.all(query)
     |> Repo.preload(
       recipe_user_meals: [
+        # Needed so the serialized recipe's `consumed` flag (spec §9) reflects
+        # whether the user ticked it — without this the association is NotLoaded
+        # and `consumed` always renders false.
+        :consume_recipe_user_meals,
         recipe: [
           recipe_ingredients: [
             :measurement_unit,
@@ -675,6 +682,40 @@ defmodule Mehungry.History do
     |> UserMeal.changeset(attrs)
     |> Repo.update()
     |> maybe_put_ingredient_nutrients()
+  end
+
+  @doc """
+  Toggle the mobile "I ate this" flag for one recipe in a meal (spec §9
+  `POST /meals/:id/consume`). The mobile surface is a boolean tick per recipe, so
+  this adds a single `ConsumeRecipeUserMeal` covering the recipe's full planned
+  portions when it isn't yet marked, or deletes that recipe's consume rows when it
+  is — leaving the meal's *other* recipes' consume history untouched. Done with
+  direct inserts/deletes (not the capped `ConsumeRecipeUserMeal.changeset`) because
+  the boolean tick means "ate the whole serving", not a partial portion claim.
+
+  Returns `{:ok, meal}` (the passed meal, unchanged — the caller reloads it for
+  serialization so `consumed` reflects the new state).
+  """
+  def toggle_recipe_consumed(%UserMeal{} = meal, %RecipeUserMeal{} = rum) do
+    existing =
+      from(c in ConsumeRecipeUserMeal,
+        where: c.user_meal_id == ^meal.id and c.recipe_user_meal_id == ^rum.id
+      )
+      |> Repo.all()
+
+    if existing == [] do
+      Repo.insert!(%ConsumeRecipeUserMeal{
+        recipe_user_meal_id: rum.id,
+        user_meal_id: meal.id,
+        consume_portions: rum.consume_portions || 1,
+        start_dt: meal.start_dt,
+        end_dt: meal.end_dt
+      })
+    else
+      Enum.each(existing, &Repo.delete!/1)
+    end
+
+    {:ok, meal}
   end
 
   # After a successful meal write, (re)compute and persist the denormalized
