@@ -3,24 +3,24 @@
     <%!-- Weekly-plan post: a reference-less post whose media is the generated
           share card. The heart here is a genuine social like/upvote (not a save),
           so it stays a heart — unlike recipe cards, which use a bookmark. --%>
-    <div class="flex items-center gap-3 px-4 py-3.5">
+    <a
+      href={MehungryWeb.UserDisplay.profile_path(@post.user)}
+      class="flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.03] transition"
+    >
       <img
         src={@post.user.profile_pic}
-        alt={@post.user.name}
+        alt={MehungryWeb.UserDisplay.display_name(@post.user)}
         class="w-10 h-10 rounded-full object-cover flex-none bg-ink-panel2"
       />
       <div class="min-w-0">
         <p class="font-mono text-[0.6rem] tracking-[0.13em] uppercase text-parchment-dim">
           {gettext("Shared a weekly plan")}
         </p>
-        <a
-          href={"/profile/#{@post.user_id}"}
-          class="block truncate text-parchment font-semibold text-sm hover:text-paprika-soft transition"
-        >
-          {@post.user.name}
-        </a>
+        <span class="block truncate text-parchment font-semibold text-sm hover:text-paprika-soft transition">
+          {MehungryWeb.UserDisplay.display_name(@post.user)}
+        </span>
       </div>
-    </div>
+    </a>
     <%!-- The card opens the full day-by-day plan (/meal-plans/:slug) when the
           post is linked to a published plan; older posts fall back to the image. --%>
     <.link
@@ -220,10 +220,10 @@
     </div>
     <div class="px-4 pb-4 pt-1 flex flex-wrap items-baseline gap-1">
       <a
-        href={"/profile/#{@post.user_id}"}
+        href={MehungryWeb.UserDisplay.profile_path(@post.user)}
         class="text-parchment font-semibold text-sm hover:text-paprika-soft transition"
       >
-        {@post.user.name}
+        {MehungryWeb.UserDisplay.display_name(@post.user)}
       </a>
       <span class="text-parchment-dim text-sm">{@post.description}</span>
     </div>
@@ -240,22 +240,24 @@
     <% following? = not is_nil(@user) and recipe.user.id in @user_follows %>
     <!-- Author strip: RECIPE BY eyebrow + follow -->
     <div class="flex items-center gap-3 px-4 py-3.5">
-      <img
-        src={recipe.user.profile_pic}
-        alt={recipe.user.name}
-        class="w-10 h-10 rounded-full object-cover flex-none bg-ink-panel2"
-      />
-      <div class="min-w-0 flex-1">
-        <p class="font-mono text-[0.6rem] tracking-[0.13em] uppercase text-parchment-dim">
-          {gettext("Recipe by")}
-        </p>
-        <a
-          href={"/profile/#{recipe.user_id}"}
-          class="block truncate text-parchment font-semibold text-sm hover:text-paprika-soft transition"
-        >
-          {recipe.user.name}
-        </a>
-      </div>
+      <a
+        href={MehungryWeb.UserDisplay.profile_path(recipe.user)}
+        class="flex items-center gap-3 min-w-0 flex-1 group"
+      >
+        <img
+          src={recipe.user.profile_pic}
+          alt={MehungryWeb.UserDisplay.display_name(recipe.user)}
+          class="w-10 h-10 rounded-full object-cover flex-none bg-ink-panel2"
+        />
+        <div class="min-w-0">
+          <p class="font-mono text-[0.6rem] tracking-[0.13em] uppercase text-parchment-dim">
+            {gettext("Recipe by")}
+          </p>
+          <span class="block truncate text-parchment font-semibold text-sm group-hover:text-paprika-soft transition">
+            {MehungryWeb.UserDisplay.display_name(recipe.user)}
+          </span>
+        </div>
+      </a>
       <%= if !is_nil(@user) and recipe.user.id != @user.id do %>
         <button
           phx-click="save_user_follow"

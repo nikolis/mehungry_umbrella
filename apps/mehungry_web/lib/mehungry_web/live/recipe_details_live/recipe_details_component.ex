@@ -379,24 +379,24 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             </div>
             <!-- Author -->
             <div class="flex items-center justify-between gap-3 p-4 border border-ink-panel2 bg-black/20 rounded-xl">
-              <div class="flex items-center gap-3 min-w-0">
+              <a
+                href={MehungryWeb.UserDisplay.profile_path(@recipe.user)}
+                class="flex items-center gap-3 min-w-0 group"
+              >
                 <img
                   src={@recipe.user.profile_pic}
-                  alt={@recipe.user.name}
+                  alt={MehungryWeb.UserDisplay.display_name(@recipe.user)}
                   class="w-11 h-11 rounded-full object-cover flex-none"
                 />
                 <div class="min-w-0">
                   <p class="font-mono text-[0.64rem] tracking-[0.12em] uppercase text-parchment-dim">
                     {gettext("Recipe by")}
                   </p>
-                  <a
-                    href={"/profile/#{@recipe.user.id}"}
-                    class="block truncate text-parchment font-semibold hover:text-paprika-soft transition"
-                  >
-                    {@recipe.user.name}
-                  </a>
+                  <span class="block truncate text-parchment font-semibold group-hover:text-paprika-soft transition">
+                    {MehungryWeb.UserDisplay.display_name(@recipe.user)}
+                  </span>
                 </div>
-              </div>
+              </a>
               <%= if !is_nil(@current_user) do %>
                 <button
                   phx-click="save_user_follow"
