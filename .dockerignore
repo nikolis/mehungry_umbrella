@@ -31,6 +31,14 @@ doc
 docs
 .fly
 
+# Test code + fixtures. The image builds MIX_ENV=prod (`mix release`), which
+# never compiles test/, so these only bloat the context — notably the ~22MB of
+# `foundationDownload.json` USDA fixtures (4 copies) that dominated the upload
+# and caused the remote-builder deadline to expire over the slow uplink.
+apps/mehungry/test
+apps/mehungry_web/test
+**/foundationDownload.json
+
 # Local-only GPU service (Bumblebee/EXLA) — the Dockerfile deletes it anyway.
 apps/mehungry_local_ai
 
