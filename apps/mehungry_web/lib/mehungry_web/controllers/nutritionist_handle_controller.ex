@@ -34,8 +34,13 @@ defmodule MehungryWeb.NutritionistHandleController do
   def show(conn, _params), do: not_found(conn)
 
   defp not_found(conn) do
+    # This renders through the app layout (the head reads `@conn.assigns`), so we
+    # must mark it noindex — otherwise the shared head emits `index, follow` plus
+    # a self-referencing canonical for the dead path, telling Google to index the
+    # broken URL. `:noindex` flips the robots meta and drops the canonical.
     conn
     |> put_status(:not_found)
+    |> assign(:noindex, true)
     |> put_view(MehungryWeb.ErrorView)
     |> render("404.html")
     |> halt()

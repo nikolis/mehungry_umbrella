@@ -30,7 +30,9 @@ defmodule MehungryWeb.Api.V1.FoodHealthTest do
       conn = get(conn, ~p"/api/v1/species/#{slug}")
       assert %{"data" => detail} = json_response(conn, 200)
       assert detail["name"] == name
-      assert Map.has_key?(detail, "compounds")
+      # The species↔compound graph was dropped; mined biomedical facts surface
+      # under "research" (Mehungry.FactMining), not "compounds".
+      assert Map.has_key?(detail, "research")
       assert Map.has_key?(detail, "ingredients")
       refute Map.has_key?(detail, "related_conditions")
     end
@@ -51,11 +53,13 @@ defmodule MehungryWeb.Api.V1.FoodHealthTest do
 
       Mehungry.Food.record_species_faostat_facts(sp.id, [%{country: "Peru", tonnes: 1.0, year: 2022}])
 
-      # Before promotion, nothing surfaces.
+      # The Wikidata fact (origin_region) lands pending and does not surface
+      # until promoted; the FAOSTAT fact auto-promotes (keyed on a curated item
+      # code), so top producers surface immediately.
       conn0 = get(conn, ~p"/api/v1/species/#{String.downcase(name)}")
       assert %{"data" => %{"facts" => facts0}} = json_response(conn0, 200)
       assert facts0["origin_region"] == nil
-      assert facts0["top_producers"] == nil
+      assert facts0["top_producers"]["countries"] == ["Peru"]
 
       Enum.each(Mehungry.Food.list_pending_species_facts(), &Mehungry.Food.promote_species_fact(&1.id))
 

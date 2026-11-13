@@ -82,18 +82,19 @@ defmodule MehungryWeb.NutritionistLive.ArticleTest do
     assert body =~ "\"@type\":\"Article\""
   end
 
-  test "a draft article's public URL redirects to the profile", %{conn: conn, profile: profile} do
+  test "a draft article's public URL serves a real 404", %{conn: conn, profile: profile} do
     {:ok, _draft} =
       Professionals.create_article(%{
         "professional_profile_id" => profile.id,
         "title" => "Secret Draft"
       })
 
-    # Logged out: the draft slug is not published, so it redirects to the profile.
-    assert {:error, {:live_redirect, %{to: to}}} =
-             live(build_conn(), "/nutritionists/#{profile.slug}/articles/secret-draft")
+    # Logged out: the draft slug is not published, so it 404s (a real 404, not a
+    # soft-404 redirect to the profile — crawlers must not index unpublished URLs).
+    assert_raise Ecto.NoResultsError, fn ->
+      live(build_conn(), "/nutritionists/#{profile.slug}/articles/secret-draft")
+    end
 
-    assert to == "/nutritionists/#{profile.slug}"
     # (conn param retained so the parent `conn` setup stays used)
     assert conn
   end

@@ -61,6 +61,11 @@ defmodule MehungryWeb.Endpoint do
 
   plug Plug.RequestId
   # plug MehungryWeb.PathPlug
+
+  # 301 the bare apex m3hungry.com → www.m3hungry.com before any session/router
+  # work. Runs after RequestId so the redirect is still logged with a request id.
+  plug MehungryWeb.Plugs.CanonicalHost
+
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,

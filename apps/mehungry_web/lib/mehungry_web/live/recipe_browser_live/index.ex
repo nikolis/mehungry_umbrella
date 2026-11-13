@@ -488,7 +488,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         |> assign(:not_empty, length(recipes) > 0)
         |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
         |> assign(:page, 1)
-        |> assign(:page_title, "High-#{label} Recipes | M3Hungry")
+        |> assign(:page_title, "High-#{label} Recipes")
         |> assign(
           :page_description,
           "Browse recipes that are high in #{label} — each badge is the EU per-serving" <>
@@ -506,7 +506,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> handle_search("@" <> ingredient_name)
     |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
     |> assign(:page, 1)
-    |> assign(:page_title, "Recipes with #{ingredient_name} | M3Hungry")
+    |> assign(:page_title, "Recipes with #{ingredient_name}")
     |> assign(
       :page_description,
       "Browse recipes containing #{ingredient_name} with full USDA nutrition data on M3Hungry."
@@ -523,11 +523,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> handle_search(display_tag)
     |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
     |> assign(:page, 1)
-    |> assign(:page_title, "#{display_tag} Recipes | M3Hungry")
+    |> assign(:page_title, "#{display_tag} Recipes")
     |> assign(
       :page_description,
       "Browse #{display_tag} recipes with complete USDA nutrition data. Discover ingredients, macros, and cooking instructions on M3Hungry."
     )
+    # Hashtag pages are internal search-result views (one shared recipe pool
+    # re-sliced per tag, many empty) — noindex,follow keeps them crawlable for
+    # discovery without the thin-content/index-bloat cost. They're also dropped
+    # from the sitemap (see sitemap_controller).
+    |> assign(:noindex, true)
   end
 
   defp apply_action(socket, :index, %{"query" => query_str} = _params) do
@@ -539,11 +544,13 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> handle_search(query_str)
     |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
     |> assign(:page, 1)
-    |> assign(:page_title, "\"#{query_str}\" Recipes | M3Hungry")
+    |> assign(:page_title, "\"#{query_str}\" Recipes")
     |> assign(
       :page_description,
       "Search results for '#{query_str}' — browse recipes with USDA nutrition analysis, macros, and step-by-step instructions on M3Hungry."
     )
+    # Free-text search-result pages are thin/infinite-space — noindex,follow.
+    |> assign(:noindex, true)
   end
 
   defp apply_action(socket, :index, _pars) do

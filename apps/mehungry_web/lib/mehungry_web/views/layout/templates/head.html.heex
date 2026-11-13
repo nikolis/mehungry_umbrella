@@ -93,7 +93,14 @@ noindex_prefixes = [
   "/admin-dashboard"
 ]
 
-noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &1))
+# A page can force noindex via an assign (e.g. the catch-all 404, which renders
+# through this layout). Those pages must also NOT emit a self-referencing
+# canonical — a 404 that canonicalises to its own dead URL tells Google to index
+# the broken path. Prefix-based noindex pages (/profile, …) keep their canonical.
+force_noindex = @conn.assigns[:noindex] == true
+
+noindex =
+  force_noindex or Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &1))
 
 ga_measurement_id = Application.get_env(:mehungry_web, :ga_measurement_id, "G-JPGJG6GCSK")
 ga_consent_granted = @conn.assigns[:cookie_consent] == :accepted
@@ -122,7 +129,9 @@ ga_enabled =
   <!-- ─── Primary SEO ──────────────────────────────────────────────────────── -->
   <title>{resolved_title}</title>
   <meta name="description" content={page_description} />
-  <link rel="canonical" href={canonical_url} />
+  <%= if not force_noindex do %>
+    <link rel="canonical" href={canonical_url} />
+  <% end %>
   <%= if not noindex and hreflang_alternates != [] do %>
     <%= for {loc, href} <- hreflang_alternates do %>
       <link rel="alternate" hreflang={loc} href={href} />
@@ -179,6 +188,40 @@ ga_enabled =
       <%= raw(Jason.encode!(%{"@context" => "https://schema.org", "@graph" => structured_data})) %>
     </script>
   <% end %>
+  <%!-- Sitewide brand entity: Organization + WebSite anchor the "M3Hungry" name,
+       logo and search endpoint for Google's Knowledge Graph on every page. Both
+       carry stable @ids so page-level graphs (Recipe, LocalBusiness, …) can
+       reference them as publisher. TODO: populate `sameAs` with the real public
+       Instagram/Facebook/Pinterest profile URLs once confirmed. --%>
+  <script type="application/ld+json">
+    <%= raw(Jason.encode!(%{
+      "@context" => "https://schema.org",
+      "@graph" => [
+        %{
+          "@type" => "Organization",
+          "@id" => base_url <> "/#organization",
+          "name" => "M3Hungry",
+          "url" => base_url <> "/",
+          "logo" => base_url <> "/images/m3hungry_icon_512.png"
+        },
+        %{
+          "@type" => "WebSite",
+          "@id" => base_url <> "/#website",
+          "url" => base_url <> "/",
+          "name" => "M3Hungry",
+          "publisher" => %{"@id" => base_url <> "/#organization"},
+          "potentialAction" => %{
+            "@type" => "SearchAction",
+            "target" => %{
+              "@type" => "EntryPoint",
+              "urlTemplate" => base_url <> "/search?q={search_term_string}"
+            },
+            "query-input" => "required name=search_term_string"
+          }
+        }
+      ]
+    })) %>
+  </script>
 
   <!-- ─── Favicons ────────────────────────────────────────────────────────── -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -219,12 +262,8 @@ ga_enabled =
     </script>
   <% end %>
 
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/gh/habibmhamadi/multi-select-tag@2.0.1/dist/css/multi-select-tag.css"
-  />
-  <script src="https://cdn.jsdelivr.net/gh/habibmhamadi/multi-select-tag@2.0.1/dist/js/multi-select-tag.js">
-  </script>
+<%!-- multi-select-tag removed: no `MultiSelectTag`/`.multi-select-tag` usage
+       anywhere in the app — it was a dead render-blocking include on every page. --%>
 
   <link
     rel="stylesheet"
@@ -243,17 +282,13 @@ ga_enabled =
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
-    integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
-
-  <link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css" />
-  <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js">
-  </script>
+  <%!-- font-awesome removed: no `fa-`/`fas`/font-awesome usage anywhere in the
+       app (grepped lib + assets) — it was ~19KB of render-blocking dead CSS on
+       every page. --%>
+  <%!-- toastui-calendar removed: its only consumer, Hooks.HiddenCalendar, is
+       attached to zero templates (the consumer calendar renders server-side), so
+       this ~222KB CDN library was a render-blocking download on every page with
+       no runtime user. --%>
 
   <link phx-track-static rel="stylesheet" href={Routes.static_path(@conn, "/css/app.css")} />
   <script
@@ -265,7 +300,7 @@ ga_enabled =
   </script>
 
   {csrf_meta_tag()}
-
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js">
-  </script>
+  <%!-- select2 CDN removed: no `.select2(` call sites anywhere, and select2 is
+       already bundled via app.js's `import select2` if ever needed — the CDN tag
+       was redundant/unused. --%>
 </head>

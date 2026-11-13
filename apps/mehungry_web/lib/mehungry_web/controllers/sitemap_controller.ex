@@ -4,8 +4,6 @@ defmodule MehungryWeb.SitemapController do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Food.Recipe
-  alias Mehungry.Hashtag
-  alias Mehungry.Food.RecipeHashtag
   alias Mehungry.Food.FoundementalFoodSpecies
   alias Mehungry.Professionals.ProfessionalProfile
   alias Mehungry.Professionals.Article
@@ -23,20 +21,9 @@ defmodule MehungryWeb.SitemapController do
         )
       )
 
-    hashtags =
-      Repo.all(
-        from(h in Hashtag,
-          join: rh in RecipeHashtag,
-          on: rh.hashtag_id == h.id,
-          where: not is_nil(h.title) and h.title != "",
-          group_by: h.title,
-          having: count(rh.id) > 1,
-          select: h.title,
-          order_by: [desc: count(rh.id)],
-          limit: 200
-        )
-      )
-
+    # Hashtag search-result pages are intentionally NOT sitemapped: they're thin,
+    # near-duplicate internal search views (and now noindex,follow). They stay
+    # crawlable via in-page links; see RecipeBrowserLive hashtag apply_action.
     species =
       Repo.all(
         from(s in FoundementalFoodSpecies,
@@ -69,7 +56,7 @@ defmodule MehungryWeb.SitemapController do
 
     published_plans = PublishedPlans.list_public_plans()
 
-    xml = build_xml(recipes, hashtags, species, nutritionists, articles, published_plans)
+    xml = build_xml(recipes, species, nutritionists, articles, published_plans)
 
     conn
     |> put_resp_content_type("application/xml")
@@ -112,7 +99,7 @@ defmodule MehungryWeb.SitemapController do
       "\n</url>"
   end
 
-  defp build_xml(recipes, hashtags, species, nutritionists, articles, published_plans) do
+  defp build_xml(recipes, species, nutritionists, articles, published_plans) do
     today = Date.utc_today() |> to_string()
 
     static_urls = [
@@ -142,17 +129,6 @@ defmodule MehungryWeb.SitemapController do
           lastmod: date,
           changefreq: "weekly",
           priority: "0.8"
-        )
-      end)
-
-    hashtag_urls =
-      Enum.map(hashtags, fn h ->
-        encoded = URI.encode(h, &URI.char_unreserved?/1)
-
-        localized_entries("/search/hashtag/#{encoded}",
-          lastmod: today,
-          changefreq: "daily",
-          priority: "0.7"
         )
       end)
 
@@ -206,7 +182,6 @@ defmodule MehungryWeb.SitemapController do
       Enum.join(
         static_urls ++
           recipe_urls ++
-          hashtag_urls ++
           food_urls ++ nutritionist_urls ++ article_urls ++ plan_urls ++ nutrient_urls,
         "\n"
       )

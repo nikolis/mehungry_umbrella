@@ -121,9 +121,13 @@ defmodule MehungryWeb.PublicNutritionistLiveTest do
       assert body =~ ~s("@type":"Person")
     end
 
-    test "an unknown slug redirects to the directory", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/nutritionists"}}} =
-               live(conn, ~p"/nutritionists/no-such-nutritionist")
+    test "an unknown slug serves a real 404 (never a soft-404 redirect)", %{conn: conn} do
+      # Intentional SEO decision in Show.mount/3: a dead profile URL must 404,
+      # not 302 to the directory, so crawlers don't suppress the whole
+      # /nutritionists/:slug pattern.
+      assert_raise Ecto.NoResultsError, fn ->
+        live(conn, ~p"/nutritionists/no-such-nutritionist")
+      end
     end
   end
 

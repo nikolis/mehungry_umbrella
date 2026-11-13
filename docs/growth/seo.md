@@ -565,11 +565,56 @@ Free-food slots (and any pre-FK-snapshot plans) are shown but skipped on import.
 After deploying, confirm these work:
 
 - [ ] `https://www.m3hungry.com/robots.txt` — opens and shows the disallow rules
-- [ ] `https://www.m3hungry.com/sitemap.xml` — opens and lists recipe, hashtag, and food (`/foods/:slug`) URLs
+- [ ] `https://www.m3hungry.com/sitemap.xml` — opens and lists recipe and food (`/foods/:slug`) URLs (hashtag pages are intentionally excluded — see 2026-11-13 fixes below)
 - [ ] View source of a recipe page (`/browse/42`) — check `<title>`, `<meta name="description">`, and `<script type="application/ld+json">` are present
 - [ ] View source of `/profile` — check `<meta name="robots" content="noindex, nofollow">` is present
 - [ ] Google's [Rich Results Test](https://search.google.com/test/rich-results) with a recipe URL — confirms JSON-LD is valid
 - [ ] Submit sitemap to [Google Search Console](https://search.google.com/search-console)
+
+---
+
+## Audit fixes — 2026-11-13 (full-site audit)
+
+A multi-agent SEO audit (technical, content/E-E-A-T, schema, performance, GEO,
+agent-readiness, SXO, local) surfaced a batch of code-level issues. The Critical/High
+items fixed in code (verified against a running server):
+
+- **Food-page calories were ~4.17× too high (kJ mislabeled as kcal).** `build_top_nutrients/1`
+  in `species_detail_live/index.ex` keyed USDA `ingredient_nutrients` by bare name, so a
+  `Map.new` collision across the 4 "Energy*" rows (kcal, kJ, 2× Atwater) let the **kJ** row
+  win in the card, `<meta description>`, and `WebPage` JSON-LD — every `/foods/*` page.
+  Fixed by routing through `NutrientCalculation.filter_energy_duplicates/1` (the same dedup the
+  nutrition tree uses) and folding Atwater names back to the `Energy` key. **YMYL accuracy bug.**
+- **Sitewide `Organization` + `WebSite` + `SearchAction` JSON-LD** added to `head.html.heex`
+  (renders on every page, stable `@id`s) — the brand-entity anchor for Google's Knowledge Graph
+  that was previously absent everywhere. `sameAs` is a TODO (fill with real social URLs).
+- **Recipe meta/JSON-LD descriptions** no longer emit raw hashtag dumps: `RecipeSeo.description/1`
+  detects a hashtag-line description (`hashtag_dump?/1`) and falls back to a constructed prose
+  sentence; the JSON-LD `description` reuses it. Hashtags still feed `keywords`.
+- **Doubled `| M3Hungry` title suffix** removed from the hashtag/search/ingredient page titles in
+  `recipe_browser_live/index.ex` (the shared `head` already appends the suffix once).
+- **Hashtag pages are now `noindex, follow` and dropped from the sitemap** (≈360 thin/near-dup
+  URLs, ~46% of the sitemap). Tag matching is now **case-insensitive** so `/Greek` and `/greek`
+  stop generating empty duplicate pages. See `docs/growth/hashtags.md`.
+- **404 hygiene:** the catch-all `NutritionistHandleController` 404 (which renders through the app
+  layout) now sets a `:noindex` assign so `head.html.heex` emits `noindex` **and drops the
+  self-referencing canonical** — it previously told Google to index the broken URL. Unknown
+  `/foods/:slug`, `/nutritionists/:slug`, and article slugs now **raise `Ecto.NoResultsError`
+  (real 404)** instead of a 302 soft-redirect to the catalog.
+- **Apex → www:** `MehungryWeb.Plugs.CanonicalHost` (new, wired in `endpoint.ex`) **301s the bare
+  apex `m3hungry.com` → `www.m3hungry.com`** (path + query preserved). The apex now has a valid
+  cert and served full duplicate content; this makes consolidation a directive, not just a
+  `rel=canonical` hint. (The `/` → `/welcome` hop stays a 302 — it is session/auth-dependent, so a
+  301 would be incorrectly hard-cached.)
+- **Performance:** removed four **dead render-blocking CDN includes** loaded on every page —
+  `toastui-calendar` (~222KB; its only consumer `Hooks.HiddenCalendar` is attached to zero
+  templates), Font Awesome (~19KB; no `fa-` usage anywhere), `multi-select-tag`, and `select2`
+  (no call sites). jQuery/selectize/flatpickr stay (genuinely used). ~240KB+ off every page.
+
+Still open (not code — business/content): seed real **nutritionist profiles** (the directory
+`/nutritionists` is a live empty `index,follow` page and no `/nutritionists/:slug` exist); add a
+demand→supply CTA from food/recipe pages to the directory; recipe `author` backfill in the bot
+pipeline; the broader jQuery/select2 bundle split (needs interactive-widget QA).
 
 ---
 

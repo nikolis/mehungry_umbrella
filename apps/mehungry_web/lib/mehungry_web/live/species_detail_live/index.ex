@@ -35,7 +35,12 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
     case Food.get_species_by_slug(slug) do
       nil ->
-        {:ok, push_navigate(socket, to: "/foods")}
+        # A missing food must be a real 404, never a 302 to /foods — redirecting a
+        # dead URL to the catalog is a soft-404 that wastes crawl budget and can
+        # suppress the whole /foods/:slug pattern in search. Raising
+        # Ecto.NoResultsError renders the 404 on the disconnected (crawler) render
+        # via Plug.Exception.
+        raise Ecto.NoResultsError, queryable: Mehungry.Food.FoundementalFoodSpecies
 
       species ->
         language = socket.assigns[:current_language] || "en"
@@ -254,7 +259,17 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   # ═══════════════════════════════════════════════════════════════════════════
 
   defp build_top_nutrients(ingredient_nutrients) do
-    by_name = Map.new(ingredient_nutrients, &{&1.nutrient.name, &1})
+    # USDA ships up to four "Energy*" rows per ingredient (kcal, kJ, Atwater
+    # General, Atwater Specific). A naive Map.new keyed on nutrient name lets the
+    # last one win — often the kJ row — so the "Calories" card, meta description,
+    # and JSON-LD description reported the kJ value mislabeled as kcal (≈4.17×
+    # too high). Collapse the energy rows to the single kcal entry the nutrient
+    # tree already uses, then fold its (possibly Atwater-suffixed) name back to
+    # the bare "Energy" key so @top_nutrient_names resolves it.
+    by_name =
+      ingredient_nutrients
+      |> Mehungry.Food.NutrientCalculation.filter_energy_duplicates()
+      |> Map.new(&{top_nutrient_key(&1.nutrient.name), &1})
 
     @top_nutrient_names
     |> Enum.flat_map(fn name ->
@@ -270,6 +285,12 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
       end
     end)
   end
+
+  # filter_energy_duplicates/1 may hand back the kcal energy row under an
+  # Atwater-factor name ("Energy (Atwater Specific Factors)"); normalize any
+  # "Energy*" name to the bare "Energy" key the display map/lookup expects.
+  defp top_nutrient_key("Energy" <> _), do: "Energy"
+  defp top_nutrient_key(name), do: name
 
   # ── Composition summary ──────────────────────────────────────────────────
   # One short paragraph of deterministic, indexable prose for the selected

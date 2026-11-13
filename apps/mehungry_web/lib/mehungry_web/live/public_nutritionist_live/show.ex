@@ -24,7 +24,11 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
   def mount(%{"slug" => slug}, _session, socket) do
     case Professionals.get_public_professional_by_slug(slug) do
       nil ->
-        {:ok, push_navigate(socket, to: ~p"/nutritionists")}
+        # Real 404, never a 302 to the directory: a soft-404 redirect of a dead
+        # profile URL wastes crawl budget and can suppress the whole
+        # /nutritionists/:slug pattern. Raising Ecto.NoResultsError renders the
+        # 404 on the crawler (dead) render via Plug.Exception.
+        raise Ecto.NoResultsError, queryable: Mehungry.Professionals.ProfessionalProfile
 
       profile ->
         {:ok,

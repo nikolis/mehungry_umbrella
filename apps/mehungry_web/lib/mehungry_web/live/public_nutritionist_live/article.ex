@@ -24,7 +24,10 @@ defmodule MehungryWeb.PublicNutritionistLive.Article do
          |> assign_seo(article, profile)}
 
       _ ->
-        {:ok, push_navigate(socket, to: ~p"/nutritionists/#{slug}")}
+        # Real 404 for a missing article/profile, never a soft-404 redirect that
+        # wastes crawl budget. Raising Ecto.NoResultsError renders the 404 on the
+        # crawler (dead) render via Plug.Exception.
+        raise Ecto.NoResultsError, queryable: Mehungry.Professionals.Article
     end
   end
 

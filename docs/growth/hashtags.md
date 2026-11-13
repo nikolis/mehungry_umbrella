@@ -120,7 +120,11 @@ picks them up on insert:
 - Route: `localized_live("/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index)`
   (`router.ex` ~325) — locale-prefixed, e.g. `/en/search/hashtag/vegan`.
 - `RecipeBrowserLive.Index.apply_action(:index, %{"hashtag" => …})` normalizes to a
-  displayed `#tag` and calls `handle_search/2`.
+  displayed `#tag` and calls `handle_search/2`. **These pages are `noindex, follow`
+  (set via a `:noindex` assign the shared `head.html.heex` reads) and are NOT in the
+  sitemap** — they are thin, near-duplicate internal search views re-slicing one
+  shared recipe pool, so they stay crawlable for discovery without the index-bloat
+  cost (SEO audit, 2026-11-13; see `docs/growth/seo.md`).
 - The search bar also treats a leading `#` as a **power-user prefix**: typing
   `#vegan` routes to hashtag search (leading `@` = ingredient search) via
   `Food.search_hashtag1/1`.
@@ -128,7 +132,10 @@ picks them up on insert:
   - `search_hashtag/1` — exact-title lookup, preloads
     `recipe_hashtags: [recipe: [recipe_ingredients: :ingredient]]`.
   - `search_hashtag1/1` — strips the `#`, joins `Recipe ⋈ RecipeHashtag ⋈ Hashtag`
-    on title, returns `{query, list_recipes(query)}` for cursor pagination.
+    on title (**case-insensitive**, `lower(title) = lower(tag)`, `distinct`), returns
+    `{query, list_recipes(query)}` for cursor pagination. Case-insensitivity collapses
+    `/search/hashtag/Greek` and `…/greek` onto one recipe pool — the exact match
+    previously split the intent and left one of each case-variant pair empty.
 
 ### Rendering on recipe cards / posts
 - `RecipeComponents.recipe_tags/1` renders each loaded hashtag via `recipe_tag/1`,

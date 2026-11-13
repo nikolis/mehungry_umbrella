@@ -25,7 +25,10 @@ defmodule MehungryWeb.FoodDetailLive.Index do
 
     case Food.get_ingredient_by_slug(slug) do
       nil ->
-        {:ok, push_navigate(socket, to: "/foods")}
+        # Real 404, never a 302 to /foods: a soft-404 redirect of a dead URL
+        # wastes crawl budget and can suppress the /foods/:slug pattern. Raising
+        # Ecto.NoResultsError renders the 404 on the crawler (dead) render.
+        raise Ecto.NoResultsError, queryable: Mehungry.Food.Ingredient
 
       ingredient ->
         language = socket.assigns[:current_language] || "en"

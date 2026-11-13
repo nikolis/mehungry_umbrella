@@ -40,9 +40,14 @@ defmodule MehungryWeb.RecipeSeo do
   """
   def description(recipe) do
     base =
-      if recipe.description && String.length(recipe.description) > 10 do
+      if is_binary(recipe.description) and String.length(recipe.description) > 10 and
+           not hashtag_dump?(recipe.description) do
         String.slice(recipe.description, 0, 140)
       else
+        # Many bot-authored recipes store their hashtag line as the description
+        # ("#MushroomRisotto #RisottoRecipe #Cheese …"). That's keyword spam as a
+        # meta snippet (and a poor AI-citation string), so fall back to a clean
+        # constructed sentence. The hashtags still feed `keywords` in the JSON-LD.
         "#{recipe.title} recipe"
       end
 
@@ -72,7 +77,9 @@ defmodule MehungryWeb.RecipeSeo do
       "@type" => "Recipe",
       "name" => recipe.title,
       "url" => "https://www.m3hungry.com/browse/#{recipe.id}",
-      "description" => recipe.description || recipe.title
+      # Reuse the cleaned meta description (prose, never a raw hashtag dump) so
+      # the rich-result snippet and AI-citation text are a real sentence.
+      "description" => description(recipe)
     }
 
     base =
@@ -179,6 +186,21 @@ defmodule MehungryWeb.RecipeSeo do
 
       _ ->
         base
+    end
+  end
+
+  # True when a recipe's description field is really a hashtag line (bot recipes
+  # often store "#MushroomRisotto #RisottoRecipe #Cheese …" there) rather than
+  # prose — i.e. it starts with "#" or is mostly #-prefixed tokens.
+  defp hashtag_dump?(text) when is_binary(text) do
+    trimmed = String.trim(text)
+    tokens = String.split(trimmed, ~r/\s+/, trim: true)
+
+    cond do
+      trimmed == "" -> false
+      String.starts_with?(trimmed, "#") -> true
+      tokens == [] -> false
+      true -> Enum.count(tokens, &String.starts_with?(&1, "#")) / length(tokens) >= 0.6
     end
   end
 

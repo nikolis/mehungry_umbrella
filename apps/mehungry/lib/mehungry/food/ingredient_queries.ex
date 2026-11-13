@@ -52,13 +52,18 @@ defmodule Mehungry.Food.IngredientQueries do
   def search_hashtag1(hashtag) do
     hashtag = String.slice(hashtag, 1..-1//1)
 
+    # Case-insensitive match so /search/hashtag/Greek and …/greek resolve to the
+    # same recipe pool. The tag matching was exact/case-sensitive, which split a
+    # single intent across case variants and left one of each pair empty — the
+    # main source of the thin/empty hashtag pages.
     query =
       from(r in Recipe,
         join: rec_tag in RecipeHashtag,
         on: rec_tag.recipe_id == r.id,
         join: tag in Hashtag,
         on: tag.id == rec_tag.hashtag_id,
-        where: tag.title == ^hashtag
+        where: fragment("lower(?) = lower(?)", tag.title, ^hashtag),
+        distinct: true
       )
 
     {query, Recipes.list_recipes(query)}

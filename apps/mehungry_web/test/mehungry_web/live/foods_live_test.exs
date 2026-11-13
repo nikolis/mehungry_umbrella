@@ -72,8 +72,11 @@ defmodule MehungryWeb.FoodsLiveTest do
       assert html =~ "Spinach"
     end
 
-    test "redirects unknown species back to /foods", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/foods"}}} = live(conn, ~p"/foods/no-such-thing")
+    test "serves a real 404 for an unknown species (never a soft-404 redirect)", %{conn: conn} do
+      # Intentional SEO decision in SpeciesDetailLive.Index.mount/3: a dead
+      # /foods/:slug must 404, not 302 to /foods, so crawlers don't suppress
+      # the whole species URL pattern.
+      assert_raise Ecto.NoResultsError, fn -> live(conn, ~p"/foods/no-such-thing") end
     end
 
     test "the synchronous dead render carries crawler-visible SEO + nutrition JSON-LD",
