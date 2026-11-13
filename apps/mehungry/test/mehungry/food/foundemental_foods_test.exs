@@ -5,7 +5,6 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
 
   alias Mehungry.Food
   alias Mehungry.Food.SpeciesSearch
-  alias Mehungry.Health
   alias Mehungry.Languages
   alias Mehungry.Literature
 
@@ -208,35 +207,6 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
 
       assert [found] = Literature.list_studies_for_species(species.id)
       assert found.id == study.id
-    end
-
-    test "Health.recommendations_for_species surfaces advice via the species' compounds",
-         %{species: species} do
-      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
-      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
-
-      {:ok, _} =
-        Food.upsert_species_relationship(%{
-          foundemental_species_id: species.id,
-          compound_id: oxalate.id,
-          relationship_type: "high_in",
-          source: "literature"
-        })
-
-      {:ok, _} =
-        Health.add_recommendation(kidney.id, oxalate.id, %{
-          recommendation: "avoid",
-          severity: "high",
-          evidence_level: "strong",
-          source: "guideline",
-          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
-        })
-
-      assert [rec] = Health.recommendations_for_species(species.id)
-      assert rec.condition.id == kidney.id
-      assert rec.compound.name == "Oxalate"
-      assert rec.recommendation == "avoid"
-      assert rec.severity == "high"
     end
   end
 end

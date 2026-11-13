@@ -74,9 +74,6 @@ config :mehungry, :pinterest_http_client, Mehungry.Social.PinterestHttpStub
 # Taxonomy classifier is stubbed in tests — no AI/API calls
 config :mehungry, :taxonomy_classifier, Mehungry.AI.TaxonomyClassifierStub
 
-# Compound plausibility gate is stubbed in tests — no AI/API calls (default :plausible)
-config :mehungry, :compound_plausibility_judge, Mehungry.CompoundPipeline.PlausibilityStub
-
 # S3 seed-file fetcher is stubbed in tests — no S3/network calls
 config :mehungry, :seed_file_fetcher, Mehungry.FoodData.Usda.SeedFileFetcherStub
 
@@ -94,6 +91,10 @@ config :mehungry, :unitools_client, Mehungry.FoodData.UniTools.ClientStub
 
 # Batch-PMID analysis extractor is stubbed in tests — no network calls
 config :mehungry, :extractor_client, Mehungry.Extractor.ClientStub
+
+# Biomed-fact-miner client is stubbed in tests — no network calls. Tests control
+# the returned FactSheet + reachability via the `:fact_miner_stub_*` app config keys.
+config :mehungry, :fact_miner_client, Mehungry.FactMining.ClientStub
 
 # Chrome
 # default

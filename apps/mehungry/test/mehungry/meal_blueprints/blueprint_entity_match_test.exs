@@ -8,7 +8,7 @@ defmodule Mehungry.MealBlueprints.BlueprintEntityMatchTest do
   import Mehungry.AccountsFixtures
   import Mehungry.FoodFixtures
 
-  alias Mehungry.Food.{Compounds, FoundementalFoods, SpeciesCompounds}
+  alias Mehungry.Food.Compounds
   alias Mehungry.Food.{IngredientNutrient, Nutrient}
   alias Mehungry.MealBlueprints
   alias Mehungry.Repo
@@ -45,22 +45,15 @@ defmodule Mehungry.MealBlueprints.BlueprintEntityMatchTest do
     recipe
   end
 
+  # Links `ingredient` directly to a compound (the ingredient-level fact path).
+  # The species-layer compound graph was removed; the compound still reaches the
+  # ingredient, so the matching assertions hold unchanged.
   defp species_compound(ingredient, name, type) do
-    {:ok, species} =
-      FoundementalFoods.create_species(%{name: "species-#{System.unique_integer()}"})
-
-    {:ok, _} =
-      FoundementalFoods.create_foundemental_food(%{
-        foundemental_species_id: species.id,
-        usda_name: "usda-#{System.unique_integer()}",
-        ingredient_id: ingredient.id
-      })
-
     {:ok, compound} = Compounds.create_compound(%{name: name, compound_type: type})
 
     {:ok, _} =
-      SpeciesCompounds.upsert_species_relationship(%{
-        foundemental_species_id: species.id,
+      Compounds.upsert_compound_relationship(%{
+        ingredient_id: ingredient.id,
         compound_id: compound.id,
         relationship_type: "contains",
         source: "manual"

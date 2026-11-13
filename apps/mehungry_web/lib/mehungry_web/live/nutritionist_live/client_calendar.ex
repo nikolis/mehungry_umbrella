@@ -430,21 +430,24 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     professional_id = socket.assigns.current_user.id
     client_id = socket.assigns.client_id
 
-    profile = Accounts.get_user_profile_by_user_id(client_id)
-    record = Professionals.get_client_record_by_user(professional_id, client_id)
-    intake = record && latest_intake(record.id)
-    conditions = if record, do: Professionals.list_client_conditions(record.id), else: []
+    # Shared precedence resolver — where the client's own profile and the
+    # nutritionist's file overlap, the nutritionist's value wins (clinician TDEE
+    # over the profile calorie target; avoid list unions both). Same brief the
+    # agentic draft's get_client_record reads.
+    ctx = Professionals.resolve_client_meal_context(professional_id, client_id)
+    anthro = ctx.anthropometrics
 
     lines =
       [
-        intake && intake.goal && "Goal: #{humanize_token(intake.goal)}",
-        intake && intake.sex && intake.age && "Sex / age: #{intake.sex}, #{intake.age}",
-        intake && intake.activity_level && "Activity level: #{humanize_token(intake.activity_level)}",
-        calorie_target_line(profile, intake),
-        profile && profile.diet && "Diet: #{profile.diet}",
-        conditions != [] && "Health conditions: #{Enum.map_join(conditions, ", ", & &1.name)}",
-        avoid_foods_line(profile),
-        intake && weight_line(intake)
+        ctx.goal && "Goal: #{humanize_token(ctx.goal)}",
+        anthro && anthro.sex && anthro.age && "Sex / age: #{anthro.sex}, #{anthro.age}",
+        anthro && anthro.activity_level &&
+          "Activity level: #{humanize_token(anthro.activity_level)}",
+        calorie_target_line(ctx.calorie_target),
+        ctx.diet && "Diet: #{ctx.diet}",
+        ctx.conditions != [] && "Health conditions: #{Enum.join(ctx.conditions, ", ")}",
+        avoid_foods_line(ctx.avoid),
+        weight_line(anthro)
       ]
       |> Enum.filter(& &1)
 
@@ -465,25 +468,15 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   defp blank_to_nil(s) when is_binary(s), do: if(String.trim(s) == "", do: nil, else: s)
   defp blank_to_nil(_), do: nil
 
-  defp latest_intake(professional_client_id) do
-    case Professionals.list_intakes(professional_client_id) do
-      [] -> nil
-      intakes -> Enum.max_by(intakes, & &1.id)
-    end
-  end
-
-  defp calorie_target_line(%{daily_calorie_target: kcal}, _intake) when is_integer(kcal),
+  defp calorie_target_line(kcal) when is_integer(kcal),
     do: "Daily calorie target: #{kcal} kcal"
 
-  defp calorie_target_line(_profile, %{tdee_kcal: kcal}) when is_integer(kcal),
-    do: "Estimated daily energy need (TDEE): #{kcal} kcal"
+  defp calorie_target_line(_), do: nil
 
-  defp calorie_target_line(_profile, _intake), do: nil
-
-  defp avoid_foods_line(%{avoid_foods: foods}) when is_list(foods) and foods != [],
+  defp avoid_foods_line(foods) when is_list(foods) and foods != [],
     do: "Foods to avoid: #{Enum.join(foods, ", ")}"
 
-  defp avoid_foods_line(_profile), do: nil
+  defp avoid_foods_line(_), do: nil
 
   defp weight_line(%{weight_kg: w, bmi: bmi}) when is_number(w) and is_number(bmi),
     do: "Current weight: #{w} kg (BMI #{Float.round(bmi / 1.0, 1)})"

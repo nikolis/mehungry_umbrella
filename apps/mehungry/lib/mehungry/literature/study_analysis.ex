@@ -50,6 +50,9 @@ defmodule Mehungry.Literature.StudyAnalysis do
     # `outline` is the lightweight section list (`[%{id, title}]`) the results card
     # deep-links into the in-app reader. Not persisted.
     field :has_full_text, :boolean, virtual: true, default: false
+    # A full-text row exists but is licence-restricted (NC/ND) or unverified, so the
+    # verbatim reader is gated off — the card shows a "full text not shown" note.
+    field :has_restricted_full_text, :boolean, virtual: true, default: false
     field :outline, {:array, :map}, virtual: true, default: []
 
     belongs_to :study, ScientificStudy

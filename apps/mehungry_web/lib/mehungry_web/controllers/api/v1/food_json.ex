@@ -16,17 +16,17 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
   end
 
   @doc """
-  Full species detail. `compounds` is a list of `%{compound, summary}` where
-  `summary` is `{:ok, IngredientCompoundSummary} | {:error, _}`; `ingredients`
-  is the resolved list; `facts` is the `fact_key => SpeciesFact` map from
+  Full species detail. `research` is a list of `SpeciesMinedFact` structs (mined
+  biomedical facts from `Mehungry.FactMining`); `ingredients` is the resolved
+  list; `facts` is the `fact_key => SpeciesFact` map from
   `Food.promoted_species_facts_for_species/2` (promoted enrichment facts).
   """
-  def species_detail(species, compounds, ingredients, facts \\ %{}) do
+  def species_detail(species, research, ingredients, facts \\ %{}) do
     %{
       data:
         species_summary(species)
         |> Map.merge(%{
-          compounds: Enum.map(compounds, &compound/1),
+          research: Enum.map(research, &research_fact/1),
           ingredients: Enum.map(ingredients, &%{id: &1.id, name: &1.name}),
           facts: facts_block(facts)
         })
@@ -69,20 +69,20 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
 
   defp producers_block(_), do: nil
 
-  defp compound(%{compound: compound, summary: {:ok, s}}) do
+  # A mined biomedical fact. Only commercial_ok quotes are populated (non-commercial
+  # quotes are withheld upstream); render from `text` + `pmid` + `label`.
+  defp research_fact(fact) do
     %{
-      name: compound.name,
-      mean: s.mean,
-      unit: s.unit,
-      range: [s.min, s.max],
-      variance: s.variance,
-      evidence_score: s.evidence_score,
-      study_count: s.study_count
+      text: fact.text,
+      label: fact.label,
+      certainty: fact.certainty,
+      claim_type: fact.claim_type,
+      study_design: fact.study_design,
+      source: fact.source,
+      pmid: fact.pmid,
+      license: fact.license,
+      quote: fact.quote
     }
-  end
-
-  defp compound(%{compound: compound, summary: _}) do
-    %{name: compound.name, mean: nil, unit: nil, range: nil, study_count: 0}
   end
 
   @doc "Derive the URL slug from a name (inverse of get_species_by_slug/1)."

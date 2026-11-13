@@ -4,7 +4,7 @@ defmodule Mehungry.MealBlueprints.CalendarProgressTest do
   import Mehungry.AccountsFixtures
   import Mehungry.FoodFixtures
 
-  alias Mehungry.Food.{Compounds, FoundementalFoods, SpeciesCompounds}
+  alias Mehungry.Food.Compounds
   alias Mehungry.History
   alias Mehungry.History.MealType
   alias Mehungry.MealBlueprints
@@ -33,29 +33,9 @@ defmodule Mehungry.MealBlueprints.CalendarProgressTest do
     recipe
   end
 
-  defp species_compound(ingredient, name, type) do
-    {:ok, species} =
-      FoundementalFoods.create_species(%{name: "species-#{System.unique_integer()}"})
-
-    {:ok, _} =
-      FoundementalFoods.create_foundemental_food(%{
-        foundemental_species_id: species.id,
-        usda_name: "usda-#{System.unique_integer()}",
-        ingredient_id: ingredient.id
-      })
-
-    {:ok, compound} = Compounds.create_compound(%{name: name, compound_type: type})
-
-    {:ok, _} =
-      SpeciesCompounds.upsert_species_relationship(%{
-        foundemental_species_id: species.id,
-        compound_id: compound.id,
-        relationship_type: "contains",
-        source: "manual"
-      })
-
-    compound
-  end
+  # The species-layer compound graph was removed, so both helpers now assert the
+  # fact at the ingredient level — the compound still reaches the ingredient.
+  defp species_compound(ingredient, name, type), do: ingredient_compound(ingredient, name, type)
 
   defp ingredient_compound(ingredient, name, type) do
     {:ok, compound} = Compounds.create_compound(%{name: name, compound_type: type})

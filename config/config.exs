@@ -240,7 +240,7 @@ config :mehungry, Oban,
      ]}
   ],
   queues: [
-    # Total concurrency is capped at 13 job slots so it fits within the DB pool
+    # Total concurrency is capped at 15 job slots so it fits within the DB pool
     # (POOL_SIZE 18) with headroom for web/LiveView/Presence checkouts. Sized to
     # close the connection-pool starvation confirmed in prod (queue_time spiking
     # to ~10s) — see oban_production_diagnostics.md.
@@ -248,6 +248,14 @@ config :mehungry, Oban,
     mailers: 3,
     ai_agents: 1,
     imports: 1,
+    # Admin-triggered "Mine all species"/"Mine all conditions" sweeps (one job per
+    # entity, calling the external biomed-fact-miner). Starts PAUSED on every node;
+    # Mehungry.FactMining.QueueLeader resumes it only on the Oban leader (local_only),
+    # so across the 2 Fly machines exactly one node ever runs this single-slot queue
+    # -> miner calls are serialized cluster-wide (a call can take ~10 min, so no DB
+    # lock is held across them). The miner also returns 429 + Retry-After when its own
+    # concurrency is saturated; the workers snooze per Retry-After as a safety net.
+    fact_mining: [limit: 1, paused: true],
     # Bulk USDA seed-file imports get their own slot so a full-bucket "Load
     # ingredients" run can't starve behind the long-running, self-resuming
     # science pipeline (literature crawl / PubTator / candidate derivation) that
@@ -258,7 +266,14 @@ config :mehungry, Oban,
     hashtag_reconcile: 1,
     # Admin-triggered derived-portion generation (one job per ingredient). Pure
     # DB work; its own slot so a full-table sweep can't starve `:default`/`:imports`.
-    portion_generation: 1
+    portion_generation: 1,
+    # Admin-triggered "Enrich all species" sweep (one job per species, fetching
+    # Wikidata + FAOSTAT facts). Its own single slot: sequential (polite to the
+    # Wikidata public API, which the fetch already paces) and active only during a
+    # rarely-run admin sweep with brief DB checkouts — unlike `:fact_mining` it is NOT
+    # leader-gated/paused, since Wikidata is a public API needing no cluster-wide
+    # serialization.
+    species_enrichment: 1
   ]
 
 config :swarm,

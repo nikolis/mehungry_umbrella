@@ -267,6 +267,16 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-squares-2x2"
           label="USDA Schema"
         />
+        <.admin_link
+          href="/professional/compound-pipeline"
+          icon="hero-document-magnifying-glass"
+          label="Fact mining"
+        />
+        <.admin_link
+          href="/professional/species-enrichment"
+          icon="hero-sparkles"
+          label="Species enrichment"
+        />
       </div>
 
       <!-- Footer -->

@@ -27,12 +27,8 @@ defmodule Mix.Tasks.Species.Enrich do
   use Mix.Task
 
   alias Mehungry.Food
-  alias Mehungry.FoodData.Faostat
-  alias Mehungry.FoodData.Wikidata
 
   @requirements ["app.start"]
-  # Be polite to the Wikidata API between species.
-  @wikidata_pause_ms 250
 
   @impl true
   def run(args) do
@@ -42,19 +38,21 @@ defmodule Mix.Tasks.Species.Enrich do
 
     Mix.shell().info("Enriching #{length(species)} species (source: #{source})\n")
 
-    faostat_rows = if source in ["all", "faostat"], do: load_faostat(), else: []
+    # Load the FAOSTAT CSV once for the whole run (the per-species fetch reuses it).
+    faostat_rows = if source in ["all", "faostat"], do: Food.load_faostat_rows(), else: []
 
     totals =
       Enum.reduce(species, %{wikidata: 0, faostat: 0}, fn sp, acc ->
-        wd = if source in ["all", "wikidata"], do: enrich_wikidata(sp), else: 0
-        fa = if source in ["all", "faostat"], do: enrich_faostat(sp, faostat_rows), else: 0
+        %{wikidata: wd, faostat: fa} =
+          Food.enrich_species(sp, source: source, faostat_rows: faostat_rows)
+
         Mix.shell().info("  #{sp.name}: #{wd} Wikidata + #{fa} FAOSTAT")
         %{wikidata: acc.wikidata + wd, faostat: acc.faostat + fa}
       end)
 
     Mix.shell().info(
-      "\nDone — #{totals.wikidata} Wikidata + #{totals.faostat} FAOSTAT facts queued. " <>
-        "Review at /professional/species-enrichment."
+      "\nDone — #{totals.wikidata} Wikidata (pending review) + #{totals.faostat} FAOSTAT " <>
+        "(auto-promoted) facts. Review Wikidata at /professional/species-enrichment."
     )
   end
 
@@ -68,27 +66,6 @@ defmodule Mix.Tasks.Species.Enrich do
     |> case do
       [] -> Mix.raise("No species matching #{inspect(only)}")
       list -> list
-    end
-  end
-
-  defp enrich_wikidata(sp) do
-    {:ok, result} = Wikidata.Client.impl().fetch(sp.name, sp.scientific_name)
-    count = Food.record_species_wikidata_facts(sp.id, result)
-    Process.sleep(@wikidata_pause_ms)
-    count
-  end
-
-  defp enrich_faostat(%{faostat_item_code: nil}, _rows), do: 0
-
-  defp enrich_faostat(%{faostat_item_code: code} = sp, rows) do
-    producers = Faostat.Parser.top_producers(rows, code)
-    Food.record_species_faostat_facts(sp.id, producers)
-  end
-
-  defp load_faostat do
-    case Faostat.Client.impl().load_rows() do
-      {:ok, rows} -> rows
-      _ -> []
     end
   end
 end

@@ -34,6 +34,30 @@ defmodule Mehungry.Professionals.ResearchNotes do
     }
   end
 
+  @doc """
+  Build the `save_suggested/2` attrs snapshot from a biomed-fact-miner
+  `ConditionMinedFact` (the new claim source). The distilled `fact.text` is the
+  body; `fact.fact_id` fills the provenance `claim_id`; the verbatim `quote` is
+  captured only when present (it already is `nil` for non-presentable sources, so
+  a "free claim" saves its distilled text + a source link, never a quote). There
+  are no reader anchors — the miner carries no full-text outline — so `section_id`
+  / `paragraph_id` stay `nil` and "My notes" falls back to the PubMed link.
+  """
+  def suggested_attrs_from_fact(condition_id, study_id, %{} = fact) do
+    %{
+      condition_id: condition_id,
+      study_id: study_id,
+      claim_id: fact_field(fact, :fact_id),
+      body: fact_field(fact, :text),
+      section_id: nil,
+      paragraph_id: nil,
+      quoted_text: fact_field(fact, :quote)
+    }
+  end
+
+  # The fact is a `%ConditionMinedFact{}` struct — read with struct access.
+  defp fact_field(fact, key), do: Map.get(fact, key)
+
   defp claim_body(claim) do
     "#{endpoint(claim, "subject")} — #{claim["predicate"]} — #{endpoint(claim, "object")} (#{claim["polarity"]})"
   end

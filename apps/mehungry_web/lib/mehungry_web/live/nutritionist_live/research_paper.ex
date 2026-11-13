@@ -26,6 +26,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
   alias Mehungry.Health
   alias Mehungry.Literature
   alias Mehungry.Literature.JournalAuthority
+  alias Mehungry.Literature.License
   alias Mehungry.Professionals.ResearchNotes
 
   @hidden_positions ~w(wrong ignore)
@@ -50,6 +51,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
          |> assign(:study, data.study)
          |> assign(:analysis, data.analysis)
          |> assign(:sections, data.sections)
+         |> assign(:full_text, data.full_text)
          |> assign(:spans_by_paragraph, data.spans_by_paragraph)
          |> assign(:claims, visible_claims(data.analysis))
          |> assign(:note_mode, false)
@@ -237,6 +239,28 @@ defmodule MehungryWeb.NutritionistLive.ResearchPaper do
           </p>
         </section>
       </article>
+
+      <%!-- Required reuse attribution: the verbatim full text is only shown for a
+            commercially-reusable licence (CC0/CC BY/CC BY-SA); credit the source. --%>
+      <footer
+        :if={@full_text}
+        class="mt-6 pt-4 border-t border-parchment/10 text-xs text-parchment-dim leading-relaxed"
+      >
+        {gettext("Full text from PubMed Central")}<span :if={@full_text.pmcid}>
+          ({@full_text.pmcid})</span>. © {gettext("the authors")} ·
+        <a
+          :if={License.deed_url(@full_text.license, @full_text.license_url)}
+          href={License.deed_url(@full_text.license, @full_text.license_url)}
+          target="_blank"
+          rel="noopener license"
+          class="text-basil hover:underline"
+        >
+          {License.display_name(@full_text.license)}
+        </a>
+        <span :if={is_nil(License.deed_url(@full_text.license, @full_text.license_url))}>
+          {License.display_name(@full_text.license)}
+        </span>. {gettext("Reproduced under licence; retrieved via Europe PMC.")}
+      </footer>
 
       <%!-- Floating, independent notes widget: save the paper's suggested notes
             and write your own against a highlighted passage. --%>

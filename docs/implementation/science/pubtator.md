@@ -244,9 +244,11 @@ mix test apps/mehungry/test/mehungry/literature/pubtator/client_test.exs \
 
 - No LiveView progress bar yet — the data + PubSub broadcasts are in place.
 - No promotion of mentions into `IngredientCompoundRelationship` facts — the annotator
-  never asserts a dietary fact. That human-curation step now exists as
-  `CompoundPipeline.Candidates` (**`docs/implementation/compound_pipeline.md`**), which reads these mentions
-  as co-occurrence evidence, scores candidate relationships, and promotes the strong ones.
+  never asserts a dietary fact. (The former species↔compound curation step that scored
+  these mentions as co-occurrence evidence was retired 2026-11-12; per-entity biomedical
+  facts now come from the external biomed-fact-miner — **`docs/implementation/fact_mining.md`**.
+  The directional `study_entity_relations` still feed the review-gated condition↔compound
+  `Health.RecommendationCandidates`.)
 - Genes, variants, and cell lines are annotated by PubTator3 but not captured — the
   integration is scoped to Chemicals, Species, and Diseases.
 ```

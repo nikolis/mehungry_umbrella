@@ -323,6 +323,14 @@ When you want this shape for a new feature, replicate these decisions:
     don't re-render the stream, for merges and summaries.
 11. **Reset cancels in-flight jobs before deleting rows**, scoped by queue + args.
 
+**Other instances in this codebase** (same shape, grep these to copy): the hashtag
+reconciliation sweep (`hashtag_reconciliations`), derived-portion generation
+(`ingredient_portion_generation_runs`), FactMining's "Mine all species"/"Mine all
+conditions" (`species_fact_mining_runs` / `condition_fact_mining_runs`), and species
+enrichment's "Enrich all species" (`species_enrichment_runs` →
+`Mehungry.Food.SpeciesEnrichmentRuns` + `SpeciesEnrichmentWorker`, `:species_enrichment`
+queue — Wikidata + FAOSTAT fetch, no reachability pre-flight).
+
 ## Source map
 
 - `apps/mehungry_web/lib/mehungry_web/live/professional_live/S3BrowserLive.ex`

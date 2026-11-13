@@ -27,13 +27,19 @@ defmodule Mehungry.Literature.ResearchType do
     {:unknown, "Unclassified", 9}
   ]
 
-  # Extractor `study_design` → bucket key. Exhaustive over the extractor's
-  # `_PUBTYPE_DESIGN` / `_DESIGN_RANK` vocabulary.
+  # `study_design` → bucket key. Exhaustive over the extractor's
+  # `_PUBTYPE_DESIGN` / `_DESIGN_RANK` vocabulary **and** the biomed-fact-miner's
+  # `StudyDesign` enum (`rct`, `mechanistic_experiment`, `gwas`, …) — both sources
+  # feed the same nutritionist research-search grouping.
   @design_bucket %{
     "systematic_review" => :systematic_review,
     "meta_analysis" => :systematic_review,
     "randomized_controlled_trial" => :controlled_trial,
     "controlled_trial" => :controlled_trial,
+    # biomed-fact-miner vocabulary
+    "rct" => :controlled_trial,
+    "mechanistic_experiment" => :preclinical_other,
+    "gwas" => :preclinical_other,
     "cohort" => :cohort,
     "case_control" => :case_control,
     "cross_sectional" => :cross_sectional,

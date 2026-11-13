@@ -1,7 +1,8 @@
 defmodule Mehungry.Health.RecommendationCandidates do
   @moduledoc """
   The two-stage candidate → curated pipeline for **condition↔compound
-  recommendations** — the ADVISE-layer analogue of `Mehungry.CompoundPipeline.Candidates`.
+  recommendations** — the condition↔compound ADVISE-layer counterpart to the
+  (retired) species↔compound fact derivation.
 
   **Candidates** are *proposed* recommendations derived from the directional
   `study_entity_relations` PubTator extracted (a chemical↔disease relation whose
@@ -9,8 +10,8 @@ defmodule Mehungry.Health.RecommendationCandidates do
   tallied by valence, scored 0.0–1.0, and mapped to a *suggested* direction
   (negative-correlation → `encourage`, positive → `avoid`, association → `neutral`).
 
-  Unlike the species pipeline, a recommendation candidate is **never auto-promoted** —
-  PubMed relation extraction is weak grounds for medical dietary advice. An admin
+  A recommendation candidate is **never auto-promoted** — PubMed relation extraction
+  is weak grounds for medical dietary advice. An admin
   confirms the direction and severity, and **promotion** writes a
   `Health.CompoundRecommendation` (`source: "literature"`, conservative default
   `evidence_level`) and marks the candidate `promoted`. Re-derivation refreshes the

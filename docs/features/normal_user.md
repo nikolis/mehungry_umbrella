@@ -50,13 +50,30 @@ category rules that drive diet-mode filtering app-wide.
 
 ### Navigation (`main_menu` desktop rail / `mobile_menu` bottom bar)
 
-The consumer's primary nav, top to bottom: **Browse · Foods · Create Recipe ·
-Calendar · Basket · Give Feedback**, then a conditional **Tutor Invitations**
-badge and a **"Manage subscriptions"** (upgrade) link, with
-language toggle (EN/ΕΛ) + Profile/Login at the bottom. There is **no standalone
-"Messages" menu entry** — the client↔nutritionist thread is embedded on the
-**My nutritionist** hub (see below), since it is only meaningful once connected. The "Your practice" block
-and "Admin Panel" link are gated off for this user.
+The desktop rail (`main_menu`) carries the full nav. The **mobile bottom bar**
+(`mobile_menu`, shown below 768px) is **five flat labeled tabs** —
+**Browse · Foods · Calendar · Nutritionist · You** — with the active tab painted
+in paprika (basil for the nutritionist "Practice" state) with a top indicator +
+`aria-current` (by `fix_navigation_active/0` in `assets/js/navigation.js`,
+matching the current path by longest-prefix). The **4th tab is the product's
+relationship surface and resolves per persona**: a **nutritionist** gets a basil
+**"Practice"** tab → `/nutritionist`; a signed-in **client** gets **"Nutritionist"**
+→ their `/my-nutritionist` hub; a **guest** gets **"Nutritionist"** → the public
+`/nutritionists` directory (the "find a nutritionist" funnel). The last tab is
+**You** (avatar → `/profile`) or **Log in** when signed out.
+
+**Recipe creation is intentionally not a bar tab.** It's an occasional
+contribution, not the daily loop, so it's surfaced **contextually** where the
+intent to author exists — a "+ New recipe" action in the **Browse header**
+(`recipe_browser_live/index.html.heex`) and on the owner's **Profile → Created
+tab** (`profile_live/index.ex`, gated `@live_action == :index`). The home *feed*
+(`/`) is reachable from the mobile header logo (now a link). Other secondary
+surfaces — **Basket**, **Tutor invitations** (red count badge), and the
+nutritionist **Payments** link — live as a "Quick links" row on the **Profile
+hero** (`profile_live/show.ex` → `profile_hero/1`). There is **no standalone
+"Messages" menu entry** — the client↔nutritionist thread is embedded on the **My
+nutritionist** hub (see below), since it is only meaningful once connected. The
+"Admin Panel"/"Professional" links stay gated to the owner.
 
 ### Discover & browse
 

@@ -5,6 +5,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
   import Mehungry.AccountsFixtures
 
   alias Mehungry.{Food, Health, Literature, MealBlueprints}
+  alias Mehungry.FactMining.ConditionFactMiningRuns
   alias Mehungry.MealBlueprints.DietPatterns
   alias Mehungry.Health.RecommendationCandidates
 
@@ -41,52 +42,38 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     assert html =~ "auth token set"
   end
 
-  test "the Research ingestion button enqueues a run and shows live progress", %{conn: conn} do
+  test "the Mine conditions button fans out a biomed-fact-miner batch", %{conn: conn} do
     {:ok, _c} = Health.create_condition(%{name: "Ulcerative Colitis"})
 
     {:ok, view, html} = live(conn, ~p"/professional/health")
-    assert html =~ "Research ingestion"
+    assert html =~ "Mine conditions"
 
-    # Both toggles left unchecked (absent params → crawl/force false).
-    html =
-      view
-      |> form("form[phx-submit=run_research_ingestion]")
-      |> render_submit()
+    view |> element(~s(button[phx-click="mine_all_conditions"])) |> render_click()
+    html = render_async(view)
 
-    # A run row now exists and its live progress panel renders.
-    assert Literature.latest_research_ingestion_run().status == "processing"
-    assert html =~ "conditions"
-
-    # A second submit while in-flight is refused.
-    html =
-      view
-      |> form("form[phx-submit=run_research_ingestion]")
-      |> render_submit()
-
-    assert html =~ "already in progress"
+    # A per-condition batch now exists (one tracking row per condition, queued on
+    # :fact_mining — testing: :manual so the jobs aren't executed here).
+    assert ConditionFactMiningRuns.latest_batch_id() != nil
+    assert ConditionFactMiningRuns.counts_for_batch(ConditionFactMiningRuns.latest_batch_id()).total == 1
+    assert html =~ "Mining started"
   end
 
-  test "a dead extractor link fails the run pre-flight instead of starting", %{conn: conn} do
+  test "a dead fact-miner fails the mine pre-flight instead of starting", %{conn: conn} do
     {:ok, _c} = Health.create_condition(%{name: "Gout"})
 
-    # The pre-flight reachability probe reports the link is down.
-    Application.put_env(:mehungry, :extractor_stub,
-      reachable?: fn -> {:error, {:network, :econnrefused}} end
-    )
-
-    on_exit(fn -> Application.delete_env(:mehungry, :extractor_stub) end)
+    # The pre-flight reachability probe reports the miner is down.
+    Application.put_env(:mehungry, :fact_miner_stub_reachable, {:error, {:network, :econnrefused}})
+    on_exit(fn -> Application.delete_env(:mehungry, :fact_miner_stub_reachable) end)
 
     {:ok, view, _html} = live(conn, ~p"/professional/health")
 
-    html =
-      view
-      |> form("form[phx-submit=run_research_ingestion]")
-      |> render_submit()
+    view |> element(~s(button[phx-click="mine_all_conditions"])) |> render_click()
+    html = render_async(view)
 
-    # Surfaced immediately, and no run was started.
-    assert html =~ "Extractor unreachable"
+    # Surfaced immediately, and no batch was started.
+    assert html =~ "unreachable"
     assert html =~ "econnrefused"
-    assert is_nil(Literature.latest_research_ingestion_run())
+    assert is_nil(ConditionFactMiningRuns.latest_batch_id())
   end
 
   test "the Add condition form can set a parent condition", %{conn: conn} do
@@ -160,7 +147,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     assert Health.get_condition_by_name("Wipe Me")
   end
 
-  test "creates a condition, attaches a recommendation, and removes it", %{
+  test "creates a condition, lists an attached recommendation, and removes it", %{
     conn: conn,
     oxalate: oxalate
   } do
@@ -177,24 +164,18 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     condition = Health.get_condition_by_name("Kidney Stones")
     assert condition
 
-    # Attach a compound recommendation.
-    view
-    |> form("form[phx-submit=save_recommendation]",
-      recommendation: %{
-        condition_id: condition.id,
-        compound_id: oxalate.id,
+    # Recommendations arrive through the review-gated flows (candidate promote /
+    # suggestion verify), not a direct form — attach via the context, then assert
+    # it is listed with a working Remove action.
+    {:ok, rec} =
+      Health.add_recommendation(condition.id, oxalate.id, %{
         recommendation: "avoid",
         severity: "high",
         source: "guideline",
-        reference_label: "Clinical guideline",
-        reference_url: "https://example.org"
-      }
-    )
-    |> render_submit()
+        source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
+      })
 
-    assert [rec] = Health.recommendations_for_condition(condition.id)
-    assert rec.compound_id == oxalate.id
-    assert rec.recommendation == "avoid"
+    {:ok, view, _html} = live(conn, ~p"/professional/health")
     assert render(view) =~ "Oxalate"
 
     # Remove the recommendation.
@@ -291,8 +272,17 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
 
     {:ok, view, html} = live(conn, ~p"/professional/health")
 
-    # Associated papers show permanently underneath the condition, on initial load
-    # — not only after a crawl completes.
+    # The papers affordance is present on initial load (associated papers persist
+    # across reloads), but the rows are rendered server-side only when the collapse
+    # is opened — so a condition with hundreds of papers doesn't bloat the page.
+    assert html =~ "Papers (1"
+
+    # Open the condition's papers collapse → the associated study is revealed.
+    html =
+      view
+      |> element("button[phx-click=toggle_condition_papers][phx-value-id='#{condition.id}']")
+      |> render_click()
+
     assert html =~ "990123"
     assert html =~ "Fiber and remission"
 
@@ -376,6 +366,11 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
 
     {:ok, view, _html} = live(conn, ~p"/professional/health")
 
+    # The re-assign form lives in the papers collapse, which is rendered on demand.
+    view
+    |> element("button[phx-click=toggle_condition_papers][phx-value-id='#{from.id}']")
+    |> render_click()
+
     view
     |> form("#reassign-#{from.id}-#{study.id}", %{"target" => "Hyperuricemia"})
     |> render_submit()
@@ -398,6 +393,10 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
       })
 
     {:ok, view, _html} = live(conn, ~p"/professional/health")
+
+    view
+    |> element("button[phx-click=toggle_condition_papers][phx-value-id='#{from.id}']")
+    |> render_click()
 
     html =
       view
@@ -712,6 +711,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
   defp insert_analysis(study, attrs) do
     base = %{
       study_id: study.id,
+      paper_title: study.title,
       status: "included",
       source_type: "open_access",
       content_hash: "hash-#{study.id}",
@@ -779,6 +779,11 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     on_exit(fn -> Application.delete_env(:mehungry, :extractor_stub) end)
 
     {:ok, view, _html} = live(conn, ~p"/professional/health")
+
+    # Open the papers collapse (rows are rendered on demand).
+    view
+    |> element("button[phx-click=toggle_condition_papers][phx-value-id='#{condition.id}']")
+    |> render_click()
 
     # Selectable before analysis — its source type isn't known yet.
     assert has_element?(view, "input[name='pmids[]'][value='991000']")

@@ -32,7 +32,7 @@ invariants.
 | DISCOVER | Qualitative compound facts | "Spinach contains Oxalate" (`Food.Compounds`) | `Food.Compounds` | [`food_compounds.md`](food_compounds.md) |
 | DISCOVER | Quantitative measurements | "Spinach, Oxalate, Raw: 750 mg/100g" (immutable) | `Food.CompoundMeasurements` | [`compound_measurements.md`](compound_measurements.md) |
 | — | Evidence summaries | Read-only mean/range/variance + auditable evidence score | `Food.EvidenceAggregation.summarize/2` | [`evidence_aggregation.md`](evidence_aggregation.md) |
-| CURATE | Fact promotion | Scored `species_compound_candidates` → `species_compound_relationships` | `CompoundPipeline.Candidates` · `CompoundPipeline.DerivationWorker` | [`compound_pipeline.md`](../compound_pipeline.md) |
+| MINE | Per-entity biomedical facts | `species_mined_facts` / `condition_mined_facts` from the external biomed-fact-miner (`POST /mine`) | `Mehungry.FactMining` · `SpeciesFactMiningWorker` | [`fact_mining.md`](../fact_mining.md) |
 | ADVISE | Dietary recommendations | Conditions ↔ compounds ("Kidney Stones: avoid Oxalate") | `Mehungry.Health` · `RecommendationCandidateDerivationWorker` | [`health_recommendations.md`](health_recommendations.md) · [`pubtator_relations_recommendations.md`](pubtator_relations_recommendations.md) |
 
 ## External authorities & configuration
@@ -111,7 +111,7 @@ The invariants that keep the subsystem legible (elaborated in
 - [`food_compounds.md`](food_compounds.md) — qualitative compound facts (`Food.Compounds`).
 - [`compound_measurements.md`](compound_measurements.md) — immutable quantitative measurements.
 - [`evidence_aggregation.md`](evidence_aggregation.md) — read-only evidence summaries + scores.
-- [`compound_pipeline.md`](../compound_pipeline.md) — the curation step that promotes evidence to facts.
+- [`fact_mining.md`](../fact_mining.md) — per-entity biomedical facts mined from the biomed-fact-miner (replaced the species↔compound derivation).
 - [`health_recommendations.md`](health_recommendations.md) — the advice layer (conditions ↔ compounds).
 - [`pubtator_relations_recommendations.md`](pubtator_relations_recommendations.md) — literature relations → review-gated recommendations.
 - [`glycemic_index.md`](glycemic_index.md) — Glycemic Index re-derived from primary literature (path B; the 2021 International Tables aren't commercially licensable), fanned over species, review-gated. Licensing/provenance rationale: [`glycemic_index_licensing.md`](glycemic_index_licensing.md).

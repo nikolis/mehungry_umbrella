@@ -167,6 +167,33 @@ defmodule MehungryWeb.ProfileLive.Show do
           <% end %>
         </div>
 
+        <%!-- Quick links: secondary surfaces kept off the mobile bottom bar
+              (basket, invitations, nutritionist payments). The relationship hub
+              and practice workspace are the bar's own tab, so they're not
+              duplicated here. These cross live_sessions → full-nav hrefs. --%>
+        <% locale = @user_profile.language_preference || "en" %>
+        <% pending_invitations = Mehungry.Professionals.count_pending_invitations_for_client(@user.id) %>
+        <div :if={@current_user} class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+          <a href={"/#{locale}/basket"} class="inline-flex items-center gap-1.5 text-sm text-parchment-dim hover:text-parchment transition-colors motion-reduce:transition-none">
+            <.icon name="hero-shopping-cart" class="w-4 h-4 flex-none" /> Basket
+          </a>
+          <a
+            :if={pending_invitations > 0}
+            href={"/#{locale}/notifications/invitations"}
+            class="inline-flex items-center gap-1.5 text-sm text-parchment-dim hover:text-parchment transition-colors motion-reduce:transition-none"
+          >
+            <.icon name="hero-bell" class="w-4 h-4 flex-none" /> Tutor invitations
+            <span class="ml-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              {pending_invitations}
+            </span>
+          </a>
+          <%= if Subscriptions.nutritionist?(@user.id) do %>
+            <a href="/nutritionist/payments" class="inline-flex items-center gap-1.5 text-sm text-parchment-dim hover:text-parchment transition-colors motion-reduce:transition-none">
+              <.icon name="hero-banknotes" class="w-4 h-4 flex-none" /> Payments
+            </a>
+          <% end %>
+        </div>
+
         <div class="inline-flex items-center gap-1 rounded-full bg-ink-panel2 p-1">
           <a
             href="/users/language/en"

@@ -22,7 +22,7 @@ Detailed layer docs (read these for the internals of any single stage):
 [`food_compounds.md`](food_compounds.md) ·
 [`compound_measurements.md`](compound_measurements.md) ·
 [`evidence_aggregation.md`](evidence_aggregation.md) ·
-[`compound_pipeline.md`](../compound_pipeline.md) ·
+[`fact_mining.md`](../fact_mining.md) ·
 [`health_recommendations.md`](health_recommendations.md).
 
 ---
@@ -184,36 +184,19 @@ Mehungry.Food.record_measurement(%{
 
 Details: [`compound_measurements.md`](compound_measurements.md).
 
-### Step 4 — Create the connections (derive + promote candidates)
+### Step 4 — Mine per-entity biomedical facts
 
-UI: `/professional/science` (or `/professional/compound-pipeline`) → **Derive**. Or:
-
-```elixir
-{:ok, _run} = Mehungry.Food.enqueue_candidate_derivation()
-Mehungry.Food.candidate_derivation_progress()   #=> %{processed: _, total: _}
-```
-
-Reads the evidence — literature **co-occurrence** (a resolved chemical mentioned in a
-paper linked to any ingredient of the species) blended with **measurement** evidence
-via noisy-OR — and scores each `(species, compound)` pair, recording the reference
-studies on each candidate. Candidates scoring ≥ `:candidate_promotion_threshold`
-(config, **default 0.75**) **auto-promote** into `species_compound_relationships`;
-everything else waits in the Promote/Reject queue on the same page. This is the
-**only** step that writes curated facts. Details:
-[`compound_pipeline.md`](../compound_pipeline.md).
+> **Replaced the species↔compound derivation (2026-11-12).** The old "derive + promote
+> `(species, compound)` candidates into `species_compound_relationships`" step and its whole
+> graph were **dropped**. Per-entity facts now come from the external **biomed-fact-miner**:
+> admin **"Mine all species"** at `/professional/compound-pipeline` stores `SpeciesMinedFact`
+> rows; **"Mine conditions"** on `/professional/health` stores `ConditionMinedFact` rows.
+> Details: [`fact_mining.md`](../fact_mining.md).
 
 ### Step 5 — Close the loop (re-crawl)
 
-Re-run **Step 1**. Now that relationships exist, `search_terms_for_ingredient/1`
-adds targeted `scientific_name × compound` terms (e.g. `Spinacia oleracea oxalate`),
-improving recall far beyond the generic keywords. The steady state is a cycle:
-
-```
-   Step 1 (crawl) ─▶ Step 2 (annotate) ─▶ Step 4 (derive/promote) ─▶ back to Step 1
-```
-
-Each loop discovers more papers → more compounds → more curated facts → better next
-crawl.
+Re-run **Step 1**. `search_terms_for_species/1` builds `scientific_name × keyword` terms
+(the former species↔compound-derived terms were retired with that graph).
 
 ### Step 6 — Consume the results
 

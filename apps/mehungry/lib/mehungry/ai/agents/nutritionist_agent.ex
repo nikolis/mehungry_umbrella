@@ -13,7 +13,7 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
   """
 
   require Logger
-  alias Mehungry.{Accounts, Food, Health, History, Professionals, AI.Agent, Search.RecipeVectorSearch}
+  alias Mehungry.{Food, History, Professionals, AI.Agent, Search.RecipeVectorSearch}
   alias Mehungry.History.MealType
   alias Mehungry.AI.Agents.MealPlanAgent
   alias Mehungry.AI.MealPlanGenerator
@@ -384,25 +384,9 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
          _input,
          %{professional_id: professional_id, client_id: client_id} = acc
        ) do
-    record = Professionals.get_client_record_by_user(professional_id, client_id)
-    profile = Accounts.get_user_profile_by_user_id(client_id)
-    intake = record && Professionals.get_latest_intake(record.id)
-    conditions = if record, do: Professionals.list_client_conditions(record.id), else: []
-    latest_note = record && (record.id |> Professionals.list_consultation_notes() |> List.last())
-
-    result = %{
-      has_record: not is_nil(record),
-      diet: (profile && profile.diet) || "omnivore",
-      lactose_intolerant: (profile && profile.lactose_intolerant) || false,
-      calorie_target: calorie_target(intake, profile),
-      goal: intake && intake.goal,
-      conditions: Enum.map(conditions, & &1.name),
-      avoid: avoid_list(profile, intake, conditions),
-      anthropometrics: anthropometrics_summary(intake),
-      latest_note: latest_note && %{body: latest_note.body, todo: latest_note.todo}
-    }
-
-    {result, acc}
+    # Single source of truth for the nutritionist-over-user precedence, shared
+    # with the calendar quick-draft path (client_calendar.ex).
+    {Professionals.resolve_client_meal_context(professional_id, client_id), acc}
   end
 
   defp do_handle_tool(
@@ -553,62 +537,6 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
   end
 
   # ── tool helpers ──────────────────────────────────────────────────────────────
-
-  # Daily calorie target: the intake's TDEE wins (clinician-assessed), else the
-  # client's own profile target, else nil.
-  defp calorie_target(intake, profile) do
-    cond do
-      intake && intake.tdee_kcal -> intake.tdee_kcal
-      profile && profile.daily_calorie_target -> profile.daily_calorie_target
-      true -> nil
-    end
-  end
-
-  # Unified list of foods to never use: the client's personal avoid list + intake
-  # allergy/intolerance terms + condition-implicated foods resolved through the same
-  # curated Health engine the /foods filter uses (condition → "avoid" compound
-  # recommendations → species → ingredients). Deduped + capped.
-  defp avoid_list(profile, intake, conditions) do
-    condition_avoid =
-      conditions
-      |> Enum.flat_map(fn c -> Health.ingredients_for_condition(c.id, "avoid") end)
-      |> Enum.map(& &1.ingredient.name)
-
-    [(profile && profile.avoid_foods) || [], intake_avoid_terms(intake), condition_avoid]
-    |> List.flatten()
-    |> Enum.map(&String.trim(to_string(&1)))
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.uniq()
-    |> Enum.take(40)
-  end
-
-  defp anthropometrics_summary(nil), do: nil
-
-  defp anthropometrics_summary(intake) do
-    %{
-      weight_kg: intake.weight_kg,
-      bmi: intake.bmi,
-      sex: intake.sex,
-      age: intake.age,
-      activity_level: intake.activity_level,
-      tdee_kcal: intake.tdee_kcal,
-      bmr_kcal: intake.bmr_kcal
-    }
-  end
-
-  # Avoid terms from a client intake's free-form `details` JSONB (allergies,
-  # intolerances, aversions). Each value may be a list or a comma/newline-separated
-  # string; both are flattened into discrete terms.
-  defp intake_avoid_terms(%{details: details}) when is_map(details) do
-    ~w(allergies food_intolerances food_aversions)
-    |> Enum.flat_map(fn key -> details |> Map.get(key) |> split_terms() end)
-  end
-
-  defp intake_avoid_terms(_), do: []
-
-  defp split_terms(value) when is_list(value), do: Enum.map(value, &to_string/1)
-  defp split_terms(value) when is_binary(value), do: String.split(value, ~r/[,;\n]/, trim: true)
-  defp split_terms(_), do: []
 
   # The client's calendar meals for the plan week that land in one of the 5 slots.
   defp assigned_meals(client_id, start_date) do

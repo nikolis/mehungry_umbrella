@@ -2,17 +2,17 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
   @moduledoc """
   Nutritionist **research search** landing (`/nutritionist/research`).
 
-  A search box over the **full list of conditions** (`Literature.conditions_for_search/1`):
-  the page loads with every condition listed, those with digested research ranked
-  first and showing a study count; typing filters the list (fuzzy, by condition
-  name). Picking a condition opens its grouped-by-research-type results
-  (`ResearchCondition`) — one with no digested research yet shows an empty state
-  there. This is a read-only surface over already-ingested, extractor-analyzed
-  literature — nothing is crawled on demand.
+  A search box over the **full list of conditions** (`FactMining.conditions_for_search/1`):
+  the page loads with every condition listed, those with mined food-related facts
+  ranked first and showing a publication count; typing filters the list (by
+  condition name). Picking a condition opens its grouped-by-research-type results
+  (`ResearchCondition`) — one with no mined facts yet shows an empty state there.
+  This is a read-only surface over already-mined literature (via the external
+  biomed-fact-miner) — nothing is crawled on demand.
   """
   use MehungryWeb, :live_view
 
-  alias Mehungry.Literature
+  alias Mehungry.FactMining
 
   @impl true
   def mount(_params, _session, socket) do
@@ -20,12 +20,12 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
      socket
      |> assign(:page_title, gettext("Research"))
      |> assign(:query, "")
-     |> assign(:catalog, Literature.conditions_for_search())}
+     |> assign(:catalog, FactMining.conditions_for_search())}
   end
 
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
-    {:noreply, assign(socket, query: q, catalog: Literature.conditions_for_search(q))}
+    {:noreply, assign(socket, query: q, catalog: FactMining.conditions_for_search(q))}
   end
 
   @impl true

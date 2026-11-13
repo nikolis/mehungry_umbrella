@@ -157,11 +157,12 @@ about a compound and its presence in an ingredient. Any user-facing guidance
 (recommendations, dietary rules) belongs in a separate layer that *reads* these facts —
 never here.
 
-**How relationships get here.** A relationship is never asserted directly from raw
-evidence (PubTator mentions, literature co-occurrence). The curation step
-`CompoundPipeline.Candidates` (**`docs/implementation/compound_pipeline.md`**) derives scored *candidates*
-from that evidence and promotes the strong ones — automatically over a config threshold or
-by admin review — writing curated rows here via `upsert_compound_relationship/1`.
+**How relationships get here.** An `IngredientCompoundRelationship` is never asserted
+directly from raw evidence (PubTator mentions, literature co-occurrence); it is curated —
+by hand or via `upsert_compound_relationship/1` / `add_compound_to_ingredient/3`. *(The
+former species↔compound derivation that scored evidence into candidates was retired
+2026-11-12; per-entity biomedical facts now come from the external biomed-fact-miner —
+**`docs/implementation/fact_mining.md`**.)*
 
 ---
 

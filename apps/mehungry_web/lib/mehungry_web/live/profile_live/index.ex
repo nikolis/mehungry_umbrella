@@ -856,6 +856,16 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
+    <%!-- Recipe creation lives here, on your own "Created" tab, where the intent
+          to author exists — not as a bottom-bar hero action. --%>
+    <div :if={@live_action == :index && @current_user} class="px-4 mb-4">
+      <.link
+        navigate={~p"/create_recipe"}
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors motion-reduce:transition-none"
+      >
+        <.icon name="hero-plus" class="w-4 h-4 flex-none" /> New recipe
+      </.link>
+    </div>
     <div
       :if={@current_user && @current_user.email == "nikolisgal@gmail.com" && @live_action == :index}
       class="px-4 mb-4"

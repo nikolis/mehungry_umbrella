@@ -48,13 +48,20 @@ defmodule Mehungry.AI.Agents.NutritionistAgentContextTest do
       condition = Repo.insert!(%Condition{name: "Gout"})
       Professionals.add_client_condition(record.id, condition.id)
 
-      put_profile(client.id, %{diet: "vegetarian", avoid_foods: ["shrimp"]})
+      # The client also set their own calorie target — the clinician's intake TDEE
+      # must win over the client's self-entered profile value.
+      put_profile(client.id, %{
+        diet: "vegetarian",
+        avoid_foods: ["shrimp"],
+        daily_calorie_target: 2500
+      })
 
       acc = NutritionistAgent.new_acc(professional.id, client.id)
       {result, ^acc} = NutritionistAgent.handle_tool("get_client_record", %{}, acc)
 
       assert result.has_record
       assert result.diet == "vegetarian"
+      # nutritionist (intake TDEE) wins over the client's profile target (2500)
       assert result.calorie_target == 1800
       assert result.goal == "weight_loss"
       assert "Gout" in result.conditions

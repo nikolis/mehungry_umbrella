@@ -1,49 +1,1009 @@
 item_code,item,area,year,value_tonnes
-515,Apples,China,2022,47571100
-515,Apples,Turkey,2022,4817500
-515,Apples,United States of America,2022,4429330
-515,Apples,Poland,2022,4264700
-388,Tomatoes,China,2022,68243030
-388,Tomatoes,India,2022,20331000
-388,Tomatoes,Turkey,2022,13000000
-388,Tomatoes,United States of America,2022,10140830
-116,Potatoes,China,2022,95699700
-116,Potatoes,India,2022,56000000
-116,Potatoes,Ukraine,2022,20900800
-116,Potatoes,United States of America,2022,17979540
-490,Oranges,Brazil,2022,16928500
-490,Oranges,India,2022,10899000
-490,Oranges,China,2022,14215600
-490,Oranges,United States of America,2022,3740860
-560,Grapes,China,2022,11970000
-560,Grapes,Italy,2022,8208590
-560,Grapes,France,2022,6200900
-560,Grapes,Spain,2022,5745800
-260,Olives,Spain,2022,5965800
-260,Olives,Italy,2022,2266000
-260,Olives,Turkey,2022,3000000
-260,Olives,Greece,2022,2250000
-15,Wheat,China,2022,137723000
-15,Wheat,India,2022,107742000
-15,Wheat,Russian Federation,2022,104230000
-15,Wheat,United States of America,2022,44900500
-27,Rice,India,2022,196245000
-27,Rice,China,2022,208494000
-27,Rice,Bangladesh,2022,57189000
-27,Rice,Indonesia,2022,54748900
-56,Maize,United States of America,2022,348749000
-56,Maize,China,2022,277202000
-56,Maize,Brazil,2022,109420000
-56,Maize,Argentina,2022,59036000
-403,Onions,China,2022,24100000
-403,Onions,India,2022,26641000
-403,Onions,Egypt,2022,3400000
-403,Onions,United States of America,2022,3280000
-426,Carrots,China,2022,18000000
-426,Carrots,Uzbekistan,2022,2600000
-426,Carrots,United States of America,2022,1510000
-426,Carrots,Russian Federation,2022,1390000
-486,Bananas,India,2022,34660000
-486,Bananas,China,2022,11780000
-486,Bananas,Indonesia,2022,9245000
-486,Bananas,Brazil,2022,6800000
+809,"Abaca, manila hemp, raw",Philippines,2024,68527
+809,"Abaca, manila hemp, raw",Ecuador,2024,37925
+809,"Abaca, manila hemp, raw",Costa Rica,2024,1264
+809,"Abaca, manila hemp, raw",Indonesia,2024,560
+800,"Agave fibres, raw, n.e.c.",Colombia,2024,14868
+800,"Agave fibres, raw, n.e.c.",Mexico,2024,6122
+800,"Agave fibres, raw, n.e.c.",Ecuador,2024,4523
+800,"Agave fibres, raw, n.e.c.",Philippines,2024,3999
+221,"Almonds, in shell",United States of America,2024,2000340
+221,"Almonds, in shell",Australia,2024,370000
+221,"Almonds, in shell",Spain,2024,369700
+221,"Almonds, in shell",Türkiye,2024,200000
+711,"Anise, badian, coriander, cumin, caraway, fennel and juniper berries, raw",India,2024,2107138
+711,"Anise, badian, coriander, cumin, caraway, fennel and juniper berries, raw",Mexico,2024,108064
+711,"Anise, badian, coriander, cumin, caraway, fennel and juniper berries, raw",Syrian Arab Republic,2024,94743
+711,"Anise, badian, coriander, cumin, caraway, fennel and juniper berries, raw",Russian Federation,2024,65554
+515,Apples,China,2024,51286350
+515,Apples,United States of America,2024,4922840
+515,Apples,Türkiye,2024,4420185
+515,Apples,Poland,2024,3384500
+526,Apricots,Türkiye,2024,1269000
+526,Apricots,Uzbekistan,2024,526693
+526,Apricots,Tajikistan,2024,313052
+526,Apricots,Iran (Islamic Republic of),2024,304118
+226,Areca nuts,India,2024,1410966
+226,Areca nuts,Bangladesh,2024,356029
+226,Areca nuts,Myanmar,2024,262835
+226,Areca nuts,China,2024,88525
+366,Artichokes,Egypt,2024,601272
+366,Artichokes,Italy,2024,373960
+366,Artichokes,Spain,2024,174620
+366,Artichokes,Algeria,2024,137704
+367,Asparagus,China,2024,7787129
+367,Asparagus,Peru,2024,333055
+367,Asparagus,Mexico,2024,330056
+367,Asparagus,Germany,2024,108130
+572,Avocados,Mexico,2024,2761328
+572,Avocados,Colombia,2024,1267757
+572,Avocados,Dominican Republic,2024,1225409
+572,Avocados,Peru,2024,919602
+839,"Balata, gutta-percha, guayule, chicle and similar natural gums in primary forms or in plates, sheets or strip",Mexico,1990,22574
+839,"Balata, gutta-percha, guayule, chicle and similar natural gums in primary forms or in plates, sheets or strip",Brazil,1990,870
+839,"Balata, gutta-percha, guayule, chicle and similar natural gums in primary forms or in plates, sheets or strip",Guyana,1990,480
+203,"Bambara beans, dry",Burkina Faso,2024,61248
+203,"Bambara beans, dry",Niger,2024,50571
+203,"Bambara beans, dry",Cameroon,2024,37965
+203,"Bambara beans, dry",Mali,2024,27629
+486,Bananas,India,2024,37614362
+486,Bananas,China,2024,12101090
+486,Bananas,Indonesia,2024,9260387
+486,Bananas,Ecuador,2024,7585653
+44,Barley,Russian Federation,2024,16667000
+44,Barley,Australia,2024,13265000
+44,Barley,Germany,2024,10610000
+44,Barley,France,2024,9669250
+176,"Beans, dry",India,2024,7990946
+176,"Beans, dry",Brazil,2024,3018459
+176,"Beans, dry",Myanmar,2024,2392683
+176,"Beans, dry",United Republic of Tanzania,2024,1463819
+51,"Beer of barley, malted",China,2023,36996100
+51,"Beer of barley, malted",United States of America,2023,19303300
+51,"Beer of barley, malted",Brazil,2023,17886670
+51,"Beer of barley, malted",Mexico,2023,12266796
+1183,Beeswax,India,2024,24521
+1183,Beeswax,Ethiopia,2024,5934
+1183,Beeswax,Argentina,2024,5212
+1183,Beeswax,Republic of Korea,2024,4067
+552,Blueberries,United States of America,2024,401970
+552,Blueberries,Peru,2024,353600
+552,Blueberries,Canada,2024,165608
+552,Blueberries,Chile,2024,97219
+216,"Brazil nuts, in shell",Brazil,2024,34909
+216,"Brazil nuts, in shell",Bolivia (Plurinational State of),2024,33980
+216,"Brazil nuts, in shell",Peru,2024,10846
+181,"Broad beans and horse beans, dry",China,2024,1754948
+181,"Broad beans and horse beans, dry",Ethiopia,2024,1156009
+181,"Broad beans and horse beans, dry",Australia,2024,640400
+181,"Broad beans and horse beans, dry",United Kingdom of Great Britain and Northern Ireland,2024,460316
+420,"Broad beans and horse beans, green",Algeria,2024,309289
+420,"Broad beans and horse beans, green",China,2024,193882
+420,"Broad beans and horse beans, green",Tunisia,2024,82888
+420,"Broad beans and horse beans, green",Peru,2024,79560
+89,Buckwheat,Russian Federation,2024,979962
+89,Buckwheat,China,2024,504358
+89,Buckwheat,Ukraine,2024,113650
+89,Buckwheat,Kazakhstan,2024,89282
+949,"Buffalo fat, unrendered",India,2024,280125
+949,"Buffalo fat, unrendered",Pakistan,2024,88883
+949,"Buffalo fat, unrendered",China,2024,55415
+949,"Buffalo fat, unrendered",Egypt,2024,5532
+983,Butter and ghee of sheep milk,Türkiye,2023,22406
+983,Butter and ghee of sheep milk,Iran (Islamic Republic of),2023,13404
+983,Butter and ghee of sheep milk,Syrian Arab Republic,2023,12833
+983,Butter and ghee of sheep milk,Afghanistan,2023,4307
+952,Butter of buffalo milk,India,2023,1099414
+952,Butter of buffalo milk,Pakistan,2023,703281
+952,Butter of buffalo milk,Egypt,2023,47581
+952,Butter of buffalo milk,Nepal,2023,24800
+886,Butter of cow milk,United States of America,2023,957773
+886,Butter of cow milk,Germany,2023,468880
+886,Butter of cow milk,New Zealand,2023,462400
+886,Butter of cow milk,France,2023,403970
+899,"Buttermilk, dry",Russian Federation,2023,66975
+899,"Buttermilk, dry",United States of America,2023,64368
+899,"Buttermilk, dry",Canada,2023,40281
+899,"Buttermilk, dry",New Zealand,2023,34620
+358,Cabbages,China,2024,36822012
+358,Cabbages,India,2024,10431705
+358,Cabbages,Russian Federation,2024,2623671
+358,Cabbages,Republic of Korea,2024,2378687
+101,Canary seed,Canada,2024,185253
+101,Canary seed,Argentina,2024,58441
+101,Canary seed,Thailand,2024,37086
+101,Canary seed,Türkiye,2024,6422
+568,Cantaloupes and other melons,China,2024,13267988
+568,Cantaloupes and other melons,India,2024,1540738
+568,Cantaloupes and other melons,Kazakhstan,2024,1498584
+568,Cantaloupes and other melons,Türkiye,2024,1479000
+426,Carrots and turnips,China,2024,19122124
+426,Carrots and turnips,Uzbekistan,2024,3566931
+426,Carrots and turnips,India,2024,2776332
+426,Carrots and turnips,Russian Federation,2024,1383155
+217,"Cashew nuts, in shell",Côte d'Ivoire,2024,944673
+217,"Cashew nuts, in shell",India,2024,794910
+217,"Cashew nuts, in shell",United Republic of Tanzania,2024,528262
+217,"Cashew nuts, in shell",Viet Nam,2024,306185
+591,Cashewapple,Brazil,2024,1134824
+591,Cashewapple,Mali,2024,174261
+591,Cashewapple,Madagascar,2024,77101
+591,Cashewapple,Guyana,2024,5
+378,Cassava leaves,Congo,1990,35000
+125,"Cassava, fresh",Nigeria,2024,62624946
+125,"Cassava, fresh",Democratic Republic of the Congo,2024,46558022
+125,"Cassava, fresh",Thailand,2024,28624312
+125,"Cassava, fresh",Ghana,2024,27917781
+265,Castor oil seeds,India,2024,1587531
+265,Castor oil seeds,Mozambique,2024,73598
+265,Castor oil seeds,Brazil,2024,39844
+265,Castor oil seeds,China,2024,20000
+869,"Cattle fat, unrendered",United States of America,2024,733074
+869,"Cattle fat, unrendered",China,2024,343407
+869,"Cattle fat, unrendered",Brazil,2024,334288
+869,"Cattle fat, unrendered",Argentina,2024,250186
+393,Cauliflowers and broccoli,China,2024,9876488
+393,Cauliflowers and broccoli,India,2024,9794357
+393,Cauliflowers and broccoli,United States of America,2024,1001192
+393,Cauliflowers and broccoli,Mexico,2024,736628
+108,Cereals n.e.c.,Ethiopia,2024,5798195
+108,Cereals n.e.c.,Chad,2024,627560
+108,Cereals n.e.c.,France,2024,297400
+108,Cereals n.e.c.,Thailand,2024,250799
+955,"Cheese from milk of buffalo, fresh or processed",Greece,2023,219590
+955,"Cheese from milk of buffalo, fresh or processed",Spain,2023,148960
+955,"Cheese from milk of buffalo, fresh or processed",Egypt,2023,136714
+955,"Cheese from milk of buffalo, fresh or processed",Italy,2023,55800
+1021,"Cheese from milk of goats, fresh or processed",France,2023,89440
+1021,"Cheese from milk of goats, fresh or processed",Sudan,2023,88663
+1021,"Cheese from milk of goats, fresh or processed",Spain,2023,52510
+1021,"Cheese from milk of goats, fresh or processed",Niger,2023,43063
+984,"Cheese from milk of sheep, fresh or processed",Spain,2023,75240
+984,"Cheese from milk of sheep, fresh or processed",China,2023,74811
+984,"Cheese from milk of sheep, fresh or processed",Italy,2023,73760
+984,"Cheese from milk of sheep, fresh or processed",France,2023,61090
+904,Cheese from skimmed cow milk,Germany,2023,681196
+904,Cheese from skimmed cow milk,France,2023,308693
+904,Cheese from skimmed cow milk,Iran (Islamic Republic of),2023,247180
+904,Cheese from skimmed cow milk,United States of America,2023,206721
+901,Cheese from whole cow milk,United States of America,2023,6420928
+901,Cheese from whole cow milk,Germany,2023,2359510
+901,Cheese from whole cow milk,France,2023,1731360
+901,Cheese from whole cow milk,Italy,2023,1207190
+531,Cherries,Türkiye,2024,726500
+531,Cherries,Chile,2024,596968
+531,Cherries,United States of America,2024,333120
+531,Cherries,Uzbekistan,2024,209025
+220,"Chestnuts, in shell",China,2024,1528549
+220,"Chestnuts, in shell",Spain,2024,181810
+220,"Chestnuts, in shell",Bolivia (Plurinational State of),2024,84090
+220,"Chestnuts, in shell",Türkiye,2024,74300
+191,"Chick peas, dry",India,2024,11038756
+191,"Chick peas, dry",Australia,2024,2267000
+191,"Chick peas, dry",Türkiye,2024,575000
+191,"Chick peas, dry",Ethiopia,2024,443954
+459,Chicory roots,Ukraine,2024,6200
+459,Chicory roots,Philippines,2024,5093
+459,Chicory roots,South Africa,2024,4371
+459,Chicory roots,Serbia,2024,3521
+689,"Chillies and peppers, dry (Capsicum spp., Pimenta spp.), raw",India,2024,2909844
+689,"Chillies and peppers, dry (Capsicum spp., Pimenta spp.), raw",China,2024,326172
+689,"Chillies and peppers, dry (Capsicum spp., Pimenta spp.), raw",Thailand,2024,324005
+689,"Chillies and peppers, dry (Capsicum spp., Pimenta spp.), raw",Bangladesh,2024,301311
+401,"Chillies and peppers, green (Capsicum spp. and Pimenta spp.)",China,2024,17330858
+401,"Chillies and peppers, green (Capsicum spp. and Pimenta spp.)",India,2024,5317989
+401,"Chillies and peppers, green (Capsicum spp. and Pimenta spp.)",Türkiye,2024,3428038
+401,"Chillies and peppers, green (Capsicum spp. and Pimenta spp.)",Mexico,2024,3220428
+693,"Cinnamon and cinnamon-tree flowers, raw",China,2024,94216
+693,"Cinnamon and cinnamon-tree flowers, raw",Viet Nam,2024,71307
+693,"Cinnamon and cinnamon-tree flowers, raw",Indonesia,2024,55204
+693,"Cinnamon and cinnamon-tree flowers, raw",Sri Lanka,2024,20587
+698,"Cloves (whole stems), raw",Indonesia,2024,147953
+698,"Cloves (whole stems), raw",Madagascar,2024,25114
+698,"Cloves (whole stems), raw",United Republic of Tanzania,2024,8575
+698,"Cloves (whole stems), raw",Comoros,2024,7767
+661,Cocoa beans,Côte d'Ivoire,2024,1890442
+661,Cocoa beans,Indonesia,2024,632702
+661,Cocoa beans,Ghana,2024,530000
+661,Cocoa beans,Ecuador,2024,403699
+252,Coconut oil,Philippines,2023,1212900
+252,Coconut oil,Indonesia,2023,646000
+252,Coconut oil,India,2023,549000
+252,Coconut oil,Viet Nam,2023,182000
+249,"Coconuts, in shell",Indonesia,2024,17985386
+249,"Coconuts, in shell",India,2024,14707567
+249,"Coconuts, in shell",Philippines,2024,14500416
+249,"Coconuts, in shell",Brazil,2024,3158018
+656,"Coffee, green",Brazil,2024,3387724
+656,"Coffee, green",Viet Nam,2024,2015289
+656,"Coffee, green",Colombia,2024,839847
+656,"Coffee, green",Indonesia,2024,807578
+813,"Coir, raw",India,2024,1051470
+813,"Coir, raw",Viet Nam,2024,421745
+813,"Coir, raw",Sri Lanka,2024,164503
+813,"Coir, raw",Thailand,2024,61677
+767,"Cotton lint, ginned",China,2023,5617900
+767,"Cotton lint, ginned",India,2023,5528744
+767,"Cotton lint, ginned",Brazil,2023,2923677
+767,"Cotton lint, ginned",United States of America,2023,2627060
+329,Cotton seed,India,2023,10600000
+329,Cotton seed,China,2023,9400000
+329,Cotton seed,Brazil,2023,4494600
+329,Cotton seed,United States of America,2023,3305780
+331,Cottonseed oil,China,2023,1309500
+331,Cottonseed oil,India,2023,1127000
+331,Cottonseed oil,Brazil,2023,378170
+331,Cottonseed oil,Pakistan,2023,212700
+195,"Cow peas, dry",Nigeria,2024,4287631
+195,"Cow peas, dry",Niger,2024,2767637
+195,"Cow peas, dry",Burkina Faso,2024,736408
+195,"Cow peas, dry",Ghana,2024,324088
+554,Cranberries,United States of America,2024,405780
+554,Cranberries,Canada,2024,211790
+554,Cranberries,Azerbaijan,2024,2888
+554,Cranberries,Ukraine,2024,400
+885,"Cream, fresh",Germany,2023,521450
+885,"Cream, fresh",France,2023,470060
+885,"Cream, fresh",Italy,2023,285800
+885,"Cream, fresh",Belgium,2023,274690
+397,Cucumbers and gherkins,China,2024,68639845
+397,Cucumbers and gherkins,India,2024,2050135
+397,Cucumbers and gherkins,Türkiye,2024,1742900
+397,Cucumbers and gherkins,Russian Federation,2024,1693492
+550,Currants,Russian Federation,2024,509945
+550,Currants,Poland,2024,100200
+550,Currants,Ukraine,2024,23800
+550,Currants,United Kingdom of Great Britain and Northern Ireland,2024,14714
+577,Dates,Saudi Arabia,2024,1927556
+577,Dates,Egypt,2024,1750302
+577,Dates,Algeria,2024,1337301
+577,Dates,Iran (Islamic Republic of),2024,1182144
+948,"Edible offal of buffalo, fresh, chilled or frozen",India,2024,767750
+948,"Edible offal of buffalo, fresh, chilled or frozen",China,2024,242445
+948,"Edible offal of buffalo, fresh, chilled or frozen",Pakistan,2024,124436
+948,"Edible offal of buffalo, fresh, chilled or frozen",Egypt,2024,31915
+868,"Edible offal of cattle, fresh, chilled or frozen",China,2024,1529534
+868,"Edible offal of cattle, fresh, chilled or frozen",Brazil,2024,1316261
+868,"Edible offal of cattle, fresh, chilled or frozen",United States of America,2024,862440
+868,"Edible offal of cattle, fresh, chilled or frozen",Argentina,2024,540944
+1018,"Edible offal of goat, fresh, chilled or frozen",China,2024,446803
+1018,"Edible offal of goat, fresh, chilled or frozen",India,2024,259983
+1018,"Edible offal of goat, fresh, chilled or frozen",Pakistan,2024,158574
+1018,"Edible offal of goat, fresh, chilled or frozen",Bangladesh,2024,69664
+1036,"Edible offal of pigs, fresh, chilled or frozen",China,2024,2576410
+1036,"Edible offal of pigs, fresh, chilled or frozen",United States of America,2024,834834
+1036,"Edible offal of pigs, fresh, chilled or frozen",Viet Nam,2024,435848
+1036,"Edible offal of pigs, fresh, chilled or frozen",Brazil,2024,352156
+978,"Edible offal of sheep, fresh, chilled or frozen",China,2024,528105
+978,"Edible offal of sheep, fresh, chilled or frozen",India,2024,162702
+978,"Edible offal of sheep, fresh, chilled or frozen",Australia,2024,118685
+978,"Edible offal of sheep, fresh, chilled or frozen",Pakistan,2024,71690
+1128,"Edible offals of camels and other camelids, fresh, chilled or frozen",Sudan,2024,16459
+1128,"Edible offals of camels and other camelids, fresh, chilled or frozen",Saudi Arabia,2024,13503
+1128,"Edible offals of camels and other camelids, fresh, chilled or frozen",Ethiopia,2024,9319
+1128,"Edible offals of camels and other camelids, fresh, chilled or frozen",Somalia,2024,8940
+1098,"Edible offals of horses and other equines, fresh, chilled or frozen",China,2024,22589
+1098,"Edible offals of horses and other equines, fresh, chilled or frozen",Kazakhstan,2024,17725
+1098,"Edible offals of horses and other equines, fresh, chilled or frozen",Mexico,2024,14133
+1098,"Edible offals of horses and other equines, fresh, chilled or frozen",Mongolia,2024,8782
+149,"Edible roots and tubers with high starch or inulin content, n.e.c., fresh",Lao People's Democratic Republic,2024,4953443
+149,"Edible roots and tubers with high starch or inulin content, n.e.c., fresh",Democratic Republic of the Congo,2024,922483
+149,"Edible roots and tubers with high starch or inulin content, n.e.c., fresh",Pakistan,2024,643180
+149,"Edible roots and tubers with high starch or inulin content, n.e.c., fresh",Indonesia,2024,384233
+399,Eggplants (aubergines),China,2024,34903774
+399,Eggplants (aubergines),India,2024,12998367
+399,Eggplants (aubergines),Egypt,2024,1782454
+399,Eggplants (aubergines),Guinea,2024,950207
+1091,"Eggs from other birds in shell, fresh, n.e.c.",China,2024,5047100
+1091,"Eggs from other birds in shell, fresh, n.e.c.",Thailand,2024,400000
+1091,"Eggs from other birds in shell, fresh, n.e.c.",Bangladesh,2024,327700
+1091,"Eggs from other birds in shell, fresh, n.e.c.",Indonesia,2024,269311
+1129,Fat of camels,Saudi Arabia,2024,5266
+1129,Fat of camels,Sudan,2024,3873
+1129,Fat of camels,United Arab Emirates,2024,2755
+1129,Fat of camels,Somalia,2024,2693
+1037,Fat of pigs,China,2024,3407978
+1037,Fat of pigs,United States of America,2024,3374860
+1037,Fat of pigs,Brazil,2024,635412
+1037,Fat of pigs,Russian Federation,2024,331668
+569,Figs,Türkiye,2024,375000
+569,Figs,Egypt,2024,217194
+569,Figs,Algeria,2024,114937
+569,Figs,Morocco,2024,106237
+771,"Flax, raw or retted",France,2024,1059080
+771,"Flax, raw or retted",Belgium,2024,91990
+771,"Flax, raw or retted",Belarus,2024,37225
+771,"Flax, raw or retted",China,2024,29270
+94,Fonio,Guinea,2024,483006
+94,Fonio,Nigeria,2024,85252
+94,Fonio,Mali,2024,64412
+94,Fonio,Côte d'Ivoire,2024,19543
+1163,"Game meat, fresh, chilled or frozen",Papua New Guinea,2024,443985
+1163,"Game meat, fresh, chilled or frozen",United States of America,2024,271430
+1163,"Game meat, fresh, chilled or frozen",Nigeria,2024,178446
+1163,"Game meat, fresh, chilled or frozen",Côte d'Ivoire,2024,161065
+953,Ghee from buffalo milk,India,2023,3949184
+953,Ghee from buffalo milk,Pakistan,2023,563238
+953,Ghee from buffalo milk,Nepal,2023,19862
+953,Ghee from buffalo milk,Bangladesh,2023,2157
+887,Ghee from cow milk,India,2023,427500
+887,Ghee from cow milk,Netherlands (Kingdom of the),2023,60000
+887,Ghee from cow milk,Bangladesh,2023,32200
+887,Ghee from cow milk,Nepal,2023,22779
+720,"Ginger, raw",India,2024,2333000
+720,"Ginger, raw",Nigeria,2024,768922
+720,"Ginger, raw",China,2024,614856
+720,"Ginger, raw",Nepal,2024,289330
+1019,"Goat fat, unrendered",China,2024,101538
+1019,"Goat fat, unrendered",India,2024,68911
+1019,"Goat fat, unrendered",Pakistan,2024,36594
+1019,"Goat fat, unrendered",Bangladesh,2024,17914
+549,Gooseberries,Russian Federation,2024,85453
+549,Gooseberries,Ukraine,2024,7300
+549,Gooseberries,United Kingdom of Great Britain and Northern Ireland,2024,2297
+549,Gooseberries,Switzerland,2024,422
+560,Grapes,China,2024,16887001
+560,Grapes,Italy,2024,7637640
+560,Grapes,Spain,2024,5387270
+560,Grapes,United States of America,2024,4902250
+446,Green corn (maize),United States of America,2024,2388323
+446,Green corn (maize),Mexico,2024,1069697
+446,Green corn (maize),Croatia,2024,901590
+446,Green corn (maize),Nigeria,2024,799511
+406,Green garlic,China,2024,21697118
+406,Green garlic,India,2024,3239000
+406,Green garlic,Egypt,2024,558228
+406,Green garlic,Bangladesh,2024,527665
+675,"Green tea (not fermented), black tea (fermented) and partly fermented tea, in immediate packings of a content not exceeding 3 kg",China,2023,3556673
+675,"Green tea (not fermented), black tea (fermented) and partly fermented tea, in immediate packings of a content not exceeding 3 kg",India,2023,1399840
+675,"Green tea (not fermented), black tea (fermented) and partly fermented tea, in immediate packings of a content not exceeding 3 kg",Kenya,2023,570449
+675,"Green tea (not fermented), black tea (fermented) and partly fermented tea, in immediate packings of a content not exceeding 3 kg",Viet Nam,2023,282150
+244,Groundnut oil,India,2023,2309000
+244,Groundnut oil,China,2023,1853800
+244,Groundnut oil,Nigeria,2023,390500
+244,Groundnut oil,Myanmar,2023,242800
+242,"Groundnuts, excluding shelled",China,2024,19651100
+242,"Groundnuts, excluding shelled",India,2024,11945539
+242,"Groundnuts, excluding shelled",Nigeria,2024,4300000
+242,"Groundnuts, excluding shelled",United States of America,2024,2924770
+225,"Hazelnuts, in shell",Türkiye,2024,717000
+225,"Hazelnuts, in shell",Italy,2024,120520
+225,"Hazelnuts, in shell",United States of America,2024,87820
+225,"Hazelnuts, in shell",Azerbaijan,2024,75698
+336,Hempseed,Canada,2024,17551
+336,Hempseed,Australia,2024,3600
+336,Hempseed,Russian Federation,2024,1799
+336,Hempseed,Chile,2024,1581
+1062,"Hen eggs in shell, fresh",China,2024,31266886
+1062,"Hen eggs in shell, fresh",India,2024,8101885
+1062,"Hen eggs in shell, fresh",Indonesia,2024,6579353
+1062,"Hen eggs in shell, fresh",United States of America,2024,6469047
+677,Hop cones,Germany,2024,46500
+677,Hop cones,Ethiopia,2024,41660
+677,Hop cones,United States of America,2024,39500
+677,Hop cones,China,2024,7951
+1097,"Horse meat, fresh or chilled",China,2024,180716
+1097,"Horse meat, fresh or chilled",Kazakhstan,2024,170918
+1097,"Horse meat, fresh or chilled",Mexico,2024,70664
+1097,"Horse meat, fresh or chilled",Mongolia,2024,61158
+277,Jojoba seeds,Mexico,2024,143
+780,"Jute, raw or retted",Bangladesh,2024,2086101
+780,"Jute, raw or retted",India,2024,1412390
+780,"Jute, raw or retted",Cambodia,2024,153318
+780,"Jute, raw or retted",Uzbekistan,2024,19140
+778,"Kapok fibre, raw",Indonesia,2023,56910
+778,"Kapok fibre, raw",Thailand,2023,21934
+310,Kapok fruit,Indonesia,2024,197236
+310,Kapok fruit,Thailand,2024,85699
+311,Kapokseed in shell,Indonesia,2023,132790
+311,Kapokseed in shell,Thailand,2023,55134
+263,Karite nuts (sheanuts),Nigeria,2024,358609
+263,Karite nuts (sheanuts),Mali,2024,197967
+263,Karite nuts (sheanuts),Burkina Faso,2024,105853
+263,Karite nuts (sheanuts),Benin,2024,86292
+782,"Kenaf, and other textile bast fibres, raw or retted",India,2024,101905
+782,"Kenaf, and other textile bast fibres, raw or retted",Russian Federation,2024,50322
+782,"Kenaf, and other textile bast fibres, raw or retted",China,2024,22245
+782,"Kenaf, and other textile bast fibres, raw or retted",Cuba,2024,11936
+592,Kiwi fruit,China,2024,2153480
+592,Kiwi fruit,New Zealand,2024,667792
+592,Kiwi fruit,Italy,2024,463910
+592,Kiwi fruit,Greece,2024,342330
+224,Kola nuts,Nigeria,2024,179044
+224,Kola nuts,Côte d'Ivoire,2024,59132
+224,Kola nuts,Cameroon,2024,48538
+224,Kola nuts,Ghana,2024,25021
+407,Leeks and other alliaceous vegetables,Indonesia,2024,626954
+407,Leeks and other alliaceous vegetables,France,2024,159100
+407,Leeks and other alliaceous vegetables,Republic of Korea,2024,153261
+407,Leeks and other alliaceous vegetables,Belgium,2024,151480
+497,Lemons and limes,India,2024,3835727
+497,Lemons and limes,Mexico,2024,3291622
+497,Lemons and limes,China,2024,2352755
+497,Lemons and limes,Argentina,2024,2154138
+201,"Lentils, dry",Canada,2024,2431284
+201,"Lentils, dry",India,2024,1791436
+201,"Lentils, dry",Australia,2024,1265050
+201,"Lentils, dry",Kazakhstan,2024,455960
+372,Lettuce and chicory,China,2024,14699042
+372,Lettuce and chicory,United States of America,2024,4398759
+372,Lettuce and chicory,India,2024,1174760
+372,Lettuce and chicory,Spain,2024,916400
+333,Linseed,Russian Federation,2024,1180000
+333,Linseed,Kazakhstan,2024,759591
+333,Linseed,China,2024,280000
+333,Linseed,Canada,2024,257974
+461,Locust beans (carobs),Türkiye,2024,25000
+461,Locust beans (carobs),Morocco,2024,22658
+461,Locust beans (carobs),Lebanon,2024,4064
+461,Locust beans (carobs),Algeria,2024,3445
+210,Lupins,Australia,2024,778000
+210,Lupins,Poland,2024,375720
+210,Lupins,Russian Federation,2024,109833
+210,Lupins,Morocco,2024,57946
+56,Maize (corn),United States of America,2024,377632690
+56,Maize (corn),China,2024,295140070
+56,Maize (corn),Brazil,2024,114953303
+56,Maize (corn),Argentina,2024,57494500
+571,"Mangoes, guavas and mangosteens",India,2024,27766261
+571,"Mangoes, guavas and mangosteens",China,2024,4242140
+571,"Mangoes, guavas and mangosteens",Indonesia,2024,4136617
+571,"Mangoes, guavas and mangosteens",Mexico,2024,2650034
+1242,Margarine and shortening,United States of America,2023,4319884
+1242,Margarine and shortening,Brazil,2023,904975
+1242,Margarine and shortening,Pakistan,2023,855000
+1242,Margarine and shortening,Türkiye,2023,757518
+671,Maté leaves,Argentina,2024,986738
+671,Maté leaves,Brazil,2024,841255
+671,Maté leaves,Paraguay,2024,169342
+1108,"Meat of asses, fresh or chilled",China,2024,47876
+1108,"Meat of asses, fresh or chilled",Niger,2024,13375
+1108,"Meat of asses, fresh or chilled",Mauritania,2024,3988
+1108,"Meat of asses, fresh or chilled",Mali,2024,3936
+947,"Meat of buffalo, fresh or chilled",India,2024,4565000
+947,"Meat of buffalo, fresh or chilled",Pakistan,2024,1269752
+947,"Meat of buffalo, fresh or chilled",China,2024,779459
+947,"Meat of buffalo, fresh or chilled",Egypt,2024,200000
+1127,"Meat of camels, fresh or chilled",Sudan,2024,145228
+1127,"Meat of camels, fresh or chilled",Kenya,2024,71490
+1127,"Meat of camels, fresh or chilled",Saudi Arabia,2024,66164
+1127,"Meat of camels, fresh or chilled",Somalia,2024,50626
+867,"Meat of cattle with the bone, fresh or chilled",United States of America,2024,12289768
+867,"Meat of cattle with the bone, fresh or chilled",Brazil,2024,10237584
+867,"Meat of cattle with the bone, fresh or chilled",China,2024,7026373
+867,"Meat of cattle with the bone, fresh or chilled",Argentina,2024,3178044
+1058,"Meat of chickens, fresh or chilled",United States of America,2024,20176637
+1058,"Meat of chickens, fresh or chilled",China,2024,16066790
+1058,"Meat of chickens, fresh or chilled",Brazil,2024,13714702
+1058,"Meat of chickens, fresh or chilled",Russian Federation,2024,5457330
+1069,"Meat of ducks, fresh or chilled",China,2024,6038841
+1069,"Meat of ducks, fresh or chilled",France,2024,187810
+1069,"Meat of ducks, fresh or chilled",Viet Nam,2024,164682
+1069,"Meat of ducks, fresh or chilled",Hungary,2024,76280
+1073,"Meat of geese, fresh or chilled",China,2024,5301329
+1073,"Meat of geese, fresh or chilled",Madagascar,2024,12730
+1073,"Meat of geese, fresh or chilled",Egypt,2024,8499
+1073,"Meat of geese, fresh or chilled",Myanmar,2024,7900
+1017,"Meat of goat, fresh or chilled",China,2024,2538503
+1017,"Meat of goat, fresh or chilled",India,2024,1722779
+1017,"Meat of goat, fresh or chilled",Pakistan,2024,561108
+1017,"Meat of goat, fresh or chilled",Nigeria,2024,292406
+1111,"Meat of mules, fresh or chilled",China,2024,9189
+1111,"Meat of mules, fresh or chilled",Argentina,2024,52
+1158,"Meat of other domestic camelids, fresh or chilled",Bolivia (Plurinational State of),2024,17561
+1158,"Meat of other domestic camelids, fresh or chilled",Peru,2024,16971
+1151,"Meat of other domestic rodents, fresh or chilled",Peru,2024,13064
+1151,"Meat of other domestic rodents, fresh or chilled",Bolivia (Plurinational State of),2024,5255
+1035,"Meat of pig with the bone, fresh or chilled",China,2024,57947565
+1035,"Meat of pig with the bone, fresh or chilled",United States of America,2024,12611319
+1035,"Meat of pig with the bone, fresh or chilled",Brazil,2024,5358897
+1035,"Meat of pig with the bone, fresh or chilled",Spain,2024,4956040
+1089,"Meat of pigeons and other birds n.e.c., fresh, chilled or frozen",Egypt,2024,11849
+1089,"Meat of pigeons and other birds n.e.c., fresh, chilled or frozen",Namibia,2024,4905
+1089,"Meat of pigeons and other birds n.e.c., fresh, chilled or frozen",Saudi Arabia,2024,452
+1089,"Meat of pigeons and other birds n.e.c., fresh, chilled or frozen",Syrian Arab Republic,2024,142
+1141,"Meat of rabbits and hares, fresh or chilled",China,2024,445128
+1141,"Meat of rabbits and hares, fresh or chilled",Democratic People's Republic of Korea,2024,156672
+1141,"Meat of rabbits and hares, fresh or chilled",Egypt,2024,51480
+1141,"Meat of rabbits and hares, fresh or chilled",Spain,2024,33927
+977,"Meat of sheep, fresh or chilled",China,2024,2640525
+977,"Meat of sheep, fresh or chilled",India,2024,1292048
+977,"Meat of sheep, fresh or chilled",Australia,2024,927230
+977,"Meat of sheep, fresh or chilled",Türkiye,2024,509539
+1080,"Meat of turkeys, fresh or chilled",United States of America,2024,2315927
+1080,"Meat of turkeys, fresh or chilled",Germany,2024,404000
+1080,"Meat of turkeys, fresh or chilled",Poland,2024,349160
+1080,"Meat of turkeys, fresh or chilled",France,2024,256450
+299,Melonseed,Nigeria,2024,582595
+299,Melonseed,Sudan,2024,90486
+299,Melonseed,Democratic Republic of the Congo,2024,63615
+299,Melonseed,Cameroon,2024,46014
+79,Millet,India,2024,12620813
+79,Millet,Niger,2024,3836015
+79,Millet,China,2024,2784246
+79,Millet,Mali,2024,1984982
+103,Mixed grain,Poland,2024,817940
+103,Mixed grain,France,2024,291320
+103,Mixed grain,Canada,2024,151911
+103,Mixed grain,Spain,2024,120690
+165,Molasses,Brazil,2023,18301393
+165,Molasses,India,2023,14399167
+165,Molasses,China,2023,5239343
+165,Molasses,United States of America,2023,4378715
+449,Mushrooms and truffles,China,2024,48614558
+449,Mushrooms and truffles,Japan,2024,494842
+449,Mushrooms and truffles,India,2024,347450
+449,Mushrooms and truffles,United States of America,2024,298800
+292,Mustard seed,Nepal,2024,210324
+292,Mustard seed,Canada,2024,192297
+292,Mustard seed,Malaysia,2024,157391
+292,Mustard seed,Russian Federation,2024,146746
+1182,Natural honey,China,2024,456024
+1182,Natural honey,India,2024,146000
+1182,Natural honey,Türkiye,2024,95492
+1182,Natural honey,Ethiopia,2024,85960
+836,Natural rubber in primary forms,Thailand,2024,4789042
+836,Natural rubber in primary forms,Indonesia,2024,2262088
+836,Natural rubber in primary forms,Côte d'Ivoire,2024,1686599
+836,Natural rubber in primary forms,Viet Nam,2024,1327473
+702,"Nutmeg, mace, cardamoms, raw",Guatemala,2024,76339
+702,"Nutmeg, mace, cardamoms, raw",India,2024,54031
+702,"Nutmeg, mace, cardamoms, raw",Indonesia,2024,40446
+702,"Nutmeg, mace, cardamoms, raw",Lao People's Democratic Republic,2024,9600
+75,Oats,Canada,2024,3357551
+75,Oats,Russian Federation,2024,3000000
+75,Oats,Poland,2024,1616910
+75,Oats,Australia,2024,1315000
+334,Oil of linseed,China,2023,319925
+334,Oil of linseed,Belgium,2023,125100
+334,Oil of linseed,United States of America,2023,69200
+334,Oil of linseed,Russian Federation,2023,35000
+60,Oil of maize,United States of America,2023,1062867
+60,Oil of maize,China,2023,547727
+60,Oil of maize,Brazil,2023,306786
+60,Oil of maize,South Africa,2023,86800
+258,Oil of palm kernel,Indonesia,2023,4968400
+258,Oil of palm kernel,Malaysia,2023,2116509
+258,Oil of palm kernel,Thailand,2023,308400
+258,Oil of palm kernel,Nigeria,2023,167900
+290,Oil of sesame seed,China,2023,289306
+290,Oil of sesame seed,India,2023,264000
+290,Oil of sesame seed,Myanmar,2023,148500
+290,Oil of sesame seed,Japan,2023,54915
+254,Oil palm fruit,Indonesia,2024,243000000
+254,Oil palm fruit,Malaysia,2024,100163525
+254,Oil palm fruit,Thailand,2024,18606769
+254,Oil palm fruit,Nigeria,2024,11517078
+430,Okra,India,2024,7305410
+430,Okra,Nigeria,2024,1807284
+430,Okra,Dominican Republic,2024,836361
+430,Okra,Mali,2024,655971
+261,Olive oil,Spain,2023,854001
+261,Olive oil,Italy,2023,359540
+261,Olive oil,Türkiye,2023,234515
+261,Olive oil,Greece,2023,228850
+260,Olives,Spain,2024,8310250
+260,Olives,Türkiye,2024,3750000
+260,Olives,Italy,2024,2299660
+260,Olives,Portugal,2024,1340820
+403,"Onions and shallots, dry (excluding dehydrated)",China,2024,24284075
+403,"Onions and shallots, dry (excluding dehydrated)",India,2024,24266712
+403,"Onions and shallots, dry (excluding dehydrated)",United States of America,2024,3499013
+403,"Onions and shallots, dry (excluding dehydrated)",Egypt,2024,3439646
+402,"Onions and shallots, green",China,2024,1002356
+402,"Onions and shallots, green",Mali,2024,847300
+402,"Onions and shallots, green",Angola,2024,612391
+402,"Onions and shallots, green",Japan,2024,488887
+490,Oranges,Brazil,2024,15688409
+490,Oranges,China,2024,7740712
+490,Oranges,Mexico,2024,4836052
+490,Oranges,Egypt,2024,4200000
+414,"Other beans, green",China,2024,18663585
+414,"Other beans, green",India,2024,2897509
+414,"Other beans, green",Indonesia,2024,932383
+414,"Other beans, green",Türkiye,2024,507061
+558,Other berries and fruits of the genus vaccinium n.e.c.,Mexico,2024,270833
+558,Other berries and fruits of the genus vaccinium n.e.c.,Viet Nam,2024,121756
+558,Other berries and fruits of the genus vaccinium n.e.c.,Papua New Guinea,2024,109230
+558,Other berries and fruits of the genus vaccinium n.e.c.,Türkiye,2024,92318
+512,"Other citrus fruit, n.e.c.",China,2024,5581006
+512,"Other citrus fruit, n.e.c.",Nigeria,2024,4196845
+512,"Other citrus fruit, n.e.c.",India,2024,789051
+512,"Other citrus fruit, n.e.c.",Iran (Islamic Republic of),2024,635389
+821,"Other fibre crops, raw, n.e.c.",Sri Lanka,2024,370085
+821,"Other fibre crops, raw, n.e.c.",Brazil,2024,102553
+821,"Other fibre crops, raw, n.e.c.",Viet Nam,2024,96417
+821,"Other fibre crops, raw, n.e.c.",Canada,2024,26870
+619,"Other fruits, n.e.c.",India,2024,11943810
+619,"Other fruits, n.e.c.",China,2024,2806183
+619,"Other fruits, n.e.c.",Viet Nam,2024,2802329
+619,"Other fruits, n.e.c.",Iran (Islamic Republic of),2024,2339411
+1166,"Other meat of mammals, fresh or chilled",China,2024,503904
+1166,"Other meat of mammals, fresh or chilled",Russian Federation,2024,500914
+1166,"Other meat of mammals, fresh or chilled",India,2024,194190
+1166,"Other meat of mammals, fresh or chilled",Democratic Republic of the Congo,2024,78858
+234,"Other nuts (excluding wild edible nuts and groundnuts), in shell, n.e.c.",China,2024,144751
+234,"Other nuts (excluding wild edible nuts and groundnuts), in shell, n.e.c.",United States of America,2024,136470
+234,"Other nuts (excluding wild edible nuts and groundnuts), in shell, n.e.c.",Mexico,2024,125730
+234,"Other nuts (excluding wild edible nuts and groundnuts), in shell, n.e.c.",Indonesia,2024,109659
+339,"Other oil seeds, n.e.c.",Pakistan,2024,644202
+339,"Other oil seeds, n.e.c.",China,2024,340888
+339,"Other oil seeds, n.e.c.",Ethiopia,2024,270050
+339,"Other oil seeds, n.e.c.",Malaysia,2024,106432
+542,Other pome fruits,Uzbekistan,2024,49363
+542,Other pome fruits,Spain,2024,31870
+542,Other pome fruits,Romania,2024,25750
+542,Other pome fruits,Portugal,2024,15490
+211,Other pulses n.e.c.,Poland,2024,575960
+211,Other pulses n.e.c.,Bangladesh,2024,429231
+211,Other pulses n.e.c.,Mozambique,2024,321693
+211,Other pulses n.e.c.,Spain,2024,287990
+723,"Other stimulant, spice and aromatic crops, n.e.c.",India,2024,1433572
+723,"Other stimulant, spice and aromatic crops, n.e.c.",Türkiye,2024,366338
+723,"Other stimulant, spice and aromatic crops, n.e.c.",Bangladesh,2024,301705
+723,"Other stimulant, spice and aromatic crops, n.e.c.",Yemen,2024,300335
+541,Other stone fruits,China,2024,159943
+541,Other stone fruits,Iran (Islamic Republic of),2024,155729
+541,Other stone fruits,Uzbekistan,2024,71613
+541,Other stone fruits,Afghanistan,2024,50342
+161,Other sugar crops n.e.c.,Myanmar,2024,471145
+161,Other sugar crops n.e.c.,Bangladesh,2024,219281
+161,Other sugar crops n.e.c.,Indonesia,2024,200734
+603,"Other tropical fruits, n.e.c.",China,2024,4229341
+603,"Other tropical fruits, n.e.c.",Thailand,2024,3272184
+603,"Other tropical fruits, n.e.c.",Philippines,2024,3228731
+603,"Other tropical fruits, n.e.c.",Brazil,2024,2478342
+463,"Other vegetables, fresh n.e.c.",China,2024,169723882
+463,"Other vegetables, fresh n.e.c.",India,2024,26077397
+463,"Other vegetables, fresh n.e.c.",Viet Nam,2024,16497308
+463,"Other vegetables, fresh n.e.c.",Nigeria,2024,7062626
+256,Palm kernels,Indonesia,2023,11290000
+256,Palm kernels,Malaysia,2023,4517973
+256,Palm kernels,Thailand,2023,726000
+256,Palm kernels,Nigeria,2023,375000
+257,Palm oil,Indonesia,2023,47084299
+257,Palm oil,Malaysia,2023,18551950
+257,Palm oil,Thailand,2023,3323200
+257,Palm oil,Colombia,2023,1841880
+600,Papayas,India,2024,5292173
+600,Papayas,Dominican Republic,2024,1942660
+600,Papayas,Indonesia,2024,1206916
+600,Papayas,Brazil,2024,1149300
+534,Peaches and nectarines,China,2024,17616800
+534,Peaches and nectarines,Spain,2024,1376900
+534,Peaches and nectarines,Türkiye,2024,1179041
+534,Peaches and nectarines,Italy,2024,1092160
+521,Pears,China,2024,21089400
+521,Pears,Argentina,2024,670592
+521,Pears,Türkiye,2024,630500
+521,Pears,South Africa,2024,465424
+187,"Peas, dry",Russian Federation,2024,3251858
+187,"Peas, dry",Canada,2024,2997354
+187,"Peas, dry",China,2024,1489237
+187,"Peas, dry",India,2024,1066557
+417,"Peas, green",China,2024,12031822
+417,"Peas, green",India,2024,6670595
+417,"Peas, green",Pakistan,2024,397262
+417,"Peas, green",France,2024,260130
+687,"Pepper (Piper spp.), raw",Viet Nam,2024,262230
+687,"Pepper (Piper spp.), raw",India,2024,126038
+687,"Pepper (Piper spp.), raw",Brazil,2024,124925
+687,"Pepper (Piper spp.), raw",Burkina Faso,2024,77932
+748,"Peppermint, spearmint",Morocco,2024,24975
+748,"Peppermint, spearmint",Argentina,2024,6963
+748,"Peppermint, spearmint",Mexico,2024,678
+748,"Peppermint, spearmint",Japan,2024,33
+587,Persimmons,China,2024,3994405
+587,Persimmons,Republic of Korea,2024,223629
+587,Persimmons,Azerbaijan,2024,192366
+587,Persimmons,Brazil,2024,177610
+1043,"Pig fat, rendered",China,2023,2648475
+1043,"Pig fat, rendered",Brazil,2023,678200
+1043,"Pig fat, rendered",United States of America,2023,466447
+1043,"Pig fat, rendered",Germany,2023,464927
+197,"Pigeon peas, dry",India,2024,3510870
+197,"Pigeon peas, dry",Malawi,2024,473662
+197,"Pigeon peas, dry",Myanmar,2024,251615
+197,"Pigeon peas, dry",United Republic of Tanzania,2024,224587
+574,Pineapples,Costa Rica,2024,3118093
+574,Pineapples,Philippines,2024,2919940
+574,Pineapples,Indonesia,2024,2740601
+574,Pineapples,China,2024,2521594
+223,"Pistachios, in shell",United States of America,2024,498950
+223,"Pistachios, in shell",Türkiye,2024,383000
+223,"Pistachios, in shell",Iran (Islamic Republic of),2024,316142
+223,"Pistachios, in shell",Syrian Arab Republic,2024,83796
+489,Plantains and cooking bananas,Uganda,2024,11834262
+489,Plantains and cooking bananas,Democratic Republic of the Congo,2024,4908314
+489,Plantains and cooking bananas,Cameroon,2024,4663350
+489,Plantains and cooking bananas,Ghana,2024,4423947
+536,Plums and sloes,China,2024,6907799
+536,Plums and sloes,Romania,2024,602570
+536,Plums and sloes,Chile,2024,509843
+536,Plums and sloes,Serbia,2024,387227
+507,Pomelos and grapefruits,China,2024,5332737
+507,Pomelos and grapefruits,Viet Nam,2024,1224307
+507,Pomelos and grapefruits,Mexico,2024,480830
+507,Pomelos and grapefruits,South Africa,2024,425570
+296,Poppy seed,Türkiye,2024,8441
+296,Poppy seed,Serbia,2024,1079
+296,Poppy seed,North Macedonia,2024,24
+116,Potatoes,China,2024,94868769
+116,Potatoes,India,2024,57053344
+116,Potatoes,Ukraine,2024,21128900
+116,Potatoes,United States of America,2024,19061860
+394,"Pumpkins, squash and gourds",India,2024,9330691
+394,"Pumpkins, squash and gourds",China,2024,7696668
+394,"Pumpkins, squash and gourds",Egypt,2024,1275383
+394,"Pumpkins, squash and gourds",Russian Federation,2024,1163235
+754,"Pyrethrum, dried flowers",United Republic of Tanzania,2024,2866
+754,"Pyrethrum, dried flowers",Kenya,2024,1634
+754,"Pyrethrum, dried flowers",Papua New Guinea,2024,1191
+754,"Pyrethrum, dried flowers",Rwanda,2024,1132
+523,Quinces,Türkiye,2024,203186
+523,Quinces,China,2024,116514
+523,Quinces,Iran (Islamic Republic of),2024,90109
+523,Quinces,Uzbekistan,2024,85074
+92,Quinoa,Peru,2024,114462
+92,Quinoa,Bolivia (Plurinational State of),2024,50262
+92,Quinoa,Ecuador,2024,1129
+92,Quinoa,Bhutan,2024,40
+788,"Ramie, raw or retted",China,2024,55418
+788,"Ramie, raw or retted",Lao People's Democratic Republic,2024,2681
+270,Rape or colza seed,Canada,2024,19239463
+270,Rape or colza seed,China,2024,16868908
+270,Rape or colza seed,India,2024,13259142
+270,Rape or colza seed,Australia,2024,6396000
+271,"Rapeseed or canola oil, crude",Canada,2023,4422368
+271,"Rapeseed or canola oil, crude",China,2023,4326300
+271,"Rapeseed or canola oil, crude",Germany,2023,4181589
+271,"Rapeseed or canola oil, crude",India,2023,4113000
+547,Raspberries,Russian Federation,2024,213818
+547,Raspberries,Mexico,2024,175538
+547,Raspberries,Serbia,2024,94026
+547,Raspberries,United States of America,2024,82080
+162,Raw cane or beet sugar (centrifugal only),Brazil,2023,41967508
+162,Raw cane or beet sugar (centrifugal only),India,2023,37000000
+162,Raw cane or beet sugar (centrifugal only),Thailand,2023,10269245
+162,Raw cane or beet sugar (centrifugal only),China,2023,10004670
+957,Raw hides and skins of buffaloes,India,2024,1006375
+957,Raw hides and skins of buffaloes,China,2024,225133
+957,Raw hides and skins of buffaloes,Pakistan,2024,165068
+957,Raw hides and skins of buffaloes,Nepal,2024,23230
+919,Raw hides and skins of cattle,China,2024,1560289
+919,Raw hides and skins of cattle,United States of America,2024,1121172
+919,Raw hides and skins of cattle,Brazil,2024,1023758
+919,Raw hides and skins of cattle,Argentina,2024,513896
+1025,Raw hides and skins of goats or kids,China,2024,507691
+1025,Raw hides and skins of goats or kids,India,2024,313233
+1025,Raw hides and skins of goats or kids,Pakistan,2024,134178
+1025,Raw hides and skins of goats or kids,Bangladesh,2024,69664
+995,Raw hides and skins of sheep or lambs,China,2024,592771
+995,Raw hides and skins of sheep or lambs,Australia,2024,203991
+995,Raw hides and skins of sheep or lambs,India,2024,196200
+995,Raw hides and skins of sheep or lambs,Türkiye,2024,92644
+951,Raw milk of buffalo,India,2024,105500000
+951,Raw milk of buffalo,Pakistan,2024,39792650
+951,Raw milk of buffalo,China,2024,3167437
+951,Raw milk of buffalo,Nepal,2024,1402156
+1130,Raw milk of camel,Kenya,2024,1098082
+1130,Raw milk of camel,Somalia,2024,999967
+1130,Raw milk of camel,Pakistan,2024,968000
+1130,Raw milk of camel,Mali,2024,299181
+882,Raw milk of cattle,India,2024,135000000
+882,Raw milk of cattle,United States of America,2024,102452123
+882,Raw milk of cattle,China,2024,41260060
+882,Raw milk of cattle,Brazil,2024,36816178
+1020,Raw milk of goats,India,2024,7335907
+1020,Raw milk of goats,Sudan,2024,1143484
+1020,Raw milk of goats,Pakistan,2024,1074000
+1020,Raw milk of goats,Bangladesh,2024,1053080
+982,Raw milk of sheep,China,2024,1256430
+982,Raw milk of sheep,Greece,2024,945820
+982,Raw milk of sheep,Türkiye,2024,906945
+982,Raw milk of sheep,Syrian Arab Republic,2024,714642
+1186,Raw silk (not thrown),China,2023,50000
+1186,Raw silk (not thrown),India,2023,38913
+1186,Raw silk (not thrown),Uzbekistan,2023,2037
+1186,Raw silk (not thrown),Viet Nam,2023,1448
+27,Rice,India,2024,217867864
+27,Rice,China,2024,209173000
+27,Rice,Bangladesh,2024,60570453
+27,Rice,Indonesia,2024,53142727
+71,Rye,Germany,2024,2584400
+71,Rye,Poland,2024,2393180
+71,Rye,Russian Federation,2024,1200000
+71,Rye,Belarus,2024,800000
+280,Safflower seed,Kazakhstan,2024,228717
+280,Safflower seed,Russian Federation,2024,159610
+280,Safflower seed,Mexico,2024,70634
+280,Safflower seed,United States of America,2024,58780
+281,"Safflower-seed oil, crude",United States of America,2023,22882
+281,"Safflower-seed oil, crude",India,2023,14000
+281,"Safflower-seed oil, crude",Uzbekistan,2023,12931
+281,"Safflower-seed oil, crude",Mexico,2023,12715
+328,"Seed cotton, unginned",China,2024,18700000
+328,"Seed cotton, unginned",India,2024,15000000
+328,"Seed cotton, unginned",United States of America,2024,9573295
+328,"Seed cotton, unginned",Brazil,2024,8523606
+289,Sesame seed,India,2024,866111
+289,Sesame seed,Myanmar,2024,720000
+289,Sesame seed,Sudan,2024,626173
+289,Sesame seed,Nigeria,2024,450000
+979,"Sheep fat, unrendered",China,2024,113165
+979,"Sheep fat, unrendered",Australia,2024,103850
+979,"Sheep fat, unrendered",India,2024,55032
+979,"Sheep fat, unrendered",Türkiye,2024,33583
+987,"Shorn wool, greasy, including fleece-washed shorn wool",China,2024,364481
+987,"Shorn wool, greasy, including fleece-washed shorn wool",Australia,2024,281000
+987,"Shorn wool, greasy, including fleece-washed shorn wool",New Zealand,2024,124951
+987,"Shorn wool, greasy, including fleece-washed shorn wool",Türkiye,2024,84270
+1185,Silk-worm cocoons suitable for reeling,India,2024,260000
+1185,Silk-worm cocoons suitable for reeling,China,2024,147002
+1185,Silk-worm cocoons suitable for reeling,Uzbekistan,2024,30066
+1185,Silk-worm cocoons suitable for reeling,Viet Nam,2024,15884
+789,"Sisal, raw",Brazil,2024,93261
+789,"Sisal, raw",United Republic of Tanzania,2024,61216
+789,"Sisal, raw",Kenya,2024,20940
+789,"Sisal, raw",Madagascar,2024,17592
+898,Skim milk and whey powder,United States of America,2023,1166000
+898,Skim milk and whey powder,India,2023,629155
+898,Skim milk and whey powder,New Zealand,2023,390000
+898,Skim milk and whey powder,Germany,2023,347780
+888,Skim milk of cows,United States of America,2023,17570389
+888,Skim milk of cows,Germany,2023,12278335
+888,Skim milk of cows,France,2023,8884571
+888,Skim milk of cows,New Zealand,2023,8623918
+896,"Skim milk, condensed",United States of America,2023,699846
+896,"Skim milk, condensed",United Kingdom of Great Britain and Northern Ireland,2023,135347
+896,"Skim milk, condensed",Spain,2023,36357
+896,"Skim milk, condensed",Belgium,2023,26000
+895,"Skim milk, evaporated",Germany,2023,52789
+895,"Skim milk, evaporated",United States of America,2023,14340
+895,"Skim milk, evaporated",Canada,2023,13825
+895,"Skim milk, evaporated",South Africa,2023,3967
+1176,"Snails, fresh, chilled, frozen, dried, salted or in brine, except sea snails",Morocco,2024,17882
+1176,"Snails, fresh, chilled, frozen, dried, salted or in brine, except sea snails",Tunisia,2024,995
+1176,"Snails, fresh, chilled, frozen, dried, salted or in brine, except sea snails",Türkiye,2024,508
+1176,"Snails, fresh, chilled, frozen, dried, salted or in brine, except sea snails",Côte d'Ivoire,2024,317
+83,Sorghum,United States of America,2024,8734190
+83,Sorghum,Nigeria,2024,6500000
+83,Sorghum,India,2024,5413005
+83,Sorghum,Sudan,2024,5393620
+530,Sour cherries,Russian Federation,2024,265389
+530,Sour cherries,Türkiye,2024,206700
+530,Sour cherries,Ukraine,2024,171200
+530,Sour cherries,Serbia,2024,136820
+237,Soya bean oil,China,2023,17815100
+237,Soya bean oil,United States of America,2023,12227000
+237,Soya bean oil,Brazil,2023,10890989
+237,Soya bean oil,Argentina,2023,5275641
+236,Soya beans,Brazil,2024,144473768
+236,Soya beans,United States of America,2024,118836440
+236,Soya beans,Argentina,2024,48213207
+236,Soya beans,China,2024,20655000
+373,Spinach,China,2024,28335324
+373,Spinach,United States of America,2024,280025
+373,Spinach,Kenya,2024,242720
+373,Spinach,Türkiye,2024,237216
+544,Strawberries,China,2024,4123417
+544,Strawberries,United States of America,2024,1466010
+544,Strawberries,Egypt,2024,880847
+544,Strawberries,Mexico,2024,696113
+423,String beans,United States of America,2024,483366
+423,String beans,Morocco,2024,170114
+423,String beans,Philippines,2024,101325
+423,String beans,Mexico,2024,101313
+157,Sugar beet,Russian Federation,2024,46680177
+157,Sugar beet,Germany,2024,36682200
+157,Sugar beet,France,2024,32594090
+157,Sugar beet,United States of America,2024,32003660
+156,Sugar cane,Brazil,2024,759662482
+156,Sugar cane,India,2024,453158494
+156,Sugar cane,China,2024,102568937
+156,Sugar cane,Pakistan,2024,84235451
+267,Sunflower seed,Russian Federation,2024,17200000
+267,Sunflower seed,Ukraine,2024,10955940
+267,Sunflower seed,Argentina,2024,3895156
+267,Sunflower seed,China,2024,2348400
+268,"Sunflower-seed oil, crude",Russian Federation,2023,7038700
+268,"Sunflower-seed oil, crude",Ukraine,2023,6044500
+268,"Sunflower-seed oil, crude",Argentina,2023,1709511
+268,"Sunflower-seed oil, crude",Türkiye,2023,900600
+122,Sweet potatoes,China,2024,51566695
+122,Sweet potatoes,Malawi,2024,7980473
+122,Sweet potatoes,Nigeria,2024,4091239
+122,Sweet potatoes,United Republic of Tanzania,2024,2227515
+1225,Tallow,United States of America,2023,3900020
+1225,Tallow,Brazil,2023,1082461
+1225,Tallow,Australia,2023,592600
+1225,Tallow,Canada,2023,318100
+305,Tallowtree seeds,China,2024,1051618
+495,"Tangerines, mandarins, clementines",China,2024,27151484
+495,"Tangerines, mandarins, clementines",India,2024,6075893
+495,"Tangerines, mandarins, clementines",Pakistan,2024,2044613
+495,"Tangerines, mandarins, clementines",Türkiye,2024,1988000
+136,Taro,Nigeria,2024,8605587
+136,Taro,Cameroon,2024,1946970
+136,Taro,China,2024,1927140
+136,Taro,Ethiopia,2024,1791635
+667,Tea leaves,China,2024,16298900
+667,Tea leaves,India,2024,6156031
+667,Tea leaves,Kenya,2024,2687200
+667,Tea leaves,Sri Lanka,2024,1514024
+388,Tomatoes,China,2024,61700323
+388,Tomatoes,India,2024,21323223
+388,Tomatoes,Türkiye,2024,14617000
+388,Tomatoes,United States of America,2024,10683555
+97,Triticale,Poland,2024,4958210
+97,Triticale,Germany,2024,1510900
+97,Triticale,France,2024,1087820
+97,Triticale,Belarus,2024,989144
+777,"True hemp, raw or retted",France,2024,135530
+777,"True hemp, raw or retted",China,2024,106345
+777,"True hemp, raw or retted",United States of America,2024,27412
+777,"True hemp, raw or retted",Netherlands (Kingdom of the),2024,24570
+275,Tung nuts,China,2024,365425
+275,Tung nuts,Paraguay,2024,40973
+275,Tung nuts,Argentina,2024,6145
+275,Tung nuts,Malawi,2024,4566
+826,Unmanufactured tobacco,China,2024,2257793
+826,Unmanufactured tobacco,India,2024,727203
+826,Unmanufactured tobacco,Brazil,2024,637749
+826,Unmanufactured tobacco,Indonesia,2024,353386
+692,"Vanilla, raw",Madagascar,2024,3090
+692,"Vanilla, raw",Indonesia,2024,1526
+692,"Vanilla, raw",Mexico,2024,510
+692,"Vanilla, raw",Papua New Guinea,2024,493
+205,Vetches,Ethiopia,2024,320718
+205,Vetches,Russian Federation,2024,133888
+205,Vetches,Mexico,2024,59949
+205,Vetches,Syrian Arab Republic,2024,28621
+222,"Walnuts, in shell",China,2024,1500000
+222,"Walnuts, in shell",United States of America,2024,547030
+222,"Walnuts, in shell",Türkiye,2024,426000
+222,"Walnuts, in shell",Iran (Islamic Republic of),2024,411331
+567,Watermelons,China,2024,63640909
+567,Watermelons,India,2024,3721254
+567,Watermelons,Türkiye,2024,3198000
+567,Watermelons,Algeria,2024,2520724
+15,Wheat,China,2024,140105000
+15,Wheat,India,2024,113292368
+15,Wheat,Russian Federation,2024,82588000
+15,Wheat,United States of America,2024,53650020
+890,"Whey, condensed",Germany,2023,674530
+890,"Whey, condensed",Poland,2023,599470
+890,"Whey, condensed",Italy,2023,528650
+890,"Whey, condensed",Spain,2023,227560
+900,"Whey, dry",United States of America,2023,654308
+900,"Whey, dry",France,2023,420720
+900,"Whey, dry",Germany,2023,384460
+900,"Whey, dry",Ireland,2023,268500
+897,Whole milk powder,New Zealand,2023,1400000
+897,Whole milk powder,India,2023,1328860
+897,Whole milk powder,Brazil,2023,559251
+897,Whole milk powder,Argentina,2023,185157
+889,"Whole milk, condensed",Netherlands (Kingdom of the),2023,362770
+889,"Whole milk, condensed",Malaysia,2023,308718
+889,"Whole milk, condensed",Germany,2023,298010
+889,"Whole milk, condensed",France,2023,103640
+894,"Whole milk, evaporated",Peru,2023,514264
+894,"Whole milk, evaporated",Germany,2023,389686
+894,"Whole milk, evaporated",Netherlands (Kingdom of the),2023,371460
+894,"Whole milk, evaporated",United States of America,2023,210641
+564,Wine,France,2023,4762507
+564,Wine,Italy,2023,4249948
+564,Wine,Spain,2023,2849589
+564,Wine,United States of America,2023,2083125
+137,Yams,Nigeria,2024,65322032
+137,Yams,Ghana,2024,10113014
+137,Yams,Côte d'Ivoire,2024,7660870
+137,Yams,Benin,2024,3353473
+135,Yautia,Venezuela (Bolivarian Republic of),2024,98597
+135,Yautia,Cuba,2024,87020
+135,Yautia,Dominican Republic,2024,71745
+135,Yautia,El Salvador,2024,48476
+891,Yoghurt,Germany,2023,852630
+891,Yoghurt,Russian Federation,2023,615550
+891,Yoghurt,France,2023,573490
+891,Yoghurt,Belarus,2023,330205

@@ -3,22 +3,10 @@ defmodule MehungryWeb.FoodsLive.Index do
   alias Mehungry.Food
   alias Mehungry.Food.SpeciesSearch
 
-  # How many compound suggestions to surface in the multi-select dropdown.
-  @compound_suggestions 12
-
-  # How many always-visible one-click facet chips to show above the grid.
-  @quick_compound_count 10
-
-  # Recognizable compounds we'd rather lead the quick-pick row with when the
-  # catalog carries them; any gaps are filled alphabetically from the linked set,
-  # so the row is useful no matter what's curated.
-  @quick_compound_priority ~w(Quercetin Anthocyanin Oxalate Lutein Lycopene Resveratrol Catechin Curcumin Capsaicin Caffeine)
-
   @impl true
   def mount(_params, _session, socket) do
     language = socket.assigns[:current_language] || "en"
     {species, cursor_after} = load_page(language, nil)
-    all_compounds = Food.list_linked_compounds()
 
     {:ok,
      socket
@@ -26,18 +14,11 @@ defmodule MehungryWeb.FoodsLive.Index do
      |> assign(:language, language)
      |> assign(:cursor_after, cursor_after)
      |> assign(:query, "")
-     |> assign(:show_filters, false)
-     |> assign(:selected_compound_ids, MapSet.new())
-     |> assign(:all_compounds, all_compounds)
-     |> assign(:compounds_by_id, Map.new(all_compounds, &{&1.id, &1}))
-     |> assign(:quick_compounds, quick_compounds(all_compounds))
-     |> assign(:compound_query, "")
-     |> assign(:compound_results, [])
      |> assign(:page_title, gettext("Foods & Nutrition Database"))
      |> assign(
        :page_description,
        gettext(
-         "Browse our database of food species with detailed nutrition facts, the research behind them, and the bioactive compounds they carry."
+         "Browse our database of food species with detailed nutrition facts and the research behind them."
        )
      )
      |> assign(:directory, build_directory(language))}
@@ -48,48 +29,6 @@ defmodule MehungryWeb.FoodsLive.Index do
     {:noreply,
      socket
      |> assign(:query, query)
-     |> refresh_species()}
-  end
-
-  def handle_event("toggle_filters", _params, socket) do
-    {:noreply, assign(socket, :show_filters, !socket.assigns.show_filters)}
-  end
-
-  # Multi-select compound search — filter the linked-compound list as the user types,
-  # excluding those already picked.
-  def handle_event("search_compounds", %{"q" => query}, socket) do
-    {:noreply,
-     socket
-     |> assign(:compound_query, query)
-     |> assign(:compound_results, compound_suggestions(socket, query))}
-  end
-
-  def handle_event("add_compound", %{"id" => id}, socket) do
-    selected = MapSet.put(socket.assigns.selected_compound_ids, String.to_integer(id))
-
-    {:noreply,
-     socket
-     |> assign(:selected_compound_ids, selected)
-     |> assign(:compound_query, "")
-     |> assign(:compound_results, [])
-     |> refresh_species()}
-  end
-
-  def handle_event("remove_compound", %{"id" => id}, socket) do
-    selected = MapSet.delete(socket.assigns.selected_compound_ids, String.to_integer(id))
-
-    {:noreply,
-     socket
-     |> assign(:selected_compound_ids, selected)
-     |> refresh_species()}
-  end
-
-  def handle_event("clear_filters", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:selected_compound_ids, MapSet.new())
-     |> assign(:compound_query, "")
-     |> assign(:compound_results, [])
      |> refresh_species()}
   end
 
@@ -107,29 +46,14 @@ defmodule MehungryWeb.FoodsLive.Index do
      |> assign(:cursor_after, cursor_after)}
   end
 
-  def filters_active?(assigns), do: MapSet.size(assigns.selected_compound_ids) > 0
-
-  # The default feed state: no name search and no compound filter active. Drives
-  # both the spotlight card and the crawlable A–Z directory (shown only here).
-  def default_browse?(assigns),
-    do: assigns.query == "" and MapSet.size(assigns.selected_compound_ids) == 0
+  # The default feed state: no name search active. Drives both the spotlight card
+  # and the crawlable A–Z directory (shown only here).
+  def default_browse?(assigns), do: assigns.query == ""
 
   # Whether to weave the "find a nutritionist" spotlight into the species grid —
   # only in the default browse state and once there are enough cards that it
   # reads as part of the collection, not a lonely banner.
   def spotlight?(assigns), do: default_browse?(assigns) and length(assigns.species) > 8
-
-  # Whether a compound is in the active filter set — drives the quick-pick chip
-  # pressed state and which toggle event it fires.
-  def compound_selected?(selected_ids, id), do: MapSet.member?(selected_ids, id)
-
-  # The compound structs currently selected, name-ordered — for the chip row.
-  def selected_compounds(assigns) do
-    assigns.selected_compound_ids
-    |> Enum.map(&Map.get(assigns.compounds_by_id, &1))
-    |> Enum.reject(&is_nil/1)
-    |> Enum.sort_by(& &1.name)
-  end
 
   # The URL slug for a species — Greek `display_name` when set, else the English
   # name, spaces hyphenated. Raw/unencoded to match `SpeciesDetailLive`'s canonical
@@ -147,86 +71,22 @@ defmodule MehungryWeb.FoodsLive.Index do
   def species_sublabel(%{family: family}) when is_binary(family) and family != "", do: family
   def species_sublabel(_), do: nil
 
-  # Styling for a facet filter pill.
-  def pill_class(selected?) do
-    base = "px-3 py-1 rounded-full text-sm font-medium border transition"
-
-    if selected? do
-      "#{base} bg-paprika border-paprika text-white"
-    else
-      "#{base} border-ink-panel2 text-parchment-dim hover:border-paprika hover:text-parchment"
-    end
-  end
-
   ###################################################################### PRIVATE ###############################################################
 
-  # The quick-pick facet chips: recognizable compounds first (in the priority
-  # order), then an alphabetical fill from the remaining linked compounds, capped.
-  defp quick_compounds(all_compounds) do
-    by_down = Map.new(all_compounds, &{String.downcase(&1.name), &1})
-
-    preferred =
-      @quick_compound_priority
-      |> Enum.map(&Map.get(by_down, String.downcase(&1)))
-      |> Enum.reject(&is_nil/1)
-
-    preferred_ids = MapSet.new(preferred, & &1.id)
-    fill = Enum.reject(all_compounds, &MapSet.member?(preferred_ids, &1.id))
-
-    Enum.take(preferred ++ fill, @quick_compound_count)
-  end
-
-  defp compound_suggestions(socket, query) do
-    term = String.trim(query)
-
-    if term == "" do
-      []
-    else
-      down = String.downcase(term)
-      selected = socket.assigns.selected_compound_ids
-
-      socket.assigns.all_compounds
-      |> Enum.filter(fn c ->
-        not MapSet.member?(selected, c.id) and String.contains?(String.downcase(c.name), down)
-      end)
-      |> Enum.take(@compound_suggestions)
-    end
-  end
-
-  # Recompute the species list from the current query + the selected compounds.
+  # Recompute the species list from the current query.
   #
-  #   * No compounds, blank query → the default paginated feed.
-  #   * No compounds, text query  → the name search (localized in Greek mode).
-  #   * Compounds selected        → the faceted filter (flat list, no pagination).
+  #   * Blank query → the default paginated feed.
+  #   * Text query  → the name search (localized in Greek mode).
   defp refresh_species(socket) do
     language = socket.assigns[:current_language] || "en"
     query = socket.assigns.query
-    compound_ids = MapSet.to_list(socket.assigns.selected_compound_ids)
 
-    cond do
-      compound_ids == [] and query == "" ->
-        {species, cursor_after} = load_page(language, nil)
-        assign(socket, species: species, cursor_after: cursor_after)
-
-      compound_ids == [] ->
-        assign(socket, species: search_species(query, language), cursor_after: nil)
-
-      true ->
-        assign(socket,
-          species: filtered_species(compound_ids, query, language),
-          cursor_after: nil
-        )
+    if query == "" do
+      {species, cursor_after} = load_page(language, nil)
+      assign(socket, species: species, cursor_after: cursor_after)
+    else
+      assign(socket, species: search_species(query, language), cursor_after: nil)
     end
-  end
-
-  defp filtered_species(compound_ids, query, language) do
-    Food.filter_species(
-      condition_compound_ids: [],
-      condition_species_ids: [],
-      compound_ids: compound_ids,
-      query: query
-    )
-    |> localize(language)
   end
 
   defp search_species(query, "el") do
@@ -246,18 +106,6 @@ defmodule MehungryWeb.FoodsLive.Index do
   end
 
   defp search_species(query, _language), do: SpeciesSearch.search(query)
-
-  # Inject the Greek `display_name` from preloaded translations (no-op in English).
-  defp localize(species_list, "el") do
-    Enum.map(species_list, fn species ->
-      case Enum.find(species.translations || [], &(&1.language_name == "el")) do
-        nil -> species
-        t -> Map.put(species, :display_name, t.name)
-      end
-    end)
-  end
-
-  defp localize(species_list, _language), do: species_list
 
   # In Greek mode: only species with a translation, with display_name injected.
   # In English mode: all species via the standard paginated query.

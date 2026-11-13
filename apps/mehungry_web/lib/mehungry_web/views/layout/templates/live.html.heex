@@ -2,12 +2,16 @@
   <div id="visit-engagement" phx-hook="VisitEngagement" class="hidden"></div>
   <div class="mobile_header text-xl text-center text-parchment font-semibold m-auto bg-ink-panel  border-b border-ink-panel2">
     <nav class=" m-auto bg-ink-panel/95 backdrop-blur-md  transition-all duration-300 h-18">
-      <span
+      <%!-- Logo links home (the community feed at `/`): the bottom bar no longer
+            carries a Home tab, so this is mobile's path back to the feed. --%>
+      <.link
+        navigate="/"
+        aria-label={gettext("Home")}
         class="w-fit m-auto block p-2"
         style="--logo-text-color: #F4EEDD; --logo-tagline-color: transparent;"
       >
         {MehungryWeb.SvgComponents.get_logo(%{id: "live-nav", class: "h-14 w-[220px]"})}
-      </span>
+      </.link>
     </nav>
   </div>
   <.get_menu

@@ -161,6 +161,12 @@ defmodule Mehungry.Literature do
   @doc "The in-app reader payload for a study (sections + per-paragraph claim spans), or nil."
   defdelegate full_text_for_reader(study_id), to: StudyAnalyses
 
+  @doc "Apply a `FullTextIntegrity` verification (licence + integrity) to a study's full text."
+  defdelegate apply_full_text_verification(study_id, verification), to: StudyAnalyses
+
+  @doc "Purge a study's full text as a content mismatch (delete row + flag analysis error)."
+  defdelegate purge_full_text_mismatch(study_id, reason \\ "content_mismatch"), to: StudyAnalyses
+
   # ── Research ingestion runs (admin-triggered bulk /analyze + store) ─────────
 
   @doc "Enqueue an admin-triggered research-ingestion run. See `ResearchIngestionRuns.enqueue/1`."

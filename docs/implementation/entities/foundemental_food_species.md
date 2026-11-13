@@ -26,9 +26,9 @@ are the key the compound facts and health advice hinge on.
 
 - `has_many :foundemental_foods` — the species ↔ ingredient curation (below)
 - `has_many :translations` (FoundementalFoodSpeciesTranslation)
-- Compound facts attach to species via `SpeciesCompoundRelationship` — see
-  [`../science/food_compounds.md`](../science/food_compounds.md) and
-  [`../compound_pipeline.md`](../compound_pipeline.md)
+- Mined biomedical facts attach to species via `SpeciesMinedFact` (from the
+  biomed-fact-miner) — see [`../fact_mining.md`](../fact_mining.md). *(The former
+  `SpeciesCompoundRelationship` species↔compound graph was dropped 2026-11-12.)*
 - Enrichment facts attach to species via `SpeciesFact` (below)
 
 ### SpeciesFact

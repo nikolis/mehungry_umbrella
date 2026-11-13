@@ -3,6 +3,19 @@
 > Status: **approved 2026-10-26; Phase 0 in progress.** Scope/decisions locked with the user.
 > Phasing in §9; this doc is the living feature doc (refined as phases land).
 
+> **Source switch — biomed-fact-miner (2026-11-12).** The condition research is no longer sourced
+> from the `mehungry_extractor` `/analyze` tool. Each condition's findings now come from the external
+> **biomed-fact-miner** (`Mehungry.FactMining`, `POST /mine`, query *"give me all the food related
+> facts about {condition}"`*), stored as `ConditionMinedFact` rows. Acquisition is the **"Mine
+> conditions (fact-miner)"** card on `/professional/health` (fan-out, one job per condition). Each
+> fact carries a per-source **licence**: `commercial_ok` publications are shown as **presentable**
+> cards *with* their verbatim quotes (grouped by research type), everything else becomes a **free
+> claim** — our distilled wording + a link to the original publication, **no quote / no full text**.
+> The old extractor stack (`StudyAnalysis`/`StudyFullText`, ingestion workers, `/analyze` seam) is
+> left **dormant**. See `docs/implementation/fact_mining.md`. The sections below describe the earlier
+> extractor-based build (historical); the in-app reader is now a **legacy-only shell** fed by any
+> displayable `StudyFullText` still on record — new miner publications link out to PubMed/PMC.
+
 ## 1. Goal
 
 A search engine of **pre-digested PubMed publications** for professional nutritionists. The
@@ -13,6 +26,15 @@ results **per publication**:
 - **highlighted parts** of the publication (the extractor's provenance-backed claims) with a link
   to the source;
 - results **grouped by research type** (systematic review / meta-analysis → RCT → cohort → …).
+
+> **Licensing is now per-fact from the miner (2026-11-12 reshape).** The standalone
+> `/professional/full-text-licensing` page + its Europe-PMC remediation sweep were **retired** —
+> licence handling moved into the miner response itself. Every `ConditionMinedFact` carries the
+> source's `license` (`commercial_ok` | `non_commercial` | `unknown`); only `commercial_ok`
+> publications are presentable (quotes shown, stored). The miner already redacts non-commercial
+> quotes under `?view=public`, and `FactMining.map_fact_sheet/3` never persists a non-`commercial_ok`
+> quote. (`Mehungry.Literature.{License, FullTextIntegrity}` + the `study_full_texts` licence columns
+> remain, now only backing the dormant legacy reader shell.)
 
 ## 2. Key reframe — the feature is ~70% already built
 

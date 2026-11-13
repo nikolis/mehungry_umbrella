@@ -261,8 +261,9 @@ studies appear linked to the ingredient and the run reaches `completed`.
 
 - No LiveView progress bar yet — the data + PubSub broadcasts are in place.
 - No promotion of studies into `IngredientCompoundRelationship` facts — the crawler never
-  asserts a dietary fact. That curation step now exists as `CompoundPipeline.Candidates`
-  (**`docs/implementation/compound_pipeline.md`**); promoted relationships feed back into
-  `search_terms_for_species/1` as targeted crawl terms.
+  asserts a dietary fact. (The former species↔compound curation step that fed promoted
+  relationships back into `search_terms_for_species/1` was retired 2026-11-12; those terms
+  are now keyword-only. Per-entity biomedical facts come from `Mehungry.FactMining` — see
+  **`docs/implementation/fact_mining.md`**.)
 - Additional literature sources (Europe PMC, Semantic Scholar, CrossRef) reuse the
   `study_ingredients.source` field and the raw-cache layer.

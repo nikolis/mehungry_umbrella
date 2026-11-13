@@ -35,4 +35,36 @@ defmodule Mehungry.FoodData.Faostat.Parser do
     |> Enum.uniq()
     |> Enum.sort_by(fn {_code, item} -> item end)
   end
+
+  @doc """
+  Best fuzzy match of a species `name` against the distinct FAOSTAT `items` (the
+  `{code, item}` pairs from `items/1`), by Jaro distance on the lowercased strings.
+  Returns `{item_code, item, score}` (the highest-scoring pair, carrying the item's
+  **full** FAOSTAT name) or `nil` when there are no items. A curation aid — FAOSTAT
+  names are crop-level, so a human confirms the match (shared by
+  `mix species.faostat_crosswalk` and the admin crosswalk UI).
+
+  Many FAOSTAT names carry a trailing qualifier (`"Coffee, green"`, `"Almonds, in
+  shell"`, `"Onions and shallots, dry"`), so the score is the **better** of the match
+  against the full name and against its pre-comma core — a plain species name
+  (`"Coffee"`, `"Almond"`) still matches without the qualifier dragging the score down.
+  """
+  def suggest_item_code(name, items) when is_binary(name) and is_list(items) do
+    down = String.downcase(name)
+
+    items
+    |> Enum.map(fn {code, item} -> {code, item, match_score(down, item)} end)
+    |> Enum.max_by(fn {_c, _i, score} -> score end, fn -> nil end)
+  end
+
+  # Best Jaro distance of `down` against the full item name and its pre-comma core.
+  defp match_score(down, item) do
+    item_down = String.downcase(item)
+    core = item_down |> String.split(",", parts: 2) |> hd()
+
+    max(
+      String.jaro_distance(down, item_down),
+      String.jaro_distance(down, core)
+    )
+  end
 end

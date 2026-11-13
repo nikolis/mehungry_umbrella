@@ -1,7 +1,18 @@
 
-.nav_link_basic.current span{
-  background-color: black; 
+/* Mobile bottom-bar active tab: painted as `a.current` by
+   fix_navigation_active() (assets/js/navigation.js). The bar is dark
+   (ink.panel), so active = paprika icon/label + a visible top indicator. */
+#nav_bar_mobile a.current {
+  color: #E8622C;
+}
 
+/* The nutritionist "Practice" tab keeps its basil accent when active. */
+#nav_bar_mobile a.nav_tab_basil.current {
+  color: #45C4AE;
+}
+
+#nav_bar_mobile a.current .nav_tab_indicator {
+  opacity: 1;
 }
 
 .main_nav_container {
@@ -139,57 +150,30 @@
 	background-color: var(--clr-light_2);
 }
 
-.mobile_nav_toggle {
-	display: none;
-}
-
 .nav_container_mobile {
 	display: none;
 }
 
-.logo {
-	display: none;
-}
 .mobile_header {
   display: none;
 }
-@media only screen and (max-width: 800px)  {
+
+/* Below md (768px, matching Tailwind's `md:` used by main_menu / the Feedback
+   pill) the desktop rail is hidden and the bottom bar + mobile header show.
+   The bar grows to fit labels; no overflow clip so the raised Create circle
+   can sit above the bar line. */
+@media only screen and (max-width: 767.98px) {
   .mobile_header {
-    display: block
+    display: block;
   }
+
 	.nav_container_mobile {
 		bottom: 0;
 		display: block;
 		position: sticky;
 		z-index: 40;
-		height: 60px;
 		width: 100%;
-		background-color: white;
-		overflow: hidden;
 		transition: 0.35s;
-	}
-	.open_menu{
-		height: 300px; 
-		transition: 0.35s;
-	}
-	.mobile_nav_toggle {
-		display: grid;
-		position: fixed;
-		top: 1rem;
-		z-index: 42;
-		right: 2rem;
-		width: 50px;
-		height: 50px;
-	}
-
-	 .logo  {
-		display: block;
-		position: fixed;
-		top: 1rem;
-		left: 2rem;
-		width: 50px;
-		height: 50px;
-		z-index: 101;
 	}
 
 	.main_nav_content {
@@ -199,7 +183,7 @@
 		padding-top: 1.4vh;
 	}
 
-	.main_nav_container{
+	.main_nav_container {
 		display: none;
 	}
 }

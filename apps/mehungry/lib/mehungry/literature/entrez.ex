@@ -93,10 +93,10 @@ defmodule Mehungry.Literature.Entrez do
   end
 
   @doc """
-  The search terms for a food species: `scientific_name × (linked compounds ∪
-  generic keywords)`. Each term carries the `compound_id` it should link to
-  (nil for a generic term that matches no registry compound). Returns `[]` when
-  the species has no scientific name.
+  The search terms for a food species: `scientific_name × generic keywords`. Each
+  term carries the registry `compound_id` its keyword resolves to (nil when the
+  keyword matches no compound). Returns `[]` when the species has no scientific
+  name. (The former species↔compound-derived terms were retired with that graph.)
   """
   def search_terms_for_species(species_id) do
     case scientific_name(species_id) do
@@ -104,15 +104,6 @@ defmodule Mehungry.Literature.Entrez do
         []
 
       sci_name ->
-        compound_terms =
-          for compound <- Food.list_positive_compounds_for_species(species_id) do
-            %{
-              term: "#{sci_name} #{compound.name}",
-              compound_id: compound.id,
-              scientific_name: sci_name
-            }
-          end
-
         generic_terms =
           for keyword <- @generic_keywords do
             compound = Food.get_compound_by_name(keyword)
@@ -124,7 +115,7 @@ defmodule Mehungry.Literature.Entrez do
             }
           end
 
-        (compound_terms ++ generic_terms ++ glycemic_terms(sci_name))
+        (generic_terms ++ glycemic_terms(sci_name))
         |> Enum.uniq_by(& &1.term)
     end
   end

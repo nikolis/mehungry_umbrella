@@ -1,15 +1,14 @@
 defmodule MehungryWeb.Api.V1.SpeciesController do
   @moduledoc """
   Foods (species) tab (spec §8). Index + detail over `FoundementalFoodSpecies`,
-  enriched with bioactive-compound evidence (`Food.summarize_species/2`).
+  enriched with mined biomedical research facts (`Mehungry.FactMining`).
   """
   use MehungryWeb, :controller
 
   import MehungryWeb.Api.V1.JSON.Helpers
 
+  alias Mehungry.FactMining
   alias Mehungry.Food
-  alias Mehungry.Food.EvidenceAggregation
-  alias Mehungry.Food.SpeciesCompounds
   alias MehungryWeb.Api.Pagination
   alias MehungryWeb.Api.V1.FoodJSON
   alias MehungryWeb.Api.V1.Locale
@@ -37,29 +36,11 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
 
       species ->
         locale = Locale.resolve(conn, params)
-        compounds = compound_evidence(species.id, locale)
+        research = FactMining.list_facts_for_species(species.id)
         ingredients = species_ingredients(species.id)
         facts = Food.promoted_species_facts_for_species(species.id, locale)
-        json(conn, FoodJSON.species_detail(species, compounds, ingredients, facts))
+        json(conn, FoodJSON.species_detail(species, research, ingredients, facts))
     end
-  end
-
-  # Overlays each compound's translated name (from the curated `compound_translations`,
-  # with English fallback) so the mobile Foods tab matches the web species page's
-  # Bioactive Compounds section.
-  defp compound_evidence(species_id, locale) do
-    rels = SpeciesCompounds.list_species_relationships(species_id)
-    names = Food.compound_display_names(Enum.map(rels, & &1.compound.id), locale)
-
-    Enum.map(rels, fn rel ->
-      compound =
-        case Map.get(names, rel.compound.id) do
-          nil -> rel.compound
-          translated -> %{rel.compound | name: translated}
-        end
-
-      %{compound: compound, summary: EvidenceAggregation.summarize_species(species_id, rel.compound_id)}
-    end)
   end
 
   defp species_ingredients(species_id) do

@@ -19,7 +19,9 @@ defmodule Mehungry.Literature.StudyAnalyses do
   alias Mehungry.Repo
   alias Mehungry.Health.Condition
   alias Mehungry.Literature.{
+    FullTextIntegrity,
     JournalAuthority,
+    License,
     ResearchType,
     ScientificStudy,
     StudyAnalysis,
@@ -239,13 +241,18 @@ defmodule Mehungry.Literature.StudyAnalyses do
       |> analyses_for_condition()
       |> Enum.reject(&(&1.status == "error"))
 
-    outlines = full_text_outlines(Enum.map(analyses, & &1.study_id))
+    study_ids = Enum.map(analyses, & &1.study_id)
+    outlines = full_text_outlines(study_ids)
+    restricted = restricted_full_text_ids(study_ids)
 
     analyses
     |> Enum.map(fn a ->
       case Map.fetch(outlines, a.study_id) do
-        {:ok, outline} -> %{a | has_full_text: true, outline: outline}
-        :error -> %{a | has_full_text: false, outline: []}
+        {:ok, outline} ->
+          %{a | has_full_text: true, outline: outline}
+
+        :error ->
+          %{a | has_full_text: false, outline: [], has_restricted_full_text: MapSet.member?(restricted, a.study_id)}
       end
     end)
     |> Enum.group_by(&ResearchType.bucket(&1.study_design))
@@ -265,9 +272,26 @@ defmodule Mehungry.Literature.StudyAnalyses do
     StudyFullText
     |> where([f], f.study_id in ^study_ids)
     |> where([f], fragment("jsonb_array_length(coalesce(?, '[]'::jsonb)) > 0", f.sections))
+    # Same gate as the reader: a card only offers "Read full text" for a
+    # licence-reusable, content-verified paper.
+    |> where([f], f.full_text_displayable == true and f.integrity_status == "verified")
     |> select([f], {f.study_id, f.sections})
     |> Repo.all()
     |> Map.new(fn {study_id, sections} -> {study_id, outline_from_sections(sections)} end)
+  end
+
+  # Study ids that have a non-empty full-text row which is *not* displayable (licence
+  # NC/ND, or unverified/pending) — the card flags these "full text not shown".
+  defp restricted_full_text_ids([]), do: MapSet.new()
+
+  defp restricted_full_text_ids(study_ids) do
+    StudyFullText
+    |> where([f], f.study_id in ^study_ids)
+    |> where([f], fragment("jsonb_array_length(coalesce(?, '[]'::jsonb)) > 0", f.sections))
+    |> where([f], f.full_text_displayable == false or f.integrity_status != "verified")
+    |> select([f], f.study_id)
+    |> Repo.all()
+    |> MapSet.new()
   end
 
   defp outline_from_sections(sections) do
@@ -300,7 +324,12 @@ defmodule Mehungry.Literature.StudyAnalyses do
   """
   def full_text_for_reader(study_id) do
     case Repo.get_by(StudyFullText, study_id: study_id) do
-      %StudyFullText{sections: [_ | _] = sections} = full_text ->
+      # Gate: only a licence-reusable, content-verified body is served verbatim.
+      %StudyFullText{
+        sections: [_ | _] = sections,
+        full_text_displayable: true,
+        integrity_status: "verified"
+      } = full_text ->
         study = Repo.get(ScientificStudy, study_id)
         analysis = get_analysis_by_study_id(study_id)
         claims = visible_claims(analysis)
@@ -445,12 +474,27 @@ defmodule Mehungry.Literature.StudyAnalyses do
   defp maybe_store_full_text(study_id, paper) do
     case paper["sections"] do
       [_ | _] = sections ->
+        license = License.normalize(paper["license"])
+
+        # New full text is trusted only when the payload explicitly asserts
+        # `full_text_verified: true` (PMID↔PMCID match, no `elink`-neighbor
+        # substitution). The extractor seam is deprecated and never set this, so any
+        # legacy/dormant ingest defaults to `pending_review` (hidden, fail-safe) — the
+        # reader shell only shows positively-verified, reusable-licensed rows.
+        verified? = paper["full_text_verified"] == true
+        integrity_status = if verified?, do: "verified", else: "pending_review"
+
         %StudyFullText{}
         |> StudyFullText.changeset(%{
           study_id: study_id,
           source: "mehungry_extractor",
+          pmcid: paper["pmcid"],
           sections: sections,
           body: body_from_sections(sections),
+          license: license,
+          license_url: paper["license_url"],
+          integrity_status: integrity_status,
+          full_text_displayable: verified? and License.reusable?(license),
           retrieved_at: DateTime.utc_now() |> DateTime.truncate(:second)
         })
         |> Repo.insert(
@@ -461,6 +505,56 @@ defmodule Mehungry.Literature.StudyAnalyses do
       _ ->
         :noop
     end
+  end
+
+  @doc """
+  Apply a `Mehungry.Literature.FullTextIntegrity` verification to a study's stored full
+  text: write the resolved `license`/`license_url`/`pmcid` and the derived
+  `integrity_status` + `full_text_displayable`. Used by the remediation task and the
+  admin review queue over the *existing* (pre-fix-extractor) corpus. No-op if the study
+  has no stored full text.
+  """
+  def apply_full_text_verification(study_id, verification) do
+    case Repo.get_by(StudyFullText, study_id: study_id) do
+      nil ->
+        {:error, :no_full_text}
+
+      %StudyFullText{} = ft ->
+        decision = FullTextIntegrity.decision(verification)
+
+        ft
+        |> StudyFullText.changeset(%{
+          license: verification.license,
+          license_url: verification.license_url,
+          pmcid: verification.pmcid || ft.pmcid,
+          integrity_status: decision.integrity_status,
+          full_text_displayable: decision.full_text_displayable
+        })
+        |> Repo.update()
+    end
+  end
+
+  @doc """
+  Purge a study's full text as a **content mismatch**: delete its `StudyFullText` row
+  and flag its `StudyAnalysis` as an `error` (so the wrong, body-derived claims drop
+  from every `status != "error"` surface). Idempotent. One transaction.
+  """
+  def purge_full_text_mismatch(study_id, reason \\ "content_mismatch") do
+    Repo.transaction(fn ->
+      Repo.delete_all(from(f in StudyFullText, where: f.study_id == ^study_id))
+
+      case get_analysis_by_study_id(study_id) do
+        nil ->
+          :ok
+
+        analysis ->
+          analysis
+          |> StudyAnalysis.changeset(%{status: "error", error: reason})
+          |> Repo.update!()
+      end
+
+      :ok
+    end)
   end
 
   # Concatenate the paragraph texts in document order, blank-line separated.

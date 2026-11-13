@@ -317,6 +317,10 @@ professional+client on mount) instead of flashing the idle form. Its
 the linked **conditions**, the latest **consultation note**, and the client's own `UserProfile`
 (diet, `avoid_foods`) into one brief with a unified **`avoid` list** — personal avoid foods +
 intake allergies/intolerances + **condition-implicated foods** (via `Health.ingredients_for_condition/2`).
+Where the client's self-entered profile and the nutritionist's file overlap, the **nutritionist's
+value wins** (the clinician's intake TDEE beats the client's own calorie target; the avoid list
+unions both) — the same precedence drives the calendar's "AI draft week", since both share one
+resolver (`Professionals.resolve_client_meal_context/2`).
 A second tool, `get_assigned_plan`, reads any meals the nutritionist already assigned to the week
 and the agent **leaves those cells untouched** (skip-filled-slots). So filling in a client's
 intake/conditions and assigning part of a week both directly shape (and constrain) the AI draft —

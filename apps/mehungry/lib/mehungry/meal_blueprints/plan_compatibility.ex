@@ -27,10 +27,10 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     * **daily energy** — the day's summed meal calories vs the day's
       `total_calorie_target`, bucketed `:under | :ok | :over` on a ±10 % band.
 
-  Compound resolution unions the canonical species layer
-  (`FoundementalFood` → `SpeciesCompoundRelationship`) with direct ingredient-level
-  facts (`IngredientCompoundRelationship`), in two batched queries regardless of
-  meal count.
+  Compound resolution reads the direct ingredient-level facts
+  (`IngredientCompoundRelationship`) in one batched query regardless of meal count.
+  (The former species-layer union — ingredient → species → compound — was retired
+  with the species↔compound graph, 2026-11-12.)
 
   ## Shapes
 
@@ -78,9 +78,7 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
 
   alias Mehungry.Food.{
     Compound,
-    FoundementalFood,
-    IngredientCompoundRelationship,
-    SpeciesCompoundRelationship
+    IngredientCompoundRelationship
   }
 
   # Fraction of the day's calorie target that counts as "on target".
@@ -207,7 +205,7 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
   defp resolve_compounds_for_ids([]), do: %{}
 
   defp resolve_compounds_for_ids(ingredient_ids) do
-    (species_compound_rows(ingredient_ids) ++ ingredient_compound_rows(ingredient_ids))
+    ingredient_compound_rows(ingredient_ids)
     |> Enum.group_by(
       fn {ing_id, _name, _type} -> ing_id end,
       fn {_ing_id, name, type} -> %{name: name, type: type} end
@@ -221,27 +219,12 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
   defp resolve_recipe_compounds([]), do: %{}
 
   defp resolve_recipe_compounds(recipe_ids) do
-    (recipe_species_compound_rows(recipe_ids) ++ recipe_ingredient_compound_rows(recipe_ids))
+    recipe_ingredient_compound_rows(recipe_ids)
     |> Enum.group_by(
       fn {rid, _name, _type} -> rid end,
       fn {_rid, name, type} -> %{name: name, type: type} end
     )
     |> Map.new(fn {rid, comps} -> {rid, Enum.uniq_by(comps, & &1.name)} end)
-  end
-
-  defp recipe_species_compound_rows(recipe_ids) do
-    Repo.all(
-      from(ri in Mehungry.Food.RecipeIngredient,
-        join: ff in FoundementalFood,
-        on: ff.ingredient_id == ri.ingredient_id,
-        join: scr in SpeciesCompoundRelationship,
-        on: scr.foundemental_species_id == ff.foundemental_species_id,
-        join: c in Compound,
-        on: c.id == scr.compound_id,
-        where: ri.recipe_id in ^recipe_ids and scr.relationship_type != "absent",
-        select: {ri.recipe_id, c.name, c.compound_type}
-      )
-    )
   end
 
   defp recipe_ingredient_compound_rows(recipe_ids) do
@@ -410,7 +393,7 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     if ingredient_ids == [] do
       %{}
     else
-      (species_compound_rows(ingredient_ids) ++ ingredient_compound_rows(ingredient_ids))
+      ingredient_compound_rows(ingredient_ids)
       |> Enum.group_by(
         fn {ing_id, _name, _type} -> ing_id end,
         fn {_ing_id, name, type} -> %{name: name, type: type} end
@@ -419,21 +402,8 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     end
   end
 
-  # Canonical species-layer facts: ingredient → species → (non-absent) compound.
-  defp species_compound_rows(ingredient_ids) do
-    Repo.all(
-      from(ff in FoundementalFood,
-        join: scr in SpeciesCompoundRelationship,
-        on: scr.foundemental_species_id == ff.foundemental_species_id,
-        join: c in Compound,
-        on: c.id == scr.compound_id,
-        where: ff.ingredient_id in ^ingredient_ids and scr.relationship_type != "absent",
-        select: {ff.ingredient_id, c.name, c.compound_type}
-      )
-    )
-  end
-
-  # Direct ingredient-level facts (union with the species layer for coverage).
+  # Direct ingredient-level compound facts. (The former species-layer facts —
+  # ingredient → species → compound — were retired with the species↔compound graph.)
   defp ingredient_compound_rows(ingredient_ids) do
     Repo.all(
       from(r in IngredientCompoundRelationship,

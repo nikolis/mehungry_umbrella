@@ -2284,6 +2284,17 @@ defmodule Mehungry.Professionals do
   end
 
   @doc """
+  The merged, precedence-applied client brief an AI meal-plan draft is tailored
+  to (nutritionist drafting for a client): where the client's own profile and the
+  nutritionist's file overlap, the nutritionist's value wins (clinician TDEE over
+  profile calorie target; avoid list unions both). See
+  `Mehungry.Professionals.ClientMealContext`.
+  """
+  defdelegate resolve_client_meal_context(professional_id, client_id),
+    to: Mehungry.Professionals.ClientMealContext,
+    as: :resolve
+
+  @doc """
   Maps every platform user the professional has a client record for to that
   record — `%{user_id => %ProfessionalClient{}}`. Most recently created wins on
   duplicates (e.g. repeated CSV imports), matching `get_client_record_by_user/2`.

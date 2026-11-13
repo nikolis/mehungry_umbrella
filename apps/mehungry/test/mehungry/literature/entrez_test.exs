@@ -68,7 +68,9 @@ defmodule Mehungry.Literature.EntrezTest do
   end
 
   # A "Spinach" species (scientific_name "Spinacia oleracea") with one curated
-  # ingredient that is linked to an "Oxalate" compound.
+  # ingredient. The species↔compound graph was removed, so the crawl terms are now
+  # just `scientific_name × generic keywords` + the glycemic term (no compound-
+  # derived term); the "Oxalate" compound is kept only as an unlinked registry row.
   defp spinach_setup do
     ingredient = ingredient_fixture(%{name: "spinach"})
 
@@ -82,21 +84,11 @@ defmodule Mehungry.Literature.EntrezTest do
 
     {:ok, compound} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
 
-    # The crawl reads the species' positive compounds to build targeted terms.
-    {:ok, _rel} =
-      Food.upsert_species_relationship(%{
-        foundemental_species_id: species.id,
-        compound_id: compound.id,
-        relationship_type: "contains",
-        source: "literature",
-        confidence: 0.9
-      })
-
     %{ingredient: ingredient, species: species, compound: compound}
   end
 
-  test "crawls the spinach/oxalate example: study, ingredient link, compound link" do
-    %{ingredient: ingredient, species: species, compound: compound} = spinach_setup()
+  test "crawls the spinach example: study parsed and fanned out to the ingredient" do
+    %{ingredient: ingredient, species: species} = spinach_setup()
 
     assert {:ok, found} = Literature.import_species(species.id)
     assert found >= 1
@@ -113,19 +105,15 @@ defmodule Mehungry.Literature.EntrezTest do
     assert study.issn == "1234-5678"
     assert study.citation_status == "MEDLINE"
 
-    # Fanned out to the species' ingredient with the exact search term as provenance.
+    # Fanned out to the species' ingredient with a generic-keyword term as provenance.
     assert [linked_study] = Literature.list_studies_for_ingredient(ingredient.id)
     assert linked_study.id == study.id
 
     assert Repo.get_by(StudyIngredient,
              study_id: study.id,
              ingredient_id: ingredient.id,
-             search_term: "Spinacia oleracea Oxalate"
+             search_term: "Spinacia oleracea phytochemical"
            )
-
-    # Linked to the compound (the term matched the registry).
-    assert [compound_study] = Literature.list_studies_for_compound(compound.id)
-    assert compound_study.id == study.id
   end
 
   test "the same PMID discovered under several terms yields a single study (dedup)" do
@@ -133,17 +121,17 @@ defmodule Mehungry.Literature.EntrezTest do
 
     assert {:ok, _} = Literature.import_species(species.id)
 
-    # One compound term + five generic keywords + one "glycemic index" term all return
-    # PMID 11111 → one study, but a StudyIngredient row per distinct term.
+    # Five generic keywords + one "glycemic index" term all return PMID 11111 →
+    # one study, but a StudyIngredient row per distinct term.
     assert Repo.aggregate(from(s in ScientificStudy, where: s.pmid == 11111), :count) == 1
 
     assert Repo.aggregate(
              from(l in StudyIngredient, where: l.ingredient_id == ^ingredient.id),
              :count
-           ) == 7
+           ) == 6
   end
 
-  test "a generic keyword term links the ingredient but not a compound" do
+  test "a generic keyword term links the ingredient but produces no compound link" do
     %{ingredient: ingredient, species: species} = spinach_setup()
 
     assert {:ok, _} = Literature.import_species(species.id)
@@ -154,8 +142,9 @@ defmodule Mehungry.Literature.EntrezTest do
              search_term: "Spinacia oleracea phytochemical"
            )
 
-    # …but only the oxalate term produced a compound link, so exactly one exists.
-    assert Repo.aggregate(StudyCompound, :count) == 1
+    # …and no term resolves to a registry compound (the species↔compound-derived
+    # "Oxalate" term was retired), so no compound link exists.
+    assert Repo.aggregate(StudyCompound, :count) == 0
   end
 
   test "re-crawling performs no HTTP (ledger short-circuit) and creates no duplicates", %{

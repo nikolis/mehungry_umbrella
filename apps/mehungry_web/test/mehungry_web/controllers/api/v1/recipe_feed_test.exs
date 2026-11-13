@@ -2,7 +2,7 @@ defmodule MehungryWeb.Api.V1.RecipeFeedTest do
   use MehungryWeb.ConnCase, async: true
 
   alias Mehungry.AccountsFixtures
-  alias Mehungry.Food.{Compounds, FoundementalFoods, SpeciesCompounds}
+  alias Mehungry.Food.Compounds
   alias Mehungry.FoodFixtures
   alias Mehungry.MealBlueprints
 
@@ -15,7 +15,8 @@ defmodule MehungryWeb.Api.V1.RecipeFeedTest do
   end
 
   # A public blueprint requiring `compound`, plus a recipe whose single ingredient
-  # carries that compound (species-fact path) — so matching yields one match.
+  # carries that compound (ingredient-level fact path — the species↔compound graph
+  # was removed) — so matching yields one match.
   defp blueprint_and_matching_recipe(compound) do
     owner = author()
 
@@ -29,21 +30,11 @@ defmodule MehungryWeb.Api.V1.RecipeFeedTest do
     ingredient = FoodFixtures.ingredient_fixture()
     mu = FoodFixtures.measurement_unit_fixture()
 
-    {:ok, species} =
-      FoundementalFoods.create_species(%{name: "species-#{System.unique_integer()}"})
-
-    {:ok, _} =
-      FoundementalFoods.create_foundemental_food(%{
-        foundemental_species_id: species.id,
-        usda_name: "usda-#{System.unique_integer()}",
-        ingredient_id: ingredient.id
-      })
-
     {:ok, cmp} = Compounds.create_compound(%{name: compound, compound_type: "oxalate"})
 
     {:ok, _} =
-      SpeciesCompounds.upsert_species_relationship(%{
-        foundemental_species_id: species.id,
+      Compounds.upsert_compound_relationship(%{
+        ingredient_id: ingredient.id,
         compound_id: cmp.id,
         relationship_type: "contains",
         source: "manual"

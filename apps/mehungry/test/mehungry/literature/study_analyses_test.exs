@@ -348,7 +348,13 @@ defmodule Mehungry.Literature.StudyAnalysesTest do
   defp response_with_sections(pmid, sections) do
     resp = response(pmid, [claim("c1", "improves", "positive")])
     [pc] = resp["paper_claims"]
-    pc = Map.put(pc, "sections", sections)
+    # A verified, reusable-licence full text → stored displayable (the reader shows it).
+    pc =
+      pc
+      |> Map.put("sections", sections)
+      |> Map.put("full_text_verified", true)
+      |> Map.put("license", "CC BY")
+
     %{resp | "paper_claims" => [pc]}
   end
 
@@ -446,7 +452,13 @@ defmodule Mehungry.Literature.StudyAnalysesTest do
 
       resp = response(311_020, [claim])
       [pc] = resp["paper_claims"]
-      pc = Map.put(pc, "sections", sections_fixture())
+
+      pc =
+        pc
+        |> Map.put("sections", sections_fixture())
+        |> Map.put("full_text_verified", true)
+        |> Map.put("license", "CC BY")
+
       {:ok, _} = Literature.store_analysis_response(%{resp | "paper_claims" => [pc]})
 
       data = Literature.full_text_for_reader(study.id)
@@ -458,6 +470,20 @@ defmodule Mehungry.Literature.StudyAnalysesTest do
     test "full_text_for_reader is nil without a stored outline" do
       {:ok, study} = Literature.upsert_study(%{pmid: 311_030, title: "Fiber"})
       {:ok, _} = Literature.store_analysis_response(response(311_030, [claim("c1", "improves", "positive")]))
+      refute Literature.full_text_for_reader(study.id)
+    end
+
+    test "full text stored WITHOUT verification is gated from the reader (fail-safe)" do
+      {:ok, study} = Literature.upsert_study(%{pmid: 311_040, title: "Fiber"})
+
+      # Sections but no `full_text_verified`/reusable licence → stored pending_review,
+      # not displayable → the verbatim reader and the card outline both withhold it.
+      resp = response(311_040, [claim("c1", "improves", "positive")])
+      [pc] = resp["paper_claims"]
+      pc = Map.put(pc, "sections", sections_fixture())
+      {:ok, _} = Literature.store_analysis_response(%{resp | "paper_claims" => [pc]})
+
+      assert Literature.get_full_text(study.id)
       refute Literature.full_text_for_reader(study.id)
     end
   end

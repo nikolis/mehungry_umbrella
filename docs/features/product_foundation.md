@@ -26,6 +26,25 @@ nutritionist and let the content funnel into them; we do **not** pitch M3Hungry 
 marketplace to seed from both ends at once. (The advice stays 100% the nutritionist's — see
 [principles](#principles--non-negotiables).)
 
+### The foundation, in one relationship
+
+At bottom the product brokers **a relationship between two people: a person who needs to watch
+their diet — primarily for medical/health reasons, secondarily for fitness — and a professional
+nutritionist on the platform.** Everything else is in service of that relationship, and the
+platform delivers on it in two moves:
+
+1. **For the diet-watcher:** give them genuinely useful content to **search, read, and learn
+   from** — and, through that content, to **discover and reach the right nutritionist** on the
+   platform. Education is the on-ramp; finding their nutritionist is the destination.
+2. **For the nutritionist:** let them build a **public, SEO-indexable profile that surfaces on
+   the open web** (so new clients find them through search, not only inside the app) **and run
+   their entire practice through the platform** — profile, discovery, clients, appointments,
+   notes, and AI-assisted drafting, end to end.
+
+When weighing any change, ask: *does this deepen the diet-watcher↔nutritionist relationship,
+make useful content easier to find and learn from, make nutritionists more discoverable on the
+web, or let them practice more fully on-platform?* If it does none of these, it is off-mission.
+
 ## The problem we solve
 
 Independent nutritionists and dietitians juggle a scattered toolchain: a social profile to be

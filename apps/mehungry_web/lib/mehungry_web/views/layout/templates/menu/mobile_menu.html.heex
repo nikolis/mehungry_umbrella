@@ -1,48 +1,41 @@
-<% show_invitations =
-  @current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) &&
-    Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) > 0 %>
-<% show_workspace =
-  (@current_user && Mehungry.Subscriptions.nutritionist?(@current_user.id)) || false %>
-<% menu_cols =
-  7 + if(show_workspace, do: 1, else: 0) + if show_invitations, do: 1, else: 0 %>
+<%!-- Consumer mobile bottom bar: five flat labeled tabs. The relationship tab
+      (4th) resolves per persona. Recipe creation is intentionally NOT here — it
+      is an occasional contribution surfaced contextually (Browse header +
+      Profile "Created" tab), not the bar's hero action. Active state is painted
+      by fix_navigation_active/0 (assets/js/navigation.js) as `a.current` →
+      paprika/basil icon/label + top indicator; phx-update="ignore" so JS owns
+      that class. --%>
+<% is_nutritionist = @current_user && Mehungry.Subscriptions.nutritionist?(@current_user.id) %>
 <nav
   class="nav_container_mobile fixed border-t border-ink-panel2 bg-ink-panel text-parchment-dim"
   id="nav_bar_mobile"
   phx-update="ignore"
 >
-  <div
-    class={"grid #{%{7 => "grid-cols-7", 8 => "grid-cols-8", 9 => "grid-cols-9", 10 => "grid-cols-10", 11 => "grid-cols-11"}[menu_cols]} bg-inherit"}
-    style="overflow: hidden; max-height: 64px;"
-  >
-    <!-- Logo -->
-    <.link
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg  transition-colors"
-      patch="/"
-      title={gettext("Home")}
-      aria-label={gettext("Home")}
-    >
-      {MehungryWeb.SvgComponents.logo_mark(%{id: "nav-mobile", class: "h-7 w-7 text-white"})}
-    </.link>
-
+  <%!-- auto-cols-fr sizes one equal-width column per child, so the five tabs
+        stay evenly spread. --%>
+  <div class="grid grid-flow-col auto-cols-fr bg-inherit">
     <!-- Browse -->
     <.link
       patch={"/#{@current_language}/browse"}
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
+      class="nav_tab relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] pt-2 pb-1 hover:text-parchment transition-colors"
       title={gettext("Browse")}
       aria-label={gettext("Browse")}
     >
-      <.icon name="hero-book-open" class="h-7 w-7" />
+      <span class="nav_tab_indicator absolute top-0 h-0.5 w-7 rounded-full bg-paprika opacity-0"></span>
+      <.icon name="hero-book-open" class="h-6 w-6" />
+      <span class="text-[10px] leading-none font-medium">{gettext("Browse")}</span>
     </.link>
 
     <!-- Foods -->
     <.link
       patch={"/#{@current_language}/foods"}
-      class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
+      class="nav_tab relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] pt-2 pb-1 hover:text-parchment transition-colors"
       title={gettext("Foods")}
       aria-label={gettext("Foods")}
     >
+      <span class="nav_tab_indicator absolute top-0 h-0.5 w-7 rounded-full bg-paprika opacity-0"></span>
       <svg
-        class="h-7 w-7"
+        class="h-6 w-6"
         fill="none"
         stroke="currentColor"
         stroke-width="2"
@@ -55,99 +48,71 @@
           d="M4 6h16a1 1 0 0 1 1 1v3a8 8 0 0 1-8 8 8 8 0 0 1-8-8V7a1 1 0 0 1 1-1z"
         />
       </svg>
-    </.link>
-
-    <!-- Create -->
-    <.link
-      patch={"/#{@current_language}/create_recipe"}
-      class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
-      title={gettext("Create Recipe")}
-      aria-label={gettext("Create Recipe")}
-    >
-      <.icon name="hero-plus-circle" class="h-7 w-7" />
+      <span class="text-[10px] leading-none font-medium">{gettext("Foods")}</span>
     </.link>
 
     <!-- Calendar -->
     <.link
       patch={"/#{@current_language}/calendar"}
-      class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
+      class="nav_tab relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] pt-2 pb-1 hover:text-parchment transition-colors"
       title={gettext("Calendar")}
       aria-label={gettext("Calendar")}
     >
-      <.icon name="hero-calendar" class="h-7 w-7" />
+      <span class="nav_tab_indicator absolute top-0 h-0.5 w-7 rounded-full bg-paprika opacity-0"></span>
+      <.icon name="hero-calendar" class="h-6 w-6" />
+      <span class="text-[10px] leading-none font-medium">{gettext("Calendar")}</span>
     </.link>
 
-    <!-- Basket -->
-    <.link
-      patch={"/#{@current_language}/basket"}
-      class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
-      title={gettext("Basket")}
-      aria-label={gettext("Basket")}
-    >
-      <.icon name="hero-shopping-cart" class="h-7 w-7" />
-    </.link>
-
-    <!-- My nutritionist -->
-    <.link
-      navigate={"/#{@current_language}/my-nutritionist"}
-      class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
-      title={gettext("My nutritionist")}
-      aria-label={gettext("My nutritionist")}
-    >
-      <.icon name="hero-user-circle" class="h-7 w-7" />
-    </.link>
-
-    <!-- Your practice workspace (pro/nutritionist) -->
-    <%= if show_workspace do %>
-      <a
-        href="/nutritionist"
-        class="flex items-center justify-center p-3 nav_link_basic text-teal-400 hover:text-white hover:bg-teal-500/20 rounded-lg transition-colors"
+    <%!-- The product's core relationship surface — resolves per persona:
+          a nutritionist jumps to their own practice, a client to their
+          nutritionist hub, everyone else to the public directory (the
+          "find a nutritionist" funnel). --%>
+    <%= if is_nutritionist do %>
+      <.link
+        navigate="/nutritionist"
+        class="nav_tab nav_tab_basil relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] pt-2 pb-1 text-basil hover:text-basil-soft transition-colors"
         title={gettext("Your practice")}
         aria-label={gettext("Your practice")}
       >
-        <.icon name="hero-squares-2x2" class="h-7 w-7" />
-      </a>
-      <a
-        href="/nutritionist/payments"
-        class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
-        title={gettext("Payments")}
-        aria-label={gettext("Payments")}
+        <span class="nav_tab_indicator absolute top-0 h-0.5 w-7 rounded-full bg-basil opacity-0"></span>
+        <.icon name="hero-squares-2x2" class="h-6 w-6" />
+        <span class="text-[10px] leading-none font-medium">{gettext("Practice")}</span>
+      </.link>
+    <% else %>
+      <.link
+        navigate={
+          if @current_user,
+            do: "/#{@current_language}/my-nutritionist",
+            else: "/#{@current_language}/nutritionists"
+        }
+        class="nav_tab relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] pt-2 pb-1 hover:text-parchment transition-colors"
+        title={gettext("Nutritionist")}
+        aria-label={gettext("Nutritionist")}
       >
-        <.icon name="hero-banknotes" class="h-7 w-7" />
-      </a>
+        <span class="nav_tab_indicator absolute top-0 h-0.5 w-7 rounded-full bg-paprika opacity-0"></span>
+        <.icon name="hero-user-circle" class="h-6 w-6" />
+        <span class="text-[10px] leading-none font-medium">{gettext("Nutritionist")}</span>
+      </.link>
     <% end %>
 
-    <!-- Tutor invitations (non-professional users with pending invitations) -->
-    <%= if show_invitations do %>
-      <a
-        href={"/#{@current_language}/notifications/invitations"}
-        class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
-        title={gettext("Tutor Invitations")}
-        aria-label={gettext("Tutor Invitations")}
-      >
-        <div class="relative">
-          <.icon name="hero-bell" class="h-7 w-7" />
-          <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
-            {Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id)}
-          </span>
-        </div>
-      </a>
-    <% end %>
-
-    <!-- Profile / Login -->
+    <!-- You / Log in -->
     <a
       href={"/#{@current_language}/profile"}
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      class="nav_tab relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] pt-2 pb-1 hover:text-parchment transition-colors"
       title={if @current_user, do: gettext("Profile"), else: gettext("Log in")}
       aria-label={if @current_user, do: gettext("Profile"), else: gettext("Log in")}
     >
+      <span class="nav_tab_indicator absolute top-0 h-0.5 w-7 rounded-full bg-paprika opacity-0"></span>
       <%= if @current_user do %>
         <img
           src={@current_user.profile_pic}
-          class="w-7 h-7 rounded-full object-cover border border-ink-panel2"
+          alt=""
+          class="h-6 w-6 rounded-full object-cover border border-ink-panel2"
         />
+        <span class="text-[10px] leading-none font-medium">{gettext("You")}</span>
       <% else %>
-        <.icon name="hero-arrow-right-on-rectangle" class="h-7 w-7" />
+        <.icon name="hero-arrow-right-on-rectangle" class="h-6 w-6" />
+        <span class="text-[10px] leading-none font-medium">{gettext("Log in")}</span>
       <% end %>
     </a>
   </div>

@@ -8,8 +8,7 @@ defmodule Mehungry.Science.PipelineReset do
 
   Curated inputs are always preserved: `FoundementalFoodSpecies`, the compound
   registry (`compounds`/`compound_identifiers`/`compound_sources`/`pubchem_responses`),
-  `conditions`/`compound_recommendations`, accepted `compound_measurements`, and
-  (for the derivation reset) manually-curated `SpeciesCompoundRelationship` rows.
+  `conditions`/`compound_recommendations`, and accepted `compound_measurements`.
 
   Deletes are written against table names rather than schema modules on purpose:
   the crawl reset spans both the `Literature` and `Food` contexts, so keeping the
@@ -22,9 +21,7 @@ defmodule Mehungry.Science.PipelineReset do
 
   # Full pipeline reset. Child tables first so the `scientific_studies` delete at
   # the end finds no dangling references (most of these also cascade, but we delete
-  # them explicitly to report per-table counts). `species_compound_candidates` is
-  # NOT a child of studies (it keys on species/compound), so it must be listed here
-  # or it would be left orphaned of its citations.
+  # them explicitly to report per-table counts).
   @crawl_tables ~w(
     compound_measurement_candidates
     study_full_texts
@@ -35,8 +32,6 @@ defmodule Mehungry.Science.PipelineReset do
     study_entity_mentions
     pubtator_responses
     pubtator_annotation_attempts
-    species_compound_candidate_studies
-    species_compound_candidates
     study_ingredients
     study_compounds
     study_condition_exclusions
@@ -48,7 +43,6 @@ defmodule Mehungry.Science.PipelineReset do
     literature_crawl_runs
     condition_crawl_runs
     pubtator_annotation_runs
-    candidate_derivation_runs
     recommendation_derivation_runs
     literature_extract_runs
   )
@@ -68,12 +62,6 @@ defmodule Mehungry.Science.PipelineReset do
     literature_extract_runs
   )
 
-  @derivation_tables ~w(
-    species_compound_candidate_studies
-    species_compound_candidates
-    candidate_derivation_runs
-  )
-
   # Recommendation-candidate reset: wipe the derived candidates, their citations, and
   # the derivation runs. The curated `compound_recommendations` (advice) are preserved,
   # as are the `study_entity_relations` they were derived from.
@@ -91,25 +79,6 @@ defmodule Mehungry.Science.PipelineReset do
 
   @doc "Stage FT: wipe PMC full texts, fetch attempts, and extracted measurement candidates. Keeps studies."
   def reset_extraction, do: purge(@extraction_tables)
-
-  @doc """
-  Stage 4: wipe derived candidates, their study citations, and derivation runs, plus
-  the auto-promoted relationships (`source` other than `"manual"`). Manually-curated
-  `SpeciesCompoundRelationship` facts are preserved.
-  """
-  def reset_derivation do
-    Repo.transaction(fn ->
-      counts = delete_tables(@derivation_tables)
-
-      %{num_rows: rels} =
-        Repo.query!(
-          "DELETE FROM species_compound_relationships WHERE source IS DISTINCT FROM 'manual'"
-        )
-
-      Map.put(counts, "species_compound_relationships (auto)", rels)
-    end)
-    |> unwrap()
-  end
 
   @doc "Stage 5: wipe derived recommendation candidates + citations + runs. Keeps curated advice."
   def reset_recommendations, do: purge(@recommendation_tables)

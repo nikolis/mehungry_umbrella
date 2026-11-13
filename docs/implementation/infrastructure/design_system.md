@@ -188,7 +188,16 @@ so every subsequent page picked up a consistent shell immediately, instead of
 last as originally suggested — this worked fine because the nav shell's own
 DOM/JS wasn't touched, only its colors, and it doesn't share markup with the
 admin/nutritionist layouts (they're separate `admin_root.heex`/
-`admin_live.heex`/`nutritionist_live.heex` templates).
+`admin_live.heex`/`nutritionist_live.heex` templates). **Update (mobile bar
+reshape):** `mobile_menu.html.heex` was recut to **five flat labeled tabs**
+(Browse · Foods · Calendar · Nutritionist · You) with a `paprika` active state
+(icon/label + top indicator + `aria-current`), replacing the old invisible
+black-span `.current` rule — so the paprika accent now also owns the mobile
+nav's selected state, not just `/profile`. The persona-resolved nutritionist
+"Practice" tab keeps its `basil` accent when active via `a.nav_tab_basil.current`.
+Recipe creation was pulled off the bar entirely and surfaced contextually
+(Browse header + Profile "Created" tab) — a FAB over-weighted an occasional
+action in a nutritionist-led product.
 
 ## Next candidates
 

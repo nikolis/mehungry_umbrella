@@ -18,7 +18,7 @@ defmodule Mehungry.AI.RecipeInsight do
   never asserts anything new.
   """
 
-  alias Mehungry.{Food, Health}
+  alias Mehungry.Health
 
   # Per-serving thresholds for the macro "standout" heuristic.
   @high_protein_g 20
@@ -61,48 +61,13 @@ defmodule Mehungry.AI.RecipeInsight do
   def candidates(recipe) do
     macros = macros(recipe)
 
-    (compound_candidates(recipe) ++
-       health_candidates(recipe) ++
-       macro_candidates(macros))
+    # The former compound-family candidates ("Rich in Polyphenols") were retired
+    # with the species↔compound graph; the standout story is now health-flag +
+    # macro based, with a balanced fallback.
+    (health_candidates(recipe) ++ macro_candidates(macros))
     |> case do
       [] -> [balanced_candidate(macros)]
       list -> list ++ [balanced_candidate(macros)]
-    end
-  end
-
-  # ── compound candidates (ranked, polyphenol first) ─────────────────────────
-
-  # Families ranked by social appeal: polyphenols lead, the rest follow the
-  # registry's family vocabulary. The generic `"other"` bucket is excluded — a
-  # "Rich in Other compounds" headline isn't compelling or specific.
-  @family_rank ~w(polyphenol salicylate phytate oxalate lectin histamine fodmap purine)
-
-  defp compound_candidates(recipe) do
-    labels = Food.family_labels()
-
-    recipe.id
-    |> Food.compounds_for_recipe()
-    |> Enum.reject(fn {type, _compounds} -> type == "other" end)
-    |> Enum.sort_by(fn {type, _compounds} -> family_index(type) end)
-    |> Enum.map(fn {type, compounds} ->
-      label = Map.get(labels, type, "Compounds")
-
-      %{
-        type: "compound",
-        headline_hint: "Rich in #{label}",
-        detail: %{
-          compound_type: type,
-          family_label: label,
-          compound_names: compounds |> Enum.map(& &1.name) |> Enum.take(5)
-        }
-      }
-    end)
-  end
-
-  defp family_index(type) do
-    case Enum.find_index(@family_rank, &(&1 == type)) do
-      nil -> length(@family_rank)
-      i -> i
     end
   end
 

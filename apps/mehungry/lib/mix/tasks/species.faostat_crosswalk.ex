@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Species.FaostatCrosswalk do
     Mix.shell().info("Species to match: #{length(species)}\n")
 
     Enum.each(species, fn sp ->
-      case best_match(sp.name, items) do
+      case Parser.suggest_item_code(sp.name, items) do
         {code, item, score} when score >= threshold ->
           Mix.shell().info(
             "#{pad(sp.name)} → #{code}  #{item}  (#{Float.round(score, 2)})#{current(sp)}"
@@ -53,14 +53,6 @@ defmodule Mix.Tasks.Species.FaostatCrosswalk do
     end)
 
     Mix.shell().info("\nConfirm a match by setting `faostat_item_code` on the species.")
-  end
-
-  defp best_match(name, items) do
-    down = String.downcase(name)
-
-    items
-    |> Enum.map(fn {code, item} -> {code, item, String.jaro_distance(down, String.downcase(item))} end)
-    |> Enum.max_by(fn {_c, _i, score} -> score end, fn -> nil end)
   end
 
   defp current(%{faostat_item_code: nil}), do: ""

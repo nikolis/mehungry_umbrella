@@ -25,6 +25,8 @@ defmodule Mehungry.Food.SpeciesEnrichment do
 
   alias Mehungry.Food.Enrichment
   alias Mehungry.Food.SpeciesFact
+  alias Mehungry.FoodData.Faostat
+  alias Mehungry.FoodData.Wikidata
 
   @faostat_source %{
     source_type: "dataset",
@@ -32,6 +34,84 @@ defmodule Mehungry.Food.SpeciesEnrichment do
     title: "FAO FAOSTAT — Production: Crops and livestock products (QCL)",
     url: "https://www.fao.org/faostat/en/#data/QCL"
   }
+
+  # Be polite to the Wikidata API between species.
+  @wikidata_pause_ms 250
+
+  # ── Fetch orchestration (one species) ─────────────────────────────────────────
+
+  @doc """
+  Fetch + record enrichment facts for **one** species, returning
+  `%{wikidata: n, faostat: m}` (facts upserted per source). Shared by
+  `mix species.enrich` and `Mehungry.ObanWorkers.SpeciesEnrichmentWorker`.
+
+  Options:
+
+    * `:source` — `"all"` (default) | `"wikidata"` | `"faostat"`.
+    * `:faostat_rows` — pre-loaded FAOSTAT rows (`Faostat.Client.load_rows/0` shape) to
+      avoid re-reading the bundled CSV per call in a batch; loaded (24h-cached) on demand
+      when absent.
+
+  FAOSTAT facts are **auto-promoted** (low mismatch risk — keyed on a curated item code);
+  Wikidata facts stay `pending` for review (ambiguous-name top-hit can be wrong).
+  """
+  def enrich_species(%{id: id} = species, opts \\ []) when is_integer(id) do
+    source = Keyword.get(opts, :source, "all")
+
+    wikidata = if source in ["all", "wikidata"], do: enrich_wikidata(species), else: 0
+    faostat = if source in ["all", "faostat"], do: enrich_faostat(species, opts), else: 0
+
+    %{wikidata: wikidata, faostat: faostat}
+  end
+
+  defp enrich_wikidata(species) do
+    {:ok, result} = Wikidata.Client.impl().fetch(species.name, species.scientific_name)
+    count = record_wikidata_facts(species.id, result)
+    Process.sleep(@wikidata_pause_ms)
+    count
+  end
+
+  defp enrich_faostat(%{faostat_item_code: nil}, _opts), do: 0
+
+  defp enrich_faostat(%{faostat_item_code: code} = species, opts) do
+    rows = Keyword.get_lazy(opts, :faostat_rows, &load_faostat_rows/0)
+    producers = Faostat.Parser.top_producers(rows, code)
+    record_faostat_facts(species.id, producers)
+  end
+
+  @doc "Load the bundled FAOSTAT production rows (24h-cached), or `[]` on failure."
+  def load_faostat_rows do
+    case Faostat.Client.impl().load_rows() do
+      {:ok, rows} -> rows
+      _ -> []
+    end
+  end
+
+  @doc """
+  FAOSTAT crosswalk suggestions for a list of species — a map
+  `%{species_id => %{code: ..., item: ..., score: ...} | nil}` giving each species'
+  best fuzzy name→item match (via `Faostat.Parser.suggest_item_code/2`). The bundled
+  item list is loaded once. Returns `%{}` when the CSV is unreadable. Read-only — a
+  curation aid for the admin crosswalk UI (mirrors `mix species.faostat_crosswalk`);
+  it never writes a code.
+  """
+  def suggest_faostat_codes(species) when is_list(species) do
+    case Faostat.Parser.items(load_faostat_rows()) do
+      [] ->
+        %{}
+
+      items ->
+        Map.new(species, fn %{id: id, name: name} ->
+          suggestion =
+            case Faostat.Parser.suggest_item_code(name, items) do
+              {code, item, score} -> %{code: code, item: item, score: score}
+              _ -> nil
+            end
+
+          {id, suggestion}
+        end)
+    end
+  end
 
   # ── Fetch intake (fan a fetch result into pending facts) ──────────────────────
 
@@ -75,7 +155,11 @@ defmodule Mehungry.Food.SpeciesEnrichment do
         locale: "",
         value_json: %{"producers" => producers},
         value_text: producers |> Enum.map(& &1[:country]) |> Enum.join(", "),
-        source: "external_db"
+        source: "external_db",
+        # Auto-promote FAOSTAT: keyed on a curated item code, so no identity-mismatch
+        # risk. `upsert_fact/1`'s on-conflict never touches `:status`, so a previously
+        # rejected fact stays rejected and a re-fetch won't flip an already-set status.
+        status: "promoted"
       })
 
     1
@@ -153,6 +237,15 @@ defmodule Mehungry.Food.SpeciesEnrichment do
 
   defp set_status(%SpeciesFact{} = fact, status),
     do: fact |> SpeciesFact.changeset(%{status: status}) |> Repo.update()
+
+  @doc "Promote every pending fact in one shot. Returns the number promoted."
+  def promote_all_pending_facts do
+    {count, _} =
+      from(f in SpeciesFact, where: f.status == "pending")
+      |> Repo.update_all(set: [status: "promoted", updated_at: now()])
+
+    count
+  end
 
   # ── Queries ───────────────────────────────────────────────────────────────────
 

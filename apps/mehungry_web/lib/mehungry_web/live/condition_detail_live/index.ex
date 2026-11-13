@@ -5,7 +5,6 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
 
   alias Mehungry.Accounts.UserContent
   alias Mehungry.Food
-  alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Health
   alias Mehungry.History.MealType
   alias Mehungry.MealBlueprints
@@ -417,7 +416,7 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
        :canonical_path,
        "#{socket.assigns.base}/#{socket.assigns.condition.id}"
      )
-     |> assign_async([:modal_nutrients, :modal_compounds, :modal_recipes], fn ->
+     |> assign_async([:modal_nutrients, :modal_recipes], fn ->
        ingredients =
          species.foundemental_foods
          |> Enum.map(& &1.ingredient)
@@ -426,7 +425,6 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
        {:ok,
         %{
           modal_nutrients: top_nutrients_for(ingredients),
-          modal_compounds: SpeciesCompounds.list_species_relationships(species.id),
           modal_recipes: sample_recipes_for(ingredients)
         }}
      end)}

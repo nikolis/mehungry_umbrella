@@ -38,7 +38,6 @@ defmodule Mehungry.Food do
     Nutrients,
     ParserVocabulary,
     Recipes,
-    SpeciesCompounds,
     SpeciesEnrichment,
     SpeciesIcons,
     Taxonomies,
@@ -368,17 +367,8 @@ defmodule Mehungry.Food do
   defdelegate list_compounds_for_ingredient(ingredient_id), to: Compounds
   defdelegate list_positive_compounds_for_ingredient(ingredient_id), to: Compounds
   defdelegate list_ingredients_for_compound(compound_id), to: Compounds
-  defdelegate compounds_for_recipe(recipe_id), to: Compounds
   defdelegate list_compound_relationships(ingredient_id), to: Compounds
   defdelegate add_compound_to_ingredient(ingredient_id, compound_attrs, rel_attrs), to: Compounds
-
-  # Species-keyed curated facts (stage-4 promotion target; read by Health + crawl)
-  defdelegate upsert_species_relationship(attrs), to: SpeciesCompounds
-  defdelegate delete_species_relationship(relationship), to: SpeciesCompounds
-  defdelegate list_compounds_for_species(species_id), to: SpeciesCompounds
-  defdelegate list_positive_compounds_for_species(species_id), to: SpeciesCompounds
-  defdelegate list_species_for_compound(compound_id), to: SpeciesCompounds
-  defdelegate list_linked_compounds(), to: SpeciesCompounds
 
   # ── Compound measurements (immutable quantitative facts) ───────────────────
 
@@ -403,17 +393,9 @@ defmodule Mehungry.Food do
   defdelegate summarize(ingredient_id, compound_id), to: EvidenceAggregation
   defdelegate summarize_for_ingredient(ingredient_id), to: EvidenceAggregation
 
-  # ── Species↔compound curated facts (the output of `Mehungry.CompoundPipeline`) ──
-  # The derive→curate pipeline that produces these facts lives in its own context,
-  # `Mehungry.CompoundPipeline`. Food keeps only the facts layer (`SpeciesCompounds`)
-  # that `Health` advice and the `/foods` filter read.
-
-  defdelegate count_relationships(), to: SpeciesCompounds
-  defdelegate list_relationships_page(opts \\ []), to: SpeciesCompounds
-
   # ── Glycemic Index (path-B: re-derived from primary literature) ─────────────
-  # Distinct `*_glycemic_*` names so they don't collide with `CompoundPipeline`'s
-  # same-shaped `promote_candidate`/`reject_candidate`/etc.
+  # Distinct `*_glycemic_*` names so they don't collide with other candidate
+  # layers' same-shaped `promote_candidate`/`reject_candidate`/etc.
 
   defdelegate record_extracted_gi(study_id, findings, species_ids),
     to: GlycemicIndex
@@ -457,6 +439,11 @@ defmodule Mehungry.Food do
     as: :rederived_by_species
 
   # ── Species enrichment facts (Wikidata CC0 + FAOSTAT CC BY) ─────────────────
+
+  defdelegate enrich_species(species, opts \\ []), to: SpeciesEnrichment
+  defdelegate load_faostat_rows(), to: SpeciesEnrichment
+  defdelegate suggest_faostat_codes(species), to: SpeciesEnrichment
+  defdelegate promote_all_pending_species_facts(), to: SpeciesEnrichment, as: :promote_all_pending_facts
 
   defdelegate record_species_wikidata_facts(species_id, result),
     to: SpeciesEnrichment,

@@ -86,6 +86,25 @@ if ms = System.get_env("EXTRACTOR_TIMEOUT_MS") do
   config :mehungry, :extractor_timeout_ms, String.to_integer(ms)
 end
 
+# Base URL of the external biomed-fact-miner (POST /mine) — the source of the
+# nutritionist condition research (Mehungry.FactMining). Distinct service/port
+# from the extractor; falls back to the built-in default when unset.
+if url = System.get_env("FACT_MINER_BASE_URL") do
+  config :mehungry, :fact_miner_base_url, url
+end
+
+# Optional JWT/bearer token for the fact-miner, sent as `Authorization: Bearer …`.
+# Overridden by a UI-saved Settings row; falls back to this when none exists.
+if token = System.get_env("FACT_MINER_AUTH_TOKEN") do
+  config :mehungry, :fact_miner_auth_token, token
+end
+
+# HTTP receive/connect timeout (ms) for /mine — one mine runs scope → gather →
+# extract → verify end to end (LLM + PubMed/PMC) and can take many seconds.
+if ms = System.get_env("FACT_MINER_TIMEOUT_MS") do
+  config :mehungry, :fact_miner_timeout_ms, String.to_integer(ms)
+end
+
 # Optional shared secret that unlocks the /test-accounts routes outside of
 # dev/test. When unset, those routes 404 in staging/prod.
 if token = System.get_env("TEST_ACCOUNTS_TOKEN") do

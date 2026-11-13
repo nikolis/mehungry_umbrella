@@ -54,154 +54,13 @@
           />
         </div>
       </form>
-
-      <button
-        type="button"
-        phx-click="toggle_filters"
-        aria-expanded={@show_filters}
-        class={[
-          "flex items-center gap-2 px-4 rounded-xl border text-sm font-medium transition-colors",
-          (filters_active?(assigns) &&
-             "bg-paprika/15 border-paprika/50 text-paprika-soft") ||
-            "bg-ink-panel border-ink-panel2 text-parchment-dim hover:text-parchment"
-        ]}
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M3 4h18M6 12h12M10 20h4"
-          />
-        </svg>
-        {gettext("Filters")}
-        <%= if filters_active?(assigns) do %>
-          <span class="ml-0.5 min-w-5 h-5 px-1.5 inline-flex items-center justify-center text-xs font-bold rounded-full bg-paprika text-white [font-variant-numeric:tabular-nums]">
-            {MapSet.size(@selected_compound_ids)}
-          </span>
-        <% end %>
-      </button>
-    </div>
-
-    <%!-- Always-visible one-click compound facet chips — the shortcut into the
-          same filter the panel's search drives, so the feature is discoverable
-          without opening Filters. A pressed chip appears selected here and in
-          the panel's chip row (shared `selected_compound_ids`). --%>
-    <div
-      :if={@quick_compounds != []}
-      role="group"
-      aria-label={gettext("Filter by compound")}
-      class="flex flex-wrap gap-2 mb-4"
-    >
-      <button
-        :for={compound <- @quick_compounds}
-        type="button"
-        phx-click={
-          if compound_selected?(@selected_compound_ids, compound.id),
-            do: "remove_compound",
-            else: "add_compound"
-        }
-        phx-value-id={compound.id}
-        aria-pressed={compound_selected?(@selected_compound_ids, compound.id)}
-        class={pill_class(compound_selected?(@selected_compound_ids, compound.id))}
-      >
-        {compound.name}
-      </button>
-    </div>
-
-    <div class={[
-      "transition-all duration-300 ease-in-out",
-      (@show_filters && "max-h-[900px] opacity-100 mb-6 overflow-visible") ||
-        "max-h-0 opacity-0 overflow-hidden"
-    ]}>
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 space-y-4">
-        <!-- Biochemical compounds — multi-search select -->
-        <div>
-          <p class="text-sm font-display font-medium text-parchment">{gettext("Contains a compound")}</p>
-          <p class="text-xs text-parchment-dim mt-0.5 mb-2">
-            {gettext("Search and pick bioactive compounds; foods containing any of them are shown.")}
-          </p>
-
-          <!-- Selected compound chips -->
-          <div :if={@selected_compound_ids != MapSet.new()} class="flex flex-wrap gap-2 mb-2">
-            <span
-              :for={compound <- selected_compounds(assigns)}
-              class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full text-sm font-medium bg-paprika text-white"
-            >
-              {compound.name}
-              <button
-                type="button"
-                phx-click="remove_compound"
-                phx-value-id={compound.id}
-                aria-label={"Remove #{compound.name}"}
-                class="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-white/25 transition"
-              >
-                <.icon name="hero-x-mark" class="w-3 h-3" />
-              </button>
-            </span>
-          </div>
-
-          <div class="relative">
-            <form id="compound-search-form" phx-change="search_compounds" phx-submit="search_compounds" autocomplete="off">
-              <input
-                type="text"
-                name="q"
-                value={@compound_query}
-                placeholder={gettext("Search compounds — e.g. Quercetin, Iron, Potassium...")}
-                phx-debounce="150"
-                class="w-full bg-ink border border-ink-panel2 rounded-xl px-4 py-2.5 text-sm text-parchment placeholder-parchment-dim focus:outline-none focus:border-paprika focus:ring-1 focus:ring-paprika transition-colors"
-              />
-            </form>
-
-            <!-- Suggestions dropdown -->
-            <div
-              :if={@compound_query != ""}
-              id="compound-suggestions"
-              class="m3-scrollbar absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-ink-panel2 border border-ink-panel2 rounded-xl shadow-lg"
-            >
-              <div :if={@compound_results == []} class="px-4 py-3 text-sm text-parchment-dim">
-                {gettext("No compounds match \"%{query}\".", query: @compound_query)}
-              </div>
-              <button
-                :for={compound <- @compound_results}
-                type="button"
-                phx-click="add_compound"
-                phx-value-id={compound.id}
-                class="w-full text-left px-4 py-2 text-sm text-parchment hover:bg-paprika/20 transition-colors"
-              >
-                {compound.name}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-1">
-          <button
-            :if={filters_active?(assigns)}
-            type="button"
-            phx-click="clear_filters"
-            class="px-4 py-1.5 rounded-full text-sm font-medium text-parchment-dim hover:text-parchment transition"
-          >
-            {gettext("Clear all")}
-          </button>
-          <button
-            type="button"
-            phx-click="toggle_filters"
-            class="px-5 py-1.5 rounded-full text-sm font-semibold bg-paprika text-white hover:opacity-90 transition"
-          >
-            {gettext("Done")}
-          </button>
-        </div>
-      </div>
     </div>
 
     <div class="text-sm text-parchment-dim mb-4">
       <%= cond do %>
         <% @query != "" -> %>
           <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
-          {gettext("results for")} "<span class="text-parchment">{@query}</span>"<%= if filters_active?(assigns), do: " " <> gettext("(filtered)") %>
-        <% filters_active?(assigns) -> %>
-          <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
-          {gettext("filtered species")}
+          {gettext("results for")} "<span class="text-parchment">{@query}</span>"
         <% true -> %>
           {gettext("Showing")}
           <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
@@ -227,7 +86,7 @@
         <%= if @query != "" do %>
           <p>{gettext("No species found for")} "<span class="text-parchment-dim">{@query}</span>"</p>
         <% else %>
-          <p>{gettext("No species match the selected filters.")}</p>
+          <p>{gettext("No species available yet.")}</p>
         <% end %>
       </div>
     <% else %>

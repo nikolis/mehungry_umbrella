@@ -22,14 +22,6 @@ defmodule MehungryWeb.FoodsLiveTest do
 
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
 
-    {:ok, _} =
-      Food.upsert_species_relationship(%{
-        foundemental_species_id: species.id,
-        compound_id: oxalate.id,
-        relationship_type: "high_in",
-        source: "literature"
-      })
-
     {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
 
     {:ok, _} =
@@ -70,95 +62,14 @@ defmodule MehungryWeb.FoodsLiveTest do
     end
   end
 
-  describe "/foods filtering" do
-    setup %{species: spinach_species} do
-      # A second species with an *encouraged* compound for a condition.
-      {:ok, apple} =
-        Food.create_foundemental_species(%{
-          "name" => "Apple",
-          "scientific_name" => "Malus domestica"
-        })
-
-      {:ok, vitc} = Food.upsert_compound(%{name: "Vitamin C", compound_type: "other"})
-
-      {:ok, _} =
-        Food.upsert_species_relationship(%{
-          foundemental_species_id: apple.id,
-          compound_id: vitc.id,
-          relationship_type: "high_in",
-          source: "literature"
-        })
-
-      {:ok, scurvy} = Health.upsert_condition(%{name: "Scurvy", category: "nutrition"})
-
-      {:ok, _} =
-        Health.add_recommendation(scurvy.id, vitc.id, %{
-          recommendation: "encourage",
-          severity: "high",
-          source: "guideline",
-          source_reference: %{"label" => "Guideline", "url" => "https://example.org"}
-        })
-
-      %{apple: apple, vitc: vitc, scurvy: scurvy, spinach: spinach_species}
-    end
-
-    test "the compound multi-select filters to species containing the picked compound", %{
-      conn: conn,
-      vitc: vitc
-    } do
-      {:ok, view, _html} = live(conn, ~p"/foods")
-
-      html = render_change(element(view, "form[phx-change='search_compounds']"), %{"q" => "Vitamin"})
-      assert html =~ "Vitamin C"
-
-      html =
-        view
-        |> element("#compound-suggestions button[phx-value-id='#{vitc.id}']")
-        |> render_click()
-
-      assert html =~ "Apple"
-      refute html =~ "Spinach"
-      assert html =~ "filtered species"
-    end
-
-    test "a quick-pick compound chip filters the grid in one click", %{conn: conn, vitc: vitc} do
-      {:ok, view, _html} = live(conn, ~p"/foods")
-
-      html =
-        view
-        |> element("[role='group'] button[phx-value-id='#{vitc.id}']")
-        |> render_click()
-
-      assert html =~ "Apple"
-      refute html =~ "Spinach"
-      assert html =~ "filtered species"
-    end
-
-    test "clearing filters restores the full list", %{conn: conn, vitc: vitc} do
-      {:ok, view, _html} = live(conn, ~p"/foods")
-
-      render_change(element(view, "form[phx-change='search_compounds']"), %{"q" => "Vitamin"})
-      render_click(element(view, "#compound-suggestions button[phx-value-id='#{vitc.id}']"))
-
-      html =
-        view
-        |> element("button[phx-click='clear_filters']")
-        |> render_click()
-
-      assert html =~ "Apple"
-      assert html =~ "Spinach"
-    end
-  end
-
   describe "/foods/:slug (species detail)" do
-    test "renders the species with its compounds", %{conn: conn} do
+    test "renders the connected species page (async sidecars resolve without error)", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/foods/Spinach")
 
-      # The compounds section resolves asynchronously after mount.
+      # The research/recipes sidecars resolve asynchronously after mount.
       html = render_async(view)
 
       assert html =~ "Spinach"
-      assert html =~ "Oxalate"
     end
 
     test "redirects unknown species back to /foods", %{conn: conn} do

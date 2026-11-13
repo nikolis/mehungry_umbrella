@@ -2,8 +2,9 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Presence, :user_tracking
 
+  alias Mehungry.FactMining
   alias Mehungry.Food
-  alias Mehungry.Food.SpeciesCompounds
+  alias Mehungry.Literature.ResearchType
   alias Phoenix.LiveView.AsyncResult
 
   @base_url "https://www.m3hungry.com"
@@ -66,7 +67,6 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
           |> assign(:species, species)
           |> assign(:display_name, display_name)
           |> assign(:ingredients, ingredients)
-          |> assign(:evidence_modal, nil)
           |> assign_ingredient_view(selected && selected.id)
           |> load_species_sidecars(species)
 
@@ -112,7 +112,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
       [{"Calories", "kcal"}, {"Protein", "g protein"}, {"Carbs", "g carbs"}, {"Fat", "g fat"}]
       |> Enum.flat_map(fn {label, unit} ->
         case Map.get(by_label, label) do
-          amount when is_number(amount) and amount > 0 -> ["#{format_amount(amount)} #{unit}"]
+          amount when is_number(amount) and amount > 0 -> ["#{format_macro(amount)} #{unit}"]
           _ -> []
         end
       end)
@@ -143,20 +143,16 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     socket = assign(socket, :facts, Food.promoted_species_facts_for_species(species.id, language))
 
     if connected?(socket) do
-      assign_async(socket, [:compounds, :recipes], fn ->
-        rels = SpeciesCompounds.list_species_relationships(species.id)
-
+      assign_async(socket, [:research, :recipes], fn ->
         {:ok,
          %{
-           compounds: localize_compounds(rels, language),
+           research: FactMining.list_facts_for_species(species.id),
            recipes: Food.list_sample_recipes_for_ingredients(ingredient_ids)
          }}
       end)
     else
-      rels = SpeciesCompounds.list_species_relationships(species.id)
-
       socket
-      |> assign(:compounds, AsyncResult.ok(localize_compounds(rels, language)))
+      |> assign(:research, AsyncResult.ok(FactMining.list_facts_for_species(species.id)))
       |> assign(
         :recipes,
         AsyncResult.ok(Food.list_sample_recipes_for_ingredients(ingredient_ids))
@@ -202,39 +198,9 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
       producer_countries(facts) != []
   end
 
-  # Overlay each compound's translated name for the current locale (from the
-  # curated `compound_translations`), so the chips — and the evidence-modal title,
-  # which reads `rel.compound.name` through `phx-value-compound` — render Greek.
-  # Falls back to the English compound name when no translation exists.
-  defp localize_compounds(rels, language) do
-    names = Food.compound_display_names(Enum.map(rels, & &1.compound.id), language)
-
-    Enum.map(rels, fn rel ->
-      case Map.get(names, rel.compound.id) do
-        nil -> rel
-        translated -> %{rel | compound: %{rel.compound | name: translated}}
-      end
-    end)
-  end
-
   @impl true
   def handle_event("select_ingredient", %{"id" => id}, socket) do
     {:noreply, assign_ingredient_view(socket, parse_id(id))}
-  end
-
-  # The supporting-research modal for one species↔compound fact. Studies are
-  # deliberately fetched here — on click — rather than preloaded with the
-  # compound list, so the initial page paint carries no PubMed provenance rows.
-  @impl true
-  def handle_event("show_evidence", %{"rel-id" => rel_id, "compound" => name}, socket) do
-    studies = SpeciesCompounds.list_relationship_studies(parse_id(rel_id))
-
-    {:noreply, assign(socket, :evidence_modal, %{compound: name, studies: studies})}
-  end
-
-  @impl true
-  def handle_event("close_evidence", _params, socket) do
-    {:noreply, assign(socket, :evidence_modal, nil)}
   end
 
   # The ingredient `{id, name}` options + the selected ingredient's nutrient view.
@@ -315,24 +281,12 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   defp build_composition_summary(name, tree) do
     carbs = top_amount(tree, "Carbohydrates")
     fat = top_amount(tree, "Total Fat")
-    protein = top_amount(tree, "Protein")
-    energy = top_amount(tree, "Energy")
 
-    macro_parts =
-      [{"carbohydrate", carbs}, {"fat", fat}, {"protein", protein}]
-      |> Enum.filter(fn {_label, amount} -> is_number(amount) and amount > 0 end)
-      |> Enum.map(fn {label, amount} -> "#{format_amount(amount)} g of #{label}" end)
-
-    energy_prefix =
-      if is_number(energy) and energy > 0, do: "#{format_amount(energy)} kcal with ", else: ""
-
-    lead =
-      case macro_parts do
-        [] -> nil
-        parts -> "Per 100 g, #{name} provides #{energy_prefix}#{join_and(parts)}."
-      end
-
-    [lead, sugar_sentence(tree, carbs), fat_sentence(tree, fat)]
+    # The energy/protein/carb/fat macros already headline the stat cards (and the
+    # JSON-LD + meta description), so the prose deliberately skips the numeric
+    # recap and carries only what the cards can't: the sugar makeup and fat
+    # quality — the long-tail terms that are this paragraph's real SEO payload.
+    [sugar_sentence(name, tree, carbs), fat_sentence(tree, fat)]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> case do
       [] -> nil
@@ -425,7 +379,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   defp micronutrient_phrase("Vitamin " <> rest), do: "vitamin " <> rest
   defp micronutrient_phrase(label), do: String.downcase(label)
 
-  defp sugar_sentence(tree, carbs) do
+  defp sugar_sentence(name, tree, carbs) do
     carbs_node = top_node(tree, "Carbohydrates")
     sugars = node_amount(find_desc(carbs_node, ["Total Sugars"]))
 
@@ -434,10 +388,10 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
         nil
 
       is_number(carbs) and carbs > 0 and sugars / carbs >= 0.8 ->
-        "Those carbohydrates are almost entirely sugars (#{format_amount(sugars)} g)#{leading_sugar_suffix(carbs_node)}."
+        "Per 100 g, #{name}'s carbohydrate is almost entirely sugar (#{format_amount(sugars)} g#{leading_sugar_suffix(carbs_node)})."
 
       true ->
-        "It contains #{format_amount(sugars)} g of total sugars#{leading_sugar_suffix(carbs_node)}."
+        "Per 100 g, #{name} contains #{format_amount(sugars)} g of total sugars#{leading_sugar_suffix(carbs_node)}."
     end
   end
 
@@ -632,17 +586,225 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
   def format_amount(amount), do: to_string(amount)
 
+  @doc """
+  Headline-macro formatting for the stat cards: at most one decimal, with a
+  trailing `.0` stripped (`341.0 → "341"`, `0.69 → "0.7"`, `1.7 → "1.7"`). Keeps
+  the row visually even — unlike `format_amount/1`, which widens sub-1 values to
+  three decimals (right for a micronutrient cell, wrong beside `341`).
+  """
+  def format_macro(nil), do: "—"
+
+  def format_macro(amount) when is_float(amount) do
+    rounded = Float.round(amount, 1)
+
+    if rounded == Float.round(amount, 0) do
+      rounded |> trunc() |> Integer.to_string()
+    else
+      :erlang.float_to_binary(rounded, decimals: 1)
+    end
+  end
+
+  def format_macro(amount) when is_integer(amount), do: Integer.to_string(amount)
+  def format_macro(amount), do: to_string(amount)
+
+  @doc "Compact unit label for the headline macro cards (`kilocalorie → \"kcal\"`)."
+  def macro_unit("kilocalorie"), do: "kcal"
+  def macro_unit("gram"), do: "g"
+  def macro_unit("milligram"), do: "mg"
+  def macro_unit("microgram"), do: "µg"
+  def macro_unit(other), do: other
+
   @doc "PubMed permalink for a study's PMID."
   def pubmed_url(%{pmid: pmid}) when not is_nil(pmid),
     do: "https://pubmed.ncbi.nlm.nih.gov/#{pmid}"
 
   def pubmed_url(_), do: nil
 
-  @doc "Human label for a species↔compound relationship type."
-  def relationship_label("contains"), do: gettext("Contains")
-  def relationship_label("high_in"), do: gettext("High in")
-  def relationship_label("low_in"), do: gettext("Low in")
-  def relationship_label("trace"), do: gettext("Trace")
-  def relationship_label("absent"), do: gettext("Absent")
-  def relationship_label(other), do: Phoenix.Naming.humanize(other || "")
+  # ── Research findings: verdict-led "evidence ledger" ──────────────────────
+  # Every mined fact carries an honest verification `label`; the section groups
+  # them by verdict (the credibility axis) and ranks within a group by human
+  # relevance (`claim_type`: a treatment outcome beats a lab mechanism) then
+  # evidence strength (`study_design` via the shared ResearchType pyramid). The
+  # readable Verified group leads; the disputed + unverified tail collapses.
+
+  @doc "Human label for a mined fact's verification state (its nuanced, localized wording)."
+  def research_label("verified"), do: gettext("Corroborated")
+  def research_label("contradicted"), do: gettext("Contradicted")
+  def research_label("unverified_quality"), do: gettext("Unverified — study quality")
+  def research_label("unverified_fulltext"), do: gettext("Unverified — abstract only")
+  def research_label("unverified_insufficient"), do: gettext("Unverified — too few studies")
+  def research_label("unverified_verification"), do: gettext("Unverified — not confirmed")
+  def research_label(other), do: Phoenix.Naming.humanize(other || "")
+
+  @doc "Coarse verdict group (credibility axis) for a mined fact's `label`."
+  def verdict_group("verified"), do: :verified
+  def verdict_group("contradicted"), do: :contradicted
+  def verdict_group(_unverified), do: :unverified
+
+  @doc "Accent classes (left rail colour + badge colours) per verdict group."
+  def verdict_accent(:verified), do: %{rail: "bg-basil", badge: "bg-basil/15 text-basil"}
+  def verdict_accent(:contradicted), do: %{rail: "bg-paprika", badge: "bg-paprika/15 text-paprika"}
+
+  def verdict_accent(:unverified),
+    do: %{rail: "bg-parchment-dim/30", badge: "bg-ink-panel2 text-parchment-dim"}
+
+  # Short, acronym-correct study-design chip label ("RCT", "Mechanistic"), not the
+  # mis-cased `Phoenix.Naming.humanize("rct") => "Rct"`. nil/unknown → no chip.
+  @study_design_labels %{
+    "rct" => "RCT",
+    "mechanistic_experiment" => "Mechanistic",
+    "systematic_review" => "Systematic review",
+    "meta_analysis" => "Meta-analysis",
+    "cohort" => "Cohort study",
+    "case_control" => "Case–control",
+    "cross_sectional" => "Cross-sectional",
+    "case_report" => "Case report",
+    "gwas" => "GWAS"
+  }
+
+  @doc "Short display label for a `study_design`, or nil when unknown/blank."
+  def study_design_label(design) when design in [nil, "", "unknown"], do: nil
+
+  def study_design_label(design),
+    do: Map.get(@study_design_labels, design, Phoenix.Naming.humanize(design))
+
+  @doc "Whether a study design is a human controlled trial — worth highlighting."
+  def rct?(design), do: ResearchType.bucket(design) == :controlled_trial
+
+  @doc """
+  Split a species' mined facts into `{lead, rest}` for display: the Verified
+  claims (the readable lead) apart from the disputed + unverified tail, each
+  internally ranked human-relevance → verdict → evidence-strength.
+  """
+  def research_lead_and_rest(facts) do
+    {verified, rest} = Enum.split_with(facts, &(verdict_group(&1.label) == :verified))
+    {Enum.sort_by(verified, &research_rank/1), Enum.sort_by(rest, &research_rank/1)}
+  end
+
+  @doc "Verdict counts `%{verified:, contradicted:, unverified:, total:}` for the tally."
+  def research_tally(facts) do
+    g = Enum.group_by(facts, &verdict_group(&1.label))
+
+    %{
+      verified: length(Map.get(g, :verified, [])),
+      contradicted: length(Map.get(g, :contradicted, [])),
+      unverified: length(Map.get(g, :unverified, [])),
+      total: length(facts)
+    }
+  end
+
+  # Sort key: human-relevance tier, then verdict tier, then evidence strength
+  # (the shared ResearchType pyramid order — stronger designs first).
+  defp research_rank(fact) do
+    relevance =
+      case fact.claim_type do
+        t when t in ["treatment_outcome", "treatment_safety"] -> 0
+        "other" -> 1
+        _ -> 2
+      end
+
+    verdict =
+      case verdict_group(fact.label) do
+        :verified -> 0
+        :contradicted -> 1
+        :unverified -> 2
+      end
+
+    {relevance, verdict, ResearchType.order(ResearchType.bucket(fact.study_design))}
+  end
+
+  # ── Research-finding row (shared by the lead + tail lists) ────────────────
+  attr :fact, :map, required: true
+
+  def research_fact(assigns) do
+    assigns =
+      assign(assigns,
+        group: verdict_group(assigns.fact.label),
+        design: study_design_label(assigns.fact.study_design)
+      )
+
+    ~H"""
+    <li class="flex gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-4">
+      <span class={"w-1 shrink-0 self-stretch rounded-full #{verdict_accent(@group).rail}"} aria-hidden="true" />
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-col-reverse sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3">
+          <p class="text-sm text-parchment leading-relaxed">{@fact.text}</p>
+          <span class={"self-start shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium #{verdict_accent(@group).badge}"}>
+            <.verdict_icon group={@group} />
+            {research_label(@fact.label)}
+          </span>
+        </div>
+        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-parchment-dim">
+          <span
+            :if={@design}
+            class={[
+              "inline-flex items-center rounded px-1.5 py-0.5 font-medium",
+              if(rct?(@fact.study_design),
+                do: "bg-basil/10 text-basil-soft",
+                else: "bg-ink-panel2 text-parchment-dim"
+              )
+            ]}
+          >
+            {@design}
+          </span>
+          <a
+            :if={pubmed_url(@fact)}
+            href={pubmed_url(@fact)}
+            target="_blank"
+            rel="noopener"
+            class="underline decoration-dotted underline-offset-2 hover:text-paprika-soft transition-colors"
+          >
+            PMID {@fact.pmid}
+          </a>
+        </div>
+        <%!-- Native <details> — no JS, keyboard-accessible, and the reason stays in
+             the crawlable DOM. --%>
+        <details :if={@fact.reason not in [nil, ""]} class="group/why mt-2 text-xs">
+          <summary class="inline-flex items-center gap-0.5 cursor-pointer list-none text-parchment-dim hover:text-parchment transition-colors [&::-webkit-details-marker]:hidden">
+            {gettext("Why?")}
+            <svg
+              class="w-3 h-3 transition-transform group-open/why:rotate-180"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <p class="mt-2 border-t border-ink-panel2 pt-2 text-parchment-dim/90 leading-relaxed">
+            {@fact.reason}
+          </p>
+        </details>
+      </div>
+    </li>
+    """
+  end
+
+  # Tiny verdict glyph for the badge: check / cross / dash.
+  attr :group, :atom, required: true
+
+  def verdict_icon(%{group: :verified} = assigns) do
+    ~H"""
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+    """
+  end
+
+  def verdict_icon(%{group: :contradicted} = assigns) do
+    ~H"""
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+    """
+  end
+
+  def verdict_icon(assigns) do
+    ~H"""
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="7" />
+    </svg>
+    """
+  end
 end

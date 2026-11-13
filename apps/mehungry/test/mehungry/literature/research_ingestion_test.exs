@@ -35,6 +35,8 @@ defmodule Mehungry.Literature.ResearchIngestionTest do
                %{
                  "pmid" => pmid,
                  "paper_title" => "Paper #{pmid}",
+                 "full_text_verified" => true,
+                 "license" => "CC BY",
                  "sections" => [
                    %{
                      "section_id" => "sec-#{pmid}",

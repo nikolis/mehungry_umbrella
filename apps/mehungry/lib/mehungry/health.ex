@@ -7,13 +7,16 @@ defmodule Mehungry.Health do
   `CompoundRecommendation` links a condition to a `Mehungry.Food.Compound` as
   advice (e.g. *Kidney Stones: avoid Oxalate*, *IBS: limit FODMAP*).
 
-  This is the **advice** layer that the "facts only" compound stack
-  (`docs/implementation/science/food_compounds.md` §4) deliberately defers to. Its hard rule: a condition
-  references a **compound**, never a species or ingredient. "Which foods should a
-  kidney-stone patient avoid?" is answered by `species_for_condition/2` (the primary
-  read), which **composes** this layer with `Food.SpeciesCompoundRelationship` at read
-  time; `ingredients_for_condition/2` derives the ingredients strictly through those
-  species. The schemas themselves stay decoupled from food data.
+  This is the **advice** layer. Its hard rule: a condition references a **compound**
+  or a **nutrient**, never a species or ingredient directly.
+
+  > **Compound→food advice retired (2026-11-12).** The species↔compound graph this
+  > layer used to compose with was dropped (replaced by `Mehungry.FactMining`), so
+  > the compound-mediated reads are gone: `species_for_condition/3` now returns only
+  > **directly-curated** species suggestions, `ingredients_for_condition/2` returns
+  > `[]`, and the recipe/ingredient flag + encouraged-recipe queries resolve purely
+  > through the **nutrient** engine (`NutrientRecommendation` → `IngredientNutrient`
+  > via `NutrientTargets`). Curated `CompoundRecommendation` rows are still stored.
   """
 
   import Ecto.Query, warn: false
@@ -27,9 +30,7 @@ defmodule Mehungry.Health do
     FoundementalFoodSpeciesTranslation,
     IngredientNutrient,
     Recipe,
-    RecipeIngredient,
-    SpeciesCompoundRelationship,
-    SpeciesCompoundRelationshipStudy
+    RecipeIngredient
   }
 
   alias Mehungry.Health.{
@@ -38,7 +39,6 @@ defmodule Mehungry.Health do
     ConditionStateRecommendation,
     CompoundRecommendation,
     CompoundRecommendationCandidate,
-    CompoundRecommendationStudy,
     ConditionIdentifier,
     ConditionRecommendationCandidate,
     ConditionTranslation,
@@ -546,34 +546,12 @@ defmodule Mehungry.Health do
   end
 
   defp do_species_for_condition(condition_id, recommendation, language) do
-    compound_rows =
-      from(rec in CompoundRecommendation,
-        join: scr in SpeciesCompoundRelationship,
-        on: scr.compound_id == rec.compound_id,
-        join: cmp in Compound,
-        on: cmp.id == rec.compound_id,
-        join: sp in assoc(scr, :species),
-        where: rec.condition_id == ^condition_id,
-        # Defense-in-depth: a compound curated `non_dietary` (assay reagent, solvent,
-        # contaminant, non-specific class) must never drive advice, even if a stray
-        # fact/recommendation exists for it.
-        where: cmp.dietary_relevance != "non_dietary",
-        order_by: [asc: sp.name, asc: cmp.name],
-        select: %{
-          species: sp,
-          compound: cmp,
-          recommendation: rec.recommendation,
-          severity: rec.severity,
-          evidence_level: rec.evidence_level,
-          recommendation_id: rec.id,
-          relationship_id: scr.id
-        }
-      )
-      |> maybe_filter_recommendation(recommendation)
-      |> Repo.all()
-      |> attach_species_citations()
-
-    (compound_rows ++ direct_species_rows(condition_id, recommendation))
+    # The former compound-derived species rows (condition → compound →
+    # species_compound_relationships → species) were retired with the species↔compound
+    # graph. A condition now resolves to foods **directly** (curated name-matched
+    # species suggestions); nutrient-mediated advice is unioned at the read surfaces.
+    condition_id
+    |> direct_species_rows(recommendation)
     |> Enum.sort_by(& &1.species.name)
     |> localize_species_rows(language)
   end
@@ -650,119 +628,16 @@ defmodule Mehungry.Health do
     end
   end
 
-  # Attach frozen PubMed provenance to each species advice row — the full "why this
-  # food" chain: `:recommendation_citations` (the condition↔compound advice's studies)
-  # and `:fact_citations` (the species↔compound fact's studies). Batch-loaded to avoid
-  # N+1; each is a (possibly empty) list of `ScientificStudy` structs.
-  defp attach_species_citations(rows) do
-    rec_ids = rows |> Enum.map(& &1.recommendation_id) |> Enum.uniq()
-    rel_ids = rows |> Enum.map(& &1.relationship_id) |> Enum.uniq()
-
-    rec_studies =
-      studies_by_parent(
-        CompoundRecommendationStudy,
-        :recommendation_id,
-        rec_ids
-      )
-
-    fact_studies =
-      studies_by_parent(
-        SpeciesCompoundRelationshipStudy,
-        :relationship_id,
-        rel_ids
-      )
-
-    Enum.map(rows, fn row ->
-      row
-      |> Map.put(:recommendation_citations, Map.get(rec_studies, row.recommendation_id, []))
-      |> Map.put(:fact_citations, Map.get(fact_studies, row.relationship_id, []))
-    end)
-  end
-
-  # `%{parent_id => [ScientificStudy, ...]}` for a result↔study join table, newest
-  # study first.
-  defp studies_by_parent(_join, _fk, []), do: %{}
-
-  defp studies_by_parent(join_schema, fk, parent_ids) do
-    from(j in join_schema,
-      join: s in ScientificStudy,
-      on: s.id == j.study_id,
-      where: field(j, ^fk) in ^parent_ids,
-      order_by: [desc: s.id],
-      select: {field(j, ^fk), s}
-    )
-    |> Repo.all()
-    |> Enum.group_by(fn {parent_id, _s} -> parent_id end, fn {_id, s} -> s end)
-  end
-
   @doc """
-  The dietary advice implicated for a **food species** — the inverse of
-  `species_for_condition/2`: `species → species_compound_relationships → compounds →
-  compound_recommendations → conditions`. Returns maps of
-  `%{compound, condition, recommendation, severity, evidence_level, source}` so a
-  species page can render "Oxalate — avoid for Kidney Stones (high)". Ordered by
-  condition then compound.
+  The ingredients implicated for a condition **by compound** — retired with the
+  species↔compound graph. Condition↔ingredient advice was only ever reachable through
+  `condition → compound → species → ingredients`; with that chain gone this returns
+  `[]`. Nutrient-mediated advice is surfaced through the nutrient flag/encouraged
+  paths instead. Kept (returning an empty list) so existing callers — recipe
+  generation's `ingredient_guidance_for_condition/1`, the nutritionist agent — keep
+  working without a compound-derived seed/avoid list.
   """
-  def recommendations_for_species(species_id) do
-    Repo.all(
-      from(scr in SpeciesCompoundRelationship,
-        join: rec in CompoundRecommendation,
-        on: rec.compound_id == scr.compound_id,
-        join: cmp in Compound,
-        on: cmp.id == scr.compound_id,
-        join: cond in Condition,
-        on: cond.id == rec.condition_id,
-        where: scr.foundemental_species_id == ^species_id,
-        # A `non_dietary` compound must never drive advice (see species_for_condition).
-        where: cmp.dietary_relevance != "non_dietary",
-        order_by: [asc: cond.name, asc: cmp.name],
-        select: %{
-          compound: cmp,
-          condition: cond,
-          recommendation: rec.recommendation,
-          severity: rec.severity,
-          evidence_level: rec.evidence_level,
-          source: rec.source,
-          recommendation_id: rec.id,
-          relationship_id: scr.id
-        }
-      )
-    )
-    |> attach_species_citations()
-    # A species can carry a compound via several relationship rows; collapse to one
-    # advice line per (condition, compound, recommendation).
-    |> Enum.uniq_by(&{&1.condition.id, &1.compound.id, &1.recommendation})
-  end
-
-  @doc """
-  The ingredients implicated for a condition — a convenience **derived strictly
-  through species**: `condition → compound → species → (species' ingredients)`. There
-  is no condition↔ingredient or fact↔ingredient link; ingredients are only reachable
-  via the `FoundementalFoodSpecies` that carries the compound. Same filtering + shape
-  as `species_for_condition/2`, but with `ingredient` in place of `species`.
-  """
-  def ingredients_for_condition(condition_id, recommendation \\ nil) do
-    from(rec in CompoundRecommendation,
-      join: scr in SpeciesCompoundRelationship,
-      on: scr.compound_id == rec.compound_id,
-      join: cmp in Compound,
-      on: cmp.id == rec.compound_id,
-      join: ff in FoundementalFood,
-      on: ff.foundemental_species_id == scr.foundemental_species_id,
-      join: ing in assoc(ff, :ingredient),
-      where: rec.condition_id == ^condition_id,
-      order_by: [asc: ing.name, asc: cmp.name],
-      select: %{
-        ingredient: ing,
-        compound: cmp,
-        recommendation: rec.recommendation,
-        severity: rec.severity,
-        evidence_level: rec.evidence_level
-      }
-    )
-    |> maybe_filter_recommendation(recommendation)
-    |> Repo.all()
-  end
+  def ingredients_for_condition(_condition_id, _recommendation \\ nil), do: []
 
   @doc """
   Compound ids a condition recommends to `"encourage"` — the compounds whose
@@ -1147,38 +1022,9 @@ defmodule Mehungry.Health do
   def flags_for_recipes(_recipe_ids, []), do: %{}
 
   def flags_for_recipes(recipe_ids, condition_ids) do
-    compound = compound_flags_for_recipes(recipe_ids, condition_ids)
-    nutrient = nutrient_flags_for_recipes(recipe_ids, condition_ids)
-    Map.merge(compound, nutrient, fn _recipe_id, a, b -> a ++ b end)
-  end
-
-  defp compound_flags_for_recipes(recipe_ids, condition_ids) do
-    from(ri in RecipeIngredient,
-      join: ff in FoundementalFood,
-      on: ff.ingredient_id == ri.ingredient_id,
-      join: scr in SpeciesCompoundRelationship,
-      on: scr.foundemental_species_id == ff.foundemental_species_id,
-      join: rec in CompoundRecommendation,
-      on: rec.compound_id == scr.compound_id,
-      join: cmp in Compound,
-      on: cmp.id == scr.compound_id,
-      join: cond in Condition,
-      on: cond.id == rec.condition_id,
-      where:
-        ri.recipe_id in ^recipe_ids and rec.condition_id in ^condition_ids and
-          scr.relationship_type != "absent",
-      order_by: [asc: cond.name, asc: cmp.name],
-      select: %{
-        recipe_id: ri.recipe_id,
-        condition: cond,
-        compound: cmp,
-        recommendation: rec.recommendation,
-        severity: rec.severity
-      }
-    )
-    |> Repo.all()
-    |> Enum.uniq_by(&{&1.recipe_id, &1.condition.id, &1.compound.id, &1.recommendation})
-    |> Enum.group_by(& &1.recipe_id, &Map.delete(&1, :recipe_id))
+    # The compound-derived badge leg was retired with the species↔compound graph;
+    # condition badges now come purely from the nutrient engine.
+    nutrient_flags_for_recipes(recipe_ids, condition_ids)
   end
 
   # Nutrient-derived badges: a recipe whose ingredients cross a target's per-100g
@@ -1337,41 +1183,19 @@ defmodule Mehungry.Health do
     )
   end
 
-  # Distinct recipe-id subquery for recipes whose ingredients carry a compound
-  # the given conditions recommend to "encourage". Shared by the "encouraged"
-  # (`recipes_for_conditions_query/1`) and "prioritized" browse queries so both
-  # agree on the same set; `distinct` keeps the prioritized query's left join
-  # from multiplying recipe rows.
-  defp encouraged_recipe_ids_query(condition_ids) do
-    from(ri in RecipeIngredient,
-      join: ff in FoundementalFood,
-      on: ff.ingredient_id == ri.ingredient_id,
-      join: scr in SpeciesCompoundRelationship,
-      on: scr.foundemental_species_id == ff.foundemental_species_id,
-      join: rec in CompoundRecommendation,
-      on: rec.compound_id == scr.compound_id,
-      where:
-        rec.condition_id in ^condition_ids and
-          rec.recommendation == "encourage" and
-          scr.relationship_type != "absent",
-      distinct: true,
-      select: %{recipe_id: ri.recipe_id}
-    )
-  end
-
-  # The union of the compound-fact and nutrient-fact "encouraged recipe id"
-  # subqueries — the recipe is encouraged if it satisfies *either* engine. When a
-  # condition has no resolvable encouraged nutrient, this is just the compound query
-  # (avoids an empty `union` leg). Both legs select `%{recipe_id: id}`.
+  # The "encouraged recipe id" subquery — recipes whose ingredients are high in a
+  # nutrient the given conditions recommend to "encourage". (The former compound-fact
+  # leg was retired with the species↔compound graph.) When a condition has no
+  # resolvable encouraged nutrient, this returns an empty-result subquery so the
+  # surrounding "encouraged / prioritized" browse queries degrade to "nothing
+  # encouraged" rather than erroring. Selects `%{recipe_id: id}`.
   defp combined_encouraged_recipe_ids_query(condition_ids) do
-    compound_query = encouraged_recipe_ids_query(condition_ids)
-
     case encouraged_nutrient_targets(condition_ids) do
       targets when map_size(targets) == 0 ->
-        compound_query
+        from(ri in RecipeIngredient, where: false, distinct: true, select: %{recipe_id: ri.recipe_id})
 
       targets ->
-        union(compound_query, ^nutrient_encouraged_recipe_ids_query_from_targets(targets))
+        nutrient_encouraged_recipe_ids_query_from_targets(targets)
     end
   end
 
@@ -1391,36 +1215,9 @@ defmodule Mehungry.Health do
   def flags_for_ingredients(_ingredient_ids, []), do: %{}
 
   def flags_for_ingredients(ingredient_ids, condition_ids) do
-    compound = compound_flags_for_ingredients(ingredient_ids, condition_ids)
-    nutrient = nutrient_flags_for_ingredients(ingredient_ids, condition_ids)
-    Map.merge(compound, nutrient, fn _ingredient_id, a, b -> a ++ b end)
-  end
-
-  defp compound_flags_for_ingredients(ingredient_ids, condition_ids) do
-    from(ff in FoundementalFood,
-      join: scr in SpeciesCompoundRelationship,
-      on: scr.foundemental_species_id == ff.foundemental_species_id,
-      join: rec in CompoundRecommendation,
-      on: rec.compound_id == scr.compound_id,
-      join: cmp in Compound,
-      on: cmp.id == scr.compound_id,
-      join: cond in Condition,
-      on: cond.id == rec.condition_id,
-      where:
-        ff.ingredient_id in ^ingredient_ids and rec.condition_id in ^condition_ids and
-          scr.relationship_type != "absent",
-      order_by: [asc: cond.name, asc: cmp.name],
-      select: %{
-        ingredient_id: ff.ingredient_id,
-        condition: cond,
-        compound: cmp,
-        recommendation: rec.recommendation,
-        severity: rec.severity
-      }
-    )
-    |> Repo.all()
-    |> Enum.uniq_by(&{&1.ingredient_id, &1.condition.id, &1.compound.id, &1.recommendation})
-    |> Enum.group_by(& &1.ingredient_id, &Map.delete(&1, :ingredient_id))
+    # The compound-derived badge leg was retired with the species↔compound graph;
+    # ingredient condition badges now come purely from the nutrient engine.
+    nutrient_flags_for_ingredients(ingredient_ids, condition_ids)
   end
 
   # Nutrient-derived ingredient badges — the direct `IngredientNutrient` sibling of

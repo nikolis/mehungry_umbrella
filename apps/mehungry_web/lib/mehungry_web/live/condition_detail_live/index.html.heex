@@ -649,36 +649,6 @@
         <% end %>
       </div>
 
-      <%!-- Bioactive compounds --%>
-      <div>
-        <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide mb-3">
-          {gettext("Bioactive Compounds")}
-        </h3>
-        <%= cond do %>
-          <% @modal_compounds.loading -> %>
-            <div class="flex flex-wrap gap-2" aria-hidden="true">
-              <div :for={_ <- 1..4} class="m3-skeleton h-8 w-24 rounded-xl bg-ink-panel2" />
-            </div>
-          <% @modal_compounds.failed -> %>
-            <p class="text-parchment-dim text-sm">{gettext("Couldn't load compounds.")}</p>
-          <% @modal_compounds.ok? && length(@modal_compounds.result) == 0 -> %>
-            <p class="text-parchment-dim text-sm">
-              {gettext("No compounds linked to this food yet.")}
-            </p>
-          <% true -> %>
-            <div class="flex flex-wrap gap-2">
-              <%= for rel <- @modal_compounds.result do %>
-                <span class="inline-flex items-center gap-2 bg-ink-panel border border-ink-panel2 rounded-xl px-3 py-1.5 text-sm">
-                  <span class="text-parchment">{rel.compound.name}</span>
-                  <span class="text-xs text-parchment-dim">{relationship_label(
-                    rel.relationship_type
-                  )}</span>
-                </span>
-              <% end %>
-            </div>
-        <% end %>
-      </div>
-
       <%!-- Sample recipes --%>
       <div>
         <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide mb-3">

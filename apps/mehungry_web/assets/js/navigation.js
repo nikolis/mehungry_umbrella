@@ -23,46 +23,53 @@ function waitForElm(selector) {
 
 
 
-function fix_navigation_active() {
-	waitForElm('#nav_bar_mobile').then((elm) => {
-		var nav = document.getElementsByTagName("nav")[1];
-		if (nav) {
-			nav.classList.add('current');
-			var childNodes = nav.childNodes;
-			childNodes.forEach(function(arg1, arg2) {
-				if (arg2 == 1 || arg2 == 5) {
-					var leaves1 = arg1.childNodes;
-					leaves1.forEach(function(arg3, arg4) {
-						if (arg3.classList) {
-							if (arg3.href == liveSocket.currentLocation.href) {
-								arg3.classList.add("current");
-							}
-						}
-					});
-				}
-			});
+// Highlight the nav link whose path best matches the current URL. We match by
+// longest-prefix on pathname (not exact href), so a deep page like
+// /en/foods/spinach still lights up the "Foods" tab. `aria-current="page"` is
+// set alongside the visual class for accessibility.
+function highlightActiveLink(navSelector, activeClass) {
+	waitForElm(navSelector).then((nav) => {
+		if (!nav) return;
+		var links = nav.querySelectorAll('a[href]');
+		var currentPath;
+		try {
+			currentPath = new URL(liveSocket.currentLocation.href).pathname;
+		} catch (e) {
+			currentPath = window.location.pathname;
 		}
-	});
 
-	waitForElm('#nav_bar').then((elm) => {
-		var nav = document.getElementsByTagName("nav")[0];
-		if (nav) {
-			nav.classList.add('active');
-			var childNodes = nav.childNodes;
-			childNodes.forEach(function(arg1, arg2) {
-				if (arg2 == 1 || arg2 == 5) {
-					var leaves1 = arg1.childNodes;
-					leaves1.forEach(function(arg3, arg4) {
-						if (arg3.classList) {
-							if (arg3.href == liveSocket.currentLocation.href) {
-								arg3.classList.add("active");
-							}
-						}
-					});
-				}
-			});
+		var best = null;
+		var bestLen = -1;
+		links.forEach(function(a) {
+			a.classList.remove(activeClass);
+			a.removeAttribute('aria-current');
+			var path;
+			try {
+				path = new URL(a.href).pathname;
+			} catch (e) {
+				return;
+			}
+			// A link matches when its path is the current path or a prefix of it
+			// at a segment boundary ("/" root is handled as exact only).
+			var matches = path === '/' ? currentPath === '/' :
+				(currentPath === path ||
+					currentPath.startsWith(path.endsWith('/') ? path : path + '/'));
+			if (matches && path.length > bestLen) {
+				best = a;
+				bestLen = path.length;
+			}
+		});
+
+		if (best) {
+			best.classList.add(activeClass);
+			best.setAttribute('aria-current', 'page');
 		}
 	});
+}
+
+function fix_navigation_active() {
+	highlightActiveLink('#nav_bar_mobile', 'current');
+	highlightActiveLink('#nav_bar', 'active');
 }
 fix_navigation_active();
 //-----------------------------------------------------------Handling Navigation Highlighting ----------    THE END------------------------------------------------------

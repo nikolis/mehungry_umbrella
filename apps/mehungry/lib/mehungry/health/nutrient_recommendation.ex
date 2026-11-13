@@ -4,13 +4,12 @@ defmodule Mehungry.Health.NutrientRecommendation do
   e.g. *Anti-Inflammatory → encourage → Omega-3*, *Anti-Inflammatory → limit →
   Saturated Fat*.
 
-  The nutrient sibling of `Mehungry.Health.CompoundRecommendation`. Where the
-  compound layer resolves condition → compound → `SpeciesCompoundRelationship`
-  (facts) → species → ingredients, the nutrient layer resolves condition →
-  nutrient → `IngredientNutrient` (the populated, per-100g USDA fact table) →
-  ingredients → recipes, thresholding the numeric `amount` for high/low. See
-  `Mehungry.Health.NutrientTargets` for the canonical-name → `Nutrient` rows
-  resolution.
+  The nutrient sibling of `Mehungry.Health.CompoundRecommendation` — and, since the
+  species↔compound graph was retired (2026-11-12), the **only live** condition→food
+  advice engine. It resolves condition → nutrient → `IngredientNutrient` (the
+  populated, per-100g USDA fact table) → ingredients → recipes, thresholding the
+  numeric `amount` for high/low. See `Mehungry.Health.NutrientTargets` for the
+  canonical-name → `Nutrient` rows resolution.
 
   A recommendation references a nutrient by its **canonical name string**
   (`nutrient_name`), never a `nutrient_id` FK: the same nutrient name exists

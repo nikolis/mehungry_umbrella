@@ -50,6 +50,8 @@ defmodule Mehungry.Application do
       Mehungry.Meta.SessionAggregator
     ]
 
+    children = children ++ fact_mining_queue_leader()
+
     case Supervisor.start_link(children, strategy: :one_for_one, name: Mehungry.Supervisor) do
       {:ok, _pid} = ok ->
         # Reset any pipeline run left stuck "processing" by a mid-run restart, so
@@ -59,6 +61,17 @@ defmodule Mehungry.Application do
 
       other ->
         other
+    end
+  end
+
+  # Gate the `:fact_mining` leader poller on queues actually running. Under the test
+  # Oban config (`testing: :manual`) queues aren't started, so pause/resume calls
+  # would be meaningless — skip it there.
+  defp fact_mining_queue_leader do
+    if get_in(Application.get_env(:mehungry, Oban), [:testing]) do
+      []
+    else
+      [Mehungry.FactMining.QueueLeader]
     end
   end
 end

@@ -1,50 +1,70 @@
 defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   @moduledoc """
   Admin page for curating the `Mehungry.Health` advice layer: create health
-  conditions and attach `CompoundRecommendation`s (condition → compound → advice).
-  Recommendations reference **compounds** only; the implicated food species are
+  conditions and manage their `CompoundRecommendation`s / `NutrientRecommendation`s.
+  Recommendations are no longer hand-entered here — they arrive through the
+  review-gated flows (promote a literature/phase candidate, or verify a derived
+  suggestion) and are listed per condition with a Remove action. Compound
+  recommendations reference **compounds** only; the implicated food species are
   resolved at read time (`Health.species_for_condition/2`).
+
+  Also the two external-service controls: the extractor "Analyzer service"
+  connection + "Analyze selected", and the biomed-fact-miner "Mine conditions"
+  sweep (both with a UI-managed URL + auth/JWT token).
   """
   use MehungryWeb, :live_view
 
   alias Mehungry.Extractor
-  alias Mehungry.Food
+  alias Mehungry.FactMining
+  alias Mehungry.FactMining.ConditionFactMiningRuns, as: FactRuns
   alias Mehungry.Health
   alias Mehungry.Literature
   alias Mehungry.Health.ConditionSeeder
   alias Mehungry.MealBlueprints.DietPatterns
-  alias Mehungry.Health.NutrientTargets
   alias Mehungry.Health.RecommendationCandidates
   alias Mehungry.Health.ConditionRecCandidates
   alias Mehungry.Health.ClaimRules
 
   @recommendations ~w(avoid limit caution monitor encourage)
   @severities ~w(low moderate high severe)
-  @evidence_levels ~w(strong moderate limited insufficient)
-  @sources ~w(guideline manual literature ai)
 
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(Mehungry.PubSub, Literature.research_ingestion_topic())
-      # Unwedge a run left `processing` by a server restart (its jobs are gone).
-      Literature.reconcile_research_ingestion()
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, FactRuns.topic())
     end
+
+    batch_id = FactRuns.latest_batch_id()
+
+    socket =
+      socket
+      |> assign(:page_title, "Health Conditions")
+      # Transient UI state (not derived from the DB, so not rebuilt in load/0).
+      |> assign(:crawling, MapSet.new())
+      |> assign(:analysis, nil)
+      |> assign(:analyzing, false)
+      # Admin-triggered "Mine all conditions" fan-out to the biomed-fact-miner —
+      # one job per condition, live aggregate progress via PubSub.
+      |> assign(:fact_batch_id, batch_id)
+      |> assign(:fact_counts, FactRuns.counts_for_batch(batch_id))
+      |> assign(:mining?, false)
+      |> assign(:miner_reachable, :unknown)
+
+    socket =
+      if connected?(socket),
+        do: start_async(socket, :miner_reachable, fn -> FactMining.reachable?() end),
+        else: socket
 
     {:ok,
      socket
-     |> assign(:page_title, "Health Conditions")
-     # Transient UI state (not derived from the DB, so not rebuilt in load/0).
-     |> assign(:crawling, MapSet.new())
-     |> assign(:analysis, nil)
-     |> assign(:analyzing, false)
-     # Admin-triggered bulk research-ingestion run (crawl? + /analyze + store,
-     # across all conditions) — live progress via PubSub.
-     |> assign(:research_run, Literature.latest_research_ingestion_run())
      # Per-condition "Claims & suggestions" detail block: which conditions are
      # expanded, their loaded data, and the active tab. Loaded lazily on expand
      # (the full condition list is large).
      |> assign(:expanded_conditions, MapSet.new())
+     # Which conditions have their "Discovered papers" collapse open. Server-side
+     # gated (not CSS-hidden) so the ~11k paper rows across all conditions are not
+     # all rendered into the DOM up front — that made the page take forever to load.
+     |> assign(:papers_open, MapSet.new())
      # cid => [%StudyAnalysis{}] (per-paper claims for Tab 1).
      |> assign(:condition_analyses, %{})
      # cid => [rule] (food-for-condition suggestions for Tab 2, via ClaimRules).
@@ -99,11 +119,10 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
     |> assign(:condition_studies, condition_studies)
     |> assign(:analyzed_study_ids, analyzed_study_ids)
     |> assign(:unusable_study_ids, unusable_study_ids)
-    |> assign(:nutrient_labels, Enum.sort(NutrientTargets.labels()))
-    |> assign(:compounds, Food.list_compounds())
     |> assign(:rec_candidates, RecommendationCandidates.list_pending_candidates())
     |> assign(:phase_candidates, ConditionRecCandidates.list_pending_candidates())
     |> assign_extractor_connection()
+    |> assign_fact_miner_connection()
   end
 
   # The live analyzer connection (UI-managed, env/config fallback) for the settings
@@ -114,6 +133,16 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
     socket
     |> assign(:extractor_base_url, base_url)
     |> assign(:extractor_auth_token, auth_token)
+  end
+
+  # The live fact-miner connection (UI-managed, env/config fallback) for the
+  # "Mine conditions" settings form + the "currently using" line.
+  defp assign_fact_miner_connection(socket) do
+    {base_url, auth_token} = FactMining.connection()
+
+    socket
+    |> assign(:miner_base_url, base_url)
+    |> assign(:miner_auth_token, auth_token)
   end
 
   # ── Events ─────────────────────────────────────────────────────────────────
@@ -170,6 +199,33 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
     end
   end
 
+  # Persist the fact-miner connection (URL + optional JWT/bearer token) that
+  # "Mine all conditions" talks to. Takes effect immediately — no redeploy.
+  @impl true
+  def handle_event("save_fact_miner_settings", %{"settings" => params}, socket) do
+    case FactMining.update_settings(params) do
+      {:ok, _} ->
+        socket =
+          socket
+          |> put_flash(:info, "Fact-miner settings saved.")
+          |> load()
+
+        # Re-probe reachability against the new connection.
+        {:noreply,
+         if(connected?(socket),
+           do:
+             socket
+             |> assign(:miner_reachable, :unknown)
+             |> start_async(:miner_reachable, fn -> FactMining.reachable?() end),
+           else: socket
+         )}
+
+      {:error, changeset} ->
+        {:noreply,
+         put_flash(socket, :error, "Could not save fact-miner settings: #{errors(changeset)}")}
+    end
+  end
+
   @impl true
   def handle_event("save_condition", %{"condition" => params}, socket) do
     case Health.create_condition(normalize_synonyms(params)) do
@@ -182,52 +238,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   @impl true
-  def handle_event("save_recommendation", %{"recommendation" => params}, socket) do
-    with %{"condition_id" => cid, "compound_id" => comp} when cid != "" and comp != "" <- params,
-         # `add_recommendation/3` injects atom-keyed condition_id/compound_id, so the
-         # rest must be atom-keyed too (Ecto rejects mixed string/atom keys).
-         rec_attrs <-
-           Map.take(params, ["recommendation", "severity", "evidence_level", "source", "notes"])
-           |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
-           |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
-           |> maybe_put_source_reference(params),
-         {:ok, _} <-
-           Health.add_recommendation(String.to_integer(cid), String.to_integer(comp), rec_attrs) do
-      {:noreply, socket |> put_flash(:info, "Recommendation added.") |> load()}
-    else
-      {:error, %Ecto.Changeset{} = cs} ->
-        {:noreply, put_flash(socket, :error, "Could not add recommendation: #{errors(cs)}")}
-
-      _ ->
-        {:noreply, put_flash(socket, :error, "Pick a condition and a compound first.")}
-    end
-  end
-
-  @impl true
   def handle_event("delete_recommendation", %{"id" => id}, socket) do
     id |> String.to_integer() |> Health.get_recommendation!() |> Health.delete_recommendation()
     {:noreply, socket |> put_flash(:info, "Recommendation removed.") |> load()}
-  end
-
-  @impl true
-  def handle_event("save_nutrient_recommendation", %{"recommendation" => params}, socket) do
-    with %{"condition_id" => cid, "nutrient_name" => name} when cid != "" and name != "" <- params,
-         rec_attrs <-
-           Map.take(params, ["recommendation", "severity", "evidence_level", "source", "notes"])
-           |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
-           |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
-           |> maybe_put_source_reference(params),
-         {:ok, _} <-
-           Health.add_nutrient_recommendation(String.to_integer(cid), name, rec_attrs) do
-      {:noreply, socket |> put_flash(:info, "Nutrient recommendation added.") |> load()}
-    else
-      {:error, %Ecto.Changeset{} = cs} ->
-        {:noreply,
-         put_flash(socket, :error, "Could not add nutrient recommendation: #{errors(cs)}")}
-
-      _ ->
-        {:noreply, put_flash(socket, :error, "Pick a condition and a nutrient first.")}
-    end
   end
 
   @impl true
@@ -380,30 +393,27 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   # `mix research.ingest`): crawl? + extractor /analyze + store across every
   # condition, as one durable background job. Only one run at a time.
   @impl true
-  def handle_event("run_research_ingestion", params, socket) do
-    opts = [crawl: params["crawl"] == "true", force: params["force"] == "true"]
-
-    # Pre-flight: fail fast if the extractor link is dead, instead of churning
-    # retries across every condition before the failure surfaces.
-    case Extractor.reachable?() do
-      :ok -> start_research_ingestion(opts, socket)
-      {:error, reason} -> {:noreply, put_flash(socket, :error, extractor_down_message(reason))}
-    end
+  def handle_event("mine_all_conditions", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:mining?, true)
+     |> start_async(:mine_all, fn -> FactRuns.mine_all_conditions() end)}
   end
 
-  # Admin escape hatch: cancel the in-flight run (cancels its jobs + marks failed).
+  # Admin escape hatch: cancel the in-flight batch (cancels its jobs + marks
+  # unfinished rows failed; already-mined facts are kept).
   @impl true
-  def handle_event("cancel_research_ingestion", _params, socket) do
-    case Literature.cancel_research_ingestion() do
-      :noop ->
-        {:noreply, put_flash(socket, :error, "No research ingestion run is in progress.")}
+  def handle_event("cancel_mining", _params, socket) do
+    FactRuns.cancel_batch(socket.assigns.fact_batch_id)
+    {:noreply, reload_fact_batch(socket, socket.assigns.fact_batch_id)}
+  end
 
-      run ->
-        {:noreply,
-         socket
-         |> assign(:research_run, run)
-         |> put_flash(:info, "Research ingestion cancelled.")}
-    end
+  @impl true
+  def handle_event("recheck_miner", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:miner_reachable, :unknown)
+     |> start_async(:miner_reachable, fn -> FactMining.reachable?() end)}
   end
 
   # Toggle a condition's "Claims & suggestions" detail block. Initially folded;
@@ -422,6 +432,19 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
        |> update(:condition_tab, &Map.put_new(&1, cid, "claims"))
        |> load_condition_detail(cid)}
     end
+  end
+
+  # Toggle a condition's "Discovered papers" collapse. Rendering the paper rows is
+  # gated on this server-side (the data is already loaded) so a condition's papers —
+  # each a heavy row with its own re-assign form — only enter the DOM when opened.
+  @impl true
+  def handle_event("toggle_condition_papers", %{"id" => id}, socket) do
+    cid = String.to_integer(id)
+
+    {:noreply,
+     update(socket, :papers_open, fn open ->
+       if MapSet.member?(open, cid), do: MapSet.delete(open, cid), else: MapSet.put(open, cid)
+     end)}
   end
 
   # Switch the active tab ("claims" | "suggestions") for a condition.
@@ -515,11 +538,62 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   @impl true
-  # Live progress from the research-ingestion worker. Reload the page data when a
-  # run finishes so the new "analyzed" badges + catalog counts appear.
-  def handle_info({:research_ingestion_run, run}, socket) do
-    socket = assign(socket, :research_run, run)
-    {:noreply, if(run.status in ["completed", "failed"], do: load(socket), else: socket)}
+  # Live progress from the "Mine all conditions" fan-out. Refresh the aggregate
+  # counts on every transition; reload the page data once the batch drains so the
+  # new catalog counts appear.
+  def handle_info({:fact_mining_run, run}, socket) do
+    if run.batch_id == socket.assigns.fact_batch_id do
+      socket = assign(socket, :fact_counts, FactRuns.counts_for_batch(socket.assigns.fact_batch_id))
+
+      {:noreply,
+       if(FactRuns.batch_in_flight?(socket.assigns.fact_batch_id), do: socket, else: load(socket))}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_info({:fact_mining_processing, batch_id, _condition_id}, socket) do
+    if batch_id == socket.assigns.fact_batch_id do
+      {:noreply, assign(socket, :fact_counts, FactRuns.counts_for_batch(batch_id))}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_async(:miner_reachable, {:ok, result}, socket) do
+    {:noreply, assign(socket, :miner_reachable, result)}
+  end
+
+  def handle_async(:miner_reachable, {:exit, _reason}, socket) do
+    {:noreply, assign(socket, :miner_reachable, {:error, :probe_crashed})}
+  end
+
+  def handle_async(:mine_all, {:ok, {:ok, batch_id}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:mining?, false)
+     |> put_flash(:info, "Mining started — one job per condition, watch the counts below.")
+     |> reload_fact_batch(batch_id)}
+  end
+
+  def handle_async(:mine_all, {:ok, {:error, {:unreachable, reason}}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:mining?, false)
+     |> assign(:miner_reachable, {:error, reason})
+     |> put_flash(:error, "Fact miner unreachable — #{inspect(reason)}")}
+  end
+
+  def handle_async(:mine_all, {:ok, {:error, :no_conditions}}, socket) do
+    {:noreply, socket |> assign(:mining?, false) |> put_flash(:error, "No conditions to mine.")}
+  end
+
+  def handle_async(:mine_all, {:exit, reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(:mining?, false)
+     |> put_flash(:error, "Could not start mining — #{inspect(reason)}")}
   end
 
   @impl true
@@ -585,31 +659,14 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   defp extractor_client,
     do: Application.get_env(:mehungry, :extractor_client, Mehungry.Extractor.Client)
 
-  defp start_research_ingestion(opts, socket) do
-    case Literature.enqueue_research_ingestion(opts) do
-      {:ok, run} ->
-        {:noreply,
-         socket
-         |> assign(:research_run, run)
-         |> put_flash(:info, "Research ingestion started across #{run.conditions_total} conditions.")}
-
-      {:error, :already_running, run} ->
-        {:noreply,
-         socket
-         |> assign(:research_run, run)
-         |> put_flash(:error, "A research ingestion run is already in progress.")}
-
-      {:error, :no_conditions} ->
-        {:noreply, put_flash(socket, :error, "No conditions to ingest.")}
-    end
+  defp reload_fact_batch(socket, batch_id) do
+    socket
+    |> assign(:fact_batch_id, batch_id)
+    |> assign(:fact_counts, FactRuns.counts_for_batch(batch_id))
   end
 
-  defp extractor_down_message(reason) do
-    {base_url, _} = Extractor.connection()
-
-    "Extractor unreachable at #{base_url} (#{inspect(reason)}). " <>
-      "Check the connection below and that the mehungry_extractor service is running, then run again."
-  end
+  @doc false
+  def fact_in_flight?(counts), do: counts.pending + counts.processing > 0
 
   # Load a condition's detail block: the stored per-paper analyses (Tab 1), the
   # derived food-for-condition suggestions (Tab 2), and — if the condition is a
@@ -881,19 +938,6 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   defp normalize_synonyms(params), do: params
 
-  # Build the structured `source_reference` from the form's label/url fields. A
-  # manual/guideline recommendation carries no PubMed study, so this is what satisfies
-  # the CompoundRecommendation citation invariant; the schema guard rejects the save if
-  # it's still empty for those sources.
-  defp maybe_put_source_reference(attrs, params) do
-    ref =
-      %{"label" => params["reference_label"], "url" => params["reference_url"]}
-      |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
-      |> Map.new()
-
-    if map_size(ref) > 0, do: Map.put(attrs, :source_reference, ref), else: attrs
-  end
-
   defp errors(changeset) do
     changeset
     |> Ecto.Changeset.traverse_errors(fn {msg, _} -> msg end)
@@ -903,8 +947,6 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   defp recommendations, do: @recommendations
   defp severities, do: @severities
-  defp evidence_levels, do: @evidence_levels
-  defp sources, do: @sources
 
   defp select_class,
     do: "rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5"

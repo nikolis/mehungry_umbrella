@@ -533,14 +533,15 @@ they exist only in the admin curation view, never in the app. See
 override if set, else derived from the species name/family by `Food.species_icon/1`
 (`Food.SpeciesIcons`). Present on both the list rows and the detail payload.
 ### `GET /api/v1/species/:slug` 🔓
-Species detail: description, nutrition facts, bioactive compounds (evidence
-summaries via `Food.EvidenceAggregation`), ingredients.
+Species detail: description, nutrition facts, **mined research findings**, ingredients.
 ```json
 { "data": {
   "id": 12, "name": "Spinach", "slug": "spinach", "icon": "🥬", "scientific_name": "Spinacia oleracea",
   "family": "Amaranthaceae", "variety": null,
-  "compounds": [ { "name": "Oxalate", "mean": 750.0, "unit": "mg/100g",
-    "range": [600,900], "variance": 12.3, "evidence_score": 0.82, "study_count": 5 } ],
+  "research": [ { "text": "Spinach is a rich source of dietary nitrate.",
+    "label": "verified", "certainty": "high", "claim_type": "other",
+    "study_design": "systematic_review", "source": "pmc_oa_fulltext",
+    "pmid": "12345678", "license": "commercial_ok", "quote": "verbatim span (nil unless commercial_ok)" } ],
   "ingredients": [ {"id":412,"name":"Spinach, raw"} ],
   "facts": {
     "origin_region": "Central Asia",
@@ -551,10 +552,13 @@ summaries via `Food.EvidenceAggregation`), ingredients.
   }
 } }
 ```
-Each compound's `name` is **localized to the request locale** (§Language) from the
-curated `compound_translations` (same data the web species page's Bioactive
-Compounds section uses), with the English compound name as fallback when no
-translation exists.
+`research` is the species' **mined biomedical facts** (`Mehungry.FactMining` → the
+biomed-fact-miner; see `docs/implementation/fact_mining.md`), distilled PMID-cited claims
+carrying the honest verification `label` (`verified` / `contradicted` / `unverified_*`) +
+`certainty`. `quote` is the verbatim source span and is **`null` unless `license ==
+"commercial_ok"`** (non-commercial quotes are withheld) — render from `text` + `pmid` +
+`label`. The array is empty until the admin "Mine all species" sweep has run for the species.
+*(Replaced the former `compounds[]` block when the species↔compound graph was retired.)*
 
 `facts` are **promoted species enrichment facts** (the web page's "Origins & cultivation"
 section) — Wikidata (CC0) + FAOSTAT (CC BY 4.0). Every key is nullable (absent/unpromoted

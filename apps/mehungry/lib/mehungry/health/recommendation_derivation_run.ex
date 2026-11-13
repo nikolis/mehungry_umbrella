@@ -1,7 +1,8 @@
 defmodule Mehungry.Health.RecommendationDerivationRun do
   @moduledoc """
   Aggregate progress record for one recommendation-candidate derivation pass over
-  the condition↔compound relation pairs. Mirrors `Mehungry.CompoundPipeline.DerivationRun`:
+  the condition↔compound relation pairs. A batch-progress run row (the same shape as
+  the other derivation-run trackers, e.g. `Mehungry.Food.IngredientPortionGenerationRun`):
   `processed`/`total` are a coverage snapshot refreshed each batch, and `status`
   moves `pending → processing → completed` (or `failed`). `promoted_count` stays 0 —
   this stage never auto-promotes — but is kept for run-record symmetry. Broadcast on
