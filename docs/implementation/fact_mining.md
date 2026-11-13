@@ -99,6 +99,13 @@ Mine all species ─▶ SpeciesFactMiningRuns.mine_all_species/0
 - Worker (`:fact_mining`, `max_attempts: 3`): a transient miner failure returns `{:error, _}` so Oban
   retries (wipe-then-insert is idempotent); on the **final** attempt the species is recorded `failed`
   so the batch still finalizes. `cancel_batch/1` cancels remaining jobs + marks unfinished rows failed.
+- **The row is reverted to `pending` whenever the job yields its slot without finishing** — a 429
+  `:snooze` or a non-final error retry (`Runs.mark_pending/1`). The worker only ever moves a row
+  *forward* (`mark_processing` on run-start → terminal), so without this a snoozed/retrying job would
+  leave its row stuck `processing` even though it is no longer executing. With `limit: 1` that leak
+  made a serialized batch falsely read as "**every species `processing` at once**" (the symptom the
+  admin sees: one job runs, but each species that took a turn and snoozed/retried stays `processing`).
+  Reverting keeps exactly the one truly-executing row `processing` and the rest `pending`.
 
 `:fact_mining` is its own single-concurrency Oban queue (total concurrency 14, pool 18) so the slow,
 self-throttled miner can't starve other work.
@@ -122,7 +129,8 @@ requests could otherwise fire at once. Two layers keep it to exactly one:
   returns **HTTP 429** when saturated. `FactMining.Client.mine/2` maps that to
   `{:error, {:rate_limited, seconds}}` (parsed from the `Retry-After` header, defaulting to 30s,
   clamped ≥5s); both workers turn it into `{:snooze, seconds}` — rescheduling **without** burning a
-  retry or marking the run failed. This covers any brief overlap during a leadership handoff.
+  retry or marking the run failed, and **reverting the tracking row to `pending`** (it gave up its slot
+  and is no longer executing). This covers any brief overlap during a leadership handoff.
 
 ## Condition sweep — the admin trigger on `/professional/health`
 
@@ -162,7 +170,7 @@ source link, no quote). `conditions_for_search/1` powers the `/nutritionist/rese
 | `FactMining.SpeciesMinedFact` / `ConditionMinedFact` | `fact_mining/schemas/…` | One row per mined fact (per species / condition). |
 | `FactMining.SpeciesFactMiningRun` / `ConditionFactMiningRun` | `fact_mining/schemas/…` | Per-entity batch tracking row. |
 | `FactMining.SpeciesFactMiningRuns` / `ConditionFactMiningRuns` | `fact_mining/…_fact_mining_runs.ex` | Fan-out + progress + PubSub + cancel. |
-| `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`); snoozes on a miner 429 (`{:rate_limited, s}`). |
+| `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`); snoozes on a miner 429 (`{:rate_limited, s}`), reverting its row to `pending` (also on a non-final error retry) so a yielded slot doesn't leave the row stuck `processing`. |
 | `FactMining.QueueLeader` | `fact_mining/queue_leader.ex` | Per-node poller: resumes `:fact_mining` only on the Oban leader (paused elsewhere) → one miner call at a time cluster-wide. |
 | `MehungryWeb.ProfessionalLive.FactMiningPipeline` | `…/professional_live/fact_mining_pipeline.ex` | Admin "Mine all species" + live progress. |
 | `MehungryWeb.ProfessionalLive.HealthConditions` | `…/professional_live/health_conditions.ex` | Admin "Mine all conditions" card + live progress. |

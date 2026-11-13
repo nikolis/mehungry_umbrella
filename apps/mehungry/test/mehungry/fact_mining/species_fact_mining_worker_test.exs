@@ -108,15 +108,19 @@ defmodule Mehungry.FactMining.SpeciesFactMiningWorkerTest do
 
       args = %{"tracking_id" => row.id, "species_id" => species.id, "batch_id" => batch_id}
 
-      # Non-final attempt → returns the error so Oban retries.
+      # Non-final attempt → returns the error so Oban retries, and reverts the row
+      # to `pending`: it yielded its slot and is no longer executing, so it must not
+      # be left stuck `processing` (that leak makes a serialized batch read as
+      # "every species processing at once").
       assert {:error, :boom} = perform_job(SpeciesFactMiningWorker, args, attempt: 1)
+      assert Repo.get!(SpeciesFactMiningRun, row.id).status == "pending"
 
       # Final attempt → records failed so the batch can finalize.
       assert :ok = perform_job(SpeciesFactMiningWorker, args, attempt: 3)
       assert Repo.get!(SpeciesFactMiningRun, row.id).status == "failed"
     end
 
-    test "snoozes (does not fail) when the miner is rate-limited (429)", %{species: species} do
+    test "snoozes and reverts the row to pending when rate-limited (429)", %{species: species} do
       Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
       Application.put_env(:mehungry, :fact_miner_stub_sheet, {:error, {:rate_limited, 42}})
       {:ok, batch_id} = Runs.mine_all_species()
@@ -124,9 +128,10 @@ defmodule Mehungry.FactMining.SpeciesFactMiningWorkerTest do
 
       args = %{"tracking_id" => row.id, "species_id" => species.id, "batch_id" => batch_id}
 
-      # Even on the final attempt a 429 snoozes per Retry-After instead of failing.
+      # Even on the final attempt a 429 snoozes per Retry-After instead of failing,
+      # and the row is reverted to `pending` (it gave up its slot — not executing).
       assert {:snooze, 42} = perform_job(SpeciesFactMiningWorker, args, attempt: 3)
-      refute Repo.get!(SpeciesFactMiningRun, row.id).status == "failed"
+      assert Repo.get!(SpeciesFactMiningRun, row.id).status == "pending"
     end
   end
 

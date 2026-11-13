@@ -40,8 +40,11 @@ defmodule Mehungry.ObanWorkers.ConditionFactMiningWorker do
         :ok
 
       # Miner concurrency saturated (429). Back off per Retry-After without burning a
-      # retry or marking the run failed — it's still in progress, just queued behind.
+      # retry or marking the run failed. Revert the row to `pending` first: it yielded
+      # its single slot and is no longer executing, so leaving it `processing` would
+      # make the serialized batch falsely read as "every condition processing at once".
       {:error, {:rate_limited, seconds}} ->
+        Runs.mark_pending(tracking_id)
         {:snooze, seconds}
 
       {:error, reason} ->
@@ -54,6 +57,9 @@ defmodule Mehungry.ObanWorkers.ConditionFactMiningWorker do
           Runs.mark_failed(tracking_id, reason)
           :ok
         else
+          # Will retry on a later slot — revert to `pending` so it isn't left
+          # stuck `processing` while it waits (same leak as the 429 snooze).
+          Runs.mark_pending(tracking_id)
           {:error, reason}
         end
     end

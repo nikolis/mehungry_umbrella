@@ -107,6 +107,34 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRuns do
     end
   end
 
+  @doc """
+  Revert a row back to `pending` — the job yielded its `:fact_mining` slot without
+  finishing (a 429 `:snooze`, or a non-final error that will retry), so it is **not**
+  currently executing.
+
+  Without this the row would stay `processing` forever: the worker only ever moves a
+  row *forward* to `processing` (and then to a terminal state on success/last
+  failure), so a job that snoozes or retries leaks its `processing` status. Over a
+  serialized, one-at-a-time batch that leak makes every species look like it is
+  processing at once even though `limit: 1` only ever runs one. Broadcasts the full
+  row so the UI badge reverts to pending.
+  """
+  def mark_pending(nil), do: nil
+
+  def mark_pending(tracking_id) do
+    case Repo.get(Run, tracking_id) do
+      nil ->
+        nil
+
+      %Run{} = run ->
+        run
+        |> Run.changeset(%{status: "pending", started_at: nil})
+        |> Repo.update!()
+        |> Repo.preload(:species)
+        |> broadcast_run()
+    end
+  end
+
   @doc "Record a species row as `completed` with its fact counts. Broadcasts the full row."
   def mark_completed(nil, _counts), do: nil
 
