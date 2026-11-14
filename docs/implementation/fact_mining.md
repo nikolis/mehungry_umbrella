@@ -125,6 +125,16 @@ requests could otherwise fire at once. Two layers keep it to exactly one:
   tick, and any in-flight job on the old leader finishes or is rescued by `Lifeline` and re-run
   (mining is idempotent). This is why no DB lock is held across the call — a single `/mine` can take
   **up to ~10 min**, so pinning a pooled connection for its duration is unacceptable.
+- **Client timeout must exceed the miner's per-call duration (the serialization premise).** The whole
+  one-at-a-time scheme assumes each `FactMining.Client.mine/2` call **blocks until the miner answers**,
+  so the single `:fact_mining` slot is held for the full call and no second `/mine` can fire. An HTTP
+  client timeout does **not** cancel the server-side work — if the client gives up early, the miner
+  keeps processing the abandoned request while the freed slot starts the next job and fires *another*
+  `/mine`, so over a batch the requests pile up and overlap on the miner even though Oban only ever ran
+  one `perform` at a time. A single `/mine` can take **up to ~10 min**, so the client default is
+  **15 min** (`@default_timeout_ms`, overridable via `:fact_miner_timeout_ms` / `FACT_MINER_TIMEOUT_MS`
+  — only ever *raise* it). The old 120s default silently broke this: every call was abandoned at 2 min
+  and the next job re-fired, which is exactly how "all species query the REST API at once" happened.
 - **429 / `Retry-After` (reactive safety net).** The miner enforces its **own** concurrency limit and
   returns **HTTP 429** when saturated. `FactMining.Client.mine/2` maps that to
   `{:error, {:rate_limited, seconds}}` (parsed from the `Retry-After` header, defaulting to 30s,

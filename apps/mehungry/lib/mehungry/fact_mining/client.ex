@@ -13,14 +13,27 @@ defmodule Mehungry.FactMining.Client do
   synchronous and slow (LLM calls + PubMed/PMC retrieval + an internal ~3 req/s
   licence throttle), so the default timeout is generous. See
   `../biomed-fact-miner/docs/rest-api.md`.
+
+  **The timeout MUST exceed the miner's real per-call duration, or serialization
+  breaks.** `:fact_mining` runs one job at a time (`limit: 1`, leader-gated) on the
+  premise that each `mine/2` call *blocks* until the miner answers, so the slot is
+  held for the whole call and no second request can fire. But an HTTP client timeout
+  does **not** cancel the server-side work: if we give up early, the miner keeps
+  processing the abandoned request while the freed slot starts the next job, which
+  fires another `/mine`. Over a batch that piles up into many *overlapping* requests
+  on the miner even though Oban only ever ran one `perform` at a time. A single
+  `/mine` (scope → gather → extract → verify, LLM + PubMed/PMC) can take **up to
+  ~10 min**, so the default must sit comfortably above that.
   """
 
   @behaviour Mehungry.FactMining.ClientBehaviour
 
-  # /mine runs scope → gather → extract → verify end to end (LLM + PubMed/PMC), so
-  # a single call can take many seconds. Generous default, overridable via the
-  # `:fact_miner_timeout_ms` config key (env FACT_MINER_TIMEOUT_MS).
-  @default_timeout_ms 120_000
+  # Must stay > the miner's worst-case /mine duration (~10 min) — see the moduledoc:
+  # a too-short timeout makes the client abandon a still-running call, so the next
+  # serialized job fires a second request and they overlap on the miner. 15 min gives
+  # headroom over the ~10-min max. Overridable via `:fact_miner_timeout_ms`
+  # (env FACT_MINER_TIMEOUT_MS) — only ever raise it, never drop below the real max.
+  @default_timeout_ms 900_000
 
   # The pre-flight /health probe must be snappy — a liveness check, not a mine.
   @reachability_timeout_ms 5_000
