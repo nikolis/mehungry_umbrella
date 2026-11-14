@@ -15,6 +15,17 @@
 > left **dormant**. See `docs/implementation/fact_mining.md`. The sections below describe the earlier
 > extractor-based build (historical); the in-app reader is now a **legacy-only shell** fed by any
 > displayable `StudyFullText` still on record — new miner publications link out to PubMed/PMC.
+>
+> **Extractor UI removed + data wipeable (2026-11-14).** The fact-miner is now the **sole**
+> condition-research source, so the `/professional/health` extractor controls described in §6–§7
+> below — the **"Analyzer service"** settings, **"Analyze selected"**, the analyzed/unusable paper
+> badges, and the per-condition **"Claims & suggestions"** verify→publish tabs — were **removed** from
+> the page (the per-condition PubMed **"Search papers"** crawl + **"Re-assign"** stay). The dormant
+> legacy data is cleared by a one-shot **"Wipe extractor data"** admin button →
+> `Mehungry.Science.PipelineReset.reset_extractor_data/0`, which deletes `study_analyses`,
+> **extractor-sourced** `study_full_texts` (`source = "mehungry_extractor"` — measurement-pipeline full
+> texts are kept), the `extractor_settings` singleton, and all `research_ingestion_runs`. The
+> `Extractor` / `StudyAnalyses` / `ResearchIngestion` contexts + the legacy reader remain in place.
 
 ## 1. Goal
 

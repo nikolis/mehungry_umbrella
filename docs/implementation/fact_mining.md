@@ -146,7 +146,30 @@ requests could otherwise fire at once. Two layers keep it to exactly one:
 
 The condition branch mirrors the species sweep exactly, from a different admin surface. The **"Mine
 conditions (fact-miner)"** card on `/professional/health` (`MehungryWeb.ProfessionalLive.HealthConditions`)
-replaced the old extractor "Research ingestion" card:
+replaced the old extractor "Research ingestion" card.
+
+**Page action hierarchy (2026-11-14).** The header keeps only the secondary `Compound pipeline →`
+link plus two Alpine dropdowns — a **Setup** menu (`Seed registry`, `Seed diet patterns`) and a
+paprika **Danger zone** menu (`Clear all suggestions`, `Wipe extractor data`) — so the rare and the
+irreversible actions no longer share size/billing with everyday work; the buttons keep their exact
+`phx-click` + `data-confirm` (still directly addressable in tests). The mining card is the page's
+hero: its status panel appears the instant a batch is kicked off (gated on `mining? or in_flight? or
+total > 0`), with a **progress bar** (completed + failed over total) and an **ETA line** —
+`counts_for_batch/1` returns the batch's earliest `started_at`, and the LiveView's `mining_eta/1`
+derives `elapsed ÷ done` throughput into `~Xh Ym left · ~N/condition` (recomputed per PubSub event;
+no ticking timer). A **sticky bottom-right mini-status** keeps that progress visible once the long
+conditions list scrolls the hero out of view.
+
+> **Extractor UI fully retired + data wipeable (2026-11-14).** With the fact-miner the sole source of
+> nutritionist condition research, the page's remaining extractor affordances — the "Analyzer service"
+> settings, "Analyze selected", analyzed/unusable badges, and the per-condition "Claims & suggestions"
+> verify→publish tabs — were **removed**. A one-shot **"Wipe extractor data"** admin button calls
+> `Mehungry.Science.PipelineReset.reset_extractor_data/0`, clearing `study_analyses`, extractor-sourced
+> `study_full_texts` (`source = "mehungry_extractor"`), the `extractor_settings` singleton, and all
+> `research_ingestion_runs`. The underlying `Extractor` / `StudyAnalyses` / `ResearchIngestion`
+> contexts and the legacy in-app reader remain dormant-but-intact.
+
+The sweep itself:
 
 ```
 Mine all conditions ─▶ ConditionFactMiningRuns.mine_all_conditions/0
@@ -160,6 +183,14 @@ Mine all conditions ─▶ ConditionFactMiningRuns.mine_all_conditions/0
   PubSub "condition_fact_mining_runs" ─▶ the LiveView refreshes aggregate counts
     (counts_for_batch) on every transition; reloads the page once the batch drains.
 ```
+
+A **single** condition can also be mined on demand from its card in the Conditions list
+(`ConditionFactMiningRuns.mine_condition/1`) — the per-condition "Mine facts" button. It opens a
+**one-row batch** on its own `batch_id` and enqueues one `ConditionFactMiningWorker` job through the
+**same** serialized `:fact_mining` queue and tracking path as the sweep (both share the private
+`enqueue_batch/1`). Its progress is the card's own "Mining…" state + a result flash ("Mined N facts"),
+routed by `batch_id` so it stays independent of the "Mine all" hero widget. Use it to (re)mine one
+condition without re-running the hours-long full sweep.
 
 `mine_condition/1` additionally **enriches** each distinct `pmid` via `Literature.fetch_and_upsert_study/1`
 (cached — the stored row is returned with no network when present) so publication cards carry real
@@ -183,7 +214,7 @@ source link, no quote). `conditions_for_search/1` powers the `/nutritionist/rese
 | `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`); snoozes on a miner 429 (`{:rate_limited, s}`), reverting its row to `pending` (also on a non-final error retry) so a yielded slot doesn't leave the row stuck `processing`. |
 | `FactMining.QueueLeader` | `fact_mining/queue_leader.ex` | Per-node poller: resumes `:fact_mining` only on the Oban leader (paused elsewhere) → one miner call at a time cluster-wide. |
 | `MehungryWeb.ProfessionalLive.FactMiningPipeline` | `…/professional_live/fact_mining_pipeline.ex` | Admin "Mine all species" + live progress. |
-| `MehungryWeb.ProfessionalLive.HealthConditions` | `…/professional_live/health_conditions.ex` | Admin "Mine all conditions" card + live progress. |
+| `MehungryWeb.ProfessionalLive.HealthConditions` | `…/professional_live/health_conditions.ex` | Admin "Mine all conditions" card + live progress, plus per-condition "Mine facts" buttons (`mine_condition/1`). |
 
 ## What the removal cost (full replacement)
 

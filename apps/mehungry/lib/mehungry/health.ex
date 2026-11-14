@@ -479,6 +479,31 @@ defmodule Mehungry.Health do
   end
 
   @doc """
+  Compound recommendations for many conditions in one query, returned as a
+  complete map `%{condition_id => [rec, ...]}` keyed by **every** passed id
+  (empty list when a condition has none). This is the batched read for the admin
+  curation page, which loads every condition at once — the per-condition cached
+  `recommendations_for_condition/2` is for the single-condition read surfaces
+  (consumer `/foods` filter, badges). No localization overlay (admin is
+  untranslated); each rec's `:compound` is preloaded.
+  """
+  def recommendations_by_conditions(condition_ids) when is_list(condition_ids) do
+    grouped =
+      Repo.all(
+        from(r in CompoundRecommendation,
+          join: c in Compound,
+          on: c.id == r.compound_id,
+          where: r.condition_id in ^condition_ids,
+          order_by: [asc: c.name],
+          preload: [compound: c, studies: ^studies_newest_first()]
+        )
+      )
+      |> Enum.group_by(& &1.condition_id)
+
+    Map.new(condition_ids, fn id -> {id, Map.get(grouped, id, [])} end)
+  end
+
+  @doc """
   The recommendation rows for a compound, each with its `:condition` and frozen
   reference `:studies` (PubMed provenance) preloaded.
   """
@@ -774,6 +799,26 @@ defmodule Mehungry.Health do
       {:ok, cached} ->
         cached
     end
+  end
+
+  @doc """
+  Nutrient recommendations for many conditions in one query, returned as a
+  complete map `%{condition_id => [rec, ...]}` keyed by **every** passed id
+  (empty list when none). Batched read for the admin curation page — the
+  per-condition cached `nutrient_recommendations_for_condition/1` is for the
+  single-condition read surfaces.
+  """
+  def nutrient_recommendations_by_conditions(condition_ids) when is_list(condition_ids) do
+    grouped =
+      Repo.all(
+        from(r in NutrientRecommendation,
+          where: r.condition_id in ^condition_ids,
+          order_by: [asc: r.nutrient_name]
+        )
+      )
+      |> Enum.group_by(& &1.condition_id)
+
+    Map.new(condition_ids, fn id -> {id, Map.get(grouped, id, [])} end)
   end
 
   @doc "The distinct nutrient names a set of conditions recommends to `encourage`."

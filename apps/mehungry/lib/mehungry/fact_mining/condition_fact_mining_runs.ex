@@ -40,48 +40,71 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
   `{:error, :no_conditions}`.
   """
   def mine_all_conditions do
-    case FactMining.reachable?() do
-      {:error, reason} ->
-        {:error, {:unreachable, reason}}
-
-      :ok ->
-        case Health.list_conditions() do
-          [] ->
-            {:error, :no_conditions}
-
-          conditions ->
-            batch_id = Ecto.UUID.generate()
-            now = now()
-
-            rows =
-              Enum.map(conditions, fn c ->
-                %{
-                  batch_id: batch_id,
-                  condition_id: c.id,
-                  status: "pending",
-                  facts_total: 0,
-                  verified_count: 0,
-                  contradicted_count: 0,
-                  inserted_at: now,
-                  updated_at: now
-                }
-              end)
-
-            {_, inserted} = Repo.insert_all(Run, rows, returning: [:id, :condition_id])
-
-            inserted
-            |> Enum.map(fn r ->
-              ConditionFactMiningWorker.new(%{
-                "tracking_id" => r.id,
-                "condition_id" => r.condition_id,
-                "batch_id" => batch_id
-              })
-            end)
-            |> Oban.insert_all()
-
-            {:ok, batch_id}
-        end
+    with :ok <- check_reachable() do
+      case Health.list_conditions() do
+        [] -> {:error, :no_conditions}
+        conditions -> {:ok, enqueue_batch(conditions)}
+      end
     end
+  end
+
+  @doc """
+  Mine a **single** condition — the per-condition twin of `mine_all_conditions/0`,
+  for the per-card "Mine facts" button. Pre-flights the miner, opens one `pending`
+  tracking row in its own `batch_id`, and enqueues one worker job on the same
+  serialized `:fact_mining` queue. Returns `{:ok, batch_id}`,
+  `{:error, {:unreachable, reason}}`, or `{:error, :not_found}`.
+  """
+  def mine_condition(condition_id) do
+    with :ok <- check_reachable() do
+      case Health.get_condition(condition_id) do
+        nil -> {:error, :not_found}
+        condition -> {:ok, enqueue_batch([condition])}
+      end
+    end
+  end
+
+  defp check_reachable do
+    case FactMining.reachable?() do
+      :ok -> :ok
+      {:error, reason} -> {:error, {:unreachable, reason}}
+    end
+  end
+
+  # Open one `pending` tracking row per condition under a fresh `batch_id` and fan
+  # out one worker job each via a single `Oban.insert_all` (never a per-row loop —
+  # the NOTIFY-storm hazard). Shared by the "all" sweep and single-condition mines.
+  defp enqueue_batch(conditions) do
+    batch_id = Ecto.UUID.generate()
+    now = now()
+
+    rows =
+      Enum.map(conditions, fn c ->
+        %{
+          batch_id: batch_id,
+          condition_id: c.id,
+          status: "pending",
+          facts_total: 0,
+          verified_count: 0,
+          contradicted_count: 0,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    {_, inserted} = Repo.insert_all(Run, rows, returning: [:id, :condition_id])
+
+    inserted
+    |> Enum.map(fn r ->
+      ConditionFactMiningWorker.new(%{
+        "tracking_id" => r.id,
+        "condition_id" => r.condition_id,
+        "batch_id" => batch_id
+      })
+    end)
+    |> Oban.insert_all()
+
+    batch_id
   end
 
   @doc "Mark a condition row `processing` + broadcast the slim progress signal."
@@ -204,7 +227,9 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
 
   @doc """
   Aggregate progress for a batch: a `%{pending, processing, completed, failed,
-  total, facts_total}` summary derived by counting over `batch_id`.
+  total, facts_total, started_at}` summary derived by counting over `batch_id`.
+  `started_at` is the earliest moment any condition in the batch began processing
+  (nil until the first one starts) — the anchor the LiveView derives an ETA from.
   """
   def counts_for_batch(nil), do: empty_counts()
 
@@ -224,13 +249,22 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
         from(r in Run, where: r.batch_id == ^batch_id, select: coalesce(sum(r.facts_total), 0))
       )
 
+    started_at =
+      Repo.one(
+        from(r in Run,
+          where: r.batch_id == ^batch_id and not is_nil(r.started_at),
+          select: min(r.started_at)
+        )
+      )
+
     %{
       pending: Map.get(by_status, "pending", 0),
       processing: Map.get(by_status, "processing", 0),
       completed: Map.get(by_status, "completed", 0),
       failed: Map.get(by_status, "failed", 0),
       total: by_status |> Map.values() |> Enum.sum(),
-      facts_total: facts_total
+      facts_total: facts_total,
+      started_at: started_at
     }
   end
 
@@ -265,7 +299,15 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
   end
 
   defp empty_counts,
-    do: %{pending: 0, processing: 0, completed: 0, failed: 0, total: 0, facts_total: 0}
+    do: %{
+      pending: 0,
+      processing: 0,
+      completed: 0,
+      failed: 0,
+      total: 0,
+      facts_total: 0,
+      started_at: nil
+    }
 
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
 end

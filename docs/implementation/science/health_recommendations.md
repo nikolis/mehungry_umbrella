@@ -118,6 +118,13 @@ so the link is carried through to the result — not left on the mutable candida
   batch-attach `:recommendation_citations` + `:fact_citations`. The public condition
   page links each conclusion to `pubmed.ncbi.nlm.nih.gov/<pmid>` (or the structured
   `source_reference`) under a "not medical advice — read the source" disclaimer.
+  The per-condition `recommendations_for_condition/2` / `nutrient_recommendations_for_condition/1`
+  are **cached** (`:health_cache`) for the single-condition consumer read surfaces;
+  the admin curation page (`/professional/health`), which loads every condition at
+  once, instead uses the batched, uncached `recommendations_by_conditions/1` /
+  `nutrient_recommendations_by_conditions/1` (one query each, returning a complete
+  `%{condition_id => [rec, ...]}` keyed by every passed id) so it doesn't fan out into
+  a per-condition N+1 on every reload.
 
 ---
 
@@ -298,7 +305,17 @@ mix test apps/mehungry/test/mehungry/health_test.exs
   prose (PubTator relations are state-blind) and posts review-gated, state-tagged
   candidates, and a **decoupled** `condition_state_recommendations` store surfaced on the
   condition page's phase selector. See **`docs/science/condition_phase_recommendations.md`**.
-- **Per-condition search + batch analysis from `/professional/health` — BUILT.** Each
+- **Per-condition search + batch analysis from `/professional/health` — the extractor half
+  REMOVED 2026-11-14.** The fact-miner (`Mehungry.FactMining`) is now the sole source of
+  nutritionist condition research, so the extractor admin flow described in this bullet —
+  **"Analyze selected"**, the **"Analyzer service"** settings, the analyzed/unusable badges, and
+  the per-condition **"Claims & suggestions"** verify→publish tabs — was **removed** from the page;
+  promoting literature-derived advice is now **only** via the PubTator-derived "Review derived
+  recommendations" / "Review phase-aware candidates" flows above. The per-condition **"Search
+  papers"** crawl + the paper list + **"Re-assign"** stay. Dormant extractor data is cleared by a
+  one-shot **"Wipe extractor data"** button → `Mehungry.Science.PipelineReset.reset_extractor_data/0`
+  (`study_analyses`, extractor-sourced `study_full_texts`, `extractor_settings`,
+  `research_ingestion_runs`). The description below is retained as historical context. Each
   condition card has a **"Search papers"** button that runs the reverse crawl for that one
   condition on demand (`Literature.crawl_condition/2`, async via `start_async`), associates
   the discovered studies (`study_conditions`), and lists them in a collapse/expand panel.

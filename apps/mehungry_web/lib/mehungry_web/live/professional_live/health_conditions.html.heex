@@ -1,4 +1,4 @@
-<div class="max-w-5xl mx-auto p-4 space-y-8">
+<div class="max-w-7xl mx-auto p-4 space-y-8">
   <div class="flex items-start justify-between gap-4">
     <div>
       <h1 class="text-2xl font-semibold text-parchment">Health Conditions</h1>
@@ -9,95 +9,94 @@
         shown on <code class="text-parchment">/conditions/:id</code>.
       </p>
     </div>
-    <div class="shrink-0 flex gap-2">
+    <%!-- Everyday mining lives in the hero card below; the header keeps only
+         secondary nav + rare setup + a guarded danger zone, so neither rare nor
+         destructive actions share billing with the page's primary job. --%>
+    <div class="shrink-0 flex items-center gap-2">
       <.link
         navigate={~p"/professional/compound-pipeline"}
         class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
       >
         Compound pipeline →
       </.link>
-      <button
-        type="button"
-        phx-click="seed_conditions"
-        data-confirm="Bulk-load the bundled condition catalogue? Idempotent — existing conditions are refreshed, not duplicated."
-        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
-      >
-        Seed registry
-      </button>
-      <button
-        type="button"
-        phx-click="seed_diet_patterns"
-        data-confirm="Add the starter diet-pattern blueprints to your account? Idempotent — patterns you already own are skipped."
-        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
-      >
-        Seed diet patterns
-      </button>
-      <button
-        type="button"
-        phx-click="clear_all_recommendations"
-        data-confirm="Delete ALL recommendation candidates AND promoted recommendations (compound + nutrient + phase-aware) for EVERY condition? This cannot be undone. Conditions and compounds are kept."
-        class="rounded border border-paprika/50 bg-paprika/10 text-paprika text-sm px-3 py-1.5 hover:bg-paprika/20"
-      >
-        Clear all suggestions
-      </button>
+
+      <%!-- Setup: rare, idempotent one-time loads, folded out of the primary row. --%>
+      <div class="relative" x-data="{ open: false }" @keydown.escape="open = false">
+        <button
+          type="button"
+          @click="open = !open"
+          class="inline-flex items-center gap-1 rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
+        >
+          Setup
+          <svg class="w-3 h-3" x-bind:class="open && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div
+          x-show="open"
+          x-cloak
+          @click.outside="open = false"
+          @click="open = false"
+          class="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-ink-panel2 bg-ink-panel shadow-lg p-1"
+        >
+          <button
+            type="button"
+            phx-click="seed_conditions"
+            data-confirm="Bulk-load the bundled condition catalogue? Idempotent — existing conditions are refreshed, not duplicated."
+            class="block w-full text-left rounded px-3 py-1.5 text-sm text-parchment hover:bg-ink-panel2"
+          >
+            Seed registry
+          </button>
+          <button
+            type="button"
+            phx-click="seed_diet_patterns"
+            data-confirm="Add the starter diet-pattern blueprints to your account? Idempotent — patterns you already own are skipped."
+            class="block w-full text-left rounded px-3 py-1.5 text-sm text-parchment hover:bg-ink-panel2"
+          >
+            Seed diet patterns
+          </button>
+        </div>
+      </div>
+
+      <%!-- Danger zone: irreversible wipes, one click deeper so they can't be hit by accident. --%>
+      <div class="relative" x-data="{ open: false }" @keydown.escape="open = false">
+        <button
+          type="button"
+          @click="open = !open"
+          class="inline-flex items-center gap-1 rounded border border-paprika/50 bg-paprika/10 text-paprika text-sm px-3 py-1.5 hover:bg-paprika/20"
+        >
+          Danger zone
+          <svg class="w-3 h-3" x-bind:class="open && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div
+          x-show="open"
+          x-cloak
+          @click.outside="open = false"
+          @click="open = false"
+          class="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-paprika/40 bg-ink-panel shadow-lg p-1"
+        >
+          <button
+            type="button"
+            phx-click="clear_all_recommendations"
+            data-confirm="Delete ALL recommendation candidates AND promoted recommendations (compound + nutrient + phase-aware) for EVERY condition? This cannot be undone. Conditions and compounds are kept."
+            class="block w-full text-left rounded px-3 py-1.5 text-sm text-paprika hover:bg-paprika/10"
+          >
+            Clear all suggestions
+          </button>
+          <button
+            type="button"
+            phx-click="wipe_extractor_data"
+            data-confirm="Permanently delete ALL legacy extractor data — every study analysis, every extractor-sourced full text, the analyzer connection settings, and all research-ingestion run history? This cannot be undone. The fact-miner data and all curated recommendations are kept."
+            class="block w-full text-left rounded px-3 py-1.5 text-sm text-paprika hover:bg-paprika/10"
+          >
+            Wipe extractor data
+          </button>
+        </div>
+      </div>
     </div>
   </div>
-
-  <%!-- ── Analyzer service connection ────────────────────────────────── --%>
-  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4" x-data="{ open: false }">
-    <div class="flex items-center justify-between gap-2">
-      <h2 class="text-lg font-medium text-parchment">Analyzer service</h2>
-      <button
-        type="button"
-        @click="open = !open"
-        class="text-xs rounded border border-ink-panel2 bg-ink-panel2 text-parchment px-2 py-1 hover:bg-ink-panel"
-      >
-        <span x-text="open ? 'Hide' : 'Configure'"></span>
-      </button>
-    </div>
-    <p class="text-parchment-dim text-sm">
-      Where <span class="font-medium">“Analyze selected”</span>
-      sends papers (the <code class="text-parchment">mehungry_extractor</code>
-      <code class="text-parchment">POST /analyze</code>
-      service). Currently using <code class="text-parchment">{@extractor_base_url}</code><span :if={
-        @extractor_auth_token
-      }> · auth token set</span>.
-    </p>
-
-    <form
-      x-show="open"
-      x-cloak
-      phx-submit="save_extractor_settings"
-      class="grid grid-cols-1 sm:grid-cols-2 gap-3"
-    >
-      <label class="text-xs text-parchment-dim sm:col-span-2 -mb-1">Service URL</label>
-      <input
-        type="url"
-        name="settings[base_url]"
-        value={@extractor_base_url}
-        required
-        placeholder="http://127.0.0.1:8000"
-        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
-      />
-      <label class="text-xs text-parchment-dim sm:col-span-2 -mb-1">
-        Auth token (optional) — sent as <code class="text-parchment">Authorization: Bearer …</code>; leave blank for none
-      </label>
-      <input
-        type="password"
-        name="settings[auth_token]"
-        value={@extractor_auth_token}
-        autocomplete="off"
-        placeholder="Bearer token (optional)"
-        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
-      />
-      <button
-        type="submit"
-        class="justify-self-start px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
-      >
-        Save analyzer settings
-      </button>
-    </form>
-  </section>
 
   <%!-- ── Mine conditions (biomed-fact-miner) ───────────────────────────── --%>
   <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4" x-data="{ open: false }">
@@ -195,9 +194,14 @@
       </span>
     </div>
 
+    <% done = @fact_counts.completed + @fact_counts.failed %>
+    <% pct = if @fact_counts.total > 0, do: round(done / @fact_counts.total * 100), else: 0 %>
+
+    <%!-- Shown the moment a batch is kicked off (mining?) — not only once rows
+         exist — so there is no blank gap between click and the first tracking row. --%>
     <div
-      :if={@fact_counts.total > 0}
-      class="text-sm rounded border border-ink-panel2 bg-ink-panel2 p-3 space-y-1"
+      :if={@mining? or in_flight? or @fact_counts.total > 0}
+      class="text-sm rounded border border-ink-panel2 bg-ink-panel2 p-3 space-y-2"
     >
       <div class="flex items-center gap-2">
         <span class={[
@@ -208,14 +212,33 @@
           {if in_flight?, do: "mining", else: "done"}
         </span>
         <span class="text-parchment-dim">
-          {@fact_counts.completed + @fact_counts.failed}/{@fact_counts.total} conditions
+          {done}/{@fact_counts.total} conditions
           <span :if={@fact_counts.failed > 0}>· {@fact_counts.failed} failed</span>
           <span :if={@fact_counts.processing > 0}>· {@fact_counts.processing} in flight</span>
         </span>
+        <span class="ml-auto text-xs text-parchment-dim tabular-nums">{pct}%</span>
       </div>
-      <p class="text-parchment-dim text-xs">
-        {@fact_counts.facts_total} facts mined this batch.
-      </p>
+
+      <%!-- Batch drain progress (completed + failed over total). --%>
+      <div class="h-2 w-full rounded-full bg-ink-panel overflow-hidden">
+        <div
+          class="h-full rounded-full bg-basil transition-all duration-500"
+          style={"width: #{pct}%"}
+        >
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-parchment-dim">
+        <span>{@fact_counts.facts_total} facts mined this batch.</span>
+        <%!-- Honest ETA from measured throughput: the queue is serialized at
+             ~10 min/condition, so a full sweep can run for hours — surface it. --%>
+        <span :if={in_flight? and mining_eta(@fact_counts)} class="text-basil">
+          {mining_eta(@fact_counts)}
+        </span>
+        <span :if={in_flight? and is_nil(mining_eta(@fact_counts))} class="text-parchment-dim/80">
+          estimating…
+        </span>
+      </div>
     </div>
   </section>
 
@@ -267,13 +290,42 @@
     </form>
   </section>
 
-  <%!-- ── Review derived recommendations (from literature) ───────────── --%>
-  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <h2 class="text-lg font-medium text-parchment mr-2">
-        Review derived recommendations ({length(@rec_candidates)})
-      </h2>
+  <%!-- ── Dormant: literature-derived recommendation review ──────────── --%>
+  <%!-- Both queues below are fed by literature-derivation pipelines that are
+       currently dormant, so they normally stay empty. Folded away by default;
+       the toggle still shows the combined pending count. --%>
+  <section
+    class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4"
+    x-data="{ open: false }"
+  >
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <h2 class="text-lg font-medium text-parchment">
+          Literature-derived recommendation review
+          <span class="text-xs rounded-full bg-ink-panel2 text-parchment-dim px-2 py-0.5 ml-1">
+            dormant
+          </span>
+        </h2>
+        <p class="text-parchment-dim text-xs">
+          Review queues for recommendations derived from the literature pipelines.
+          These pipelines are currently dormant, so the lists are normally empty.
+        </p>
+      </div>
+      <button
+        type="button"
+        @click="open = !open"
+        class="shrink-0 text-xs rounded border border-ink-panel2 bg-ink-panel2 text-parchment px-2 py-1 hover:bg-ink-panel"
+      >
+        <span x-text="open ? 'Hide' : 'Show'"></span>
+        ({length(@rec_candidates) + length(@phase_candidates)})
+      </button>
     </div>
+
+    <div x-show="open" x-cloak class="space-y-6">
+      <div class="space-y-3">
+        <h3 class="text-base font-medium text-parchment">
+          Review derived recommendations ({length(@rec_candidates)})
+        </h3>
     <p class="text-parchment-dim text-sm">
       Candidates derived from PubTator's directional chemical↔disease relations. The
       <span class="font-medium">suggested</span>
@@ -357,27 +409,25 @@
         </button>
       </form>
     </div>
-  </section>
+      </div>
 
-  <%!-- ── Review phase-aware candidates (Active Flare vs Remission …) ──── --%>
-  <section class="space-y-3 rounded-lg border border-paprika/30 bg-ink-panel p-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <h2 class="text-lg font-medium text-parchment mr-2">
-        Review phase-aware candidates ({length(@phase_candidates)})
-      </h2>
-    </div>
-    <p class="text-parchment-dim text-sm">
-      Extracted from condition literature by the offline Python service, each tagged
-      with a <span class="font-medium">disease phase</span>
-      (Active Flare, Remission …). Confirm the direction, severity and phase, then
-      <span class="font-medium">Promote</span>
-      to write a phase-specific recommendation
-      (<code class="text-parchment">condition_state_recommendations</code>, shown only on
-      the condition page). Nothing is auto-promoted.
-    </p>
+      <%!-- ── Phase-aware candidates (Active Flare vs Remission …) ──── --%>
+      <div class="space-y-3 rounded-lg border border-paprika/30 p-3">
+        <h3 class="text-base font-medium text-parchment">
+          Review phase-aware candidates ({length(@phase_candidates)})
+        </h3>
+        <p class="text-parchment-dim text-sm">
+          Candidates tagged with a <span class="font-medium">disease phase</span>
+          (Active Flare, Remission …). Confirm the direction, severity and phase, then
+          <span class="font-medium">Promote</span>
+          to write a phase-specific recommendation
+          (<code class="text-parchment">condition_state_recommendations</code>, shown only on
+          the condition page). Nothing is auto-promoted.
+        </p>
 
     <p :if={@phase_candidates == []} class="text-parchment-dim text-sm">
-      No pending phase candidates. Run the condition crawl + Python extractor.
+      No pending phase candidates. (The phase-aware literature extraction that fed
+      this queue is currently dormant.)
     </p>
 
     <div
@@ -462,16 +512,54 @@
         </button>
       </form>
     </div>
+      </div>
+    </div>
   </section>
 
   <%!-- ── Conditions list ────────────────────────────────────────────── --%>
-  <section class="space-y-3">
-    <h2 class="text-lg font-medium text-parchment">
-      Conditions ({length(@conditions)})
-    </h2>
+  <% total = length(@conditions) %>
+  <%!-- Client-side (Alpine) filter + per-card expand over the ~200 already-loaded
+       conditions — no per-keystroke round-trip (mirrors UsdaSchema.species_combobox/1).
+       `recount()` re-derives the visible tally via x-effect whenever `q` changes,
+       feeding the live heading count and the empty state. --%>
+  <section
+    class="space-y-3"
+    x-data="{ q: '', count: null, recount() { this.count = [...$root.querySelectorAll('[data-condition]')].filter(el => !this.q || el.dataset.search.includes(this.q.trim().toLowerCase())).length } }"
+    x-effect="recount()"
+  >
+    <%!-- Sticky filter bar: the list is long, so keep search reachable while scrolling.
+         top-14 md:top-0 clears the mobile top bar; bg-ink so rows scroll cleanly under. --%>
+    <div class="sticky top-14 md:top-0 z-20 bg-ink border-b border-ink-panel2 py-2 space-y-2">
+      <h2 class="text-lg font-medium text-parchment">
+        Conditions (<span x-text={"q ? count + ' of #{total}' : '#{total}'"}>{total}</span>)
+      </h2>
+      <div :if={@conditions != []} class="relative max-w-md">
+        <input
+          type="search"
+          x-model.debounce.120ms="q"
+          placeholder="Filter by name, category, or synonym…"
+          aria-label="Filter conditions"
+          class="w-full rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 pr-8 placeholder:text-parchment-dim"
+        />
+        <button
+          type="button"
+          x-show="q"
+          x-cloak
+          @click="q = ''"
+          aria-label="Clear filter"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-parchment-dim hover:text-parchment"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
 
     <p :if={@conditions == []} class="text-parchment-dim text-sm">
       No conditions yet.
+    </p>
+
+    <p x-show="q && count === 0" x-cloak class="text-parchment-dim text-sm">
+      No conditions match “<span x-text="q"></span>”.
     </p>
 
     <%!-- Shared options for the per-paper "Re-assign to…" search-selects below. --%>
@@ -481,22 +569,71 @@
 
     <div
       :for={condition <- @conditions}
-      class="rounded-lg border border-ink-panel2 bg-ink-panel p-4 space-y-2"
+      id={"condition-#{condition.id}"}
+      data-condition
+      data-search={
+        [condition.name, condition.category, condition.subcategory | condition.synonyms || []]
+        |> Enum.reject(&is_nil/1)
+        |> Enum.join(" ")
+        |> String.downcase()
+      }
+      x-data="{ expanded: false }"
+      x-show="!q || $el.dataset.search.includes(q.trim().toLowerCase())"
+      class="rounded-lg border border-ink-panel2 bg-ink-panel px-4 py-2.5"
     >
+      <% rec_count = length(@recs[condition.id] || []) + length(@nutrient_recs[condition.id] || []) %>
+      <% paper_count = length(@condition_studies[condition.id] || []) %>
+
+      <%!-- Compact row: expand toggle (chevron + name + category) · count badges ·
+           per-condition actions. The detail block is revealed on expand. --%>
       <div class="flex flex-wrap items-center gap-2">
-        <span class="text-parchment font-medium">{condition.name}</span>
-        <span
-          :if={condition.category}
-          class="text-xs rounded bg-ink-panel2 text-parchment-dim px-2 py-0.5"
+        <button
+          type="button"
+          @click="expanded = !expanded"
+          x-bind:aria-expanded="expanded"
+          class="flex items-center gap-2 min-w-0 text-left rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-basil/50"
         >
-          {condition.category}
+          <svg
+            class="w-3 h-3 shrink-0 text-parchment-dim transition-transform duration-200 motion-reduce:transition-none"
+            x-bind:class="expanded && 'rotate-90'"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          <span class="text-parchment font-medium truncate">{condition.name}</span>
+          <span
+            :if={condition.category}
+            class="shrink-0 text-xs rounded bg-ink-panel2 text-parchment-dim px-2 py-0.5"
+          >
+            {condition.category}
+          </span>
+        </button>
+
+        <span class="text-[11px] text-parchment-dim tabular-nums whitespace-nowrap">
+          {rec_count} advice · {paper_count} paper{if paper_count == 1, do: "", else: "s"}
         </span>
+
+        <%!-- Primary per-condition action: mine this one condition's facts (a
+             one-row batch on the serialized :fact_mining queue). Its progress is
+             the button's own state + a result flash, independent of "Mine all". --%>
+        <button
+          type="button"
+          phx-click="mine_condition"
+          phx-value-id={condition.id}
+          disabled={MapSet.member?(@mining_conditions, condition.id)}
+          class="ml-auto text-xs rounded bg-basil text-ink font-medium px-2.5 py-1 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {if MapSet.member?(@mining_conditions, condition.id), do: "Mining…", else: "Mine facts"}
+        </button>
         <button
           type="button"
           phx-click="search_condition_papers"
           phx-value-id={condition.id}
           disabled={MapSet.member?(@crawling, condition.id)}
-          class="ml-auto text-xs rounded border border-ink-panel2 bg-ink-panel2 text-parchment px-2 py-1 hover:bg-ink-panel disabled:opacity-60"
+          class="text-xs rounded border border-ink-panel2 bg-ink-panel2 text-parchment px-2 py-1 hover:bg-ink-panel disabled:opacity-60"
         >
           {if MapSet.member?(@crawling, condition.id), do: "Searching…", else: "Search papers"}
         </button>
@@ -511,6 +648,10 @@
         </button>
       </div>
 
+      <%!-- Detail: description + recommendations, revealed on expand (x-cloak so it
+           doesn't flash open before Alpine inits). The heavy papers sub-list keeps its
+           own server-side lazy toggle nested inside. --%>
+      <div x-show="expanded" x-cloak class="mt-2 space-y-2">
       <p :if={condition.description} class="text-xs text-parchment-dim">
         {condition.description}
       </p>
@@ -565,7 +706,7 @@
         </div>
       </div>
 
-      <%!-- ── Discovered papers (collapse) + analyze form ──────────────── --%>
+      <%!-- ── Discovered papers (collapse) ──────────────────────────────── --%>
       <div
         :if={Map.has_key?(@condition_studies, condition.id)}
         class="mt-2 pt-2 border-t border-ink-panel2"
@@ -588,9 +729,7 @@
           >
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
           </svg>
-          Papers ({length(@condition_studies[condition.id])}<span :if={
-              analyzed_count(@condition_studies[condition.id], @analyzed_study_ids) > 0
-            }> · {analyzed_count(@condition_studies[condition.id], @analyzed_study_ids)} analyzed</span>)
+          Papers ({length(@condition_studies[condition.id])})
         </button>
 
         <%!-- Rendered server-side only when opened: a condition can carry hundreds of
@@ -605,52 +744,12 @@
               No papers found yet — try searching again later.
             </p>
 
-            <%!-- The analyze form is kept self-contained (empty) so each paper row
-                 can carry its own re-assign form as a sibling — nesting forms is
-                 invalid HTML. The checkboxes and the Analyze button live in the
-                 rows below and bind to it via the HTML `form=` attribute. --%>
             <div :if={@condition_studies[condition.id] != []} class="mt-2 space-y-1">
-              <form id={"analyze-#{condition.id}"} phx-submit="analyze_condition"></form>
-
-              <div class="flex items-center gap-3 mb-1">
-                <button
-                  type="button"
-                  @click={"document.querySelectorAll('.cond-pmid-#{condition.id}').forEach(c => c.checked = true)"}
-                  class="text-[11px] text-basil hover:underline"
-                >
-                  Select all
-                </button>
-                <button
-                  type="submit"
-                  form={"analyze-#{condition.id}"}
-                  disabled={@analyzing}
-                  class="px-3 py-1.5 rounded bg-basil text-ink text-xs font-medium hover:opacity-90 disabled:opacity-60"
-                >
-                  {if @analyzing, do: "Analyzing…", else: "Analyze selected"}
-                </button>
-                <button
-                  type="button"
-                  @click={"document.querySelectorAll('.cond-pmid-#{condition.id}').forEach(c => c.checked = false)"}
-                  class="text-[11px] text-parchment-dim hover:underline"
-                >
-                  Clear
-                </button>
-              </div>
-              <%!-- Non-open-access papers (flagged unusable by a prior analysis)
-                   are hidden from the list — they can't be (re)selected. --%>
               <div
                 :for={study <- @condition_studies[condition.id]}
-                :if={not MapSet.member?(@unusable_study_ids, study.id)}
                 class="flex flex-wrap items-start justify-between gap-2 py-0.5"
               >
-                <label class="flex items-start gap-2 text-xs text-parchment-dim min-w-0 flex-1">
-                  <input
-                    type="checkbox"
-                    name="pmids[]"
-                    value={study.pmid}
-                    form={"analyze-#{condition.id}"}
-                    class={"cond-pmid-#{condition.id} mt-0.5 accent-basil"}
-                  />
+                <div class="flex items-start gap-2 text-xs text-parchment-dim min-w-0 flex-1">
                   <span class="min-w-0">
                     <a
                       href={"https://pubmed.ncbi.nlm.nih.gov/#{study.pmid}/"}
@@ -658,14 +757,9 @@
                       rel="noopener"
                       class="text-basil hover:underline"
                     >{study.pmid}</a>
-                    <span
-                      :if={MapSet.member?(@analyzed_study_ids, study.id)}
-                      class="text-[10px] text-basil"
-                      title="This paper has a stored extractor analysis"
-                    >✓ analyzed</span>
                     <span class="text-parchment">{study.title}</span>
                   </span>
-                </label>
+                </div>
 
                 <%!-- Re-assign this paper to a better-fitting condition. "Move + flag":
                      it is linked to the target, removed from here, and flagged so a
@@ -694,439 +788,37 @@
                   </button>
                 </form>
               </div>
-
-              <p class="text-[11px] text-parchment-dim pt-1">Select 1–200 papers.</p>
             </div>
           </div>
         </div>
       </div>
-
-      <%!-- ── Claims & suggestions (folded, expandable two-tab block) ──── --%>
-      <%!-- Tab 1 "Claims": the extractor /analyze response, per paper — each claim
-           gets a state dropdown (Food related / General science / Wrong / Ignore).
-           Tab 2 "Suggestions": the claims marked "Food related" formulated into
-           food-for-condition suggestions (via ClaimRules). Non-destructive. --%>
-      <div
-        :if={Map.has_key?(@condition_studies, condition.id)}
-        class="mt-2 pt-2 border-t border-ink-panel2"
-      >
-        <button
-          type="button"
-          phx-click="toggle_condition_detail"
-          phx-value-id={condition.id}
-          class="cursor-pointer inline-flex items-center gap-1 text-[11px] text-basil hover:underline"
-        >
-          <svg
-            class={[
-              "w-3 h-3 transition-transform duration-200",
-              MapSet.member?(@expanded_conditions, condition.id) && "rotate-90"
-            ]}
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-          Claims &amp; suggestions
-        </button>
-
-        <div :if={MapSet.member?(@expanded_conditions, condition.id)} class="mt-2">
-          <%!-- Tab bar --%>
-          <div class="flex items-center gap-1 border-b border-ink-panel2 mb-2">
-            <button
-              type="button"
-              phx-click="switch_condition_tab"
-              phx-value-id={condition.id}
-              phx-value-tab="claims"
-              class={tab_class((@condition_tab[condition.id] || "claims") == "claims")}
-            >
-              Claims ({claims_total(@condition_analyses[condition.id])})
-            </button>
-            <button
-              type="button"
-              phx-click="switch_condition_tab"
-              phx-value-id={condition.id}
-              phx-value-tab="suggestions"
-              class={tab_class(@condition_tab[condition.id] == "suggestions")}
-            >
-              Suggestions ({length(food_related_rules(@condition_rules[condition.id]))})
-            </button>
-          </div>
-
-          <%!-- ── Tab 1: per-paper claims with a state dropdown ──── --%>
-          <div
-            :if={(@condition_tab[condition.id] || "claims") == "claims"}
-            class="space-y-3"
-          >
-            <p
-              :if={(@condition_analyses[condition.id] || []) == []}
-              class="text-xs text-parchment-dim"
-            >
-              No analyzed papers yet — select papers above and click “Analyze selected”.
-            </p>
-
-            <div
-              :for={analysis <- ordered_analyses(@condition_analyses[condition.id])}
-              class="text-xs"
-            >
-              <div class="flex flex-wrap items-center gap-2">
-                <a
-                  :if={analysis.study}
-                  href={"https://pubmed.ncbi.nlm.nih.gov/#{analysis.study.pmid}/"}
-                  target="_blank"
-                  rel="noopener"
-                  class="text-basil hover:underline"
-                >{analysis.study.pmid}</a>
-                <span class="text-parchment">{analysis.paper_title}</span>
-                <span
-                  :if={analysis.study_design && analysis.study_design != "unknown"}
-                  class="text-[10px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim"
-                >
-                  {analysis.study_design}
-                </span>
-                <span :if={analysis.publication_year} class="text-parchment-dim">
-                  · {analysis.publication_year}
-                </span>
-                <span :if={analysis.sample_size} class="text-parchment-dim">
-                  · n={analysis.sample_size}
-                </span>
-                <span class="text-parchment-dim">· {length(analysis.claims || [])} claim(s)</span>
-              </div>
-
-              <form
-                :for={claim <- analysis.claims || []}
-                phx-change="set_claim_position"
-                class={[
-                  "mt-1 flex items-start gap-2 pl-2 border-l-2 border-ink-panel2",
-                  claim["position"] in ["wrong", "ignore"] && "opacity-50"
-                ]}
-              >
-                <input type="hidden" name="study" value={analysis.study_id} />
-                <input type="hidden" name="claim" value={claim["claim_id"]} />
-                <input type="hidden" name="condition" value={condition.id} />
-
-                <div class="min-w-0 flex-1 space-y-0.5">
-                  <div
-                    :if={disease_state(claim)}
-                    class="text-[10px] inline-block px-2 py-0.5 rounded-full bg-paprika/20 text-paprika-soft"
-                  >
-                    disease state: {disease_state(claim)}
-                  </div>
-                  <div class="text-parchment">
-                    <span class="font-medium">
-                      {claim["subject_label"] || claim["subject_name"] || claim["subject_text"]}
-                    </span>
-                    <span class="text-parchment-dim">— {claim["predicate"]} —</span>
-                    <span class="font-medium">
-                      {claim["object_label"] || claim["object_name"] || claim["object_text"]}
-                    </span>
-                    <span class={["ml-1", polarity_class(claim["polarity"])]}>
-                      {claim["polarity"]} · {claim["certainty"] || "asserted"}
-                    </span>
-                  </div>
-                  <p :if={first_quote(claim)} class="text-parchment-dim/80 italic">
-                    “{first_quote(claim)}”
-                  </p>
-                </div>
-
-                <select
-                  name="position"
-                  title="State — only “Food related” feeds the Suggestions tab"
-                  class={[select_class(), "shrink-0 text-[11px] py-0.5"]}
-                >
-                  <option
-                    :for={{value, label} <- position_options()}
-                    value={value}
-                    selected={(claim["position"] || "") == value}
-                  >
-                    {label}
-                  </option>
-                </select>
-              </form>
-            </div>
-          </div>
-
-          <%!-- ── Tab 2: food_related claims → suggestions ──── --%>
-          <div
-            :if={@condition_tab[condition.id] == "suggestions"}
-            class="space-y-1"
-          >
-            <div class="flex items-start justify-between gap-2">
-              <p class="text-[11px] text-parchment-dim">
-                Formulated from claims marked
-                <span class="text-basil font-medium">Food related</span>
-                in the Claims tab. <span class="text-parchment">Verify</span>
-                one to publish it as a recommendation on the public condition page.
-              </p>
-              <button
-                type="button"
-                phx-click="refresh_suggestions"
-                phx-value-id={condition.id}
-                title="Re-evaluate suggestions from the latest claims & curation"
-                class="shrink-0 inline-flex items-center gap-1 text-[11px] text-basil hover:underline"
-              >
-                <svg
-                  class="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M4 4v5h5M20 20v-5h-5M5 9a7 7 0 0111.9-2.5L20 9M19 15a7 7 0 01-11.9 2.5L4 15"
-                  />
-                </svg>
-                Refresh
-              </button>
-            </div>
-
-            <p
-              :if={food_related_rules(@condition_rules[condition.id]) == []}
-              class="text-xs text-parchment-dim"
-            >
-              No suggestions yet — mark one or more claims “Food related” in the Claims tab.
-            </p>
-
-            <.suggestion_row
-              :for={rule <- food_related_rules(@condition_rules[condition.id])}
-              rule={rule}
-              condition_id={condition.id}
-            />
-
-            <%!-- Inherited from the parent condition (e.g. IBD → UC): general
-                 evidence, clearly labelled and visually set apart. --%>
-            <div
-              :if={@condition_parent_rules[condition.id]}
-              class="mt-3 pt-3 border-t border-paprika/30"
-            >
-              <p class="text-[11px] text-paprika-soft">
-                Inherited from
-                <span class="font-medium">{@condition_parent_rules[condition.id].name}</span>
-                — general evidence; review before applying to {condition.name}.
-              </p>
-              <p
-                :if={food_related_rules(@condition_parent_rules[condition.id].rules) == []}
-                class="text-xs text-parchment-dim"
-              >
-                No inherited suggestions yet.
-              </p>
-              <.suggestion_row
-                :for={rule <- food_related_rules(@condition_parent_rules[condition.id].rules)}
-                rule={rule}
-              />
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </section>
 
-  <%!-- ── Extractor analysis result (modal) ──────────────────────────── --%>
-  <%!-- Opened by the inner content's phx-mounted when @analysis is set (server-side
-       `show` flips don't re-fire the modal's own phx-mounted). --%>
-  <.modal id="analysis-modal" show={false} on_cancel={JS.push("close_analysis")}>
-    <div :if={@analysis} phx-mounted={show_modal("analysis-modal")} class="space-y-4">
-      <div>
-        <h3 class="text-lg font-medium text-parchment">Batch analysis</h3>
-        <p class="text-xs text-parchment-dim">
-          {length(@analysis["included_pmids"] || [])} of {length(
-            @analysis["requested_pmids"] || []
-          )} papers included · engine {get_in(@analysis, ["run", "synthesis_version"]) || "?"}
-        </p>
-      </div>
-
-      <%!-- Per-paper claims extracted by the engine (the normalized concept layer;
-           each traces back to a verbatim source span). Replaces the old cross-paper
-           "conclusions" rollup. --%>
-      <div>
-        <h4 class="text-sm font-medium text-parchment mb-1">
-          Claims ({claim_count(@analysis)} across {length(
-            @analysis["paper_claims"] || []
-          )} paper(s))
-        </h4>
-        <p
-          :if={claim_count(@analysis) == 0}
-          class="text-xs text-parchment-dim"
-        >
-          No claims extracted — the papers may be abstract-only or outside the
-          engine's nutrition vocabulary.
-        </p>
-        <div
-          :for={pc <- @analysis["paper_claims"] || []}
-          class="py-2 border-t border-ink-panel2 text-sm"
-        >
-          <div class="text-xs">
-            <a
-              href={pc["paper_url"] || "https://pubmed.ncbi.nlm.nih.gov/#{pc["pmid"]}/"}
-              target="_blank"
-              rel="noopener"
-              class="text-basil hover:underline"
-            >{pc["pmid"]}</a>
-            <span class="text-parchment">{pc["paper_title"]}</span>
-          </div>
-          <p
-            :if={(pc["claims_list"] || []) == []}
-            class="text-xs text-parchment-dim/80 mt-1"
-          >
-            No claims in this paper.
-          </p>
-          <div
-            :for={claim <- pc["claims_list"] || []}
-            class="mt-2 pl-2 border-l-2 border-ink-panel2"
-          >
-            <%!-- Verbatim from the extractor REST API (see mehungry_extractor/docs/api.md) --%>
-            <p class="text-[9px] uppercase tracking-wide text-parchment-dim/70 mb-0.5">
-              From extractor
-            </p>
-            <div class="text-parchment">
-              <%!-- `*_label` folds any restrictive modifiers back into the head
-                   (e.g. "Dysbiosis of gut microbiome"); fall back to the bare
-                   canonical name, then the raw surface text. --%>
-              <span class="font-medium">
-                {claim["subject_label"] || claim["subject_name"] || claim["subject_text"]}
-              </span>
-              <span class="text-parchment-dim">— {claim["predicate"]} —</span>
-              <span class="font-medium">
-                {claim["object_label"] || claim["object_name"] || claim["object_text"]}
-              </span>
-              <span class={[
-                "text-xs ml-1 px-2 py-0.5 rounded-full bg-ink-panel2",
-                polarity_class(claim["polarity"])
-              ]}>
-                {claim["polarity"]} · {claim["certainty"]}
-              </span>
-            </div>
-            <div
-              :if={(claim["qualifiers"] || []) != []}
-              class="text-xs text-parchment-dim mt-0.5 flex flex-wrap gap-1.5"
-            >
-              <span
-                :for={q <- claim["qualifiers"]}
-                class="px-2 py-0.5 rounded-full bg-ink-panel2"
-              >
-                {q["qualifier_type"]}: {q["value_text"]}
-              </span>
-            </div>
-            <p :if={first_quote(claim)} class="text-xs text-parchment-dim/80 italic mt-1">
-              “{first_quote(claim)}”
-            </p>
-
-            <%!-- ── Added by m3hungry (derived from the claim above) ──── --%>
-            <%!-- Visually separated so it's clear this is our interpretation, not
-                 extractor output: the suggested direction and how the dietary
-                 endpoint resolved to a foods-mapping registry entry. --%>
-            <div
-              :if={claim["__derived__"]}
-              class="mt-1.5 rounded border border-dashed border-basil/40 bg-basil/5 px-2 py-1"
-            >
-              <p class="text-[9px] uppercase tracking-wide text-basil/80 mb-0.5">
-                Added by m3hungry
-              </p>
-              <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                <span class="text-parchment-dim">suggests</span>
-                <span class={"font-medium #{direction_class(claim["__derived__"].direction)}"}>
-                  {claim["__derived__"].direction}
-                </span>
-                <span class="text-parchment-dim">·</span>
-                <span class="text-parchment-dim">{registry_match_label(claim["__derived__"])}</span>
-                <span
-                  :if={not claim["__derived__"].used_in_rules?}
-                  class="text-[10px] text-parchment-dim border border-ink-panel2 rounded px-1"
-                  title="Dropped by the rule filter (hedged, or missing an endpoint)"
-                >
-                  not used in rules
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <%!-- Detected shared topic core the claims were scored against. --%>
-      <div :if={(get_in(@analysis, ["topic", "core_concepts"]) || []) != []}>
-        <h4 class="text-sm font-medium text-parchment mb-1">
-          Topic core ({length(@analysis["topic"]["core_concepts"])})
-        </h4>
-        <div class="flex flex-wrap gap-1.5">
-          <span
-            :for={concept <- @analysis["topic"]["core_concepts"]}
-            class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim"
-          >
-            {concept["name"]} · {concept["paper_count"]}
-          </span>
-        </div>
-      </div>
-
-      <%!-- Every requested paper: status, metadata, and per-paper errors. --%>
-      <div :if={(@analysis["papers"] || []) != []}>
-        <h4 class="text-sm font-medium text-parchment mb-1">
-          Papers ({length(@analysis["papers"])})
-        </h4>
-        <div
-          :for={p <- @analysis["papers"] || []}
-          class="py-2 border-t border-ink-panel2 text-sm"
-        >
-          <div class="flex items-start gap-2">
-            <span class={[
-              "text-xs px-2 py-0.5 rounded-full bg-ink-panel2 shrink-0",
-              paper_status_class(p["status"])
-            ]}>
-              {p["status"]}
-            </span>
-            <%!-- A non-open-access paper is unusable for now; it's flagged here and
-                 then hidden from this condition's selection list going forward. --%>
-            <span
-              :if={not usable_source?(p["source_type"])}
-              class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-paprika shrink-0"
-              title="Not open access — unusable for now; hidden from the paper list going forward"
-            >
-              unusable · not open access
-            </span>
-            <span class="min-w-0">
-              <a
-                href={"https://pubmed.ncbi.nlm.nih.gov/#{p["pmid"]}/"}
-                target="_blank"
-                rel="noopener"
-                class="text-basil hover:underline"
-              >{p["pmid"]}</a>
-              <span class="text-parchment">{p["title"]}</span>
-            </span>
-          </div>
-          <div class="text-xs text-parchment-dim mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 pl-1">
-            <span :if={p["publication_year"]}>{p["publication_year"]}</span>
-            <span :if={p["source_type"]}>{p["source_type"]}</span>
-            <span :if={p["study_design"] && p["study_design"] != "unknown"}>
-              {p["study_design"]}
-            </span>
-            <span :if={p["sample_size"]}>n={p["sample_size"]}</span>
-            <span :if={p["n_claims"]}>{p["n_claims"]} claim(s)</span>
-            <span :if={is_number(p["cohesion_score"])}>
-              cohesion {Float.round(p["cohesion_score"] * 1.0, 2)}
-            </span>
-          </div>
-          <p :if={p["error"]} class="text-xs text-paprika mt-0.5 pl-1">{p["error"]}</p>
-        </div>
-      </div>
-
-      <div :if={(@analysis["outliers"] || []) != []}>
-        <h4 class="text-sm font-medium text-parchment mb-1">
-          Outliers ({length(@analysis["outliers"])})
-        </h4>
-        <div :for={o <- @analysis["outliers"]} class="text-xs text-parchment-dim">
-          {o["pmid"]} — {o["reason"]}<span :if={is_number(o["cohesion_score"])}>
-            (cohesion {Float.round(o["cohesion_score"] * 1.0, 2)})</span>
-        </div>
-      </div>
-
-      <div :if={(@analysis["warnings"] || []) != []}>
-        <h4 class="text-sm font-medium text-parchment mb-1">Warnings</h4>
-        <ul class="list-disc pl-5 text-xs text-parchment-dim space-y-0.5">
-          <li :for={w <- @analysis["warnings"]}>{w}</li>
-        </ul>
+  <%!-- Sticky batch status: the conditions list makes this page very tall, so the
+       mining hero scrolls out of sight — keep live progress pinned while in flight. --%>
+  <div
+    :if={fact_in_flight?(@fact_counts)}
+    class="fixed bottom-4 right-4 z-40 w-64 rounded-lg border border-ink-panel2 bg-ink-panel/95 backdrop-blur shadow-xl p-3 space-y-1.5"
+  >
+    <% sticky_done = @fact_counts.completed + @fact_counts.failed %>
+    <% sticky_pct =
+      if @fact_counts.total > 0, do: round(sticky_done / @fact_counts.total * 100), else: 0 %>
+    <div class="flex items-center gap-2 text-xs">
+      <span class="h-2 w-2 rounded-full bg-basil animate-pulse"></span>
+      <span class="text-parchment font-medium">Mining {sticky_done}/{@fact_counts.total}</span>
+      <span class="ml-auto text-parchment-dim tabular-nums">{sticky_pct}%</span>
+    </div>
+    <div class="h-1.5 w-full rounded-full bg-ink-panel2 overflow-hidden">
+      <div
+        class="h-full rounded-full bg-basil transition-all duration-500"
+        style={"width: #{sticky_pct}%"}
+      >
       </div>
     </div>
-  </.modal>
+    <p :if={mining_eta(@fact_counts)} class="text-[11px] text-parchment-dim">
+      {mining_eta(@fact_counts)}
+    </p>
+  </div>
 </div>

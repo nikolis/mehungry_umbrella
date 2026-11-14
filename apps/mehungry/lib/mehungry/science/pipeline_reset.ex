@@ -83,6 +83,37 @@ defmodule Mehungry.Science.PipelineReset do
   @doc "Stage 5: wipe derived recommendation candidates + citations + runs. Keeps curated advice."
   def reset_recommendations, do: purge(@recommendation_tables)
 
+  @doc """
+  One-shot wipe of all legacy `mehungry_extractor` data, run from the admin
+  `/professional/health` page once the fact-miner has fully replaced the extractor.
+
+  Deletes, in one transaction: every `study_analyses` row (pure `/analyze` output),
+  the extractor-sourced `study_full_texts` rows (**source-scoped** to
+  `"mehungry_extractor"` so PMC full texts written by the measurement-extraction
+  pipeline survive), the singleton `extractor_settings` connection, and all dormant
+  `research_ingestion_runs` history. Curated advice (`compound_recommendations` /
+  `nutrient_recommendations`), the compound registry, discovered `scientific_studies`,
+  and all fact-miner data (`condition_mined_facts`) are untouched. Returns a
+  `%{table => rows_deleted}` map.
+  """
+  def reset_extractor_data do
+    Repo.transaction(fn ->
+      %{
+        "study_analyses" => deleted("DELETE FROM study_analyses"),
+        "study_full_texts" =>
+          deleted("DELETE FROM study_full_texts WHERE source = $1", ["mehungry_extractor"]),
+        "extractor_settings" => deleted("DELETE FROM extractor_settings"),
+        "research_ingestion_runs" => deleted("DELETE FROM research_ingestion_runs")
+      }
+    end)
+    |> unwrap()
+  end
+
+  defp deleted(sql, params \\ []) do
+    %{num_rows: n} = Repo.query!(sql, params)
+    n
+  end
+
   defp purge(tables), do: Repo.transaction(fn -> delete_tables(tables) end) |> unwrap()
 
   defp delete_tables(tables) do
