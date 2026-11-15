@@ -428,6 +428,16 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
      |> put_flash(:info, "Mining started — watch the condition's card.")}
   end
 
+  def handle_async({:mine_condition, cid}, {:ok, {:error, {:already_running, _cid}}}, socket) do
+    {:noreply,
+     socket
+     |> update(:mining_conditions, &MapSet.delete(&1, cid))
+     |> put_flash(
+       :error,
+       "This condition already has a mine in the queue — wait for it to finish or cancel it first."
+     )}
+  end
+
   def handle_async({:mine_condition, cid}, {:ok, {:error, {:unreachable, reason}}}, socket) do
     {:noreply,
      socket

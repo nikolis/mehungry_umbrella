@@ -109,6 +109,57 @@ defmodule Mehungry.FactMining.SpeciesFactMiningWorkerTest do
     end
   end
 
+  describe "mine_species/2 one-in-flight defense" do
+    test "refuses a second mine while one is already queued, leaving one job + one row",
+         %{species: species} do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+
+      assert {:ok, _batch_id} = Runs.mine_species(species.id, "first")
+      assert {:error, {:already_running, sid}} = Runs.mine_species(species.id, "second")
+      assert sid == species.id
+
+      # No duplicate job and no orphan tracking row.
+      assert [_only] = all_enqueued(worker: SpeciesFactMiningWorker)
+      assert Repo.aggregate(SpeciesFactMiningRun, :count, :id) == 1
+    end
+
+    test "active_mine_for_species/1 reports the live job, nil otherwise", %{species: species} do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+      refute Runs.active_mine_for_species(species.id)
+
+      assert {:ok, _batch_id} = Runs.mine_species(species.id, "q")
+      assert %Oban.Job{} = Runs.active_mine_for_species(species.id)
+    end
+
+    test "still allows mining a different species", %{species: species} do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+
+      {:ok, other} =
+        Food.create_foundemental_species(%{
+          "name" => "Kale",
+          "scientific_name" => "Brassica oleracea var. sabellica"
+        })
+
+      assert {:ok, _} = Runs.mine_species(species.id, "a")
+      assert {:ok, _} = Runs.mine_species(other.id, "b")
+      assert length(all_enqueued(worker: SpeciesFactMiningWorker)) == 2
+    end
+
+    test "allows re-mining once the prior job reaches a terminal state", %{species: species} do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+
+      assert {:ok, batch1} = Runs.mine_species(species.id, "first")
+
+      # Simulate the first mine finishing: a completed job no longer blocks.
+      Repo.update_all(Oban.Job, set: [state: "completed"])
+      refute Runs.active_mine_for_species(species.id)
+
+      assert {:ok, batch2} = Runs.mine_species(species.id, "re-mine")
+      assert batch2 != batch1
+      assert %Oban.Job{} = Runs.active_mine_for_species(species.id)
+    end
+  end
+
   describe "perform/1" do
     test "marks the row completed with fact counts on success", %{species: species} do
       Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)

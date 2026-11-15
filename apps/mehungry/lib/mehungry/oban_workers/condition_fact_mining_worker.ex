@@ -13,9 +13,24 @@ defmodule Mehungry.ObanWorkers.ConditionFactMiningWorker do
   transient miner failure retries (mining is idempotent — wipe-then-insert), and on
   the **final** attempt the condition is recorded as failed so the batch can still
   finalize.
+
+  **One in-flight mine per condition** — `unique` keyed on `condition_id` across the
+  non-terminal states refuses a second job for a condition that already has one
+  queued/executing/retrying (so a re-trigger can't spawn an overlapping ~15-min
+  miner call that wipe-replaces the same rows). `completed`/`discarded`/`cancelled`
+  are excluded, so re-mining a *finished* condition is still allowed. Enforced only
+  through `Oban.insert/1` (the single-condition enqueue path in
+  `ConditionFactMiningRuns.mine_condition/2`), not the dormant bulk `insert_all` sweep.
   """
 
-  use Oban.Worker, queue: :fact_mining, max_attempts: 3
+  use Oban.Worker,
+    queue: :fact_mining,
+    max_attempts: 3,
+    unique: [
+      keys: [:condition_id],
+      states: [:available, :scheduled, :executing, :retryable],
+      period: :infinity
+    ]
 
   require Logger
 

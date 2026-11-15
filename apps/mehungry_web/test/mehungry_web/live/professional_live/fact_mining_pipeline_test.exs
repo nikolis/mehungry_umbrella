@@ -68,6 +68,29 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipelineTest do
     assert sid == species.id
   end
 
+  test "re-triggering a species that already has a queued mine flashes a warning", %{
+    conn: conn,
+    species: species
+  } do
+    Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+    # First mine already queued (not yet finished).
+    {:ok, _batch_id} = Runs.mine_species(species.id, "first")
+
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
+
+    view
+    |> form("form[phx-submit='mine_species']", %{
+      "species_id" => to_string(species.id),
+      "query" => "second attempt"
+    })
+    |> render_submit()
+
+    assert render_async(view) =~ "already has a mine in the queue"
+    # No duplicate job was enqueued.
+    assert Runs.active_mine_for_species(species.id)
+    assert Mehungry.Repo.aggregate(Mehungry.FactMining.SpeciesFactMiningRun, :count, :id) == 1
+  end
+
   test "a terminal broadcast patches a streamed species row", %{conn: conn} do
     Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
     {:ok, batch_id} = Runs.mine_all_species()

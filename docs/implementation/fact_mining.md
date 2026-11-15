@@ -113,7 +113,8 @@ whose `phx-change` pre-fills the prompt `<textarea>` with the default, editable 
 
 ```
 Mine species (form: species_id + query) ─▶ SpeciesFactMiningRuns.mine_species/2
-  preflight reachable? + get_foundemental_species/1 existence check
+  preflight reachable? + get_foundemental_species/1 existence + one-in-flight guard
+    (active_mine_for_species/1 → {:error, {:already_running, id}} + admin flash)
   one `pending` species_fact_mining_runs row (query stored) ─ one SpeciesFactMiningWorker job
                                    │       (job args carry "query")
   :fact_mining queue (concurrency 1) ─ one job == one species
@@ -174,6 +175,34 @@ requests could otherwise fire at once. Two layers keep it to exactly one:
   clamped ≥5s); both workers turn it into `{:snooze, seconds}` — rescheduling **without** burning a
   retry or marking the run failed, and **reverting the tracking row to `pending`** (it gave up its slot
   and is no longer executing). This covers any brief overlap during a leadership handoff.
+
+> **Prod note (2026-11-15):** a Broccoli mine actually ran **~19 min** (the miner interpreted
+> `max_records: 200` loosely and returned 2632 facts), overshooting the 15-min client default — the
+> client abandoned the request at 15 min with `{:network, :timeout}` and the completed response (391
+> verified facts) was discarded, then the job retried the same overshoot. Fixed by setting
+> `FACT_MINER_TIMEOUT_MS=1800000` (30 min) in prod. The repeated timeouts also saturated the miner,
+> which returned 429s that snoozed the bulk jobs' `max_attempts` up into the hundreds (each `:snooze`
+> bumps `max_attempts`), leaving a days-long retry backlog that was cancelled.
+
+### One in-flight mine per entity (duplicate-trigger defense)
+
+A per-entity mine is **singleton in the queue**: re-triggering a species/condition that already has a
+job `available/scheduled/executing/retryable` is **refused and surfaced to the admin**, not silently
+duplicated. Re-mining an entity whose previous mine has **completed** stays allowed (mining is
+wipe-then-replace). Two complementary layers, symmetric across species + condition:
+
+- **App-level pre-check (the notification).** `active_mine_for_{species,condition}/1` queries `Oban.Job`
+  for a live job on that entity id; `mine_{species,condition}/2` returns `{:error, {:already_running,
+  id}}` before enqueuing, and the LiveViews flash *"already has a mine in the queue — wait for it to
+  finish or cancel it first"* (`FactMiningPipeline` `handle_async(:mine_one, …)`; `HealthConditions`
+  `handle_async({:mine_condition, cid}, …)`).
+- **Oban `unique` backstop (race-proof).** Both workers declare
+  `unique: [keys: [:species_id|:condition_id], states: [:available, :scheduled, :executing, :retryable],
+  period: :infinity]` (`completed`/`discarded`/`cancelled` excluded, so a finished entity is re-minable).
+  The single-entity path enqueues via **`Oban.insert/1`** (not the bulk `insert_all`, which bypasses
+  uniqueness) through `enqueue_one/2`; if the insert comes back `conflict?: true`, the just-opened
+  tracking row is deleted (no orphan `pending` row) and `:already_running` is returned. The dormant
+  bulk `mine_all_*/0` keeps `enqueue_batch/2` + `insert_all` unchanged.
 
 ## Condition mining — the admin trigger on `/professional/health`
 
@@ -244,8 +273,8 @@ source link, no quote). `conditions_for_search/1` powers the `/nutritionist/rese
 | `FactMining.Settings` | `fact_mining/settings.ex` | Singleton UI-managed connection row (`base_url` + JWT `auth_token`), read via `connection/0`. |
 | `FactMining.SpeciesMinedFact` / `ConditionMinedFact` | `fact_mining/schemas/…` | One row per mined fact (per species / condition). |
 | `FactMining.SpeciesFactMiningRun` / `ConditionFactMiningRun` | `fact_mining/schemas/…` | Per-entity batch tracking row (carries the mined `query`). |
-| `FactMining.SpeciesFactMiningRuns` / `ConditionFactMiningRuns` | `fact_mining/…_fact_mining_runs.ex` | `mine_species/2` · `mine_condition/2` single-entity enqueue (query → row + job args) + progress + PubSub + cancel; dormant `mine_all_*/0` bulk fan-out shares the private `enqueue_batch/2`. |
-| `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`); forwards `args["query"]` to `mine_*/2`; snoozes on a miner 429 (`{:rate_limited, s}`), reverting its row to `pending` (also on a non-final error retry) so a yielded slot doesn't leave the row stuck `processing`. |
+| `FactMining.SpeciesFactMiningRuns` / `ConditionFactMiningRuns` | `fact_mining/…_fact_mining_runs.ex` | `mine_species/2` · `mine_condition/2` single-entity enqueue (query → row + job args) via `enqueue_one/2` (one `Oban.insert/1` with the uniqueness backstop) + progress + PubSub + cancel; `active_mine_for_{species,condition}/1` pre-check → `{:error, {:already_running, id}}` on a duplicate trigger; dormant `mine_all_*/0` bulk fan-out shares the private `enqueue_batch/2`. |
+| `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`), `unique` keyed on the entity id across non-terminal states (one in-flight mine per entity); forwards `args["query"]` to `mine_*/2`; snoozes on a miner 429 (`{:rate_limited, s}`), reverting its row to `pending` (also on a non-final error retry) so a yielded slot doesn't leave the row stuck `processing`. |
 | `FactMining.QueueLeader` | `fact_mining/queue_leader.ex` | Per-node poller: resumes `:fact_mining` only on the Oban leader (paused elsewhere) → one miner call at a time cluster-wide. |
 | `MehungryWeb.ProfessionalLive.FactMiningPipeline` | `…/professional_live/fact_mining_pipeline.ex` | Admin "Mine one species" form (species select + editable prompt) + live progress. |
 | `MehungryWeb.ProfessionalLive.HealthConditions` | `…/professional_live/health_conditions.ex` | Admin Conditions list; per-condition "Mine facts" button → prompt modal (`open_mine_modal` → `mine_condition/2`) + live card state. |
@@ -290,10 +319,14 @@ mix test apps/mehungry/test/mehungry/fact_mining_test.exs \
 - **Worker/runs** — `mine_species/2` single-entity enqueue (one row + one job, `query` on row + args),
   unreachable / `:not_found` short-circuits, worker forwards `args["query"]` (nil → default),
   success→completed+counts, retry-then-failed contract, `counts_for_batch` aggregation; dormant
-  `mine_all_species/0` fan-out still covered.
+  `mine_all_species/0` fan-out still covered. **One-in-flight defense** — a second `mine_{species,
+  condition}/2` while a job is live returns `{:error, {:already_running, id}}` leaving exactly one job +
+  one row, `active_mine_for_{species,condition}/1` reflects the live job, a different entity still
+  enqueues, and a completed job no longer blocks a re-mine.
 - **LiveView** — species page renders the mine-one form, select pre-fills the prompt, form submit
   opens a one-row batch carrying the edited query; condition page opens the per-condition mine modal
-  (pre-filled), submit mines with the edited query, non-admin redirect.
+  (pre-filled), submit mines with the edited query, non-admin redirect. Re-submitting a species that
+  already has a queued mine flashes "already has a mine in the queue" and adds no duplicate job.
 
 ## End-to-end (manual)
 

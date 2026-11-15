@@ -61,22 +61,95 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRuns do
   `{:error, {:unreachable, reason}}`, or `{:error, :not_found}`.
   """
   def mine_species(species_id, query \\ nil) do
-    case FactMining.reachable?() do
-      {:error, reason} ->
-        {:error, {:unreachable, reason}}
+    # Pre-flight the miner, resolve the species, then refuse a second mine while one
+    # is already in flight (the user-facing notification). `enqueue_one/2` re-checks
+    # atomically via Oban `unique` to close the click-race window.
+    with :ok <- check_reachable(),
+         {:ok, species} <- fetch_species(species_id),
+         :clear <- mine_guard(species) do
+      enqueue_one(species, query)
+    end
+  end
 
-      :ok ->
-        case Food.get_foundemental_species(species_id) do
-          nil -> {:error, :not_found}
-          species -> {:ok, enqueue_batch([species], query)}
-        end
+  defp check_reachable do
+    case FactMining.reachable?() do
+      :ok -> :ok
+      {:error, reason} -> {:error, {:unreachable, reason}}
+    end
+  end
+
+  defp fetch_species(species_id) do
+    case Food.get_foundemental_species(species_id) do
+      nil -> {:error, :not_found}
+      species -> {:ok, species}
+    end
+  end
+
+  defp mine_guard(species) do
+    if active_mine_for_species(species.id),
+      do: {:error, {:already_running, species.id}},
+      else: :clear
+  end
+
+  @doc """
+  The live `Oban.Job` for a species' mine — one that is `available`, `scheduled`,
+  `executing`, or `retryable` — or `nil` when none is in flight. Used both to block
+  a duplicate trigger and to drive the "already mining" UI state. A `completed`/
+  `cancelled` job does not count, so re-mining a finished species is allowed.
+  """
+  def active_mine_for_species(species_id) do
+    Repo.one(
+      from(j in Oban.Job,
+        where:
+          j.worker == @worker and
+            j.state in ["available", "scheduled", "executing", "retryable"] and
+            fragment("(?->>'species_id')::bigint = ?", j.args, ^species_id),
+        limit: 1
+      )
+    )
+  end
+
+  # Single-species enqueue with the Oban `unique` backstop. Opens the `pending`
+  # tracking row, then inserts the job via `Oban.insert/1` (NOT `insert_all`, which
+  # bypasses uniqueness). If the worker's `unique` constraint catches a concurrent
+  # duplicate (`conflict?: true`), the just-created row is an orphan with no job of
+  # its own — delete it and report `:already_running` so the UI never shows a stuck
+  # "pending" row. Returns `{:ok, batch_id}` or `{:error, {:already_running, id}}`.
+  defp enqueue_one(species, query) do
+    batch_id = Ecto.UUID.generate()
+
+    {:ok, run} =
+      %Run{}
+      |> Run.changeset(%{
+        batch_id: batch_id,
+        foundemental_species_id: species.id,
+        status: "pending",
+        query: query
+      })
+      |> Repo.insert()
+
+    job =
+      SpeciesFactMiningWorker.new(%{
+        "tracking_id" => run.id,
+        "species_id" => species.id,
+        "batch_id" => batch_id,
+        "query" => query
+      })
+
+    case Oban.insert(job) do
+      {:ok, %Oban.Job{conflict?: true}} ->
+        Repo.delete(run)
+        {:error, {:already_running, species.id}}
+
+      {:ok, %Oban.Job{}} ->
+        {:ok, batch_id}
     end
   end
 
   # Open one `pending` tracking row per species under a fresh `batch_id` and fan out
   # one worker job each via a single `Oban.insert_all` (never a per-row loop — the
-  # NOTIFY-storm hazard). Shared by the "all" sweep (`query` nil → default) and
-  # single-species mines (`query` = the admin's prompt, stored + carried in args).
+  # NOTIFY-storm hazard). Used by the dormant "all" sweep (`query` nil → default);
+  # single-species mines go through `enqueue_one/2` for the uniqueness backstop.
   defp enqueue_batch(species, query) do
     batch_id = Ecto.UUID.generate()
     # `timestamps()` columns are :naive_datetime; insert_all needs them explicit.

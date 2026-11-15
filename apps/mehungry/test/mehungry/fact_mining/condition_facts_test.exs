@@ -182,4 +182,32 @@ defmodule Mehungry.FactMining.ConditionFactsTest do
 
     assert cid == condition.id
   end
+
+  describe "FactRuns.mine_condition/2 one-in-flight defense" do
+    test "refuses a second mine while one is already queued, leaving one row", %{
+      condition: condition
+    } do
+      assert {:ok, _batch} = FactRuns.mine_condition(condition.id, "first")
+      assert {:error, {:already_running, cid}} = FactRuns.mine_condition(condition.id, "second")
+      assert cid == condition.id
+
+      assert Mehungry.Repo.aggregate(Mehungry.FactMining.ConditionFactMiningRun, :count, :id) == 1
+    end
+
+    test "active_mine_for_condition/1 reflects the live job", %{condition: condition} do
+      refute FactRuns.active_mine_for_condition(condition.id)
+      assert {:ok, _batch} = FactRuns.mine_condition(condition.id, "q")
+      assert %Oban.Job{} = FactRuns.active_mine_for_condition(condition.id)
+    end
+
+    test "allows re-mining once the prior job reaches a terminal state", %{condition: condition} do
+      assert {:ok, batch1} = FactRuns.mine_condition(condition.id, "first")
+
+      Mehungry.Repo.update_all(Oban.Job, set: [state: "completed"])
+      refute FactRuns.active_mine_for_condition(condition.id)
+
+      assert {:ok, batch2} = FactRuns.mine_condition(condition.id, "re-mine")
+      assert batch2 != batch1
+    end
+  end
 end

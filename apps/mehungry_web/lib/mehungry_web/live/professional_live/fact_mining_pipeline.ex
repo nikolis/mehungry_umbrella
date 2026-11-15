@@ -153,6 +153,16 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
      |> reload_batch(batch_id)}
   end
 
+  def handle_async(:mine_one, {:ok, {:error, {:already_running, _species_id}}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:mining?, false)
+     |> put_flash(
+       :error,
+       "This species already has a mine in the queue — wait for it to finish or cancel it first."
+     )}
+  end
+
   def handle_async(:mine_one, {:ok, {:error, {:unreachable, reason}}}, socket) do
     {:noreply,
      socket
