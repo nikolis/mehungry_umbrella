@@ -57,6 +57,19 @@ The `Species ↔ Ingredient` curation. `Mehungry.Food.FoundementalFood` (`food/s
 - `belongs_to :species` (FK `foundemental_species_id`, required), `belongs_to :ingredient` (required).
 - **Unique `ingredient_id`** — an ingredient belongs to **at most one** species.
 
+**Curation UI (`/professional/usda-schema`, `MehungryWeb.ProfessionalLive.UsdaSchema`).** The page
+leads with a **Find & assign console**: a name search (`phx-change "search"`, debounced) over the
+whole *un-curated* universe — the union of every schema's matched rows and the unmatched pile, minus
+the already-assigned ids — ranked by the shared `MehungryWeb.ProfessionalLive.ImportReviewSearch`
+ranker. Matches stream into a checkbox list; selection (a `MapSet` persisted across queries, with
+"Select all") collects in a sticky tray that assigns the **whole batch** to one species — existing or
+a new one created inline — via `Food.assign_foundemental_ingredients/2`
+(`FoundementalFoods.assign_ingredients/2`, which loops the single-row `assign_ingredient/3` so the
+unique `ingredient_id` is honoured; an already-curated ingredient is counted **skipped**, never
+fatal). The parser's schema-signature accordion (grouping by field pattern, with per-row single
+assign) is retained but **demoted** to a collapsed "Structural view"; the "Foundemental Foods"
+accordion below is the destination view (assigned leaves + per-species icon/visibility controls).
+
 ## Constraints
 
 - Unique `[:name, :variety]`; required: `name`.

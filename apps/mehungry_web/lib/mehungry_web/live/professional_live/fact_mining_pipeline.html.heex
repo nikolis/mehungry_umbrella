@@ -46,31 +46,24 @@
       </div>
     </div>
 
-    <%!-- Mine one species with an editable prompt --%>
-    <form phx-submit="mine_species" class="space-y-3">
+    <%!-- Mine one species (searchable picker, rows annotated with mined state) + editable prompt --%>
+    <.form for={@mine_form} id="mine-form" phx-change="mine_changed" phx-submit="mine_species" class="space-y-3">
       <div class="space-y-1">
         <label class="text-xs text-parchment-dim">Species</label>
-        <select
-          name="species_id"
-          phx-change="select_species"
-          class="w-full rounded-md border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-2"
-        >
-          <option value="" selected={is_nil(@selected_species_id)}>— pick a species —</option>
-          <option
-            :for={s <- @species_options}
-            value={s.id}
-            selected={@selected_species_id == s.id}
-          >
-            {s.name}{if s.scientific_name, do: " · #{s.scientific_name}"}{if s.variety,
-              do: " (#{s.variety})"}
-          </option>
-        </select>
+        <.live_component
+          module={MehungryWeb.SelectComponent}
+          id="species-picker"
+          form={@mine_form}
+          input_variable={:species_id}
+          items={@species_items}
+          item_meta={@species_meta}
+        />
       </div>
 
       <div class="space-y-1">
         <label class="text-xs text-parchment-dim">Prompt sent to the miner</label>
         <textarea
-          name="query"
+          name="mine[query]"
           rows="3"
           placeholder="Pick a species to pre-fill the default prompt…"
           class="w-full rounded-md border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-2 placeholder:text-parchment-dim"
@@ -88,7 +81,7 @@
       >
         {if @mining?, do: "Starting…", else: "Mine species"}
       </button>
-    </form>
+    </.form>
 
     <%!-- connection config: miner base URL + optional JWT/bearer token --%>
     <details class="rounded-md border border-ink-panel2 bg-ink-panel2/40" open={@reachable == {:error, :probe_crashed} or match?({:error, _}, @reachable)}>
@@ -128,22 +121,25 @@
         </button>
       </.form>
     </details>
-
-    <%!-- progress summary --%>
-    <div class="flex flex-wrap gap-4 text-sm">
-      <span class="text-parchment-dim">Pending <span class="text-parchment font-medium">{@counts.pending}</span></span>
-      <span class="text-parchment-dim">Processing <span class="text-amber-300 font-medium">{@counts.processing}</span></span>
-      <span class="text-parchment-dim">Completed <span class="text-basil font-medium">{@counts.completed}</span></span>
-      <span class="text-parchment-dim">Failed <span class="text-paprika font-medium">{@counts.failed}</span></span>
-      <span class="text-parchment-dim ml-auto">Facts mined <span class="text-parchment font-medium">{@counts.facts_total}</span></span>
-    </div>
   </section>
 
   <%!-- ── Per-species stream ───────────────────────────────────────────────────── --%>
   <section class="rounded-lg border border-ink-panel2 bg-ink-panel p-4 space-y-3">
-    <header class="flex items-baseline gap-2">
-      <h2 class="text-lg font-medium text-parchment">Species</h2>
-      <span class="text-xs text-parchment-dim">{@counts.total} in batch</span>
+    <header class="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+      <div class="flex items-baseline gap-2">
+        <h2 class="text-lg font-medium text-parchment">Species</h2>
+        <span class="text-xs text-parchment-dim">{@counts.total} in batch</span>
+      </div>
+
+      <%!-- progress summary --%>
+      <div class="flex flex-wrap items-baseline gap-4 text-sm ml-auto">
+        <span class="text-parchment-dim">Pending <span class="text-parchment font-medium">{@counts.pending}</span></span>
+        <span class="text-parchment-dim">Processing <span class="text-amber-300 font-medium">{@counts.processing}</span></span>
+        <span class="text-parchment-dim">Completed <span class="text-basil font-medium">{@counts.completed}</span></span>
+        <span class="text-parchment-dim">Failed <span class="text-paprika font-medium">{@counts.failed}</span></span>
+        <span class="text-parchment-dim">Cancelled <span class="text-parchment-dim font-medium">{@counts.cancelled}</span></span>
+        <span class="text-parchment-dim">Facts mined <span class="text-parchment font-medium">{@counts.facts_total}</span></span>
+      </div>
     </header>
 
     <div id="fact-mining-rows" phx-update="stream" class="divide-y divide-ink-panel2">

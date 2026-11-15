@@ -15,7 +15,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRun do
 
   alias Mehungry.Health.Condition
 
-  @statuses ~w(pending processing completed failed)
+  @statuses ~w(pending processing completed failed cancelled)
 
   # The runs context stamps every column (incl. inserted_at/updated_at via
   # Repo.insert_all / update_all) with a `DateTime` — keep the auto-timestamps

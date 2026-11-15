@@ -14,7 +14,7 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRun do
 
   alias Mehungry.Food.FoundementalFoodSpecies
 
-  @statuses ~w(pending processing completed failed)
+  @statuses ~w(pending processing completed failed cancelled)
 
   schema "species_fact_mining_runs" do
     field :batch_id, :string

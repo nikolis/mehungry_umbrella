@@ -108,8 +108,12 @@ carry `nil` → default. A re-mine is still wipe-then-insert idempotent.
 ## Species mining — the admin pipeline (Oban-UI-connected)
 
 `/professional/compound-pipeline` (`MehungryWeb.ProfessionalLive.FactMiningPipeline`, admin-gated;
-route reused from the retired page). The page is a **"Mine one species" form** — a species `<select>`
-whose `phx-change` pre-fills the prompt `<textarea>` with the default, editable before submit:
+route reused from the retired page). The page is a **"Mine one species" form** — a **searchable
+species picker** (`MehungryWeb.SelectComponent`, type-to-filter; rows already mined are annotated via
+`item_meta` with "N facts", or "mined · 0 facts" when a run completed but yielded none, from
+`FactMining.fact_counts_by_species/0` + `SpeciesFactMiningRuns.species_with_completed_runs/0`) whose
+selection pre-fills the prompt `<textarea>` with the default (via the form's `mine_changed`
+`phx-change`), editable before submit:
 
 ```
 Mine species (form: species_id + query) ─▶ SpeciesFactMiningRuns.mine_species/2
@@ -132,7 +136,8 @@ Mine species (form: species_id + query) ─▶ SpeciesFactMiningRuns.mine_specie
   table).
 - Worker (`:fact_mining`, `max_attempts: 3`): a transient miner failure returns `{:error, _}` so Oban
   retries (wipe-then-insert is idempotent); on the **final** attempt the species is recorded `failed`
-  so the batch still finalizes. `cancel_batch/1` cancels remaining jobs + marks unfinished rows failed.
+  so the batch still finalizes. `cancel_batch/1` cancels remaining jobs + marks unfinished rows
+  `cancelled` (a neutral status, distinct from `failed`, that doesn't count toward "Failed" or show red).
 - **The row is reverted to `pending` whenever the job yields its slot without finishing** — a 429
   `:snooze` or a non-final error retry (`Runs.mark_pending/1`). The worker only ever moves a row
   *forward* (`mark_processing` on run-start → terminal), so without this a snoozed/retrying job would
@@ -276,7 +281,7 @@ source link, no quote). `conditions_for_search/1` powers the `/nutritionist/rese
 | `FactMining.SpeciesFactMiningRuns` / `ConditionFactMiningRuns` | `fact_mining/…_fact_mining_runs.ex` | `mine_species/2` · `mine_condition/2` single-entity enqueue (query → row + job args) via `enqueue_one/2` (one `Oban.insert/1` with the uniqueness backstop) + progress + PubSub + cancel; `active_mine_for_{species,condition}/1` pre-check → `{:error, {:already_running, id}}` on a duplicate trigger; dormant `mine_all_*/0` bulk fan-out shares the private `enqueue_batch/2`. |
 | `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`), `unique` keyed on the entity id across non-terminal states (one in-flight mine per entity); forwards `args["query"]` to `mine_*/2`; snoozes on a miner 429 (`{:rate_limited, s}`), reverting its row to `pending` (also on a non-final error retry) so a yielded slot doesn't leave the row stuck `processing`. |
 | `FactMining.QueueLeader` | `fact_mining/queue_leader.ex` | Per-node poller: resumes `:fact_mining` only on the Oban leader (paused elsewhere) → one miner call at a time cluster-wide. |
-| `MehungryWeb.ProfessionalLive.FactMiningPipeline` | `…/professional_live/fact_mining_pipeline.ex` | Admin "Mine one species" form (species select + editable prompt) + live progress. |
+| `MehungryWeb.ProfessionalLive.FactMiningPipeline` | `…/professional_live/fact_mining_pipeline.ex` | Admin "Mine one species" form (searchable `SelectComponent` picker annotated with each species' mined-fact state + editable prompt) + live progress (counts incl. neutral `cancelled`). |
 | `MehungryWeb.ProfessionalLive.HealthConditions` | `…/professional_live/health_conditions.ex` | Admin Conditions list; per-condition "Mine facts" button → prompt modal (`open_mine_modal` → `mine_condition/2`) + live card state. |
 
 ## What the removal cost (full replacement)
@@ -323,7 +328,7 @@ mix test apps/mehungry/test/mehungry/fact_mining_test.exs \
   condition}/2` while a job is live returns `{:error, {:already_running, id}}` leaving exactly one job +
   one row, `active_mine_for_{species,condition}/1` reflects the live job, a different entity still
   enqueues, and a completed job no longer blocks a re-mine.
-- **LiveView** — species page renders the mine-one form, select pre-fills the prompt, form submit
+- **LiveView** — species page renders the mine-one form, the searchable picker pre-fills the prompt, form submit
   opens a one-row batch carrying the edited query; condition page opens the per-condition mine modal
   (pre-filled), submit mines with the edited query, non-admin redirect. Re-submitting a species that
   already has a queued mine flashes "already has a mine in the queue" and adds no duplicate job.

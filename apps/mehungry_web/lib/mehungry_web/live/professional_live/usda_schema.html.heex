@@ -1,16 +1,14 @@
-<div class="max-w-5xl mx-auto p-4 space-y-8">
+<div class="max-w-5xl mx-auto p-4 pb-28 space-y-8">
   <div class="flex flex-wrap items-start gap-3">
     <div class="flex-1 min-w-[16rem]">
       <h1 class="text-2xl font-semibold text-parchment">USDA Schema</h1>
       <p class="text-parchment-dim text-sm mt-1">
-        Ingredients grouped by the structural <em>schema</em>
-        of their USDA description — the
-        set of semantic dimensions the deterministic parser populates
-        (<code class="text-parchment">food + processing + packaging</code>, …). The catalog of
-        valid schemas is inherited from the <span class="text-parchment">{source_label(@source)}</span>. Ingredients whose signature
-        matches no schema exactly are set aside below. Assign an ingredient to a
-        <span class="text-parchment">fundamental food species</span>
-        and it moves into the Foundemental Foods accordion.
+        Curate raw USDA ingredients onto a <span class="text-parchment">fundamental food species</span>. Search by name, select the
+        matches, and assign them in one move — a curated ingredient then feeds the species layer
+        (facts, icons, <code class="text-parchment">/foods</code>). The parser's structural
+        <em>schema</em>
+        grouping is kept under <span class="text-parchment">Structural view</span>
+        below.
       </p>
     </div>
     <div class="flex items-center gap-2">
@@ -38,6 +36,95 @@
     Computing schema analysis from the ingredient corpus…
   </div>
 
+  <%!-- ── Find & assign console (the primary workflow) ───────────────────────── --%>
+  <section class="space-y-3">
+    <div class="rounded-lg border border-ink-panel2 bg-ink-panel p-4 space-y-3">
+      <form id="usda-search-form" phx-change="search" class="relative">
+        <span
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-parchment-dim text-sm"
+          aria-hidden="true"
+        >
+          🔍
+        </span>
+        <input
+          id="usda-search"
+          type="text"
+          name="q"
+          value={@query}
+          phx-debounce="200"
+          autocomplete="off"
+          placeholder="Search USDA ingredients by name — e.g. apple · beef chuck · spinach"
+          class="w-full bg-ink-panel2 text-parchment border border-ink-panel2 rounded pl-9 pr-3 py-2 text-base focus:outline-none focus:border-paprika/60"
+        />
+      </form>
+
+      <div
+        :if={@query != "" and @result_ids != []}
+        class="flex items-center justify-between text-xs text-parchment-dim"
+      >
+        <span>
+          {if @results_capped,
+            do: "Showing the first #{length(@result_ids)} matches — refine to narrow",
+            else:
+              "#{length(@result_ids)} #{if length(@result_ids) == 1, do: "match", else: "matches"}"}
+        </span>
+        <button type="button" phx-click="select_all" class="text-parchment hover:opacity-90">
+          Select all {length(@result_ids)}
+        </button>
+      </div>
+
+      <p :if={@query == ""} class="text-parchment-dim text-sm py-2">
+        Type to search {map_size(@universe)} uncurated ingredients, then select and assign them to a species.
+      </p>
+      <p :if={@query != "" and @result_ids == []} class="text-parchment-dim text-sm py-2">
+        No uncurated ingredients match “{@query}”.
+      </p>
+
+      <ul
+        :if={@result_ids != []}
+        id="results-list"
+        phx-update="stream"
+        class="divide-y divide-ink-panel2 max-h-[28rem] overflow-auto"
+      >
+        <li
+          :for={{dom_id, row} <- @streams.results}
+          id={dom_id}
+          class="flex items-center gap-3"
+        >
+          <button
+            type="button"
+            phx-click="toggle_select"
+            phx-value-id={row.id}
+            class="flex-1 flex items-center gap-3 text-left min-w-0 py-2 hover:opacity-90"
+          >
+            <span class={[
+              "h-4 w-4 rounded border flex items-center justify-center shrink-0 text-[10px] leading-none",
+              if(MapSet.member?(@selected, row.id),
+                do: "bg-paprika border-paprika text-white",
+                else: "border-ink-panel2 text-transparent"
+              )
+            ]}>
+              ✓
+            </span>
+            <span class="text-parchment text-sm truncate">{row.name}</span>
+            <span
+              :if={row.data_type}
+              class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment-dim border-ink-panel2 shrink-0"
+            >
+              {row.data_type}
+            </span>
+          </button>
+          <a
+            href={~p"/professional/ingredients/#{row.id}/show"}
+            class="text-parchment-dim text-xs hover:text-parchment shrink-0 pr-1"
+          >
+            #{row.id}
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
   <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <div class="rounded-lg border border-ink-panel2 bg-ink-panel p-4">
       <div class="text-parchment-dim text-xs uppercase tracking-wide">Ingredients</div>
@@ -57,155 +144,175 @@
     </div>
   </section>
 
+  <%!-- ── Structural view (demoted schema + unmatched accordions) ────────────── --%>
   <section class="space-y-3">
-    <h2 class="text-lg font-semibold text-parchment">Schemas</h2>
-
-    <div class="space-y-2">
-      <div
-        :for={{schema, idx} <- Enum.with_index(@schemas)}
-        class="rounded-lg border border-ink-panel2 bg-ink-panel"
-      >
-        <button
-          type="button"
-          phx-click="open_panel"
-          phx-value-key={schema.key}
-          class="w-full flex items-center gap-3 px-4 py-3 text-left hover:opacity-90"
-        >
-          <span class="text-parchment-dim text-xs w-4">
-            {if @active_key == schema.key, do: "▾", else: "▸"}
-          </span>
-          <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-1.5">
-              <span
-                :for={dim <- schema.dimensions}
-                class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment border-ink-panel2"
-              >
-                {dim}
-              </span>
-            </div>
-            <div class="text-parchment-dim text-xs mt-1 truncate">
-              e.g. {Enum.join(schema.reference_examples, " · ")}
-            </div>
-          </div>
-          <div class="text-right shrink-0">
-            <div class="text-parchment text-lg font-semibold">{schema.matched_count}</div>
-            <div class="text-parchment-dim text-xs">
-              {schema.reference_count} ref
-            </div>
-          </div>
-        </button>
-
-        <div :if={@active_key == schema.key} class="border-t border-ink-panel2">
-          <p :if={@active_rows == []} class="px-4 py-3 text-parchment-dim text-sm">
-            No ingredients matched this schema.
-          </p>
-          <ul
-            :if={@active_rows != []}
-            id={"schema-rows-#{idx}"}
-            phx-update="stream"
-            class="divide-y divide-ink-panel2"
-          >
-            <li
-              :for={{dom_id, row} <- @streams.rows}
-              id={dom_id}
-              class="px-4 py-2 flex items-center justify-between gap-3"
-            >
-              <div class="min-w-0 flex items-center gap-2">
-                <span class="text-parchment text-sm truncate">{row.name}</span>
-                <span
-                  :if={row.data_type}
-                  class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment-dim border-ink-panel2 shrink-0"
-                >
-                  {row.data_type}
-                </span>
-                <span
-                  :if={row.food_class}
-                  class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment-dim border-ink-panel2 shrink-0"
-                >
-                  {row.food_class}
-                </span>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <.species_combobox row={row} species={@species} />
-                <a
-                  href={~p"/professional/ingredients/#{row.id}/show"}
-                  class="text-parchment-dim text-xs hover:text-parchment"
-                >
-                  #{row.id}
-                </a>
-              </div>
-            </li>
-          </ul>
-          <div
-            :if={@row_limit < length(@active_rows)}
-            class="px-4 py-2 border-t border-ink-panel2"
-          >
-            <button
-              type="button"
-              phx-click="load_more"
-              class="text-parchment text-xs hover:opacity-90"
-            >
-              Show more — {@row_limit} of {length(@active_rows)}
-            </button>
-          </div>
+    <button
+      type="button"
+      phx-click="toggle"
+      phx-value-key="structural"
+      class="w-full flex items-center gap-3 rounded-lg border border-ink-panel2 bg-ink-panel px-4 py-3 text-left hover:opacity-90"
+    >
+      <span class="text-parchment-dim text-xs w-4">
+        {if expanded?(@expanded, "structural"), do: "▾", else: "▸"}
+      </span>
+      <div class="flex-1">
+        <div class="text-parchment font-medium">Structural view</div>
+        <div class="text-parchment-dim text-xs mt-1">
+          Ingredients grouped by the parser's field <em>schema</em>
+          ({source_label(@source)}) — plus the unmatched pile. Per-row assign still works here.
         </div>
       </div>
+      <div class="text-parchment-dim text-xs shrink-0">
+        {@schema_count} schemas · {@unmatched_count} unmatched
+      </div>
+    </button>
 
-      <p :if={@schemas == []} class="text-parchment-dim text-sm">
-        No schemas derived. Seed some fdc-backed ingredients first.
-      </p>
-    </div>
-  </section>
-
-  <section :if={@unmatched_count > 0} class="space-y-3">
-    <h2 class="text-lg font-semibold text-parchment">Unmatched</h2>
-
-    <div class="rounded-lg border border-ink-panel2 bg-ink-panel">
-      <button
-        type="button"
-        phx-click="open_panel"
-        phx-value-key="__unmatched__"
-        class="w-full flex items-center gap-3 px-4 py-3 text-left hover:opacity-90"
-      >
-        <span class="text-parchment-dim text-xs w-4">
-          {if @active_key == "__unmatched__", do: "▾", else: "▸"}
-        </span>
-        <div class="flex-1">
-          <div class="text-parchment font-medium">No exact schema match</div>
-          <div class="text-parchment-dim text-xs mt-1">
-            unparseable, no base food, or a signature absent from the catalog
-          </div>
-        </div>
-        <div class="text-parchment text-lg font-semibold shrink-0">{@unmatched_count}</div>
-      </button>
-
-      <div :if={@active_key == "__unmatched__"} class="border-t border-ink-panel2">
-        <ul
-          :if={@active_rows != []}
-          id="unmatched-rows"
-          phx-update="stream"
-          class="divide-y divide-ink-panel2"
+    <div :if={expanded?(@expanded, "structural")} class="space-y-6">
+      <div class="space-y-2">
+        <h2 class="text-lg font-semibold text-parchment">Schemas</h2>
+        <div
+          :for={{schema, idx} <- Enum.with_index(@schemas)}
+          class="rounded-lg border border-ink-panel2 bg-ink-panel"
         >
-          <li
-            :for={{dom_id, row} <- @streams.rows}
-            id={dom_id}
-            class="px-4 py-2 flex items-center justify-between gap-3"
-          >
-            <span class="text-parchment text-sm truncate">{row.name}</span>
-            <div class="flex items-center gap-2 shrink-0">
-              <.species_combobox row={row} species={@species} />
-              <span :if={row.reason} class="text-parchment-dim text-xs">{row.reason}</span>
-            </div>
-          </li>
-        </ul>
-        <div :if={@row_limit < length(@active_rows)} class="px-4 py-2 border-t border-ink-panel2">
           <button
             type="button"
-            phx-click="load_more"
-            class="text-parchment text-xs hover:opacity-90"
+            phx-click="open_panel"
+            phx-value-key={schema.key}
+            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:opacity-90"
           >
-            Show more — {@row_limit} of {length(@active_rows)}
+            <span class="text-parchment-dim text-xs w-4">
+              {if @active_key == schema.key, do: "▾", else: "▸"}
+            </span>
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span
+                  :for={dim <- schema.dimensions}
+                  class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment border-ink-panel2"
+                >
+                  {dim}
+                </span>
+              </div>
+              <div class="text-parchment-dim text-xs mt-1 truncate">
+                e.g. {Enum.join(schema.reference_examples, " · ")}
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-parchment text-lg font-semibold">{schema.matched_count}</div>
+              <div class="text-parchment-dim text-xs">
+                {schema.reference_count} ref
+              </div>
+            </div>
           </button>
+
+          <div :if={@active_key == schema.key} class="border-t border-ink-panel2">
+            <p :if={@active_rows == []} class="px-4 py-3 text-parchment-dim text-sm">
+              No ingredients matched this schema.
+            </p>
+            <ul
+              :if={@active_rows != []}
+              id={"schema-rows-#{idx}"}
+              phx-update="stream"
+              class="divide-y divide-ink-panel2"
+            >
+              <li
+                :for={{dom_id, row} <- @streams.rows}
+                id={dom_id}
+                class="px-4 py-2 flex items-center justify-between gap-3"
+              >
+                <div class="min-w-0 flex items-center gap-2">
+                  <span class="text-parchment text-sm truncate">{row.name}</span>
+                  <span
+                    :if={row.data_type}
+                    class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment-dim border-ink-panel2 shrink-0"
+                  >
+                    {row.data_type}
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <.species_combobox row={row} species={@species} />
+                  <a
+                    href={~p"/professional/ingredients/#{row.id}/show"}
+                    class="text-parchment-dim text-xs hover:text-parchment"
+                  >
+                    #{row.id}
+                  </a>
+                </div>
+              </li>
+            </ul>
+            <div
+              :if={@row_limit < length(@active_rows)}
+              class="px-4 py-2 border-t border-ink-panel2"
+            >
+              <button
+                type="button"
+                phx-click="load_more"
+                class="text-parchment text-xs hover:opacity-90"
+              >
+                Show more — {@row_limit} of {length(@active_rows)}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p :if={@schemas == []} class="text-parchment-dim text-sm">
+          No schemas derived. Seed some fdc-backed ingredients first.
+        </p>
+      </div>
+
+      <div :if={@unmatched_count > 0} class="space-y-2">
+        <h2 class="text-lg font-semibold text-parchment">Unmatched</h2>
+
+        <div class="rounded-lg border border-ink-panel2 bg-ink-panel">
+          <button
+            type="button"
+            phx-click="open_panel"
+            phx-value-key="__unmatched__"
+            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:opacity-90"
+          >
+            <span class="text-parchment-dim text-xs w-4">
+              {if @active_key == "__unmatched__", do: "▾", else: "▸"}
+            </span>
+            <div class="flex-1">
+              <div class="text-parchment font-medium">No exact schema match</div>
+              <div class="text-parchment-dim text-xs mt-1">
+                unparseable, no base food, or a signature absent from the catalog
+              </div>
+            </div>
+            <div class="text-parchment text-lg font-semibold shrink-0">{@unmatched_count}</div>
+          </button>
+
+          <div :if={@active_key == "__unmatched__"} class="border-t border-ink-panel2">
+            <ul
+              :if={@active_rows != []}
+              id="unmatched-rows"
+              phx-update="stream"
+              class="divide-y divide-ink-panel2"
+            >
+              <li
+                :for={{dom_id, row} <- @streams.rows}
+                id={dom_id}
+                class="px-4 py-2 flex items-center justify-between gap-3"
+              >
+                <span class="text-parchment text-sm truncate">{row.name}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                  <.species_combobox row={row} species={@species} />
+                  <span :if={row.reason} class="text-parchment-dim text-xs">{row.reason}</span>
+                </div>
+              </li>
+            </ul>
+            <div
+              :if={@row_limit < length(@active_rows)}
+              class="px-4 py-2 border-t border-ink-panel2"
+            >
+              <button
+                type="button"
+                phx-click="load_more"
+                class="text-parchment text-xs hover:opacity-90"
+              >
+                Show more — {@row_limit} of {length(@active_rows)}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -278,12 +385,16 @@
             >
               Save
             </button>
-            <span class="text-parchment-dim text-xs">Blank = auto ({Mehungry.Food.SpeciesIcons.default_icon(species)})</span>
+            <span class="text-parchment-dim text-xs">Blank = auto ({Mehungry.Food.SpeciesIcons.default_icon(
+              species
+            )})</span>
           </form>
           <div class="flex items-center gap-2 px-4 py-3 border-b border-ink-panel2">
             <label class="text-parchment-dim text-xs">Visibility</label>
             <span class="text-parchment text-xs">
-              {if species.private, do: "Private — hidden from /foods", else: "Public — shown on /foods"}
+              {if species.private,
+                do: "Private — hidden from /foods",
+                else: "Public — shown on /foods"}
             </span>
             <button
               type="button"
@@ -318,10 +429,31 @@
       </div>
 
       <p :if={@species_with_foods == []} class="text-parchment-dim text-sm">
-        No species defined yet. Assign an ingredient above to create the first one.
+        No species defined yet. Search above, select ingredients, and assign them to create the first one.
       </p>
     </div>
   </section>
+</div>
+
+<%!-- ── Sticky selection tray ──────────────────────────────────────────────── --%>
+<div
+  :if={MapSet.size(@selected) > 0}
+  class="fixed bottom-0 inset-x-0 z-40 border-t border-ink-panel2 bg-ink-panel/95 backdrop-blur"
+>
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+    <span class="text-parchment text-sm font-medium">
+      {MapSet.size(@selected)} selected
+    </span>
+    <div class="flex-1"></div>
+    <button
+      type="button"
+      phx-click="clear_selection"
+      class="text-parchment-dim text-xs hover:text-parchment px-2 py-1 rounded border border-ink-panel2"
+    >
+      Clear
+    </button>
+    <.tray_species_combobox species={@species} />
+  </div>
 </div>
 
 <.modal
@@ -334,7 +466,7 @@
     <div>
       <h3 class="text-lg font-semibold text-parchment">New food species</h3>
       <p :if={@pending_assignment} class="text-parchment-dim text-sm mt-1">
-        “{@pending_assignment.usda_name}” will be assigned to this species once created.
+        {assignment_label(@pending_assignment.ingredients)} will be assigned to this species once created.
       </p>
     </div>
 
@@ -379,7 +511,7 @@
     <div>
       <h3 class="text-lg font-semibold text-parchment">Assign to species</h3>
       <p :if={@pending_assignment} class="text-parchment-dim text-sm mt-1">
-        “{@pending_assignment.usda_name}” will be assigned to
+        {assignment_label(@pending_assignment.ingredients)} will be assigned to
         “{@pending_assignment.species_label}”.
       </p>
     </div>

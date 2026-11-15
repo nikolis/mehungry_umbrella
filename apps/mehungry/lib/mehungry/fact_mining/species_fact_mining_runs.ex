@@ -306,7 +306,7 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRuns do
 
   @doc """
   Aggregate progress for a batch: a `%{pending, processing, completed, failed,
-  total, facts_total}` summary derived by counting over `batch_id`.
+  cancelled, total, facts_total}` summary derived by counting over `batch_id`.
   """
   def counts_for_batch(nil), do: empty_counts()
 
@@ -331,6 +331,7 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRuns do
       processing: Map.get(by_status, "processing", 0),
       completed: Map.get(by_status, "completed", 0),
       failed: Map.get(by_status, "failed", 0),
+      cancelled: Map.get(by_status, "cancelled", 0),
       total: by_status |> Map.values() |> Enum.sum(),
       facts_total: facts_total
     }
@@ -347,7 +348,7 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRuns do
 
   @doc """
   Cancel a batch: cancel its remaining Oban jobs, then mark any still-unfinished
-  rows `failed` ("cancelled by admin"). Already-mined facts are kept.
+  rows `cancelled`. Already-mined facts are kept.
   """
   def cancel_batch(nil), do: :noop
 
@@ -360,14 +361,25 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRuns do
 
     from(r in Run, where: r.batch_id == ^batch_id and r.status in ["pending", "processing"])
     |> Repo.update_all(
-      set: [status: "failed", error: "cancelled by admin", completed_at: now(), updated_at: now()]
+      set: [status: "cancelled", error: nil, completed_at: now(), updated_at: now()]
     )
 
     :cancelled
   end
 
+  @doc """
+  The set of species ids that have at least one `completed` mining run — used to
+  annotate the picker with a "mined" badge even when the run yielded 0 facts.
+  """
+  def species_with_completed_runs do
+    Repo.all(
+      from(r in Run, where: r.status == "completed", select: r.foundemental_species_id, distinct: true)
+    )
+    |> MapSet.new()
+  end
+
   defp empty_counts,
-    do: %{pending: 0, processing: 0, completed: 0, failed: 0, total: 0, facts_total: 0}
+    do: %{pending: 0, processing: 0, completed: 0, failed: 0, cancelled: 0, total: 0, facts_total: 0}
 
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
 end

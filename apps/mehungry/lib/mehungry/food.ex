@@ -443,7 +443,10 @@ defmodule Mehungry.Food do
   defdelegate enrich_species(species, opts \\ []), to: SpeciesEnrichment
   defdelegate load_faostat_rows(), to: SpeciesEnrichment
   defdelegate suggest_faostat_codes(species), to: SpeciesEnrichment
-  defdelegate promote_all_pending_species_facts(), to: SpeciesEnrichment, as: :promote_all_pending_facts
+
+  defdelegate promote_all_pending_species_facts(),
+    to: SpeciesEnrichment,
+    as: :promote_all_pending_facts
 
   defdelegate record_species_wikidata_facts(species_id, result),
     to: SpeciesEnrichment,
@@ -516,6 +519,10 @@ defmodule Mehungry.Food do
   defdelegate assign_foundemental_ingredient(species_id, ingredient_id, usda_name),
     to: FoundementalFoods,
     as: :assign_ingredient
+
+  defdelegate assign_foundemental_ingredients(species_id, pairs),
+    to: FoundementalFoods,
+    as: :assign_ingredients
 
   defdelegate assigned_foundemental_ingredient_ids(),
     to: FoundementalFoods,

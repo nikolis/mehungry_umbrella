@@ -34,9 +34,14 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   alias Mehungry.Food
   alias Mehungry.Food.FoundementalFoodSpecies
   alias Mehungry.FoodData.Usda.SchemaMatcher
+  alias MehungryWeb.ProfessionalLive.ImportReviewSearch
 
-  # Rows rendered per panel before "Show more".
+  # Rows rendered per schema panel before "Show more".
   @page 100
+
+  # Max search results shown in the Find & assign console (a name search rarely
+  # needs more; keeps the streamed list cheap).
+  @results_page 300
 
   @impl true
   def mount(_params, _session, socket) do
@@ -52,8 +57,13 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
       |> assign(:active_key, nil)
       |> assign(:active_rows, [])
       |> assign(:row_limit, @page)
+      |> assign(:query, "")
+      |> assign(:selected, MapSet.new())
+      |> assign(:result_ids, [])
+      |> assign(:results_capped, false)
       |> assign_empty_analysis()
       |> stream(:rows, [])
+      |> stream(:results, [])
 
     # The heavy corpus parse must not block the mount (it runs the full USDA
     # parser over every ingredient). Skip it on the dead render entirely, and on
@@ -128,68 +138,107 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     {:noreply, assign(socket, :row_limit, limit + @page)}
   end
 
+  # ── Find & assign console (search → multi-select → batch assign) ──────────────
+
+  # Name search across the whole un-curated universe. A single term or several
+  # (AND-matched) rank via the shared ImportReviewSearch ranker; a blank query
+  # shows nothing (never dumps all ~5k rows). Selection persists across queries.
+  def handle_event("search", %{"q" => q}, socket) do
+    results = search_results(socket.assigns.universe, q)
+
+    {:noreply,
+     socket
+     |> assign(:query, q)
+     |> assign(:result_ids, Enum.map(results, & &1.id))
+     |> assign(:results_capped, length(results) == @results_page)
+     |> stream(:results, results, reset: true)}
+  end
+
+  # Toggle one row's membership in the selection; re-insert that single row so its
+  # checkbox re-renders (one-row diff, not a re-stream).
+  def handle_event("toggle_select", %{"id" => id}, socket) do
+    id = String.to_integer(id)
+    selected = toggle_member(socket.assigns.selected, id)
+    socket = assign(socket, :selected, selected)
+
+    socket =
+      case Map.get(socket.assigns.universe, id) do
+        nil -> socket
+        row -> stream_insert(socket, :results, row)
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("select_all", _params, socket) do
+    selected = MapSet.union(socket.assigns.selected, MapSet.new(socket.assigns.result_ids))
+    {:noreply, socket |> assign(:selected, selected) |> restream_results()}
+  end
+
+  def handle_event("clear_selection", _params, socket) do
+    {:noreply, socket |> assign(:selected, MapSet.new()) |> restream_results()}
+  end
+
+  # Tray species picker — assign the whole current selection. Mirrors the per-row
+  # `select_species` flow but reads the batch from `@selected`.
+  def handle_event("choose_species", %{"species_id" => ""}, socket), do: {:noreply, socket}
+
+  def handle_event("choose_species", %{"species_id" => "__new__"}, socket) do
+    case selected_ingredients(socket) do
+      [] -> {:noreply, socket}
+      ingredients -> {:noreply, open_new_species_modal(socket, ingredients)}
+    end
+  end
+
+  def handle_event("choose_species", %{"species_id" => species_id}, socket) do
+    case selected_ingredients(socket) do
+      [] ->
+        {:noreply, socket}
+
+      ingredients ->
+        {:noreply, open_assign_modal(socket, ingredients, String.to_integer(species_id))}
+    end
+  end
+
+  # ── Per-row combobox (demoted Structural view) — a batch of one ───────────────
+
   # Blank selection ("— assign species —") is a no-op.
   def handle_event("select_species", %{"species_id" => ""}, socket), do: {:noreply, socket}
 
-  # "+ New species…" — stash which ingredient is being classified and open the
-  # modal; the created species is assigned to it on submit.
   def handle_event(
         "select_species",
         %{"species_id" => "__new__", "ingredient_id" => ingredient_id, "usda_name" => usda_name},
         socket
       ) do
-    {:noreply,
-     socket
-     |> assign(:pending_assignment, %{
-       ingredient_id: String.to_integer(ingredient_id),
-       usda_name: usda_name
-     })
-     |> assign(:species_form, new_species_form())
-     |> assign(:show_species_modal, true)}
+    ingredients = [%{id: String.to_integer(ingredient_id), name: usda_name}]
+    {:noreply, open_new_species_modal(socket, ingredients)}
   end
 
-  # Existing species — mirror the "+ New species…" flow: stash the pending
-  # assignment and open a confirmation modal to submit, skipping species creation.
   def handle_event(
         "select_species",
         %{"species_id" => species_id, "ingredient_id" => ingredient_id, "usda_name" => usda_name},
         socket
       ) do
-    species_id = String.to_integer(species_id)
-    species = Enum.find(socket.assigns.species, &(&1.id == species_id))
-
-    {:noreply,
-     socket
-     |> assign(:pending_assignment, %{
-       ingredient_id: String.to_integer(ingredient_id),
-       usda_name: usda_name,
-       species_id: species_id,
-       species_label: species && species_label(species)
-     })
-     |> assign(:show_assign_modal, true)}
+    ingredients = [%{id: String.to_integer(ingredient_id), name: usda_name}]
+    {:noreply, open_assign_modal(socket, ingredients, String.to_integer(species_id))}
   end
 
-  # Submit of the confirmation modal for an existing species.
+  # Submit of the confirmation modal for an existing species — assigns the batch.
   def handle_event("confirm_assignment", _params, socket) do
-    %{ingredient_id: ingredient_id, usda_name: usda_name, species_id: species_id} =
-      socket.assigns.pending_assignment
+    %{ingredients: ingredients, species_id: species_id} = socket.assigns.pending_assignment
 
     socket =
       socket
       |> assign(:show_assign_modal, false)
       |> assign(:pending_assignment, nil)
 
-    case Food.assign_foundemental_ingredient(species_id, ingredient_id, usda_name) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> after_assign_data(ingredient_id)
-         |> stream_delete(:rows, %{id: ingredient_id})
-         |> put_flash(:info, "Assigned to species")}
+    {:ok, %{assigned: assigned, skipped: skipped}} =
+      Food.assign_foundemental_ingredients(species_id, pairs_for(ingredients))
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not assign ingredient to species")}
-    end
+    {:noreply,
+     socket
+     |> after_assign_data(Enum.map(ingredients, & &1.id))
+     |> put_flash(:info, assign_flash(assigned, skipped))}
   end
 
   def handle_event("close_assign_modal", _params, socket) do
@@ -292,6 +341,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:unmatched, [])
     |> assign(:matched_count, 0)
     |> assign(:unmatched_count, 0)
+    |> assign(:universe, %{})
     |> assign(:species, [])
     |> assign(:species_with_foods, [])
   end
@@ -318,7 +368,20 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:unmatched, unmatched)
     |> assign(:matched_count, matched_count)
     |> assign(:unmatched_count, length(unmatched))
+    |> assign(:universe, build_universe(schemas, unmatched))
     |> reload_species()
+  end
+
+  # The flat, searchable set of every *un-curated* ingredient — the union of all
+  # schemas' matched rows and the unmatched entries (both already minus the
+  # assigned ids). Keyed by id for O(1) lookup when resolving a selection to
+  # assign. This is the corpus the Find & assign console searches.
+  defp build_universe(schemas, unmatched) do
+    matched = Enum.flat_map(schemas, & &1.matched)
+    unmatched_ings = Enum.map(unmatched, & &1.ingredient)
+
+    (matched ++ unmatched_ings)
+    |> Map.new(fn ing -> {ing.id, %{id: ing.id, name: ing.name, data_type: ing.data_type}} end)
   end
 
   # ── Curation panel (streamed rows) ────────────────────────────────────────────
@@ -337,6 +400,17 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     )
   end
 
+  # Re-stream the currently visible search results so their checkboxes reflect the
+  # latest `@selected` (used by select-all / clear, which touch many rows at once).
+  defp restream_results(socket) do
+    rows =
+      socket.assigns.result_ids
+      |> Enum.map(&Map.get(socket.assigns.universe, &1))
+      |> Enum.reject(&is_nil/1)
+
+    stream(socket, :results, rows, reset: true)
+  end
+
   # Normalized, stream-friendly rows (uniform shape + an :id for the dom id).
   defp rows_for(assigns, "__unmatched__"),
     do: Enum.map(assigns.unmatched, &normalize_unmatched_row/1)
@@ -349,47 +423,48 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   end
 
   defp normalize_matched_row(ing) do
-    %{
-      id: ing.id,
-      name: ing.name,
-      data_type: ing.data_type,
-      food_class: ing.food_class,
-      reason: nil
-    }
+    %{id: ing.id, name: ing.name, data_type: ing.data_type, reason: nil}
   end
 
   defp normalize_unmatched_row(%{ingredient: ing, reason: reason}) do
-    %{
-      id: ing.id,
-      name: ing.name,
-      data_type: ing.data_type,
-      food_class: ing.food_class,
-      reason: reason
-    }
+    %{id: ing.id, name: ing.name, data_type: ing.data_type, reason: reason}
   end
 
-  # Patch the in-memory lists after one ingredient is assigned — decrements its
-  # schema's count, drops it from unmatched/active_rows, and reloads the (small)
-  # species tables. Re-renders the 92 headers only; the streamed rows are patched
-  # separately by the caller (stream_delete / restream).
-  defp after_assign_data(socket, ingredient_id) do
+  # Patch the in-memory lists after a batch of ingredients is assigned — decrements
+  # their schemas' counts, drops them from unmatched/active_rows/universe/selection,
+  # stream-deletes them from both the console (:results) and the accordion (:rows),
+  # and reloads the (small) species tables.
+  defp after_assign_data(socket, ingredient_ids) do
+    id_set = MapSet.new(ingredient_ids)
+
     schemas =
       for schema <- socket.assigns.schemas do
-        if Enum.any?(schema.matched, &(&1.id == ingredient_id)) do
-          matched = Enum.reject(schema.matched, &(&1.id == ingredient_id))
+        if Enum.any?(schema.matched, &MapSet.member?(id_set, &1.id)) do
+          matched = Enum.reject(schema.matched, &MapSet.member?(id_set, &1.id))
           %{schema | matched: matched, matched_count: length(matched)}
         else
           schema
         end
       end
 
-    unmatched = Enum.reject(socket.assigns.unmatched, &(&1.ingredient.id == ingredient_id))
-    active_rows = Enum.reject(socket.assigns.active_rows, &(&1.id == ingredient_id))
+    unmatched = Enum.reject(socket.assigns.unmatched, &MapSet.member?(id_set, &1.ingredient.id))
+    active_rows = Enum.reject(socket.assigns.active_rows, &MapSet.member?(id_set, &1.id))
+    result_ids = Enum.reject(socket.assigns.result_ids, &MapSet.member?(id_set, &1))
+
+    socket =
+      Enum.reduce(ingredient_ids, socket, fn id, acc ->
+        acc
+        |> stream_delete(:rows, %{id: id})
+        |> stream_delete(:results, %{id: id})
+      end)
 
     socket
     |> assign(:schemas, schemas)
     |> assign(:unmatched, unmatched)
     |> assign(:active_rows, active_rows)
+    |> assign(:result_ids, result_ids)
+    |> assign(:universe, Map.drop(socket.assigns.universe, ingredient_ids))
+    |> assign(:selected, MapSet.difference(socket.assigns.selected, id_set))
     |> assign(:matched_count, schemas |> Enum.map(& &1.matched_count) |> Enum.sum())
     |> assign(:unmatched_count, length(unmatched))
     |> reload_species()
@@ -401,63 +476,101 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:species_with_foods, Food.list_foundemental_species_with_foods())
   end
 
-  # Wire up a freshly created species: if it was created from a row's "+ New
-  # species…" flow, assign that ingredient to it (checking the result so a failed
-  # assign doesn't masquerade as success), then patch the lists. Otherwise just
-  # reload the species tables.
-  defp finish_create_species(socket, species, %{
-         ingredient_id: ingredient_id,
-         usda_name: usda_name
-       }) do
-    case Food.assign_foundemental_ingredient(species.id, ingredient_id, usda_name) do
-      {:ok, _} ->
-        # New species now exists — re-stream the visible rows so their dropdowns
-        # include it, dropping the just-assigned one.
-        socket
-        |> after_assign_data(ingredient_id)
-        |> restream_active()
-        |> put_flash(:info, "Created species \"#{species.name}\" and assigned ingredient")
+  # Assign the pending batch to a freshly created species, then patch the lists.
+  # `restream_active/1` refreshes the accordion rows so their comboboxes include
+  # the new species.
+  defp finish_create_species(socket, species, %{ingredients: ingredients}) do
+    {:ok, %{assigned: assigned, skipped: skipped}} =
+      Food.assign_foundemental_ingredients(species.id, pairs_for(ingredients))
 
-      {:error, _changeset} ->
-        socket
-        |> reload_species()
-        |> put_flash(
-          :error,
-          "Created species \"#{species.name}\", but could not assign the ingredient"
-        )
-    end
+    socket
+    |> after_assign_data(Enum.map(ingredients, & &1.id))
+    |> restream_active()
+    |> put_flash(:info, "Created “#{species.name}” — #{assign_flash(assigned, skipped)}")
   end
 
   defp finish_create_species(socket, species, _pending) do
     socket
     |> reload_species()
-    |> put_flash(:info, "Created species \"#{species.name}\"")
+    |> put_flash(:info, "Created species “#{species.name}”")
   end
 
   defp new_species_form do
     to_form(Food.change_foundemental_species(%FoundementalFoodSpecies{}))
   end
 
+  # ── Find & assign helpers ─────────────────────────────────────────────────────
+
+  defp search_results(_universe, q) when q in [nil, ""], do: []
+
+  defp search_results(universe, q) do
+    universe
+    |> Map.values()
+    |> ImportReviewSearch.filter(q, & &1.name)
+    |> Enum.take(@results_page)
+  end
+
+  defp toggle_member(set, id) do
+    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
+  end
+
+  # The current selection resolved to `%{id, name}` from the universe (ids that
+  # have since left the universe are dropped).
+  defp selected_ingredients(socket) do
+    socket.assigns.selected
+    |> MapSet.to_list()
+    |> Enum.map(&Map.get(socket.assigns.universe, &1))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&%{id: &1.id, name: &1.name})
+  end
+
+  defp pairs_for(ingredients) do
+    Enum.map(ingredients, fn %{id: id, name: name} -> %{ingredient_id: id, usda_name: name} end)
+  end
+
+  defp open_new_species_modal(socket, ingredients) do
+    socket
+    |> assign(:pending_assignment, %{ingredients: ingredients})
+    |> assign(:species_form, new_species_form())
+    |> assign(:show_species_modal, true)
+  end
+
+  defp open_assign_modal(socket, ingredients, species_id) do
+    species = Enum.find(socket.assigns.species, &(&1.id == species_id))
+
+    socket
+    |> assign(:pending_assignment, %{
+      ingredients: ingredients,
+      species_id: species_id,
+      species_label: species && species_label(species)
+    })
+    |> assign(:show_assign_modal, true)
+  end
+
+  defp assign_flash(assigned, 0),
+    do: "Assigned #{assigned} #{ngettext_ingredient(assigned)}"
+
+  defp assign_flash(assigned, skipped),
+    do: "Assigned #{assigned}; skipped #{skipped} already assigned"
+
+  defp ngettext_ingredient(1), do: "ingredient"
+  defp ngettext_ingredient(_), do: "ingredients"
+
   # ── Render helpers ──────────────────────────────────────────────────────────
 
   @doc """
-  Searchable species picker for one curation row. Client-side (Alpine) filter
-  over the small species list — no per-keystroke round-trip — pre-seeded with the
-  first two letters of the row's ingredient name. Picking an option (or "+ New
-  species…") pushes the shared `select_species` event via `phx-click`, so the
-  create/confirm modal flow is unchanged.
+  Searchable species picker for one curation row (demoted Structural view).
+  Client-side (Alpine) filter over the small species list — no per-keystroke
+  round-trip — starting empty. Picking an option (or "+ New species…") pushes the
+  shared `select_species` event via `phx-click`, so the create/confirm modal flow
+  is unchanged.
   """
   def species_combobox(assigns) do
     ~H"""
-    <div
-      class="relative"
-      x-data={"{ open: false, q: #{Jason.encode!(search_seed(@row.name))} }"}
-      @click.outside="open = false"
-    >
+    <div class="relative" x-data="{ open: false, q: '' }" @click.outside="open = false">
       <input
         type="text"
         x-model="q"
-        value={search_seed(@row.name)}
         @focus="open = true"
         placeholder="Search species…"
         autocomplete="off"
@@ -497,8 +610,60 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     """
   end
 
-  # First two letters of the ingredient name — the search box's default query.
-  defp search_seed(name), do: name |> to_string() |> String.slice(0, 2)
+  @doc """
+  Destination species picker for the Find & assign tray — applies to the **whole**
+  current selection. Same Alpine client-filter as `species_combobox/1`, but pushes
+  `choose_species` (no per-row ingredient context; the batch is read from
+  `@selected` server-side).
+  """
+  def tray_species_combobox(assigns) do
+    ~H"""
+    <div class="relative" x-data="{ open: false, q: '' }" @click.outside="open = false">
+      <button
+        type="button"
+        @click="open = !open"
+        class="bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-3 py-1.5 font-medium hover:opacity-90"
+      >
+        Assign to species ▾
+      </button>
+      <div
+        x-show="open"
+        class="absolute right-0 bottom-full z-30 mb-1 w-64 max-h-64 overflow-auto rounded border border-ink-panel2 bg-ink-panel shadow-lg"
+      >
+        <div class="p-1 border-b border-ink-panel2">
+          <input
+            type="text"
+            x-model="q"
+            placeholder="Search species…"
+            autocomplete="off"
+            class="w-full bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-2 py-1 focus:outline-none"
+          />
+        </div>
+        <button
+          :for={s <- @species}
+          type="button"
+          x-show={species_match_js(s)}
+          phx-click="choose_species"
+          phx-value-species_id={s.id}
+          @click="open = false"
+          class="block w-full text-left px-2 py-1 text-xs text-parchment hover:bg-ink-panel2"
+        >
+          {species_label(s)}
+        </button>
+        <p :if={@species == []} class="px-2 py-1 text-xs text-parchment-dim">No species yet.</p>
+        <button
+          type="button"
+          phx-click="choose_species"
+          phx-value-species_id="__new__"
+          @click="open = false"
+          class="block w-full text-left px-2 py-1 text-xs text-parchment font-medium border-t border-ink-panel2 hover:bg-ink-panel2"
+        >
+          + New species…
+        </button>
+      </div>
+    </div>
+    """
+  end
 
   # Alpine `x-show` test: the (constant) species label contains the live query.
   defp species_match_js(species) do
@@ -506,6 +671,11 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   end
 
   def expanded?(expanded, key), do: MapSet.member?(expanded, key)
+
+  # Human summary of the pending batch for the modals ("“Apples, raw” + 6 more").
+  def assignment_label([]), do: "No ingredients"
+  def assignment_label([%{name: name}]), do: "“#{name}”"
+  def assignment_label([%{name: name} | rest]), do: "“#{name}” + #{length(rest)} more"
 
   def species_label(%{variety: v} = s) when v in [nil, ""], do: s.name
   def species_label(s), do: "#{s.name} — #{s.variety}"

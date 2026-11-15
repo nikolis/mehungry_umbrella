@@ -493,12 +493,12 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   # ── Helpers ────────────────────────────────────────────────────────────────
 
   # A tracking-row transition for a single-condition mine. On a terminal status
-  # (completed/failed) clear the card's "Mining…" state + flash the outcome; a revert
-  # to `pending` (a 429 snooze / pending retry) leaves the card mining — it's still
-  # queued. Mined facts feed the nutritionist research surface, not this page, so no
-  # reload is needed.
+  # (completed/failed/cancelled) clear the card's "Mining…" state + flash the outcome;
+  # a revert to `pending` (a 429 snooze / pending retry) leaves the card mining — it's
+  # still queued. Mined facts feed the nutritionist research surface, not this page, so
+  # no reload is needed.
   defp handle_single_mine_run(socket, %{status: status} = run)
-       when status in ["completed", "failed"] do
+       when status in ["completed", "failed", "cancelled"] do
     socket =
       socket
       |> update(:mining_conditions, &MapSet.delete(&1, run.condition_id))
@@ -512,6 +512,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
       "failed" ->
         put_flash(socket, :error, "Mining failed for “#{name}”: #{run.error}")
+
+      "cancelled" ->
+        put_flash(socket, :info, "Mining cancelled for “#{name}”.")
     end
   end
 

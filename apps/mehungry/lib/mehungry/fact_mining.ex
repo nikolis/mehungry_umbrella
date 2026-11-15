@@ -341,6 +341,19 @@ defmodule Mehungry.FactMining do
   end
 
   @doc """
+  Mined-fact counts for every species that has any, as a `%{species_id => count}`
+  map — one grouped query (species with no facts are simply absent). Used to
+  annotate the admin species picker.
+  """
+  def fact_counts_by_species do
+    SpeciesMinedFact
+    |> group_by([f], f.foundemental_species_id)
+    |> select([f], {f.foundemental_species_id, count(f.id)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   The curated, SEO-visible research set for a species' detail page: the on-subject
   **verified** facts only, ranked lead-tier → name-mention → clarity, capped at
   `:limit` (default 10).

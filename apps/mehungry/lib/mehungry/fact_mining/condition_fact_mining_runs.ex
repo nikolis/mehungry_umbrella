@@ -302,7 +302,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
 
   @doc """
   Aggregate progress for a batch: a `%{pending, processing, completed, failed,
-  total, facts_total, started_at}` summary derived by counting over `batch_id`.
+  cancelled, total, facts_total, started_at}` summary derived by counting over `batch_id`.
   `started_at` is the earliest moment any condition in the batch began processing
   (nil until the first one starts) — the anchor the LiveView derives an ETA from.
   """
@@ -337,6 +337,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
       processing: Map.get(by_status, "processing", 0),
       completed: Map.get(by_status, "completed", 0),
       failed: Map.get(by_status, "failed", 0),
+      cancelled: Map.get(by_status, "cancelled", 0),
       total: by_status |> Map.values() |> Enum.sum(),
       facts_total: facts_total,
       started_at: started_at
@@ -354,7 +355,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
 
   @doc """
   Cancel a batch: cancel its remaining Oban jobs, then mark any still-unfinished
-  rows `failed` ("cancelled by admin"). Already-mined facts are kept.
+  rows `cancelled`. Already-mined facts are kept.
   """
   def cancel_batch(nil), do: :noop
 
@@ -367,7 +368,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
 
     from(r in Run, where: r.batch_id == ^batch_id and r.status in ["pending", "processing"])
     |> Repo.update_all(
-      set: [status: "failed", error: "cancelled by admin", completed_at: now(), updated_at: now()]
+      set: [status: "cancelled", error: nil, completed_at: now(), updated_at: now()]
     )
 
     :cancelled
@@ -379,6 +380,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
       processing: 0,
       completed: 0,
       failed: 0,
+      cancelled: 0,
       total: 0,
       facts_total: 0,
       started_at: nil

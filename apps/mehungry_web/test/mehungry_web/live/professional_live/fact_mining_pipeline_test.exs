@@ -37,10 +37,12 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipelineTest do
   test "picking a species pre-fills the default prompt", %{conn: conn, species: species} do
     {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
+    # The picker's JS hook writes the hidden input then fires the form's phx-change;
+    # render_hook simulates that pushEvent (the hidden input can't be set via form/3).
     html =
-      view
-      |> element("select[name='species_id']")
-      |> render_change(%{"species_id" => to_string(species.id)})
+      render_hook(view, "mine_changed", %{
+        "mine" => %{"species_id" => to_string(species.id), "query" => ""}
+      })
 
     assert html =~ "tell me all the facts about Acerola (Malpighia emarginata)"
   end
@@ -52,12 +54,9 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipelineTest do
     Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
     {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
-    view
-    |> form("form[phx-submit='mine_species']", %{
-      "species_id" => to_string(species.id),
-      "query" => "just the vitamin C facts"
+    render_hook(view, "mine_species", %{
+      "mine" => %{"species_id" => to_string(species.id), "query" => "just the vitamin C facts"}
     })
-    |> render_submit()
 
     assert render_async(view) =~ "Mining started"
 
@@ -78,12 +77,9 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipelineTest do
 
     {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
 
-    view
-    |> form("form[phx-submit='mine_species']", %{
-      "species_id" => to_string(species.id),
-      "query" => "second attempt"
+    render_hook(view, "mine_species", %{
+      "mine" => %{"species_id" => to_string(species.id), "query" => "second attempt"}
     })
-    |> render_submit()
 
     assert render_async(view) =~ "already has a mine in the queue"
     # No duplicate job was enqueued.

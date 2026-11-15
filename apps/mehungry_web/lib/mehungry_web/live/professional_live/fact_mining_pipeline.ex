@@ -32,6 +32,8 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
     batch_id = Runs.latest_batch_id()
 
     species = Food.list_foundemental_species()
+    fact_counts = FactMining.fact_counts_by_species()
+    mined = Runs.species_with_completed_runs()
 
     socket =
       socket
@@ -41,8 +43,11 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
       |> assign(:reachable, :unknown)
       |> assign(:mining?, false)
       |> assign(:species_options, species)
+      |> assign(:species_items, Enum.map(species, &{Integer.to_string(&1.id), species_label(&1)}))
+      |> assign(:species_meta, build_species_meta(species, fact_counts, mined))
       |> assign(:selected_species_id, nil)
       |> assign(:mine_query, "")
+      |> assign(:mine_form, mine_form())
       |> assign(:processing_ids, MapSet.new())
       |> assign(:flush_scheduled?, false)
       |> assign_settings_form()
@@ -69,21 +74,28 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
   # ── Triggers ───────────────────────────────────────────────────────────────
 
   @impl true
-  def handle_event("select_species", %{"species_id" => id}, socket) do
-    # Only fired by the <select> → refill the prompt with the chosen species'
-    # default (typing in the textarea doesn't fire this, so edits survive).
+  def handle_event("mine_changed", %{"mine" => %{"species_id" => id} = params}, socket) do
+    # The whole mine form's phx-change. Picking a new species in the SelectComponent
+    # refills the prompt with that species' default; editing the textarea (which also
+    # fires this) leaves the species unchanged, so the manual edit is preserved.
     {species_id, species} = resolve_species(socket, id)
 
-    query = if species, do: FactMining.query_for_species(species), else: ""
+    query =
+      if species && species_id != socket.assigns.selected_species_id do
+        FactMining.query_for_species(species)
+      else
+        Map.get(params, "query", socket.assigns.mine_query)
+      end
 
     {:noreply,
      socket
      |> assign(:selected_species_id, species_id)
-     |> assign(:mine_query, query)}
+     |> assign(:mine_query, query)
+     |> assign(:mine_form, mine_form(params))}
   end
 
   @impl true
-  def handle_event("mine_species", %{"species_id" => id, "query" => query}, socket) do
+  def handle_event("mine_species", %{"mine" => %{"species_id" => id, "query" => query}}, socket) do
     case Integer.parse(to_string(id)) do
       {species_id, _} ->
         {:noreply,
@@ -258,6 +270,41 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
     end
   end
 
+  # A schemaless changeset form for the mine inputs. SelectComponent reconciles its
+  # selection against `form.source.changes` / `form.source.data`, so the form must be
+  # changeset-backed (a plain map form has no such fields).
+  defp mine_form(params \\ %{}) do
+    {%{species_id: nil, query: ""}, %{species_id: :integer, query: :string}}
+    |> Ecto.Changeset.cast(params, [:species_id, :query])
+    |> to_form(as: :mine)
+  end
+
+  # The `{value, label}` label for a species option — matches the old <option> text.
+  defp species_label(s) do
+    [s.name, s.scientific_name && "· #{s.scientific_name}", s.variety && "(#{s.variety})"]
+    |> Enum.reject(&(&1 in [nil, false]))
+    |> Enum.join(" ")
+  end
+
+  # SelectComponent `item_meta`: a `%{value_string => %{subtitle: ...}}` map built only
+  # for already-mined species. Facts present → "N facts"; a completed run that yielded
+  # none → "mined · 0 facts"; otherwise the species is absent (plain row, no subtitle).
+  defp build_species_meta(species, fact_counts, mined) do
+    species
+    |> Enum.reduce(%{}, fn s, acc ->
+      count = Map.get(fact_counts, s.id, 0)
+
+      cond do
+        count > 0 -> Map.put(acc, Integer.to_string(s.id), %{subtitle: fact_subtitle(count)})
+        MapSet.member?(mined, s.id) -> Map.put(acc, Integer.to_string(s.id), %{subtitle: "mined · 0 facts"})
+        true -> acc
+      end
+    end)
+  end
+
+  defp fact_subtitle(1), do: "1 fact"
+  defp fact_subtitle(n), do: "#{n} facts"
+
   # ── View helpers (used by the template) ──────────────────────────────────────
 
   @doc false
@@ -267,5 +314,6 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
   def status_badge_class("completed"), do: "bg-basil/20 text-basil"
   def status_badge_class("processing"), do: "bg-amber-500/20 text-amber-300"
   def status_badge_class("failed"), do: "bg-paprika/20 text-paprika"
+  def status_badge_class("cancelled"), do: "bg-ink-panel2 text-parchment-dim"
   def status_badge_class(_pending), do: "bg-ink-panel2 text-parchment-dim"
 end

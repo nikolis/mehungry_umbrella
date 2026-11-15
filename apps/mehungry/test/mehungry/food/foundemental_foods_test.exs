@@ -56,6 +56,35 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
     end
   end
 
+  describe "assign_ingredients/2 (bulk)" do
+    test "assigns a batch and counts already-assigned ones as skipped", %{
+      species: species,
+      spinach: spinach
+    } do
+      kale = ingredient_fixture(%{name: "kale"})
+      chard = ingredient_fixture(%{name: "chard"})
+
+      # spinach is already curated (from setup), so it should be skipped.
+      pairs = [
+        %{ingredient_id: kale.id, usda_name: "kale"},
+        %{ingredient_id: chard.id, usda_name: "chard"},
+        %{ingredient_id: spinach.id, usda_name: "spinach"}
+      ]
+
+      assert {:ok, %{assigned: 2, skipped: 1}} =
+               Food.assign_foundemental_ingredients(species.id, pairs)
+
+      assigned = Food.assigned_foundemental_ingredient_ids()
+      assert MapSet.member?(assigned, kale.id)
+      assert MapSet.member?(assigned, chard.id)
+    end
+
+    test "an empty batch is a no-op", %{species: species} do
+      assert {:ok, %{assigned: 0, skipped: 0}} =
+               Food.assign_foundemental_ingredients(species.id, [])
+    end
+  end
+
   describe "update_species/2 (icon override)" do
     test "persists a curator's icon override", %{species: species} do
       {:ok, updated} = Food.update_foundemental_species(species, %{"icon" => "🥗"})

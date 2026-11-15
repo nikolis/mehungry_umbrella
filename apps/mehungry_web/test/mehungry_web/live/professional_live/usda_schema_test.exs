@@ -116,13 +116,14 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
 
     assert key, "seeded fdc ingredient did not appear in any panel"
 
+    # The schema/unmatched panels now live under the collapsed "Structural view".
+    view |> element(~s|button[phx-value-key="structural"]|) |> render_click()
+
     view |> element(~s|button[phx-value-key="#{key}"]|) |> render_click()
     # The row is streamed into the panel (asserted via its stream dom id, since
     # the name also shows up in the always-visible schema "e.g. …" header examples).
     row = "#rows-#{ingredient.id}"
     assert has_element?(view, row)
-    # The search box is pre-seeded with the first two letters of the row name.
-    assert has_element?(view, ~s|#{row} input[value="Aa"]|)
 
     # Pick the existing species → confirm modal → assign.
     render_change(view, "select_species", %{
@@ -136,6 +137,35 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
     assert MapSet.member?(Food.assigned_foundemental_ingredient_ids(), ingredient.id)
     # stream_delete removed the row without re-rendering the whole panel
     refute has_element?(view, row)
+  end
+
+  test "search → select → bulk-assign curates the whole selection", %{conn: conn} do
+    a = ingredient_fixture(%{name: "Zucchini, raw", fdc_id: 991_001})
+    b = ingredient_fixture(%{name: "Zucchini, cooked", fdc_id: 991_002})
+    {:ok, species} = Food.create_foundemental_species(%{"name" => "Zucchini"})
+
+    {:ok, view, _html} = live(conn, ~p"/professional/usda-schema")
+    _ = render(view)
+
+    # Search surfaces both un-curated zucchini entries.
+    html = render_change(view, "search", %{"q" => "zucchini"})
+    assert html =~ "Zucchini, raw"
+    assert html =~ "Zucchini, cooked"
+
+    # Select both rows, then assign the batch to the existing species.
+    render_click(view, "toggle_select", %{"id" => Integer.to_string(a.id)})
+    render_click(view, "toggle_select", %{"id" => Integer.to_string(b.id)})
+    render_click(view, "choose_species", %{"species_id" => Integer.to_string(species.id)})
+
+    view |> element("#assign-modal button", "Assign") |> render_click()
+
+    assigned = Food.assigned_foundemental_ingredient_ids()
+    assert MapSet.member?(assigned, a.id)
+    assert MapSet.member?(assigned, b.id)
+
+    # Both rows leave the results list after assignment.
+    refute has_element?(view, "#results-#{a.id}")
+    refute has_element?(view, "#results-#{b.id}")
   end
 
   test "choosing '+ New species…' opens the create-species modal", %{conn: conn} do

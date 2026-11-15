@@ -262,4 +262,47 @@ defmodule Mehungry.FactMining.SpeciesFactMiningWorkerTest do
       _ = species
     end
   end
+
+  describe "cancel_batch/1" do
+    test "marks unfinished rows cancelled (neutral), not failed", %{species: _species} do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+      {:ok, batch_id} = Runs.mine_all_species()
+      [row] = Runs.list_batch_rows(batch_id)
+
+      Runs.cancel_batch(batch_id)
+
+      cancelled = Repo.get!(SpeciesFactMiningRun, row.id)
+      assert cancelled.status == "cancelled"
+      assert is_nil(cancelled.error)
+
+      counts = Runs.counts_for_batch(batch_id)
+      assert counts.cancelled == 1
+      assert counts.failed == 0
+      assert counts.total == 1
+      refute Runs.batch_in_flight?(batch_id)
+    end
+  end
+
+  describe "picker annotations" do
+    test "fact_counts_by_species + species_with_completed_runs reflect a completed mine",
+         %{species: species} do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+      Application.put_env(:mehungry, :fact_miner_stub_sheet, one_fact_sheet())
+      {:ok, batch_id} = Runs.mine_all_species()
+      [row] = Runs.list_batch_rows(batch_id)
+
+      assert Mehungry.FactMining.fact_counts_by_species() == %{}
+      assert Runs.species_with_completed_runs() == MapSet.new()
+
+      assert :ok =
+               perform_job(SpeciesFactMiningWorker, %{
+                 "tracking_id" => row.id,
+                 "species_id" => species.id,
+                 "batch_id" => batch_id
+               })
+
+      assert Mehungry.FactMining.fact_counts_by_species() == %{species.id => 1}
+      assert Runs.species_with_completed_runs() == MapSet.new([species.id])
+    end
+  end
 end

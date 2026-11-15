@@ -351,6 +351,27 @@ defmodule Mehungry.Food.FoundementalFoods do
     })
   end
 
+  @doc """
+  Assigns many ingredients to one species in one call. Loops the single-row
+  `assign_ingredient/3` (not `insert_all`) so the per-ingredient
+  `unique_constraint(:ingredient_id)` is honoured and `timestamps()` auto-fill.
+  Partial success is intended: an ingredient already curated onto some species is
+  counted as **skipped**, never fatal. `pairs` is a list of
+  `%{ingredient_id, usda_name}`. Returns `{:ok, %{assigned: n, skipped: m}}`.
+  """
+  def assign_ingredients(species_id, pairs) do
+    {assigned, skipped} =
+      Enum.reduce(pairs, {0, 0}, fn %{ingredient_id: ingredient_id, usda_name: usda_name},
+                                    {ok, skip} ->
+        case assign_ingredient(species_id, ingredient_id, usda_name) do
+          {:ok, _} -> {ok + 1, skip}
+          {:error, _} -> {ok, skip + 1}
+        end
+      end)
+
+    {:ok, %{assigned: assigned, skipped: skipped}}
+  end
+
   @doc "The ingredient ids curated onto a species (its `foundemental_foods`)."
   def list_ingredient_ids_for_species(species_ids) when is_list(species_ids) do
     FoundementalFood
