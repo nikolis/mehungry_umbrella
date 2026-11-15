@@ -5,14 +5,18 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
   and stores them as `SpeciesMinedFact` rows (replacing the old species↔compound
   derivation).
 
-  "Mine all species" fans out one `SpeciesFactMiningWorker` job per
-  `FoundementalFoodSpecies` (durable per-species tracking rows on the `:fact_mining`
-  queue) and this view watches the batch finish live — a stream of per-species rows
+  **One species at a time, with an editable prompt.** The admin picks a species and
+  edits the question sent to the miner (pre-filled with the default
+  `FactMining.query_for_species/1`); submitting enqueues a single
+  `SpeciesFactMiningWorker` job (a one-row batch) on the serialized `:fact_mining`
+  queue. The view watches it finish live — a stream of per-species tracking rows
   patched O(1) from PubSub, with the high-frequency `processing` signal coalesced
-  behind a flush timer (the `oban_ui_connected_worker.md` pattern).
+  behind a flush timer (the `oban_ui_connected_worker.md` pattern). The bulk
+  "Mine all species" fan-out (`Runs.mine_all_species/0`) is kept dormant (no UI).
   """
   use MehungryWeb, :live_view
 
+  alias Mehungry.Food
   alias Mehungry.FactMining
   alias Mehungry.FactMining.Settings
   alias Mehungry.FactMining.SpeciesFactMiningRuns, as: Runs
@@ -27,6 +31,8 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
 
     batch_id = Runs.latest_batch_id()
 
+    species = Food.list_foundemental_species()
+
     socket =
       socket
       |> assign(:page_title, "Fact mining")
@@ -34,6 +40,9 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
       |> assign(:counts, Runs.counts_for_batch(batch_id))
       |> assign(:reachable, :unknown)
       |> assign(:mining?, false)
+      |> assign(:species_options, species)
+      |> assign(:selected_species_id, nil)
+      |> assign(:mine_query, "")
       |> assign(:processing_ids, MapSet.new())
       |> assign(:flush_scheduled?, false)
       |> assign_settings_form()
@@ -60,11 +69,33 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
   # ── Triggers ───────────────────────────────────────────────────────────────
 
   @impl true
-  def handle_event("mine_all", _params, socket) do
+  def handle_event("select_species", %{"species_id" => id}, socket) do
+    # Only fired by the <select> → refill the prompt with the chosen species'
+    # default (typing in the textarea doesn't fire this, so edits survive).
+    {species_id, species} = resolve_species(socket, id)
+
+    query = if species, do: FactMining.query_for_species(species), else: ""
+
     {:noreply,
      socket
-     |> assign(:mining?, true)
-     |> start_async(:mine_all, fn -> Runs.mine_all_species() end)}
+     |> assign(:selected_species_id, species_id)
+     |> assign(:mine_query, query)}
+  end
+
+  @impl true
+  def handle_event("mine_species", %{"species_id" => id, "query" => query}, socket) do
+    case Integer.parse(to_string(id)) do
+      {species_id, _} ->
+        {:noreply,
+         socket
+         |> assign(:mining?, true)
+         |> assign(:selected_species_id, species_id)
+         |> assign(:mine_query, query)
+         |> start_async(:mine_one, fn -> Runs.mine_species(species_id, query) end)}
+
+      :error ->
+        {:noreply, put_flash(socket, :error, "Pick a species to mine")}
+    end
   end
 
   @impl true
@@ -114,15 +145,15 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
     {:noreply, assign(socket, :reachable, {:error, :probe_crashed})}
   end
 
-  def handle_async(:mine_all, {:ok, {:ok, batch_id}}, socket) do
+  def handle_async(:mine_one, {:ok, {:ok, batch_id}}, socket) do
     {:noreply,
      socket
      |> assign(:mining?, false)
-     |> put_flash(:info, "Mining started — watch each species finish below")
+     |> put_flash(:info, "Mining started — watch the species finish below")
      |> reload_batch(batch_id)}
   end
 
-  def handle_async(:mine_all, {:ok, {:error, {:unreachable, reason}}}, socket) do
+  def handle_async(:mine_one, {:ok, {:error, {:unreachable, reason}}}, socket) do
     {:noreply,
      socket
      |> assign(:mining?, false)
@@ -130,14 +161,14 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
      |> put_flash(:error, "Fact miner unreachable — #{inspect(reason)}")}
   end
 
-  def handle_async(:mine_all, {:ok, {:error, :no_species}}, socket) do
+  def handle_async(:mine_one, {:ok, {:error, :not_found}}, socket) do
     {:noreply,
      socket
      |> assign(:mining?, false)
-     |> put_flash(:error, "No species to mine")}
+     |> put_flash(:error, "That species no longer exists")}
   end
 
-  def handle_async(:mine_all, {:exit, reason}, socket) do
+  def handle_async(:mine_one, {:exit, reason}, socket) do
     {:noreply,
      socket
      |> assign(:mining?, false)
@@ -189,6 +220,19 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipeline do
     |> assign(:batch_id, batch_id)
     |> assign(:counts, Runs.counts_for_batch(batch_id))
     |> stream(:rows, Runs.list_batch_rows(batch_id), reset: true)
+  end
+
+  # Resolve the picked `species_id` (a form string) to `{integer_id | nil, species | nil}`
+  # from the already-loaded options (no extra query).
+  defp resolve_species(socket, id) do
+    case Integer.parse(to_string(id)) do
+      {species_id, _} ->
+        species = Enum.find(socket.assigns.species_options, &(&1.id == species_id))
+        {species_id, species}
+
+      :error ->
+        {nil, nil}
+    end
   end
 
   defp buffer_processing(socket, species_id) do

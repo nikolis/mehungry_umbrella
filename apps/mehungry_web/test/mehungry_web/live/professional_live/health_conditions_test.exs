@@ -75,67 +75,57 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     assert html =~ "Wiped legacy extractor data"
   end
 
-  test "the Mine conditions button fans out a biomed-fact-miner batch", %{conn: conn} do
-    {:ok, _c} = Health.create_condition(%{name: "Ulcerative Colitis"})
+  test "opening a condition's mine modal pre-fills the default prompt", %{conn: conn} do
+    {:ok, target} = Health.create_condition(%{name: "Diverticulitis"})
 
     {:ok, view, html} = live(conn, ~p"/professional/health")
     assert html =~ "Mine conditions"
+    # No bulk trigger anymore.
+    refute has_element?(view, ~s(button[phx-click="mine_all_conditions"]))
 
-    view |> element(~s(button[phx-click="mine_all_conditions"])) |> render_click()
-    html = render_async(view)
+    html =
+      view
+      |> element(~s(button[phx-click="open_mine_modal"][phx-value-id="#{target.id}"]))
+      |> render_click()
 
-    # A per-condition batch now exists (one tracking row per condition, queued on
-    # :fact_mining — testing: :manual so the jobs aren't executed here).
-    assert ConditionFactMiningRuns.latest_batch_id() != nil
-    assert ConditionFactMiningRuns.counts_for_batch(ConditionFactMiningRuns.latest_batch_id()).total == 1
-    assert html =~ "Mining started"
+    assert html =~ "Mine facts — Diverticulitis"
+    assert html =~ "give me all the food related facts about Diverticulitis"
   end
 
-  test "a dead fact-miner fails the mine pre-flight instead of starting", %{conn: conn} do
-    {:ok, _c} = Health.create_condition(%{name: "Gout"})
-
-    # The pre-flight reachability probe reports the miner is down.
-    Application.put_env(:mehungry, :fact_miner_stub_reachable, {:error, {:network, :econnrefused}})
-    on_exit(fn -> Application.delete_env(:mehungry, :fact_miner_stub_reachable) end)
-
-    {:ok, view, _html} = live(conn, ~p"/professional/health")
-
-    view |> element(~s(button[phx-click="mine_all_conditions"])) |> render_click()
-    html = render_async(view)
-
-    # Surfaced immediately, and no batch was started.
-    assert html =~ "unreachable"
-    assert html =~ "econnrefused"
-    assert is_nil(ConditionFactMiningRuns.latest_batch_id())
-  end
-
-  test "a per-condition 'Mine facts' button mines just that condition", %{conn: conn} do
+  test "the modal mines just that condition with the edited prompt", %{conn: conn} do
     {:ok, target} = Health.create_condition(%{name: "Diverticulitis"})
     {:ok, _other} = Health.create_condition(%{name: "Celiac Disease"})
 
     {:ok, view, _html} = live(conn, ~p"/professional/health")
 
+    view
+    |> element(~s(button[phx-click="open_mine_modal"][phx-value-id="#{target.id}"]))
+    |> render_click()
+
     html =
       view
-      |> element(~s(button[phx-click="mine_condition"][phx-value-id="#{target.id}"]))
-      |> render_click()
+      |> form("form[phx-submit='mine_condition']", %{"query" => "only fiber facts"})
+      |> render_submit()
 
     html = html <> render_async(view)
 
-    # A one-row batch for *only* the clicked condition (jobs queued on :fact_mining;
-    # testing: :manual so nothing runs here).
+    # A one-row batch for *only* the clicked condition, carrying the edited prompt
+    # (jobs queued on :fact_mining; testing: :manual so nothing runs here).
     batch_id = ConditionFactMiningRuns.latest_batch_id()
     assert batch_id != nil
     assert ConditionFactMiningRuns.counts_for_batch(batch_id).total == 1
-    assert [%{condition_id: cid}] = ConditionFactMiningRuns.list_batch_rows(batch_id)
+
+    assert [%{condition_id: cid, query: "only fiber facts"}] =
+             ConditionFactMiningRuns.list_batch_rows(batch_id)
+
     assert cid == target.id
 
-    # The card reflects it: that button is now disabled "Mining…", the flash fired.
+    # The card reflects it: the button is now disabled "Mining…", the flash fired.
     assert html =~ "Mining started"
 
     assert has_element?(
              view,
-             ~s(button[phx-click="mine_condition"][phx-value-id="#{target.id}"][disabled]),
+             ~s(button[phx-click="open_mine_modal"][phx-value-id="#{target.id}"][disabled]),
              "Mining…"
            )
   end
@@ -149,8 +139,12 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     {:ok, view, _html} = live(conn, ~p"/professional/health")
 
     view
-    |> element(~s(button[phx-click="mine_condition"][phx-value-id="#{c.id}"]))
+    |> element(~s(button[phx-click="open_mine_modal"][phx-value-id="#{c.id}"]))
     |> render_click()
+
+    view
+    |> form("form[phx-submit='mine_condition']", %{"query" => ""})
+    |> render_submit()
 
     html = render_async(view)
 

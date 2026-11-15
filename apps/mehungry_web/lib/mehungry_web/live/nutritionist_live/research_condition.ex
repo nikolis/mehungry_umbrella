@@ -44,6 +44,8 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
      |> assign(:publication_count, research.publication_count)
      |> assign(:fact_count, research.fact_count)
      |> assign(:sort, :relevance)
+     |> assign(:label_filter, :verified)
+     |> assign(:label_counts, label_counts(research))
      |> assign(:saved_keys, ResearchNotes.saved_claim_keys(user.id, condition.id))
      |> assign(:composing_study_id, nil)}
   end
@@ -51,6 +53,10 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
   @impl true
   def handle_event("set_sort", %{"sort" => sort}, socket) do
     {:noreply, assign(socket, :sort, sort_key_atom(sort))}
+  end
+
+  def handle_event("set_label_filter", %{"label" => label}, socket) do
+    {:noreply, assign(socket, :label_filter, filter_atom(label))}
   end
 
   # Save ⇄ unsave a fact (the per-fact bookmark toggle). `claim_id` carries the
@@ -116,6 +122,49 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
 
   defp sort_key_atom(s), do: Enum.find(Keyword.keys(@sorts), &(to_string(&1) == s)) || :relevance
 
+  # ── Verification-label filter ───────────────────────────────────────────────
+
+  # Chip order (and the segmented control). `:verified` is the default so the
+  # page leads with the highest-trust findings.
+  defp filter_options do
+    [
+      verified: gettext("Verified"),
+      contradicted: gettext("Contradicted"),
+      unverified: gettext("Unverified"),
+      all: gettext("All")
+    ]
+  end
+
+  defp filter_atom(l), do: Enum.find(Keyword.keys(filter_options()), &(to_string(&1) == l)) || :all
+
+  # Does a fact pass the active label filter? The miner emits several
+  # `unverified_*` variants (quality/fulltext/insufficient/verification) that all
+  # fold into the one "Unverified" chip.
+  defp fact_visible?(_fact, :all), do: true
+  defp fact_visible?(%{label: "verified"}, :verified), do: true
+  defp fact_visible?(%{label: "contradicted"}, :contradicted), do: true
+  defp fact_visible?(%{label: "unverified" <> _}, :unverified), do: true
+  defp fact_visible?(_fact, _filter), do: false
+
+  defp visible_facts(pub, filter), do: Enum.filter(pub.facts, &fact_visible?(&1, filter))
+
+  # Condition-wide counts for the chip badges (static — independent of the active
+  # filter), computed once in `mount/3` from every loaded fact.
+  defp label_counts(research) do
+    facts =
+      (Enum.flat_map(research.groups, & &1.publications) ++ research.free_publications)
+      |> Enum.flat_map(& &1.facts)
+
+    %{
+      all: length(facts),
+      verified: Enum.count(facts, &(&1.label == "verified")),
+      contradicted: Enum.count(facts, &(&1.label == "contradicted")),
+      unverified: Enum.count(facts, &String.starts_with?(&1.label || "", "unverified"))
+    }
+  end
+
+  defp label_count(counts, key), do: Map.get(counts, key, 0)
+
   defp sort_options do
     [
       relevance: gettext("Best match"),
@@ -167,7 +216,20 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         </.link>
       </div>
 
-      <% visible = sorted_groups(@groups, @sort) %>
+      <%!-- Apply sort + the active label filter in the view only (never mutate the
+           assigns) so Save can still relocate any fact server-side. --%>
+      <% visible_groups =
+        @groups
+        |> sorted_groups(@sort)
+        |> Enum.map(fn group ->
+          %{group | publications: Enum.filter(group.publications, &(visible_facts(&1, @label_filter) != []))}
+        end)
+        |> Enum.reject(&(&1.publications == [])) %>
+      <% visible_free =
+        @free_publications
+        |> sort_publications(@sort)
+        |> Enum.filter(&(visible_facts(&1, @label_filter) != [])) %>
+      <% has_data = @groups != [] or @free_publications != [] %>
 
       <header class="mb-4">
         <h1 class="text-2xl font-semibold text-parchment">{@condition.name}</h1>
@@ -181,9 +243,32 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
       </header>
 
       <div
-        :if={@groups != []}
+        :if={has_data}
         class="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-ink-panel2"
       >
+        <div
+          class="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label={gettext("Filter by verification")}
+        >
+          <button
+            :for={{key, label} <- filter_options()}
+            type="button"
+            phx-click="set_label_filter"
+            phx-value-label={key}
+            aria-pressed={to_string(@label_filter == key)}
+            class={[
+              "px-2.5 py-1 rounded-full text-xs transition-colors",
+              if(@label_filter == key,
+                do: "bg-basil/15 text-basil",
+                else: "bg-ink-panel2 text-parchment-dim hover:text-parchment"
+              )
+            ]}
+          >
+            {label} <span class="opacity-70">{label_count(@label_counts, key)}</span>
+          </button>
+        </div>
+
         <form id="research-sort" phx-change="set_sort" class="ml-auto flex items-center gap-1.5">
           <label for="sort" class="text-xs text-parchment-dim">{gettext("Sort")}</label>
           <select
@@ -198,15 +283,19 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         </form>
       </div>
 
-      <p
-        :if={@groups == [] and @free_publications == []}
-        class="text-sm text-parchment-dim py-8 text-center"
-      >
+      <p :if={not has_data} class="text-sm text-parchment-dim py-8 text-center">
         {gettext("No digested research for this condition yet.")}
       </p>
 
+      <p
+        :if={has_data and visible_groups == [] and visible_free == []}
+        class="text-sm text-parchment-dim py-8 text-center"
+      >
+        {gettext("No findings match this filter.")}
+      </p>
+
       <%!-- Presentable publications — grouped by research type, with quotes. --%>
-      <details :for={group <- visible} class="mb-8 group/bucket" open>
+      <details :for={group <- visible_groups} class="mb-8 group/bucket" open>
         <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim hover:text-parchment">
           <.icon
             name="hero-chevron-right"
@@ -223,6 +312,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
             :for={pub <- group.publications}
             pub={pub}
             presentable={true}
+            label_filter={@label_filter}
             saved_keys={@saved_keys}
             composing_study_id={@composing_study_id}
           />
@@ -230,11 +320,11 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
       </details>
 
       <%!-- Free claims — distilled facts from papers we may not reproduce. --%>
-      <section :if={@free_publications != []} class="mb-8">
+      <section :if={visible_free != []} class="mb-8">
         <div class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim">
           {gettext("Free claims")}
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim normal-case tracking-normal">
-            {length(@free_publications)}
+            {length(visible_free)}
           </span>
         </div>
         <p class="text-xs text-parchment-dim mb-3">
@@ -244,9 +334,10 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         </p>
 
         <.publication_card
-          :for={pub <- @free_publications}
+          :for={pub <- visible_free}
           pub={pub}
           presentable={false}
+          label_filter={@label_filter}
           saved_keys={@saved_keys}
           composing_study_id={@composing_study_id}
         />
@@ -259,10 +350,13 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
 
   attr :pub, :map, required: true
   attr :presentable, :boolean, required: true
+  attr :label_filter, :any, required: true
   attr :saved_keys, :any, required: true
   attr :composing_study_id, :any, required: true
 
   defp publication_card(assigns) do
+    assigns = assign(assigns, :facts, visible_facts(assigns.pub, assigns.label_filter))
+
     ~H"""
     <article class="mb-3 p-4 rounded-xl bg-ink-panel2 border border-ink-panel2">
       <a
@@ -301,13 +395,27 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         </span>
       </div>
 
-      <ul class="mt-3 space-y-2">
-        <li :for={fact <- @pub.facts} class="pl-3 border-l-2 border-ink text-xs">
-          <div class="text-parchment">
-            {fact.text}
-            <span class={["ml-1", label_class(fact.label)]}>{label_text(fact.label)}</span>
-            <span :if={fact.certainty} class="text-parchment-dim">· {certainty_text(fact.certainty)}</span>
-          </div>
+      <details class="mt-2 group/pub">
+        <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none flex items-center gap-1.5 text-xs text-parchment-dim hover:text-parchment">
+          <.icon
+            name="hero-chevron-right"
+            class="w-3 h-3 transition-transform group-open/pub:rotate-90"
+          />
+          {ngettext("%{count} finding", "%{count} findings", length(@facts))}
+        </summary>
+
+        <ul class="mt-3 space-y-2">
+          <li :for={fact <- @facts} class="pl-3 border-l-2 border-ink text-xs">
+            <div class="text-parchment">
+              {fact.text}
+              <span class={["ml-1", label_class(fact.label)]}>{label_text(fact.label)}</span>
+              <span
+                :if={@presentable or fact.certainty not in [nil, "very_low"]}
+                class="text-parchment-dim"
+              >
+                · {certainty_text(fact.certainty)}
+              </span>
+            </div>
 
           <p :if={@presentable and is_binary(fact.quote)} class="text-parchment-dim/80 italic mt-0.5">
             “{fact.quote}”
@@ -389,6 +497,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
           </button>
         </div>
       </form>
+      </details>
     </article>
     """
   end

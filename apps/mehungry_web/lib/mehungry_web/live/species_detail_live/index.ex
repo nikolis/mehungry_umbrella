@@ -147,23 +147,62 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     # (unlike the heavier compounds/recipes, which go async when connected).
     socket = assign(socket, :facts, Food.promoted_species_facts_for_species(species.id, language))
 
+    # `@research` is now the *curated* set — the on-subject verified top 10, not the
+    # full (potentially thousands-strong) fact list. That is the SEO-visible payload
+    # and the first paint; the rest is reached via the search box (search_research).
+    # The verdict tally reads a cheap grouped count, so it still reports the true
+    # totals. Search state starts empty.
+    name_term = name_term(species)
+
+    socket =
+      socket
+      |> assign(:research_counts, FactMining.research_counts_for_species(species.id))
+      |> assign(:research_query, "")
+      |> assign(:research_results, [])
+
     if connected?(socket) do
       assign_async(socket, [:research, :recipes], fn ->
         {:ok,
          %{
-           research: FactMining.list_facts_for_species(species.id),
+           research: FactMining.top_facts_for_species(species.id, name_term: name_term),
            recipes: Food.list_sample_recipes_for_ingredients(ingredient_ids)
          }}
       end)
     else
       socket
-      |> assign(:research, AsyncResult.ok(FactMining.list_facts_for_species(species.id)))
+      |> assign(
+        :research,
+        AsyncResult.ok(FactMining.top_facts_for_species(species.id, name_term: name_term))
+      )
       |> assign(
         :recipes,
         AsyncResult.ok(Food.list_sample_recipes_for_ingredients(ingredient_ids))
       )
     end
   end
+
+  # A crude singular stem of the species' English common name's first token
+  # ("Cranberries (Alaska Native)" → "cranberr", "Tomatoes" → "tomato") used to
+  # boost facts that name the food when `lay` relevance is absent (pre-re-mine data).
+  # English name on purpose — mined fact text is English regardless of UI locale.
+  defp name_term(%{name: name}) when is_binary(name) do
+    core =
+      name
+      |> String.split(["(", ",", "/"], parts: 2)
+      |> List.first()
+      |> String.trim()
+      |> String.downcase()
+
+    cond do
+      core == "" -> nil
+      String.ends_with?(core, "ies") -> String.replace_suffix(core, "ies", "")
+      String.ends_with?(core, "es") -> String.replace_suffix(core, "es", "")
+      String.ends_with?(core, "s") -> String.replace_suffix(core, "s", "")
+      true -> core
+    end
+  end
+
+  defp name_term(_), do: nil
 
   # ── Enrichment facts (Origins & cultivation section) ─────────────────────────
   # `@facts` is a fact_key => SpeciesFact map from `promoted_species_facts_for_species/2`.
@@ -206,6 +245,14 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   @impl true
   def handle_event("select_ingredient", %{"id" => id}, socket) do
     {:noreply, assign_ingredient_view(socket, parse_id(id))}
+  end
+
+  # Fuzzy search over the full fact set — the on-demand path for everything the
+  # curated top-10 omits (contradicted + unverified + off-subject findings). A
+  # blank query falls back to the curated set (empty results list).
+  def handle_event("search_research", %{"q" => q}, socket) do
+    results = FactMining.search_facts_for_species(socket.assigns.species.id, q)
+    {:noreply, assign(socket, research_query: q, research_results: results)}
   end
 
   # The ingredient `{id, name}` options + the selected ingredient's nutrient view.
@@ -484,7 +531,10 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     carbs_node = top_node(tree, "Carbohydrates")
 
     unsat =
-      [child_amount(fat_node, "Monounsaturated Fat"), child_amount(fat_node, "Polyunsaturated Fat")]
+      [
+        child_amount(fat_node, "Monounsaturated Fat"),
+        child_amount(fat_node, "Polyunsaturated Fat")
+      ]
       |> Enum.filter(&is_number/1)
       |> Enum.sum()
 
@@ -664,7 +714,9 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
   @doc "Accent classes (left rail colour + badge colours) per verdict group."
   def verdict_accent(:verified), do: %{rail: "bg-basil", badge: "bg-basil/15 text-basil"}
-  def verdict_accent(:contradicted), do: %{rail: "bg-paprika", badge: "bg-paprika/15 text-paprika"}
+
+  def verdict_accent(:contradicted),
+    do: %{rail: "bg-paprika", badge: "bg-paprika/15 text-paprika"}
 
   def verdict_accent(:unverified),
     do: %{rail: "bg-parchment-dim/30", badge: "bg-ink-panel2 text-parchment-dim"}
@@ -692,49 +744,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   @doc "Whether a study design is a human controlled trial — worth highlighting."
   def rct?(design), do: ResearchType.bucket(design) == :controlled_trial
 
-  @doc """
-  Split a species' mined facts into `{lead, rest}` for display: the Verified
-  claims (the readable lead) apart from the disputed + unverified tail, each
-  internally ranked human-relevance → verdict → evidence-strength.
-  """
-  def research_lead_and_rest(facts) do
-    {verified, rest} = Enum.split_with(facts, &(verdict_group(&1.label) == :verified))
-    {Enum.sort_by(verified, &research_rank/1), Enum.sort_by(rest, &research_rank/1)}
-  end
-
-  @doc "Verdict counts `%{verified:, contradicted:, unverified:, total:}` for the tally."
-  def research_tally(facts) do
-    g = Enum.group_by(facts, &verdict_group(&1.label))
-
-    %{
-      verified: length(Map.get(g, :verified, [])),
-      contradicted: length(Map.get(g, :contradicted, [])),
-      unverified: length(Map.get(g, :unverified, [])),
-      total: length(facts)
-    }
-  end
-
-  # Sort key: human-relevance tier, then verdict tier, then evidence strength
-  # (the shared ResearchType pyramid order — stronger designs first).
-  defp research_rank(fact) do
-    relevance =
-      case fact.claim_type do
-        t when t in ["treatment_outcome", "treatment_safety"] -> 0
-        "other" -> 1
-        _ -> 2
-      end
-
-    verdict =
-      case verdict_group(fact.label) do
-        :verified -> 0
-        :contradicted -> 1
-        :unverified -> 2
-      end
-
-    {relevance, verdict, ResearchType.order(ResearchType.bucket(fact.study_design))}
-  end
-
-  # ── Research-finding row (shared by the lead + tail lists) ────────────────
+  # ── Research-finding row (shared by the curated + search lists) ───────────
   attr :fact, :map, required: true
 
   def research_fact(assigns) do
@@ -746,7 +756,10 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
     ~H"""
     <li class="flex gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-4">
-      <span class={"w-1 shrink-0 self-stretch rounded-full #{verdict_accent(@group).rail}"} aria-hidden="true" />
+      <span
+        class={"w-1 shrink-0 self-stretch rounded-full #{verdict_accent(@group).rail}"}
+        aria-hidden="true"
+      />
       <div class="min-w-0 flex-1">
         <div class="flex flex-col-reverse sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3">
           <p class="text-sm text-parchment leading-relaxed">{@fact.text}</p>

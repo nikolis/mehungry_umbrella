@@ -18,6 +18,7 @@ defmodule Mehungry.FactMining.SpeciesFactMiningWorkerTest do
     on_exit(fn ->
       Application.delete_env(:mehungry, :fact_miner_stub_sheet)
       Application.delete_env(:mehungry, :fact_miner_stub_reachable)
+      Application.delete_env(:mehungry, :fact_miner_stub_last_query)
     end)
 
     %{species: species}
@@ -78,6 +79,36 @@ defmodule Mehungry.FactMining.SpeciesFactMiningWorkerTest do
     end
   end
 
+  describe "mine_species/2 (single-entity)" do
+    test "opens a one-row batch carrying the query on the row + job args", %{species: species} do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+
+      assert {:ok, batch_id} = Runs.mine_species(species.id, "custom species prompt")
+
+      assert [%{foundemental_species_id: sid, status: "pending", query: "custom species prompt"}] =
+               Runs.list_batch_rows(batch_id)
+
+      assert sid == species.id
+
+      assert [job] = all_enqueued(worker: SpeciesFactMiningWorker)
+      assert job.args["species_id"] == species.id
+      assert job.args["batch_id"] == batch_id
+      assert job.args["query"] == "custom species prompt"
+    end
+
+    test "aborts when the miner is unreachable" do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, {:error, :down})
+      assert {:error, {:unreachable, :down}} = Runs.mine_species(1, "q")
+      assert Repo.aggregate(SpeciesFactMiningRun, :count, :id) == 0
+    end
+
+    test "returns :not_found for an unknown species" do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+      assert {:error, :not_found} = Runs.mine_species(-1, "q")
+      assert all_enqueued(worker: SpeciesFactMiningWorker) == []
+    end
+  end
+
   describe "perform/1" do
     test "marks the row completed with fact counts on success", %{species: species} do
       Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
@@ -132,6 +163,33 @@ defmodule Mehungry.FactMining.SpeciesFactMiningWorkerTest do
       # and the row is reverted to `pending` (it gave up its slot — not executing).
       assert {:snooze, 42} = perform_job(SpeciesFactMiningWorker, args, attempt: 3)
       assert Repo.get!(SpeciesFactMiningRun, row.id).status == "pending"
+    end
+
+    test "forwards args[\"query\"] to the miner; nil falls back to the default", %{
+      species: species
+    } do
+      Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+      Application.put_env(:mehungry, :fact_miner_stub_sheet, one_fact_sheet())
+
+      {:ok, batch_id} = Runs.mine_species(species.id, "narrow prompt")
+      [row] = Runs.list_batch_rows(batch_id)
+
+      args = %{
+        "tracking_id" => row.id,
+        "species_id" => species.id,
+        "batch_id" => batch_id,
+        "query" => "narrow prompt"
+      }
+
+      assert :ok = perform_job(SpeciesFactMiningWorker, args)
+      assert Mehungry.FactMining.ClientStub.last_query() == "narrow prompt"
+
+      # No "query" arg (dormant bulk job) → default builder.
+      assert :ok =
+               perform_job(SpeciesFactMiningWorker, Map.delete(args, "query"))
+
+      assert Mehungry.FactMining.ClientStub.last_query() ==
+               Mehungry.FactMining.query_for_species(species)
     end
   end
 

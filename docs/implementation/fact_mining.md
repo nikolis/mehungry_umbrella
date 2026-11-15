@@ -13,17 +13,21 @@ idempotent). Two entity surfaces share the machinery:
 - **Species** (`SpeciesMinedFact`, table `species_mined_facts`) — an **entity-scope** query
   `"tell me all the facts about {name} ({scientific_name})"`. Surfaced on the public species detail
   page (`/foods/:slug` "Research findings") and the `/api/v1/species/:slug` detail (`research[]`).
-  The species page renders the facts as a **verdict-led "evidence ledger"** (not a flat list): a
-  header tally (`✓ verified · ✕ contradicted · unverified`), then facts grouped by verdict — the
-  **Verified** claims lead (the readable payload), the disputed + unverified tail collapses behind one
-  Alpine toggle ("Show N findings under review"). Within a group, facts rank **human-relevance**
-  (`claim_type`: a `treatment_outcome`/`treatment_safety` outbeats a lab `mechanistic` claim) →
-  verdict → **evidence strength** (`study_design` via the shared `Literature.ResearchType` pyramid;
-  `rct` gets a highlighted chip). Each row carries a verdict-colour left rail + badge, an
-  acronym-correct study-design chip (`SpeciesDetailLive.study_design_label/1` — fixes the
-  `Phoenix.Naming.humanize("rct") => "Rct"` miscasing), the PMID link, and a per-fact **"Why?"** that
-  expands the mined `reason`. The uniform-`very_low` `certainty` is intentionally **not** shown. All
-  facts stay in the crawlable dead-render DOM — Alpine only toggles visibility, so SEO is unaffected.
+  **The species page renders a _curated_ top set, not the full list (2026-11-14).** A well-studied
+  species can carry **thousands** of mined facts; rendering them all bloated the page HTML (~1–2 MB)
+  and crawl weight without SEO benefit. So the page renders only the **on-subject verified top ~10**
+  (`FactMining.top_facts_for_species/2` — `label == "verified"`, `lay_tier != "hide"`, ranked
+  lead-tier → name-mention → `lay_clarity`), which is the crawlable SEO payload and the first paint.
+  The honest header tally (`✓ corroborated · ✕ contradicted · unverified`) still reports the **true**
+  totals via a cheap grouped count (`research_counts_for_species/1`), independent of the curated slice.
+  Everything the top set omits — contradicted, unverified, and off-subject (`lay_tier == "hide"`)
+  facts — is reached on demand through a **server-side fuzzy search box** (`phx-change` →
+  `search_facts_for_species/3`, a case-insensitive `ILIKE` on `text` across **all** labels/tiers,
+  capped). Each row still carries a verdict-colour left rail + badge, an acronym-correct study-design
+  chip (`SpeciesDetailLive.study_design_label/1` — fixes the `Phoenix.Naming.humanize("rct") => "Rct"`
+  miscasing), the PMID link, and a per-fact **"Why?"** that expands the mined `reason`. The
+  uniform-`very_low` `certainty` is intentionally **not** shown. (The search box needs the socket, so
+  it is inert on the dead render — crawlers index the curated verified list, which is the point.)
 - **Condition** (`ConditionMinedFact`, table `condition_mined_facts`) — a **relational** query
   `"give me all the food related facts about {condition}"`, feeding the nutritionist research surface
   (`research_for_condition/1`, `conditions_for_search/1`); each mined PMID is enriched into the
@@ -34,8 +38,20 @@ idempotent). Two entity surfaces share the machinery:
 A FastAPI pipeline (sibling repo `/home/nikolis/git/biomed-fact-miner`). `POST /mine` returns a
 `FactSheet.to_dict()`: `{query, scope_kind (entity|relational|out_of_scope), counts, facts[], trace[]}`.
 Each `facts[]` element wraps a verdict (`label`, `certainty`, `reason`, `conflicting_pmid`,
-`assessment`) around an inner fact (`fact_id`, `text`, `claim_type`, `pmid`, `quote`, `char_span`,
-`study_design`, `source`, `pmcid`, `doi`, `pub_status`, `structured_effect`, `license`, `license_raw`).
+`assessment`, **`lay`**) around an inner fact (`fact_id`, `text`, `claim_type`, `pmid`, `quote`,
+`char_span`, `study_design`, `source`, `pmcid`, `doi`, `pub_status`, `structured_effect`, `license`,
+`license_raw`).
+
+**`lay`** (added 2026-11-14) is a **presentation hint orthogonal to `label`** —
+`%{tier: "lead"|"show"|"hide", clarity: float[0,1], flags: [...]}`. The rule is "relevance decides
+visibility, clarity only decides prominence": `hide` = the fact is **not about the query subject**
+(off-subject comparators/background), `lead`/`show` = on-subject sorted by readability `clarity`;
+`flags` carry the demotion reasons (`off_subject:<relation>`, `undefined_acronym:<ACR>`, …). The
+miner never trims — every fact stays in the payload; filtering is the client's call. We flatten it
+into `lay_tier` / `lay_clarity` / `lay_flags` columns on **both** mined-fact tables (shared ingest)
+and the species page uses `tier`+`clarity` to pick its curated top set and to push off-subject facts
+into search-only. Facts mined before the miner exposed `lay` have NULL `lay_*` (kept, not hidden)
+until the next wipe-insert re-mine.
 
 `label ∈ verified | contradicted | unverified_quality | unverified_fulltext |
 unverified_insufficient | unverified_verification` — **`verified` is the only "released" state**; every
@@ -73,19 +89,35 @@ a token is present it is sent as `Authorization: Bearer <jwt>`.
 - `mine/2` → `POST {base}/mine?format=json&view=public`, body `%{query, fetch_fulltext: true, max_records: 200}`, bearer header when a token is set.
 - `reachable?/0` → short-timeout `GET {base}/health` (pre-flight before a sweep), bearer header when set.
 
-## Species sweep — the admin pipeline (Oban-UI-connected)
+## Single-entity mining with a customizable prompt (2026-11-15)
+
+Mining is invoked **one entity at a time**, and the **prompt is editable per mine** (pre-filled with
+the default `query_for_species/1` / `query_for_condition/1`). The bulk fan-out (`mine_all_species/0`
+/ `mine_all_conditions/0`) is **kept dormant** — the context functions + their tests remain, but no UI
+triggers them (removed 2026-11-15). Each single mine still rides the exact same Oban + per-unit
+tracking-row + PubSub path (`docs/reference_architecture/oban_ui_connected_worker.md`) as a **one-row
+batch**, so the live-progress machinery is unchanged; only the fan-out and the fixed prompt are gone.
+
+**How the custom prompt threads down.** `FactMining.mine_species/2` / `mine_condition/2` take an
+optional `opts[:query]` that overrides the prompt sent to `client().mine/2` (blank/nil → the default
+builder, via a `presence/1` guard). The chosen prompt is **persisted** on the tracking row (`query`
+`:text` column on both run tables) **and** carried in the Oban job args (`"query"`), so the worker
+reads `args["query"]` and forwards it (`mine_species(id, query: args["query"])`). Dormant bulk jobs
+carry `nil` → default. A re-mine is still wipe-then-insert idempotent.
+
+## Species mining — the admin pipeline (Oban-UI-connected)
 
 `/professional/compound-pipeline` (`MehungryWeb.ProfessionalLive.FactMiningPipeline`, admin-gated;
-route reused from the retired page). "Mine all species" fans out one job per species following
-`docs/reference_architecture/oban_ui_connected_worker.md`:
+route reused from the retired page). The page is a **"Mine one species" form** — a species `<select>`
+whose `phx-change` pre-fills the prompt `<textarea>` with the default, editable before submit:
 
 ```
-Mine all species ─▶ SpeciesFactMiningRuns.mine_all_species/0
-  preflight reachable? ─ create one `pending` species_fact_mining_runs row per species
-  (Repo.insert_all) ─ Oban.insert_all one SpeciesFactMiningWorker job per species
-                                   │
+Mine species (form: species_id + query) ─▶ SpeciesFactMiningRuns.mine_species/2
+  preflight reachable? + get_foundemental_species/1 existence check
+  one `pending` species_fact_mining_runs row (query stored) ─ one SpeciesFactMiningWorker job
+                                   │       (job args carry "query")
   :fact_mining queue (concurrency 1) ─ one job == one species
-    SpeciesFactMiningWorker.perform ─▶ FactMining.mine_species/1 (wipe + insert)
+    SpeciesFactMiningWorker.perform ─▶ FactMining.mine_species(id, query: args["query"]) (wipe + insert)
                                    │        mark_processing → mark_completed | mark_failed
                                    ▼
   PubSub "species_fact_mining_runs" ─▶ LiveView streams per-species rows (O(1) patch),
@@ -94,8 +126,9 @@ Mine all species ─▶ SpeciesFactMiningRuns.mine_all_species/0
 ```
 
 - `species_fact_mining_runs` — **one row per species per `batch_id`** (status `pending → processing →
-  completed | failed`, `facts_total` / `verified_count` / `contradicted_count`, `error`). The LiveView
-  streams these and derives batch progress by counting over `batch_id` (no separate aggregate table).
+  completed | failed`, `facts_total` / `verified_count` / `contradicted_count`, `query`, `error`). The
+  LiveView streams these and derives batch progress by counting over `batch_id` (no separate aggregate
+  table).
 - Worker (`:fact_mining`, `max_attempts: 3`): a transient miner failure returns `{:error, _}` so Oban
   retries (wipe-then-insert is idempotent); on the **final** attempt the species is recorded `failed`
   so the batch still finalizes. `cancel_batch/1` cancels remaining jobs + marks unfinished rows failed.
@@ -142,9 +175,9 @@ requests could otherwise fire at once. Two layers keep it to exactly one:
   retry or marking the run failed, and **reverting the tracking row to `pending`** (it gave up its slot
   and is no longer executing). This covers any brief overlap during a leadership handoff.
 
-## Condition sweep — the admin trigger on `/professional/health`
+## Condition mining — the admin trigger on `/professional/health`
 
-The condition branch mirrors the species sweep exactly, from a different admin surface. The **"Mine
+The condition branch mirrors the species path exactly, from a different admin surface. The **"Mine
 conditions (fact-miner)"** card on `/professional/health` (`MehungryWeb.ProfessionalLive.HealthConditions`)
 replaced the old extractor "Research ingestion" card.
 
@@ -152,13 +185,16 @@ replaced the old extractor "Research ingestion" card.
 link plus two Alpine dropdowns — a **Setup** menu (`Seed registry`, `Seed diet patterns`) and a
 paprika **Danger zone** menu (`Clear all suggestions`, `Wipe extractor data`) — so the rare and the
 irreversible actions no longer share size/billing with everyday work; the buttons keep their exact
-`phx-click` + `data-confirm` (still directly addressable in tests). The mining card is the page's
-hero: its status panel appears the instant a batch is kicked off (gated on `mining? or in_flight? or
-total > 0`), with a **progress bar** (completed + failed over total) and an **ETA line** —
-`counts_for_batch/1` returns the batch's earliest `started_at`, and the LiveView's `mining_eta/1`
-derives `elapsed ÷ done` throughput into `~Xh Ym left · ~N/condition` (recomputed per PubSub event;
-no ticking timer). A **sticky bottom-right mini-status** keeps that progress visible once the long
-conditions list scrolls the hero out of view.
+`phx-click` + `data-confirm` (still directly addressable in tests). The "Mine conditions" card is now
+just intro copy + the miner-reachability indicator; mining is **per-condition** from each card.
+
+**Per-condition mine with an editable prompt (2026-11-15).** Each condition card's **"Mine facts"**
+button fires `open_mine_modal` → a `core_components.ex` `<.modal>` pre-filled with that condition's
+default prompt (`FactMining.query_for_condition/1`). The admin edits the prompt and submits the modal
+form (`phx-submit="mine_condition"`, textarea `name="query"`); the handler reads the condition from the
+open modal's assign + the query from the form and starts a one-row mine. The bulk **"Mine all
+conditions"** button + its progress bar / ETA line / sticky mini-status were **removed** with the
+fan-out (the dormant `mine_all_conditions/0` stays).
 
 > **Extractor UI fully retired + data wipeable (2026-11-14).** With the fact-miner the sole source of
 > nutritionist condition research, the page's remaining extractor affordances — the "Analyzer service"
@@ -169,30 +205,28 @@ conditions list scrolls the hero out of view.
 > `research_ingestion_runs`. The underlying `Extractor` / `StudyAnalyses` / `ResearchIngestion`
 > contexts and the legacy in-app reader remain dormant-but-intact.
 
-The sweep itself:
+A single condition is mined from its card (the modal flow above):
 
 ```
-Mine all conditions ─▶ ConditionFactMiningRuns.mine_all_conditions/0
-  preflight reachable? ─ one `pending` condition_fact_mining_runs row per condition
-  (Repo.insert_all) ─ Oban.insert_all one ConditionFactMiningWorker job per condition
+Mine facts (modal: query) ─▶ ConditionFactMiningRuns.mine_condition/2 (condition_id, query)
+  preflight reachable? ─ one `pending` condition_fact_mining_runs row (query stored)
+  ─ one ConditionFactMiningWorker job (args carry "query")
                                    │
   :fact_mining queue (concurrency 1) ─ one job == one condition
-    ConditionFactMiningWorker.perform ─▶ FactMining.mine_condition/1 (wipe + insert + enrich PMIDs)
+    ConditionFactMiningWorker.perform ─▶ FactMining.mine_condition(id, query: args["query"])
+                                   │        (wipe + insert + enrich PMIDs)
                                    │        mark_processing → mark_completed | mark_failed
                                    ▼
-  PubSub "condition_fact_mining_runs" ─▶ the LiveView refreshes aggregate counts
-    (counts_for_batch) on every transition; reloads the page once the batch drains.
+  PubSub "condition_fact_mining_runs" ─▶ the LiveView routes the terminal event by `batch_id`
+    (single_batch_ids) back to the card: clears "Mining…" + flashes "Mined N facts".
 ```
 
-A **single** condition can also be mined on demand from its card in the Conditions list
-(`ConditionFactMiningRuns.mine_condition/1`) — the per-condition "Mine facts" button. It opens a
-**one-row batch** on its own `batch_id` and enqueues one `ConditionFactMiningWorker` job through the
-**same** serialized `:fact_mining` queue and tracking path as the sweep (both share the private
-`enqueue_batch/1`). Its progress is the card's own "Mining…" state + a result flash ("Mined N facts"),
-routed by `batch_id` so it stays independent of the "Mine all" hero widget. Use it to (re)mine one
-condition without re-running the hours-long full sweep.
+Both `mine_condition/2` and the dormant `mine_all_conditions/0` share the private `enqueue_batch/2`
+(`query` nil for the bulk path → the worker falls back to the default builder). The per-condition mine
+opens a **one-row batch** on its own `batch_id`; its progress is the card's own "Mining…" state + a
+result flash, routed by `batch_id`.
 
-`mine_condition/1` additionally **enriches** each distinct `pmid` via `Literature.fetch_and_upsert_study/1`
+`mine_condition/2` additionally **enriches** each distinct `pmid` via `Literature.fetch_and_upsert_study/1`
 (cached — the stored row is returned with no network when present) so publication cards carry real
 title/journal/authors/year + MEDLINE badge. The miner returns only PMID/PMCID/DOI.
 
@@ -205,16 +239,16 @@ source link, no quote). `conditions_for_search/1` powers the `/nutritionist/rese
 
 | Module | File | Role |
 |---|---|---|
-| `Mehungry.FactMining` | `fact_mining.ex` | Context: `mine_species/1`, `mine_condition/1`, `map_fact_sheet/3`, reads, `research_for_condition/1`, `conditions_for_search/1`. |
+| `Mehungry.FactMining` | `fact_mining.ex` | Context: `mine_species/2`, `mine_condition/2` (optional `opts[:query]` prompt override → default builder when blank), `map_fact_sheet/3`, species reads (`list_facts_for_species/2` full · `top_facts_for_species/2` curated SEO set · `research_counts_for_species/1` tally · `search_facts_for_species/3` on-demand fuzzy), `research_for_condition/1`, `conditions_for_search/1`. |
 | `FactMining.Client` / `ClientBehaviour` | `fact_mining/client.ex`, `client_behaviour.ex` | `POST /mine` + `/health`, bearer-token header. |
 | `FactMining.Settings` | `fact_mining/settings.ex` | Singleton UI-managed connection row (`base_url` + JWT `auth_token`), read via `connection/0`. |
 | `FactMining.SpeciesMinedFact` / `ConditionMinedFact` | `fact_mining/schemas/…` | One row per mined fact (per species / condition). |
-| `FactMining.SpeciesFactMiningRun` / `ConditionFactMiningRun` | `fact_mining/schemas/…` | Per-entity batch tracking row. |
-| `FactMining.SpeciesFactMiningRuns` / `ConditionFactMiningRuns` | `fact_mining/…_fact_mining_runs.ex` | Fan-out + progress + PubSub + cancel. |
-| `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`); snoozes on a miner 429 (`{:rate_limited, s}`), reverting its row to `pending` (also on a non-final error retry) so a yielded slot doesn't leave the row stuck `processing`. |
+| `FactMining.SpeciesFactMiningRun` / `ConditionFactMiningRun` | `fact_mining/schemas/…` | Per-entity batch tracking row (carries the mined `query`). |
+| `FactMining.SpeciesFactMiningRuns` / `ConditionFactMiningRuns` | `fact_mining/…_fact_mining_runs.ex` | `mine_species/2` · `mine_condition/2` single-entity enqueue (query → row + job args) + progress + PubSub + cancel; dormant `mine_all_*/0` bulk fan-out shares the private `enqueue_batch/2`. |
+| `Mehungry.ObanWorkers.{Species,Condition}FactMiningWorker` | `oban_workers/…` | One job == one entity (`:fact_mining`); forwards `args["query"]` to `mine_*/2`; snoozes on a miner 429 (`{:rate_limited, s}`), reverting its row to `pending` (also on a non-final error retry) so a yielded slot doesn't leave the row stuck `processing`. |
 | `FactMining.QueueLeader` | `fact_mining/queue_leader.ex` | Per-node poller: resumes `:fact_mining` only on the Oban leader (paused elsewhere) → one miner call at a time cluster-wide. |
-| `MehungryWeb.ProfessionalLive.FactMiningPipeline` | `…/professional_live/fact_mining_pipeline.ex` | Admin "Mine all species" + live progress. |
-| `MehungryWeb.ProfessionalLive.HealthConditions` | `…/professional_live/health_conditions.ex` | Admin "Mine all conditions" card + live progress, plus per-condition "Mine facts" buttons (`mine_condition/1`). |
+| `MehungryWeb.ProfessionalLive.FactMiningPipeline` | `…/professional_live/fact_mining_pipeline.ex` | Admin "Mine one species" form (species select + editable prompt) + live progress. |
+| `MehungryWeb.ProfessionalLive.HealthConditions` | `…/professional_live/health_conditions.ex` | Admin Conditions list; per-condition "Mine facts" button → prompt modal (`open_mine_modal` → `mine_condition/2`) + live card state. |
 
 ## What the removal cost (full replacement)
 
@@ -243,17 +277,31 @@ mix test apps/mehungry/test/mehungry/fact_mining_test.exs \
          apps/mehungry_web/test/mehungry_web/live/professional_live/fact_mining_pipeline_test.exs
 ```
 
-- **Context** — `query_for_species`, `map_fact_sheet/3` (column flattening, `commercial_ok`-only quote,
-  skip-missing + dedup), `mine_species` (insert + counts, wipe-then-insert idempotency, error passthrough).
-- **Worker/runs** — fan-out (one row + one job per species), unreachable preflight short-circuit,
-  success→completed+counts, retry-then-failed contract, `counts_for_batch` aggregation.
-- **LiveView** — renders the page, a terminal broadcast patches a streamed row, non-admin redirect.
+- **Context** — `query_for_species`, `map_fact_sheet/3` (column flattening incl. `lay_*`,
+  `commercial_ok`-only quote, skip-missing + dedup), `mine_species` (insert + counts, wipe-then-insert
+  idempotency, error passthrough), **`mine_species/2` / `mine_condition/2` custom prompt** (`opts[:query]`
+  sent verbatim; blank/nil → default builder — asserted via `ClientStub.last_query/0`), species reads
+  (`top_facts_for_species/2` — verified-only, `hide` excluded, lead/clarity/name-term order, `:limit`;
+  `research_counts_for_species/1` tally; `search_facts_for_species/3` — all-labels match, blank → `[]`).
+- **Species page** (`species_detail_research_test.exs`) — dead render caps verified facts at 10 while
+  the tally reports the true total; `hide`/non-verified excluded from the curated set; connected search
+  surfaces the contradicted/off-subject facts the curated set omits.
+- **API** (`food_json_test.exs`) — `research[].lay` serialized (`flags` defaults to `[]`).
+- **Worker/runs** — `mine_species/2` single-entity enqueue (one row + one job, `query` on row + args),
+  unreachable / `:not_found` short-circuits, worker forwards `args["query"]` (nil → default),
+  success→completed+counts, retry-then-failed contract, `counts_for_batch` aggregation; dormant
+  `mine_all_species/0` fan-out still covered.
+- **LiveView** — species page renders the mine-one form, select pre-fills the prompt, form submit
+  opens a one-row batch carrying the edited query; condition page opens the per-condition mine modal
+  (pre-filled), submit mines with the edited query, non-admin redirect.
 
 ## End-to-end (manual)
 
 ```bash
 cd ../biomed-fact-miner && python3 examples/serve_api.py --demo --port 8811   # offline stub corpus
 FACT_MINER_BASE_URL=http://127.0.0.1:8811 iex -S mix phx.server
-# /professional/compound-pipeline → "Mine all species", or in IEx: Mehungry.FactMining.mine_species(<id>)
+# /professional/compound-pipeline → pick a species, edit the prompt, "Mine species"
+#   (or in IEx: Mehungry.FactMining.mine_species(<id>, query: "custom prompt"))
+# /professional/health → a condition's "Mine facts" → edit the prompt in the modal → "Mine"
 # inspect: Mehungry.Repo.all(Mehungry.FactMining.SpeciesMinedFact)  # non-commercial quotes are nil
 ```

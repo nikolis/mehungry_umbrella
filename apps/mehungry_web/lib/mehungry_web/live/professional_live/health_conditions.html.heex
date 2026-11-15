@@ -112,11 +112,11 @@
     </div>
     <p class="text-parchment-dim text-sm">
       Ask the external <span class="font-medium">biomed-fact-miner</span>
-      for every condition's food-related facts in one background pass — one job per
-      condition. Each condition's stored facts are
+      for a condition's food-related facts — mine one condition at a time from its
+      card below (each opens an editable prompt). The condition's stored facts are
       <span class="font-medium">fully replaced</span>
       (idempotent). The miner only needs to be reachable
-      <span class="font-medium">while this runs</span>; afterwards the nutritionist
+      <span class="font-medium">while a mine runs</span>; afterwards the nutritionist
       research search serves each condition from the database. Facts carry a
       per-source licence: <em>commercial_ok</em>
       papers are shown with their quotes, everything else becomes a "free claim"
@@ -163,28 +163,11 @@
       </button>
     </form>
 
-    <% in_flight? = fact_in_flight?(@fact_counts) %>
-
-    <div class="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        phx-click="mine_all_conditions"
-        disabled={@mining? or in_flight?}
-        class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {if in_flight?, do: "Mining…", else: "Mine all conditions"}
-      </button>
-      <button
-        :if={in_flight?}
-        type="button"
-        phx-click="cancel_mining"
-        data-confirm="Cancel the in-flight mining batch? Already-mined facts are kept."
-        class="px-3 py-1.5 rounded border border-red-500/40 text-red-400 text-sm font-medium hover:bg-red-500/10"
-      >
-        Cancel
-      </button>
-
-      <span class="text-xs">
+    <div class="flex flex-wrap items-center gap-3 text-xs">
+      <span class="text-parchment-dim">
+        Mine a condition one at a time from its card below — each opens an editable prompt.
+      </span>
+      <span class="ml-auto">
         <span :if={@miner_reachable == :unknown} class="text-parchment-dim">checking miner…</span>
         <span :if={@miner_reachable == :ok} class="text-basil">miner online</span>
         <span :if={match?({:error, _}, @miner_reachable)} class="text-red-400">
@@ -192,53 +175,6 @@
           <button type="button" phx-click="recheck_miner" class="underline ml-1">recheck</button>
         </span>
       </span>
-    </div>
-
-    <% done = @fact_counts.completed + @fact_counts.failed %>
-    <% pct = if @fact_counts.total > 0, do: round(done / @fact_counts.total * 100), else: 0 %>
-
-    <%!-- Shown the moment a batch is kicked off (mining?) — not only once rows
-         exist — so there is no blank gap between click and the first tracking row. --%>
-    <div
-      :if={@mining? or in_flight? or @fact_counts.total > 0}
-      class="text-sm rounded border border-ink-panel2 bg-ink-panel2 p-3 space-y-2"
-    >
-      <div class="flex items-center gap-2">
-        <span class={[
-          "px-2 py-0.5 rounded-full text-[11px] font-medium",
-          in_flight? && "bg-basil/15 text-basil",
-          not in_flight? && "bg-basil/20 text-basil"
-        ]}>
-          {if in_flight?, do: "mining", else: "done"}
-        </span>
-        <span class="text-parchment-dim">
-          {done}/{@fact_counts.total} conditions
-          <span :if={@fact_counts.failed > 0}>· {@fact_counts.failed} failed</span>
-          <span :if={@fact_counts.processing > 0}>· {@fact_counts.processing} in flight</span>
-        </span>
-        <span class="ml-auto text-xs text-parchment-dim tabular-nums">{pct}%</span>
-      </div>
-
-      <%!-- Batch drain progress (completed + failed over total). --%>
-      <div class="h-2 w-full rounded-full bg-ink-panel overflow-hidden">
-        <div
-          class="h-full rounded-full bg-basil transition-all duration-500"
-          style={"width: #{pct}%"}
-        >
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-parchment-dim">
-        <span>{@fact_counts.facts_total} facts mined this batch.</span>
-        <%!-- Honest ETA from measured throughput: the queue is serialized at
-             ~10 min/condition, so a full sweep can run for hours — surface it. --%>
-        <span :if={in_flight? and mining_eta(@fact_counts)} class="text-basil">
-          {mining_eta(@fact_counts)}
-        </span>
-        <span :if={in_flight? and is_nil(mining_eta(@fact_counts))} class="text-parchment-dim/80">
-          estimating…
-        </span>
-      </div>
     </div>
   </section>
 
@@ -616,12 +552,12 @@
           {rec_count} advice · {paper_count} paper{if paper_count == 1, do: "", else: "s"}
         </span>
 
-        <%!-- Primary per-condition action: mine this one condition's facts (a
-             one-row batch on the serialized :fact_mining queue). Its progress is
-             the button's own state + a result flash, independent of "Mine all". --%>
+        <%!-- Primary per-condition action: open the mine modal to edit the prompt,
+             then mine this one condition's facts (a one-row batch on the serialized
+             :fact_mining queue). Progress is the button's own state + a result flash. --%>
         <button
           type="button"
-          phx-click="mine_condition"
+          phx-click="open_mine_modal"
           phx-value-id={condition.id}
           disabled={MapSet.member?(@mining_conditions, condition.id)}
           class="ml-auto text-xs rounded bg-basil text-ink font-medium px-2.5 py-1 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -796,29 +732,47 @@
     </div>
   </section>
 
-  <%!-- Sticky batch status: the conditions list makes this page very tall, so the
-       mining hero scrolls out of sight — keep live progress pinned while in flight. --%>
-  <div
-    :if={fact_in_flight?(@fact_counts)}
-    class="fixed bottom-4 right-4 z-40 w-64 rounded-lg border border-ink-panel2 bg-ink-panel/95 backdrop-blur shadow-xl p-3 space-y-1.5"
+  <%!-- Per-condition mine modal: edit the prompt before mining one condition. --%>
+  <.modal
+    :if={@mine_modal_condition}
+    id="mine-condition-modal"
+    show
+    on_cancel={JS.push("close_mine_modal")}
   >
-    <% sticky_done = @fact_counts.completed + @fact_counts.failed %>
-    <% sticky_pct =
-      if @fact_counts.total > 0, do: round(sticky_done / @fact_counts.total * 100), else: 0 %>
-    <div class="flex items-center gap-2 text-xs">
-      <span class="h-2 w-2 rounded-full bg-basil animate-pulse"></span>
-      <span class="text-parchment font-medium">Mining {sticky_done}/{@fact_counts.total}</span>
-      <span class="ml-auto text-parchment-dim tabular-nums">{sticky_pct}%</span>
-    </div>
-    <div class="h-1.5 w-full rounded-full bg-ink-panel2 overflow-hidden">
-      <div
-        class="h-full rounded-full bg-basil transition-all duration-500"
-        style={"width: #{sticky_pct}%"}
-      >
-      </div>
-    </div>
-    <p :if={mining_eta(@fact_counts)} class="text-[11px] text-parchment-dim">
-      {mining_eta(@fact_counts)}
+    <h2 class="text-lg font-medium text-parchment mb-1">
+      Mine facts — {@mine_modal_condition.name}
+    </h2>
+    <p class="text-parchment-dim text-sm mb-3">
+      Edit the question sent to the biomed-fact-miner, then mine. This
+      <span class="font-medium">replaces</span>
+      the condition's stored facts.
     </p>
-  </div>
+    <form phx-submit="mine_condition" class="space-y-3">
+      <textarea
+        name="query"
+        rows="3"
+        class="w-full rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-2 placeholder:text-parchment-dim"
+        placeholder="give me all the food related facts about …"
+      >{@mine_query}</textarea>
+      <p class="text-xs text-parchment-dim">
+        Leave blank to fall back to the default
+        <em>"give me all the food related facts about {"{condition}"}"</em>.
+      </p>
+      <div class="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          phx-click="close_mine_modal"
+          class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm hover:bg-ink-panel2"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+        >
+          Mine
+        </button>
+      </div>
+    </form>
+  </.modal>
 </div>

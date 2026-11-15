@@ -9,11 +9,11 @@
     </div>
     <p class="text-parchment-dim text-sm max-w-3xl">
       Mine per-species biomedical facts from the external
-      <span class="font-medium">biomed-fact-miner</span>. Each species is asked
-      <em>"tell me all the facts about {"{name}"} ({"{scientific_name}"})"</em>; the returned
+      <span class="font-medium">biomed-fact-miner</span>. Pick a species, edit the question
+      sent to the miner (pre-filled with the default), and mine it — the returned
       PMID-cited claims (verified / contradicted / unverified) <span class="font-medium">replace</span>
-      that species' stored facts. One Oban job per species on the <code class="text-parchment">:fact_mining</code>
-      queue — watch each finish live below.
+      that species' stored facts. One Oban job on the <code class="text-parchment">:fact_mining</code>
+      queue — watch it finish live below.
     </p>
   </div>
 
@@ -37,21 +37,58 @@
         <%= if in_flight?(@counts) do %>
           <button
             phx-click="cancel"
-            data-confirm="Cancel the remaining species in this batch?"
+            data-confirm="Cancel the species still in this batch?"
             class="rounded-md bg-paprika/20 text-paprika px-3 py-1.5 text-sm hover:bg-paprika/30"
           >
-            Cancel batch
+            Cancel
           </button>
         <% end %>
-        <button
-          phx-click="mine_all"
-          disabled={@mining? or in_flight?(@counts)}
-          class="rounded-md bg-basil text-ink px-4 py-1.5 text-sm font-medium hover:bg-basil/90 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {if @mining? or in_flight?(@counts), do: "Mining…", else: "Mine all species"}
-        </button>
       </div>
     </div>
+
+    <%!-- Mine one species with an editable prompt --%>
+    <form phx-submit="mine_species" class="space-y-3">
+      <div class="space-y-1">
+        <label class="text-xs text-parchment-dim">Species</label>
+        <select
+          name="species_id"
+          phx-change="select_species"
+          class="w-full rounded-md border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-2"
+        >
+          <option value="" selected={is_nil(@selected_species_id)}>— pick a species —</option>
+          <option
+            :for={s <- @species_options}
+            value={s.id}
+            selected={@selected_species_id == s.id}
+          >
+            {s.name}{if s.scientific_name, do: " · #{s.scientific_name}"}{if s.variety,
+              do: " (#{s.variety})"}
+          </option>
+        </select>
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-xs text-parchment-dim">Prompt sent to the miner</label>
+        <textarea
+          name="query"
+          rows="3"
+          placeholder="Pick a species to pre-fill the default prompt…"
+          class="w-full rounded-md border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-2 placeholder:text-parchment-dim"
+        >{@mine_query}</textarea>
+        <p class="text-xs text-parchment-dim">
+          Edit freely — leave blank to fall back to the default
+          <em>"tell me all the facts about {"{name}"} ({"{scientific_name}"})"</em>.
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        disabled={@mining? or is_nil(@selected_species_id)}
+        class="rounded-md bg-basil text-ink px-4 py-1.5 text-sm font-medium hover:bg-basil/90 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {if @mining?, do: "Starting…", else: "Mine species"}
+      </button>
+    </form>
 
     <%!-- connection config: miner base URL + optional JWT/bearer token --%>
     <details class="rounded-md border border-ink-panel2 bg-ink-panel2/40" open={@reachable == {:error, :probe_crashed} or match?({:error, _}, @reachable)}>
@@ -139,7 +176,7 @@
     </div>
 
     <p :if={@counts.total == 0} class="text-parchment-dim text-sm">
-      No batch yet — click <span class="font-medium">Mine all species</span> to start.
+      No mine yet — pick a species above and click <span class="font-medium">Mine species</span> to start.
     </p>
   </section>
 </div>

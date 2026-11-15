@@ -8,6 +8,7 @@ defmodule Mehungry.FactMining.ConditionFactsTest do
   use Mehungry.DataCase, async: false
 
   alias Mehungry.FactMining
+  alias Mehungry.FactMining.ConditionFactMiningRuns, as: FactRuns
   alias Mehungry.Health
   alias Mehungry.Literature
 
@@ -27,7 +28,10 @@ defmodule Mehungry.FactMining.ConditionFactsTest do
     {:ok, _} =
       Literature.upsert_study(%{pmid: 222, title: "Curcumin in UC", journal: "J Clin Gastro"})
 
-    on_exit(fn -> Application.delete_env(:mehungry, :fact_miner_stub_sheet) end)
+    on_exit(fn ->
+      Application.delete_env(:mehungry, :fact_miner_stub_sheet)
+      Application.delete_env(:mehungry, :fact_miner_stub_last_query)
+    end)
 
     %{condition: condition}
   end
@@ -153,5 +157,29 @@ defmodule Mehungry.FactMining.ConditionFactsTest do
   test "mine_condition surfaces a miner error so Oban can retry", %{condition: condition} do
     put_sheet({:error, {:network, :econnrefused}})
     assert {:error, {:network, :econnrefused}} = FactMining.mine_condition(condition)
+  end
+
+  test "mine_condition sends opts[:query] verbatim, else the default", %{condition: condition} do
+    put_sheet(two_fact_sheet())
+
+    assert {:ok, _} = FactMining.mine_condition(condition, query: "only fiber facts")
+    assert Mehungry.FactMining.ClientStub.last_query() == "only fiber facts"
+
+    assert {:ok, _} = FactMining.mine_condition(condition, query: "  ")
+    assert Mehungry.FactMining.ClientStub.last_query() == FactMining.query_for_condition(condition)
+
+    assert {:ok, _} = FactMining.mine_condition(condition)
+    assert Mehungry.FactMining.ClientStub.last_query() == FactMining.query_for_condition(condition)
+  end
+
+  test "FactRuns.mine_condition/2 opens a one-row batch carrying the query", %{
+    condition: condition
+  } do
+    assert {:ok, batch_id} = FactRuns.mine_condition(condition.id, "only fiber facts")
+
+    assert [%{condition_id: cid, status: "pending", query: "only fiber facts"}] =
+             FactRuns.list_batch_rows(batch_id)
+
+    assert cid == condition.id
   end
 end

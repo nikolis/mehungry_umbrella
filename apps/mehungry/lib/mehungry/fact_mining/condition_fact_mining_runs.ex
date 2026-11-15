@@ -43,7 +43,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
     with :ok <- check_reachable() do
       case Health.list_conditions() do
         [] -> {:error, :no_conditions}
-        conditions -> {:ok, enqueue_batch(conditions)}
+        conditions -> {:ok, enqueue_batch(conditions, nil)}
       end
     end
   end
@@ -52,14 +52,16 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
   Mine a **single** condition — the per-condition twin of `mine_all_conditions/0`,
   for the per-card "Mine facts" button. Pre-flights the miner, opens one `pending`
   tracking row in its own `batch_id`, and enqueues one worker job on the same
-  serialized `:fact_mining` queue. Returns `{:ok, batch_id}`,
+  serialized `:fact_mining` queue. `query` is the admin's (optionally edited) prompt
+  — stored on the row and carried in the job args; `nil`/blank falls back to the
+  default `FactMining.query_for_condition/1` at mine time. Returns `{:ok, batch_id}`,
   `{:error, {:unreachable, reason}}`, or `{:error, :not_found}`.
   """
-  def mine_condition(condition_id) do
+  def mine_condition(condition_id, query \\ nil) do
     with :ok <- check_reachable() do
       case Health.get_condition(condition_id) do
         nil -> {:error, :not_found}
-        condition -> {:ok, enqueue_batch([condition])}
+        condition -> {:ok, enqueue_batch([condition], query)}
       end
     end
   end
@@ -73,8 +75,9 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
 
   # Open one `pending` tracking row per condition under a fresh `batch_id` and fan
   # out one worker job each via a single `Oban.insert_all` (never a per-row loop —
-  # the NOTIFY-storm hazard). Shared by the "all" sweep and single-condition mines.
-  defp enqueue_batch(conditions) do
+  # the NOTIFY-storm hazard). Shared by the "all" sweep (`query` nil → default) and
+  # single-condition mines (`query` = the admin's prompt, stored + carried in args).
+  defp enqueue_batch(conditions, query) do
     batch_id = Ecto.UUID.generate()
     now = now()
 
@@ -87,6 +90,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
           facts_total: 0,
           verified_count: 0,
           contradicted_count: 0,
+          query: query,
           inserted_at: now,
           updated_at: now
         }
@@ -99,7 +103,8 @@ defmodule Mehungry.FactMining.ConditionFactMiningRuns do
       ConditionFactMiningWorker.new(%{
         "tracking_id" => r.id,
         "condition_id" => r.condition_id,
-        "batch_id" => batch_id
+        "batch_id" => batch_id,
+        "query" => query
       })
     end)
     |> Oban.insert_all()

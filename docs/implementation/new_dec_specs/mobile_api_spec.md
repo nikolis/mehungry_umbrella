@@ -541,7 +541,8 @@ Species detail: description, nutrition facts, **mined research findings**, ingre
   "research": [ { "text": "Spinach is a rich source of dietary nitrate.",
     "label": "verified", "certainty": "high", "claim_type": "other",
     "study_design": "systematic_review", "source": "pmc_oa_fulltext",
-    "pmid": "12345678", "license": "commercial_ok", "quote": "verbatim span (nil unless commercial_ok)" } ],
+    "pmid": "12345678", "license": "commercial_ok", "quote": "verbatim span (nil unless commercial_ok)",
+    "lay": { "tier": "lead", "clarity": 0.8, "flags": [] } } ],
   "ingredients": [ {"id":412,"name":"Spinach, raw"} ],
   "facts": {
     "origin_region": "Central Asia",
@@ -557,8 +558,14 @@ biomed-fact-miner; see `docs/implementation/fact_mining.md`), distilled PMID-cit
 carrying the honest verification `label` (`verified` / `contradicted` / `unverified_*`) +
 `certainty`. `quote` is the verbatim source span and is **`null` unless `license ==
 "commercial_ok"`** (non-commercial quotes are withheld) — render from `text` + `pmid` +
-`label`. The array is empty until the admin "Mine all species" sweep has run for the species.
-*(Replaced the former `compounds[]` block when the species↔compound graph was retired.)*
+`label`. `lay` is the miner's **presentation hint, orthogonal to `label`**:
+`{tier: "lead"|"show"|"hide", clarity: float[0,1], flags: [...]}` — `hide` = off-subject
+(comparator/background), `lead`/`show` = on-subject by readability; apply the same lead/show/hide
+policy the web page does (lead the list with on-subject verified facts; treat `hide` as
+search-only). `tier`/`clarity` are `null` for facts mined before the miner exposed `lay` (pre-
+2026-11-14, until a re-mine); `flags` defaults to `[]`. The array is empty until the admin "Mine
+all species" sweep has run for the species. *(Replaced the former `compounds[]` block when the
+species↔compound graph was retired.)*
 
 `facts` are **promoted species enrichment facts** (the web page's "Origins & cultivation"
 section) — Wikidata (CC0) + FAOSTAT (CC BY 4.0). Every key is nullable (absent/unpromoted

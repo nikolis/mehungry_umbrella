@@ -29,7 +29,9 @@ defmodule Mehungry.ObanWorkers.ConditionFactMiningWorker do
 
     Runs.mark_processing(tracking_id)
 
-    case FactMining.mine_condition(condition_id) do
+    # `args["query"]` is the admin's custom prompt (nil for dormant bulk jobs →
+    # `mine_condition/2` falls back to the default `query_for_condition/1`).
+    case FactMining.mine_condition(condition_id, query: args["query"]) do
       {:ok, counts} ->
         Logger.info(
           "[FactMining] condition ##{condition_id}: #{counts.total} facts " <>

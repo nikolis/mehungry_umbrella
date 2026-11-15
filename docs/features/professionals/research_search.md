@@ -6,8 +6,10 @@
 > **Source switch — biomed-fact-miner (2026-11-12).** The condition research is no longer sourced
 > from the `mehungry_extractor` `/analyze` tool. Each condition's findings now come from the external
 > **biomed-fact-miner** (`Mehungry.FactMining`, `POST /mine`, query *"give me all the food related
-> facts about {condition}"`*), stored as `ConditionMinedFact` rows. Acquisition is the **"Mine
-> conditions (fact-miner)"** card on `/professional/health` (fan-out, one job per condition). Each
+> facts about {condition}"`* by default, **editable per mine**), stored as `ConditionMinedFact` rows.
+> Acquisition is the per-condition **"Mine facts"** button on `/professional/health`, which opens a
+> prompt modal (pre-filled, editable) → one mining job per condition (the bulk "Mine all" fan-out is
+> kept dormant, 2026-11-15). Each
 > fact carries a per-source **licence**: `commercial_ok` publications are shown as **presentable**
 > cards *with* their verbatim quotes (grouped by research type), everything else becomes a **free
 > claim** — our distilled wording + a link to the original publication, **no quote / no full text**.
@@ -26,6 +28,30 @@
 > **extractor-sourced** `study_full_texts` (`source = "mehungry_extractor"` — measurement-pipeline full
 > texts are kept), the `extractor_settings` singleton, and all `research_ingestion_runs`. The
 > `Extractor` / `StudyAnalyses` / `ResearchIngestion` contexts + the legacy reader remain in place.
+
+> **Condition results page — current toolbar + quick UI wins (2026-11-14).** The live
+> `/nutritionist/research/:condition_id` page (`MehungryWeb.NutritionistLive.ResearchCondition`) is the
+> miner-based build; the extractor-era **"Filter + sort toolbar"** and **"Result card"** descriptions
+> below (§ Routes/UI) are historical. What's live now:
+> - **Verification-label filter** — a segmented chip row (**Verified · Contradicted · Unverified ·
+>   All**, each with a condition-wide count), **default `:verified`** so the page leads with the
+>   highest-trust findings. Folds the miner's `unverified_*` variants into one "Unverified" chip.
+>   Filtering runs **in the view** over the loaded assigns (never mutating them, so server-side Save via
+>   `find_fact/3` still works); publications/groups left with zero matching facts are hidden.
+> - **Sort** select (`Best match · Newest · Most findings`) now applies to the **free-claims** list too
+>   (previously only the presentable groups), and the toolbar renders whenever there's any content
+>   (previously gated on presentable groups existing — i.e. never, since licence is currently always
+>   non-`commercial_ok`).
+> - **Per-publication collapse** — each publication's findings sit behind a native `<details>` (title +
+>   journal/year badges stay visible; summary shows **"N findings"**), **collapsed by default** so the
+>   page is a scannable index rather than a wall (condition 189 dropped from a 114,658px DOM to ~3,555px
+>   at the Verified default).
+> - The constant **"· very low certainty"** suffix is **suppressed** on free claims (shown only when a
+>   fact's certainty is a real `high`/`moderate`/`low` signal).
+>
+> Follow-ups (not shipped): true payload reduction via LiveView streams/pagination; fixing the upstream
+> `license`/`certainty` constants in the miner-response mapping (which currently keep the
+> presentable/quote/grouping path dormant).
 
 ## 1. Goal
 

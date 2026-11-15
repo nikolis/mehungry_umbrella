@@ -51,17 +51,29 @@ each openable read-only.
   auto-upload re-renders the form mid-edit — unbound inputs would silently
   reset and the entry would save empty next to its photo.
 - **Chart**: the Progress tab **leads with a multi-series overlay chart**
-  (`MehungryWeb.ProgressOverlayChart`, server-SVG) plotting the logged body
-  measurements and — toggleable onto the **same diagram** — per-day
+  (data layer `MehungryWeb.ProgressOverlayChart`, SVG rendered by
+  `MehungryWeb.ProgressOverlayChartIndexed`, both server-SVG) plotting the
+  logged body measurements and — toggleable onto the **same diagram** — per-day
   **nutrition-intake series from the user's logged meals**: Total Fat,
   Polyunsaturated / Monounsaturated / Trans Fat, Carbohydrates, Sugars, Fiber,
   Protein, Energy (kcal). Because the series span incompatible units
-  (kg/%/cm/g/kcal), each line is **min–max normalized to its own range** — the
-  plot compares trends, and the legend carries each series' **latest absolute
-  value**; with exactly one series selected the y-axis shows that series' real
-  numbers. Selection is multi-select: the body-metric KPI cards and a
-  "From your logged meals" chip row both toggle series on/off
-  (`toggle_series` event, `MapSet` of keys, default = weight).
+  (kg/%/cm/g/kcal), each line is **indexed to its own first reading = 100%**
+  (`ProgressOverlayChartIndexed`), so the plot rides **one shared, labelled
+  y-axis in "% of first reading"** where "+8%" means the same for every
+  metric, a dashed **100% baseline** line reads as "no change", and a flat
+  series sits honestly on it (not collapsed to a meaningless mid-plot). A series
+  whose first point is ≤ 0 can't be indexed (no "% change from zero") and is
+  omitted — rare, nutrition-only. **Identity beyond colour**: body series draw
+  **solid**, nutrition **dashed** (secondary encoding so the two kinds stay
+  distinguishable under colour-vision deficiency), ≤ 4 series get **direct
+  end-labels**, every point carries a **`<title>` hover tooltip** with its real
+  absolute value, and the legend chips the latest value per series. The 18-slot
+  categorical palette (`ProgressOverlayChart.@palette`, one hue per series key,
+  no wrap) is **CVD-validated** on the dark surface via the dataviz
+  `validate_palette.js` (adjacent ΔE 23.9, chroma all pass; within-group ~8–10,
+  backed by the solid/dashed + labels). Selection is multi-select: the
+  body-metric KPI cards and a "From your logged meals" chip row both toggle
+  series on/off (`toggle_series` event, `MapSet` of keys, default = weight).
   Nutrition values come from the calendar's exact pipeline
   (`History.daily_nutrition_history/3` →
   `list_calendar_user_meals` + `format_user_meals` +
@@ -74,11 +86,12 @@ each openable read-only.
   from before `started_on` stays on-plot), so the diagram always spans the
   whole period. Days with no
   logged meals are **skipped** (the line bridges the gap — no zero dips).
-  Goal lines/healthy bands don't transfer to a normalized plot: goals stay
+  Goal lines/healthy bands don't transfer to an indexed plot: goals stay
   visible as the header chips, and absolute deltas live in the KPI cards /
   Before → Now. The nutritionist `ClientDetail` keeps the original
-  single-metric `MeasurementChart` dashboard unchanged (the two modules share
-  geometry constants so `photo_strip` pins align — mirror comments in both).
+  single-metric `MeasurementChart` dashboard unchanged — it and
+  `ProgressOverlayChartIndexed` share geometry constants so `photo_strip` pins
+  align (mirror comments in both).
 - **Photos**: up to 4 per entry. Thumbnails are **pinned under the trend chart
   at their entry's date** (same x-axis math as the SVG), and the period's
   earliest/latest photo-carrying entries render as a **Before → Now**

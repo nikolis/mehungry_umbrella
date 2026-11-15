@@ -40,8 +40,6 @@ defmodule MehungryWeb.ProgressOverlayChartTest do
     ]
   end
 
-  defp svg_binary({:safe, iodata}), do: IO.iodata_to_binary(iodata)
-
   describe "series_specs/2" do
     test "includes only series with at least two points, body first" do
       specs = Chart.series_specs(body_history(), nutrition_history())
@@ -116,64 +114,6 @@ defmodule MehungryWeb.ProgressOverlayChartTest do
                {~D[2026-10-01], ~D[2026-11-01]}
 
       assert Chart.axis(specs, MapSet.new()) == nil
-    end
-  end
-
-  describe "overlay_svg/2" do
-    test "nil when nothing is selected" do
-      specs = Chart.series_specs(body_history(), nutrition_history())
-      assert Chart.overlay_svg(specs, MapSet.new()) == nil
-    end
-
-    test "draws one path per selected series in its own color, without y-axis numbers" do
-      specs = Chart.series_specs(body_history(), nutrition_history())
-      sel = MapSet.new(["weight_kg", "nutrition_protein_g", "nutrition_energy_kcal"])
-
-      svg = svg_binary(Chart.overlay_svg(specs, sel))
-
-      assert length(String.split(svg, "<path")) - 1 == 3
-
-      for key <- sel do
-        color = Enum.find(specs, &(&1.key == key)).color
-        assert svg =~ ~s(stroke="#{color}")
-      end
-
-      # Normalized multi-series plot: no absolute y-axis labels.
-      refute svg =~ ~s(text-anchor="end" fill="#A9A08C" font-size="11">)
-    end
-
-    test "labels the gridlines with real values when exactly one series is selected" do
-      specs = Chart.series_specs(body_history(), nutrition_history())
-      svg = svg_binary(Chart.overlay_svg(specs, MapSet.new(["weight_kg"])))
-
-      # min/max of 81..84 appear as y labels, plus the rotated axis title.
-      assert svg =~ ">81<"
-      assert svg =~ ">84<"
-      assert svg =~ "Weight (kg)"
-    end
-
-    test "a flat series still renders (centered)" do
-      flat = [
-        %{date: ~D[2026-10-01], source: :self, weight_kg: 80.0},
-        %{date: ~D[2026-10-08], source: :self, weight_kg: 80.0}
-      ]
-
-      specs = Chart.series_specs(flat, [])
-      svg = svg_binary(Chart.overlay_svg(specs, MapSet.new(["weight_kg"])))
-
-      assert svg =~ "<path"
-    end
-
-    test "a single-date span centers the points instead of dividing by zero" do
-      same_day = [
-        %{date: ~D[2026-10-01], source: :self, weight_kg: 80.0, bmi: 24.0},
-        %{date: ~D[2026-10-01], source: :visit, weight_kg: 81.0, bmi: 24.2}
-      ]
-
-      specs = Chart.series_specs(same_day, [])
-      svg = svg_binary(Chart.overlay_svg(specs, MapSet.new(["weight_kg"])))
-
-      assert svg =~ "<path"
     end
   end
 

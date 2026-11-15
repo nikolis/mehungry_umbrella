@@ -19,6 +19,9 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias Mehungry.Progress.Period
   alias MehungryWeb.MeasurementChart
   alias MehungryWeb.ProgressOverlayChart
+  # The chart SVG is index-to-baseline; specs/axis/legend/toggles stay on
+  # ProgressOverlayChart (ProgressOverlayChartIndexed only renders the plot).
+  alias MehungryWeb.ProgressOverlayChartIndexed
 
   @impl true
   def mount(_params, session, socket) do
@@ -82,6 +85,13 @@ defmodule MehungryWeb.ProfileLive.Index do
     key = MehungryWeb.Uploads.key_for("progress_photos", entry)
     {:ok, MehungryWeb.Uploads.meta(entry, key, 5_000_000, bucket: :private), socket}
   end
+
+  # True while any selected photo is still streaming its bytes to the private
+  # bucket. Drives the submit button's busy state and guards the submit so an
+  # entry is never logged while its photo upload is still in flight (which would
+  # silently drop the photo, since consume_uploaded_entries skips incomplete entries).
+  defp photos_uploading?(%{entries: entries}),
+    do: Enum.any?(entries, &(&1.progress < 100))
 
   # The lightbox assign: a resolved (signed) display URL + the photo's
   # share-link state, driving the share/unshare controls.
@@ -391,7 +401,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:progress_cards, MeasurementChart.cards(history))
     |> assign(:series_specs, specs)
     |> assign(:selected_series, selected)
-    |> assign(:overlay_chart_svg, ProgressOverlayChart.overlay_svg(specs, selected, bounds))
+    |> assign(:overlay_chart_svg, ProgressOverlayChartIndexed.overlay_svg(specs, selected, bounds))
     |> assign(:overlay_legend, ProgressOverlayChart.legend_entries(specs, selected))
   end
 
@@ -502,7 +512,7 @@ defmodule MehungryWeb.ProfileLive.Index do
        socket
        |> assign(:selected_series, sel)
        |> assign(:photo_axis, ProgressOverlayChart.axis(specs, sel, bounds))
-       |> assign(:overlay_chart_svg, ProgressOverlayChart.overlay_svg(specs, sel, bounds))
+       |> assign(:overlay_chart_svg, ProgressOverlayChartIndexed.overlay_svg(specs, sel, bounds))
        |> assign(:overlay_legend, ProgressOverlayChart.legend_entries(specs, sel))}
     else
       {:noreply, socket}
@@ -1368,12 +1378,31 @@ defmodule MehungryWeb.ProfileLive.Index do
                   entry={entry}
                   class="w-16 h-16 object-cover rounded-lg border border-ink-panel2"
                 />
+                <%!-- While bytes stream to the private bucket: dim the thumbnail and
+                      show a real fill bar driven by the upload's own progress. --%>
+                <div
+                  :if={entry.progress < 100}
+                  class="absolute inset-0 rounded-lg bg-ink/50 pointer-events-none"
+                >
+                </div>
+                <div
+                  :if={entry.progress < 100}
+                  class="absolute bottom-0 inset-x-0 h-1 rounded-b-lg bg-ink/60 overflow-hidden pointer-events-none"
+                  role="progressbar"
+                  aria-label={gettext("Uploading photo")}
+                  aria-valuenow={entry.progress}
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div class="h-full bg-paprika transition-all duration-200" style={"width: #{entry.progress}%"}>
+                  </div>
+                </div>
                 <button
                   type="button"
                   phx-click="cancel_photo_upload"
                   phx-value-ref={entry.ref}
                   aria-label={gettext("Cancel upload")}
-                  class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ink text-parchment-dim hover:text-paprika text-xs leading-none"
+                  class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-ink text-parchment-dim hover:text-paprika text-xs leading-none z-10"
                 >
                   ✕
                 </button>
@@ -1392,9 +1421,19 @@ defmodule MehungryWeb.ProfileLive.Index do
 
           <button
             type="submit"
-            class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors"
+            phx-disable-with={gettext("Saving…")}
+            disabled={photos_uploading?(@uploads.progress_photo)}
+            class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {gettext("Log entry")}
+            <span
+              :if={photos_uploading?(@uploads.progress_photo)}
+              class="w-3.5 h-3.5 rounded-full border-2 border-ink/30 border-t-ink animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            >
+            </span>
+            {if photos_uploading?(@uploads.progress_photo),
+              do: gettext("Uploading photos…"),
+              else: gettext("Log entry")}
           </button>
         </form>
 

@@ -1,21 +1,15 @@
 defmodule MehungryWeb.ProgressOverlayChart do
   @moduledoc """
-  The profile progress tab's **multi-series overlay chart**: body measurements
-  (`MehungryWeb.MeasurementChart`'s history shape) and per-day nutrition-intake
-  series (`Mehungry.History.daily_nutrition_history/3`) plotted together on one
-  hand-built SVG.
+  The profile progress tab's **multi-series overlay** data layer: body
+  measurements (`MehungryWeb.MeasurementChart`'s history shape) and per-day
+  nutrition-intake series (`Mehungry.History.daily_nutrition_history/3`) combined
+  into plottable specs, plus the selection/axis/legend helpers and the toggle +
+  legend UI components.
 
-  The series span incompatible units (kg / % / cm / kcal / g), so each series is
-  **min–max normalized to its own range** — the plot compares *trends*, not
-  magnitudes. The y-axis therefore carries no numbers; each series' latest
-  absolute value lives in the legend instead. The one exception: with exactly
-  **one** series selected the gridlines are labelled with that series' real
-  values (restoring the old single-metric chart's readability).
-
-  Geometry constants are copied **verbatim** from `MeasurementChart` — its
-  `photo_strip/1` pins photo thumbnails to this chart's date axis via the same
-  margin math, so the two modules must never drift (see the mirror comment
-  there).
+  The SVG itself is drawn by `MehungryWeb.ProgressOverlayChartIndexed`
+  (index-to-baseline: every series as a percentage of its own first reading, on a
+  shared labelled axis). This module stays rendering-free — it owns the data and
+  the fixed per-key categorical palette (`series_color/1`) only.
 
   Stateless like `MeasurementChart`: the host LiveView owns the selection (a
   `MapSet` of series keys) and handles the `toggle_series` event the toggle
@@ -23,23 +17,12 @@ defmodule MehungryWeb.ProgressOverlayChart do
   """
 
   use Phoenix.Component
-  import Phoenix.HTML, only: [raw: 1]
   use Gettext, backend: MehungryWeb.Gettext
 
   alias MehungryWeb.MeasurementChart
 
-  # ── design tokens (always on the dark `ink-panel` surface) ─────────────────────
-  @c_grid "#332e20"
+  # Fallback series colour for an unknown key (on the dark `ink-panel` surface).
   @c_dim "#A9A08C"
-  @c_panel "#211D16"
-
-  # ── chart geometry — MUST equal MeasurementChart's (photo_strip alignment) ─────
-  @w 680
-  @h 280
-  @ml 52
-  @mr 20
-  @mt 24
-  @mb 44
 
   # Nutrition series: {key, label, unit, field in daily_nutrition_history/3 rows}.
   # String keys so phx-value round-trips; display order mirrors the feature spec.
@@ -55,27 +38,50 @@ defmodule MehungryWeb.ProgressOverlayChart do
     {"nutrition_energy_kcal", "Energy", "kcal", :energy_kcal}
   ]
 
-  # Fixed per-key categorical palette (body metrics then nutrition, catalog
-  # order), extending the 8 muted-on-ink colors of `CalendarLive.PieChart`.
-  # Fixed assignment keeps a series' color stable whatever else is toggled.
+  # Fixed per-key categorical palette — **one slot per series key**, in
+  # `metric_keys/0 ++ nutrition_keys/0` order (9 body, then 9 nutrition = 18).
+  # Fixed assignment keeps a series' colour stable whatever else is toggled; a
+  # full 18 entries means `series_color/1` never wraps (the old 15-slot list
+  # aliased fiber/protein/energy onto weight/body-fat/waist).
+  #
+  # CVD-validated on the dark `#211D16` surface via the dataviz skill's
+  # `validate_palette.js` (paprika `#E8622C` + basil `#45C4AE` are brand tokens,
+  # kept fixed):
+  #   • chroma floor .......... all 18 PASS (no slot reads gray)
+  #   • contrast vs surface ... all 18 PASS (>= 3:1)
+  #   • adjacent CVD .......... PASS, worst ΔE 23.9 (was 3.3)
+  #   • within-group CVD ...... core-6 body 10.3, nutrition-9 8.4 (floor band) —
+  #     legal because every series also carries secondary encoding:
+  #     body = solid line, nutrition = dashed (see ProgressOverlayChartIndexed),
+  #     plus direct end-labels + legend swatch + hover `<title>`.
+  #   • lightness band ........ intentional house-style deviation — the
+  #     warm-charcoal system runs marks *lighter* than the validator's dark band,
+  #     which is why contrast/chroma still pass (they're never invisible/gray).
+  # The circumference metrics (hands/glutes/feet) are the weak tail: niche,
+  # body/solid, and when co-plotted their identity is carried by label, not hue.
   @palette [
-    # body: weight, body fat, waist, muscle mass, bmi, bmr
+    # body (metric_keys order): weight, body fat, waist, muscle mass,
+    #                           hands, glutes, feet, bmi, bmr
     "#E8622C",
     "#45C4AE",
     "#E7B54A",
     "#C77DAD",
+    "#C76A4A",
+    "#2FAA98",
+    "#B98ACF",
     "#8FB46B",
-    "#6FA1C9",
-    # nutrition: total fat, poly, mono, trans, carbs, sugars, fiber, protein, energy
-    "#D98299",
-    "#7FB8A0",
-    "#B0A1D6",
-    "#C98D6B",
-    "#9AB8D9",
-    "#D6C08A",
-    "#86C3B5",
-    "#DA9E66",
-    "#B7C96B"
+    "#5E9ED8",
+    # nutrition (nutrition_keys order): total fat, poly, mono, trans,
+    #                                   carbs, sugars, fiber, protein, energy
+    "#E05555",
+    "#46B8DC",
+    "#E2913C",
+    "#5E72D8",
+    "#C7D24C",
+    "#CE63B0",
+    "#2FA66E",
+    "#9B8AE0",
+    "#C98A52"
   ]
 
   # key => history-field atom for the body metrics, resolved at compile time
@@ -224,150 +230,9 @@ defmodule MehungryWeb.ProgressOverlayChart do
 
   defp min_max_dates(dates), do: {Enum.min(dates, Date), Enum.max(dates, Date)}
 
-  # ── the overlay SVG ────────────────────────────────────────────────────────────
-
-  @doc """
-  The normalized multi-series trend SVG (`raw/1`-wrapped), or `nil` when no
-  selected series. Each series min–max normalized to its own range (flat series
-  sit mid-plot); lines bridge date gaps; the latest point of each series is
-  emphasized. With exactly one series selected the gridlines carry that series'
-  real values and a rotated y-title names it. `bounds` widens the date axis to
-  the viewed period's range, exactly as in `axis/3`.
-  """
-  def overlay_svg(specs, selected, bounds \\ nil) do
-    active = Enum.filter(specs, &MapSet.member?(selected, &1.key))
-
-    case active do
-      [] -> nil
-      active -> build_overlay(active, bounds)
-    end
-  end
-
-  defp build_overlay(active, bounds) do
-    plot_w = @w - @ml - @mr
-    plot_h = @h - @mt - @mb
-
-    {min_d, max_d} = date_bounds(active, bounds)
-    span = Date.diff(max_d, min_d)
-
-    x_of = fn d ->
-      if span == 0, do: @ml + plot_w / 2, else: @ml + Date.diff(d, min_d) / span * plot_w
-    end
-
-    # 6% inner padding keeps lines off the plot edges.
-    norm_y = fn frac -> @mt + plot_h * (0.06 + (1.0 - frac) * 0.88) end
-
-    single = match?([_], active)
-
-    labels =
-      case active do
-        [only] -> single_axis_labels(only, norm_y)
-        _ -> ""
-      end
-
-    title = Enum.map_join(active, ", ", & &1.label)
-
-    svg =
-      ~s(<svg viewBox="0 0 #{@w} #{@h}" class="w-full h-auto block" font-family="ui-sans-serif, system-ui, sans-serif" role="img" aria-label="#{Phoenix.HTML.html_escape(title) |> Phoenix.HTML.safe_to_string()} over time">) <>
-        gridlines_svg(plot_w) <>
-        labels <>
-        Enum.map_join(active, &series_svg(&1, x_of, norm_y)) <>
-        x_labels_svg(min_d, max_d, span, x_of) <>
-        if(single, do: y_title_svg(hd(active), plot_h), else: "") <>
-        "</svg>"
-
-    raw(svg)
-  end
-
-  # Data dates widened by the period bounds — must match `axis/3`, or the photo
-  # strip pins thumbnails to a different date axis than the plot draws.
-  defp date_bounds(active, bounds) do
-    dates = for s <- active, p <- s.points, do: p.date
-    min_max_dates(dates ++ bound_dates(bounds))
-  end
-
-  # Unlabelled horizontal gridlines — normalized axes carry no shared numbers.
-  defp gridlines_svg(plot_w) do
-    Enum.map_join(0..4, fn t ->
-      y = @mt + (@h - @mt - @mb) * t / 4
-
-      ~s(<line x1="#{@ml}" y1="#{f(y)}" x2="#{@ml + plot_w}" y2="#{f(y)}" stroke="#{@c_grid}" stroke-width="1"/>)
-    end)
-  end
-
-  # Single-series mode: label the normalized gridlines with the series' real
-  # values. Gridline t sits at normalized fraction (1 - t/4) inside the padded
-  # band, so invert norm_y's padding to recover the value it represents.
-  defp single_axis_labels(%{points: points}, norm_y) do
-    {lo, hi} = points |> Enum.map(& &1.value) |> Enum.min_max()
-    range = hi - lo
-
-    Enum.map_join(0..4, fn t ->
-      frac = 1.0 - t / 4
-      v = lo + range * frac
-      y = norm_y.(frac)
-
-      ~s(<text x="#{@ml - 8}" y="#{f(y + 3.5)}" text-anchor="end" fill="#{@c_dim}" font-size="11">#{fmt_num(Float.round(v * 1.0, 1))}</text>)
-    end)
-  end
-
-  defp series_svg(%{points: points, color: color}, x_of, norm_y) do
-    {lo, hi} = points |> Enum.map(& &1.value) |> Enum.min_max()
-    range = hi - lo
-
-    coords =
-      Enum.map(points, fn p ->
-        frac = if range == 0, do: 0.5, else: (p.value - lo) / range
-        {x_of.(p.date), norm_y.(frac)}
-      end)
-
-    line_d =
-      coords
-      |> Enum.with_index()
-      |> Enum.map_join(" ", fn {{x, y}, i} ->
-        "#{if i == 0, do: "M", else: "L"}#{f(x)} #{f(y)}"
-      end)
-
-    dots =
-      coords
-      |> Enum.with_index()
-      |> Enum.map_join(fn {{x, y}, i} ->
-        if i == length(coords) - 1 do
-          ~s(<circle cx="#{f(x)}" cy="#{f(y)}" r="7" fill="#{color}" opacity="0.18"/>) <>
-            ~s(<circle cx="#{f(x)}" cy="#{f(y)}" r="4" fill="#{color}" stroke="#{@c_panel}" stroke-width="1.5"/>)
-        else
-          ~s(<circle cx="#{f(x)}" cy="#{f(y)}" r="2.6" fill="#{color}"/>)
-        end
-      end)
-
-    ~s(<path d="#{line_d}" fill="none" stroke="#{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>) <>
-      dots
-  end
-
-  # ~6 evenly spaced rotated date ticks over the union span (point dates differ
-  # per series, so ticks are span-based rather than point-based).
-  defp x_labels_svg(min_d, max_d, span, x_of) do
-    y = @h - @mb + 16
-    ticks = min(span, 6)
-
-    0..ticks//1
-    |> Enum.map(fn t ->
-      if t == ticks, do: max_d, else: Date.add(min_d, div(span * t, max(ticks, 1)))
-    end)
-    |> Enum.uniq()
-    |> Enum.map_join(fn d ->
-      x = x_of.(d)
-
-      ~s|<text x="#{f(x)}" y="#{y}" text-anchor="end" fill="#{@c_dim}" font-size="10.5" transform="rotate(-32 #{f(x)} #{y})">#{Calendar.strftime(d, "%b %d")}</text>|
-    end)
-  end
-
-  defp y_title_svg(%{label: label, unit: unit}, plot_h) do
-    title = if unit, do: "#{label} (#{unit})", else: label
-    cy = @mt + plot_h / 2
-
-    ~s|<text x="14" y="#{f(cy)}" text-anchor="middle" fill="#{@c_dim}" font-size="11" transform="rotate(-90 14 #{f(cy)})">#{Phoenix.HTML.html_escape(title) |> Phoenix.HTML.safe_to_string()}</text>|
-  end
+  # The overlay SVG itself is rendered by `MehungryWeb.ProgressOverlayChartIndexed`
+  # (index-to-baseline); this module owns the data (specs/axis/legend) + toggle
+  # and legend components only.
 
   @doc """
   Legend entries for the selected specs: `%{key, label, color, latest}` — the
@@ -492,7 +357,4 @@ defmodule MehungryWeb.ProgressOverlayChart do
       do: Integer.to_string(trunc(r)),
       else: :erlang.float_to_binary(r, decimals: 1)
   end
-
-  # Format a number as a 1-decimal SVG coordinate string.
-  defp f(n), do: :erlang.float_to_binary(n * 1.0, decimals: 1)
 end

@@ -29,6 +29,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRun do
     field :verified_count, :integer, default: 0
     field :contradicted_count, :integer, default: 0
     field :error, :string
+    field :query, :string
     field :started_at, :utc_datetime
     field :completed_at, :utc_datetime
 
@@ -38,7 +39,7 @@ defmodule Mehungry.FactMining.ConditionFactMiningRun do
   end
 
   @castable ~w(batch_id condition_id status facts_total verified_count
-               contradicted_count error started_at completed_at)a
+               contradicted_count error query started_at completed_at)a
 
   def changeset(run, attrs) do
     run

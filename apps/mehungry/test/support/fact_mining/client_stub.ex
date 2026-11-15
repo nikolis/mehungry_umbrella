@@ -7,17 +7,26 @@ defmodule Mehungry.FactMining.ClientStub do
       (default a minimal verified sheet), **or** an `{:error, reason}` tuple to
       simulate a failed call.
     * `:fact_miner_stub_reachable` — `:ok` (default) or `{:error, reason}`.
+
+  It also records the **last query** it received under
+  `:fact_miner_stub_last_query` (safe because the fact-mining tests run
+  `async: false`), so a test can assert which prompt reached the miner.
   """
 
   @behaviour Mehungry.FactMining.ClientBehaviour
 
   @impl true
-  def mine(_query, _opts \\ []) do
+  def mine(query, _opts \\ []) do
+    Application.put_env(:mehungry, :fact_miner_stub_last_query, query)
+
     case Application.get_env(:mehungry, :fact_miner_stub_sheet, default_sheet()) do
       {:error, _} = err -> err
       %{} = sheet -> {:ok, sheet}
     end
   end
+
+  @doc "The last query passed to `mine/2`, or `nil` if none yet this run."
+  def last_query, do: Application.get_env(:mehungry, :fact_miner_stub_last_query)
 
   @impl true
   def reachable? do

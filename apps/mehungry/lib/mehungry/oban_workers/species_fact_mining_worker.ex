@@ -27,7 +27,9 @@ defmodule Mehungry.ObanWorkers.SpeciesFactMiningWorker do
 
     Runs.mark_processing(tracking_id)
 
-    case FactMining.mine_species(species_id) do
+    # `args["query"]` is the admin's custom prompt (nil for dormant bulk jobs →
+    # `mine_species/2` falls back to the default `query_for_species/1`).
+    case FactMining.mine_species(species_id, query: args["query"]) do
       {:ok, counts} ->
         Logger.info(
           "[FactMining] species ##{species_id}: #{counts.total} facts " <>

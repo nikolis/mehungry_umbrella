@@ -12,21 +12,60 @@ defmodule MehungryWeb.ProfessionalLive.FactMiningPipelineTest do
   setup %{conn: conn} do
     admin = user_fixture(%{email: @admin_email})
 
-    {:ok, _species} =
+    {:ok, species} =
       Food.create_foundemental_species(%{
         "name" => "Acerola",
         "scientific_name" => "Malpighia emarginata"
       })
 
-    on_exit(fn -> Application.delete_env(:mehungry, :fact_miner_stub_reachable) end)
+    on_exit(fn ->
+      Application.delete_env(:mehungry, :fact_miner_stub_reachable)
+      Application.delete_env(:mehungry, :fact_miner_stub_last_query)
+    end)
 
-    %{conn: log_in_user(conn, admin)}
+    %{conn: log_in_user(conn, admin), species: species}
   end
 
-  test "renders the fact-mining page with an empty batch", %{conn: conn} do
+  test "renders the fact-mining page with the mine-one form", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/professional/compound-pipeline")
     assert html =~ "Fact mining"
-    assert html =~ "Mine all species"
+    assert html =~ "Mine species"
+    assert html =~ "Prompt sent to the miner"
+    refute html =~ "Mine all species"
+  end
+
+  test "picking a species pre-fills the default prompt", %{conn: conn, species: species} do
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
+
+    html =
+      view
+      |> element("select[name='species_id']")
+      |> render_change(%{"species_id" => to_string(species.id)})
+
+    assert html =~ "tell me all the facts about Acerola (Malpighia emarginata)"
+  end
+
+  test "submitting the form mines one species with the edited prompt", %{
+    conn: conn,
+    species: species
+  } do
+    Application.put_env(:mehungry, :fact_miner_stub_reachable, :ok)
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-pipeline")
+
+    view
+    |> form("form[phx-submit='mine_species']", %{
+      "species_id" => to_string(species.id),
+      "query" => "just the vitamin C facts"
+    })
+    |> render_submit()
+
+    assert render_async(view) =~ "Mining started"
+
+    batch_id = Runs.latest_batch_id()
+    assert [%{foundemental_species_id: sid, query: "just the vitamin C facts"}] =
+             Runs.list_batch_rows(batch_id)
+
+    assert sid == species.id
   end
 
   test "a terminal broadcast patches a streamed species row", %{conn: conn} do

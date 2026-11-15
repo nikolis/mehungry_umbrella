@@ -45,44 +45,72 @@ defmodule Mehungry.FactMining.SpeciesFactMiningRuns do
 
       :ok ->
         case Food.list_foundemental_species() do
-          [] ->
-            {:error, :no_species}
-
-          species ->
-            batch_id = Ecto.UUID.generate()
-            # `timestamps()` columns are :naive_datetime; insert_all needs them explicit.
-            now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-
-            rows =
-              Enum.map(species, fn s ->
-                %{
-                  batch_id: batch_id,
-                  foundemental_species_id: s.id,
-                  status: "pending",
-                  facts_total: 0,
-                  verified_count: 0,
-                  contradicted_count: 0,
-                  inserted_at: now,
-                  updated_at: now
-                }
-              end)
-
-            {_, inserted} =
-              Repo.insert_all(Run, rows, returning: [:id, :foundemental_species_id])
-
-            inserted
-            |> Enum.map(fn r ->
-              SpeciesFactMiningWorker.new(%{
-                "tracking_id" => r.id,
-                "species_id" => r.foundemental_species_id,
-                "batch_id" => batch_id
-              })
-            end)
-            |> Oban.insert_all()
-
-            {:ok, batch_id}
+          [] -> {:error, :no_species}
+          species -> {:ok, enqueue_batch(species, nil)}
         end
     end
+  end
+
+  @doc """
+  Mine a **single** species — the per-species twin of `mine_all_species/0`, for the
+  admin "Mine one species" form. Pre-flights the miner, opens one `pending` tracking
+  row in its own `batch_id`, and enqueues one worker job on the same serialized
+  `:fact_mining` queue. `query` is the admin's (optionally edited) prompt — stored on
+  the row and carried in the job args; `nil`/blank falls back to the default
+  `FactMining.query_for_species/1` at mine time. Returns `{:ok, batch_id}`,
+  `{:error, {:unreachable, reason}}`, or `{:error, :not_found}`.
+  """
+  def mine_species(species_id, query \\ nil) do
+    case FactMining.reachable?() do
+      {:error, reason} ->
+        {:error, {:unreachable, reason}}
+
+      :ok ->
+        case Food.get_foundemental_species(species_id) do
+          nil -> {:error, :not_found}
+          species -> {:ok, enqueue_batch([species], query)}
+        end
+    end
+  end
+
+  # Open one `pending` tracking row per species under a fresh `batch_id` and fan out
+  # one worker job each via a single `Oban.insert_all` (never a per-row loop — the
+  # NOTIFY-storm hazard). Shared by the "all" sweep (`query` nil → default) and
+  # single-species mines (`query` = the admin's prompt, stored + carried in args).
+  defp enqueue_batch(species, query) do
+    batch_id = Ecto.UUID.generate()
+    # `timestamps()` columns are :naive_datetime; insert_all needs them explicit.
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    rows =
+      Enum.map(species, fn s ->
+        %{
+          batch_id: batch_id,
+          foundemental_species_id: s.id,
+          status: "pending",
+          facts_total: 0,
+          verified_count: 0,
+          contradicted_count: 0,
+          query: query,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    {_, inserted} = Repo.insert_all(Run, rows, returning: [:id, :foundemental_species_id])
+
+    inserted
+    |> Enum.map(fn r ->
+      SpeciesFactMiningWorker.new(%{
+        "tracking_id" => r.id,
+        "species_id" => r.foundemental_species_id,
+        "batch_id" => batch_id,
+        "query" => query
+      })
+    end)
+    |> Oban.insert_all()
+
+    batch_id
   end
 
   @doc "Mark a species row `processing` + broadcast the slim progress signal."

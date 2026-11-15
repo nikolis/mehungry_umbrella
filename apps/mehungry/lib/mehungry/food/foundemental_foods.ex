@@ -239,6 +239,9 @@ defmodule Mehungry.Food.FoundementalFoods do
 
   def get_species!(id), do: Repo.get!(FoundementalFoodSpecies, id)
 
+  @doc "Fetch a species by id, or `nil` when absent (non-raising `get_species!/1`)."
+  def get_species(id), do: Repo.get(FoundementalFoodSpecies, id)
+
   @doc """
   Fetch species for a list of ids in a single query, returned as an
   `%{id => species}` map (unordered). Lets callers resolve a batch of search hits

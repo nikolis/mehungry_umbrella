@@ -118,9 +118,14 @@ defmodule Mehungry.FactMining do
   them in a single transaction. Returns `{:ok, counts}` (`%{total, verified,
   contradicted, by_label}`) or `{:error, reason}` on a non-200 / parse failure (so
   the worker can let Oban retry).
+
+  `opts[:query]` overrides the prompt sent to the miner (blank/nil → the default
+  `query_for_species/1`), letting the admin customize the question per mine.
   """
-  def mine_species(%FoundementalFoodSpecies{} = species) do
-    query = query_for_species(species)
+  def mine_species(species_or_id, opts \\ [])
+
+  def mine_species(%FoundementalFoodSpecies{} = species, opts) do
+    query = presence(Keyword.get(opts, :query)) || query_for_species(species)
 
     case client().mine(query, max_records: 200) do
       {:ok, sheet} ->
@@ -142,8 +147,8 @@ defmodule Mehungry.FactMining do
     end
   end
 
-  def mine_species(species_id) when is_integer(species_id) do
-    mine_species(Food.get_foundemental_species!(species_id))
+  def mine_species(species_id, opts) when is_integer(species_id) do
+    mine_species(Food.get_foundemental_species!(species_id), opts)
   end
 
   @doc """
@@ -164,9 +169,14 @@ defmodule Mehungry.FactMining do
   (`Literature.fetch_and_upsert_study/1` returns the stored row with no network
   when present), so a re-run is cheap. Returns `{:ok, counts}` or
   `{:error, reason}` on a non-200 / parse failure (so the worker can let Oban retry).
+
+  `opts[:query]` overrides the prompt sent to the miner (blank/nil → the default
+  `query_for_condition/1`), letting the admin customize the question per mine.
   """
-  def mine_condition(%Condition{} = condition) do
-    query = query_for_condition(condition)
+  def mine_condition(condition_or_id, opts \\ [])
+
+  def mine_condition(%Condition{} = condition, opts) do
+    query = presence(Keyword.get(opts, :query)) || query_for_condition(condition)
 
     case client().mine(query, max_records: 200) do
       {:ok, sheet} ->
@@ -187,8 +197,8 @@ defmodule Mehungry.FactMining do
     end
   end
 
-  def mine_condition(condition_id) when is_integer(condition_id) do
-    mine_condition(Health.get_condition!(condition_id))
+  def mine_condition(condition_id, opts) when is_integer(condition_id) do
+    mine_condition(Health.get_condition!(condition_id), opts)
   end
 
   # Upsert each mined PMID into the study registry so publication cards have
@@ -235,6 +245,10 @@ defmodule Mehungry.FactMining do
     if blank?(fact_id) or blank?(text) or blank?(label) do
       nil
     else
+      # `lay` is a FactVerdict-level block (sibling to label/certainty), not inside
+      # `fact`; absent on facts mined before the miner exposed it → all-nil.
+      lay = verdict["lay"] || %{}
+
       %{
         owner_field => owner_id,
         label: label,
@@ -242,6 +256,9 @@ defmodule Mehungry.FactMining do
         reason: verdict["reason"],
         conflicting_pmid: verdict["conflicting_pmid"],
         assessment: verdict["assessment"],
+        lay_tier: lay["tier"],
+        lay_clarity: lay["clarity"],
+        lay_flags: lay["flags"],
         fact_id: fact_id,
         text: text,
         claim_type: fact["claim_type"],
@@ -274,6 +291,17 @@ defmodule Mehungry.FactMining do
   defp blank?(nil), do: true
   defp blank?(""), do: true
   defp blank?(_), do: false
+
+  # A trimmed non-empty string, else nil — so an empty custom-prompt textarea
+  # falls back to the default query builder.
+  defp presence(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp presence(_), do: nil
 
   defp count_rows(rows) do
     by_label = Enum.frequencies_by(rows, & &1.label)
@@ -310,6 +338,125 @@ defmodule Mehungry.FactMining do
     |> where([f], f.foundemental_species_id == ^species_id)
     |> then(fn q -> if labels, do: where(q, [f], f.label in ^labels), else: q end)
     |> Repo.aggregate(:count, :id)
+  end
+
+  @doc """
+  The curated, SEO-visible research set for a species' detail page: the on-subject
+  **verified** facts only, ranked lead-tier → name-mention → clarity, capped at
+  `:limit` (default 10).
+
+  A well-studied species can carry thousands of mined facts; rendering them all
+  bloats the page (HTML weight + crawl) without SEO benefit. This returns the small
+  high-signal set shown on first paint — everything else is reachable via
+  `search_facts_for_species/3`. Off-subject facts (`lay_tier == "hide"`, the miner's
+  comparator/background relevance call) are excluded. Facts mined before the miner
+  exposed `lay` have NULL `lay_tier`/`lay_clarity` and are kept (not hidden), ordered
+  behind the lead-tier ones; `:name_term` (a species-name stem, e.g. `"cranberr"`)
+  then boosts facts that name the food — the transitional fallback until a re-mine
+  populates `lay`.
+  """
+  def top_facts_for_species(species_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 10)
+    term = opts |> Keyword.get(:name_term) |> normalize_term()
+
+    base =
+      SpeciesMinedFact
+      |> where([f], f.foundemental_species_id == ^species_id)
+      |> where([f], f.label == "verified")
+      |> where([f], is_nil(f.lay_tier) or f.lay_tier != "hide")
+
+    base
+    |> top_order(term)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  # Postgres sorts booleans false < true, so `desc:` on a boolean expression puts
+  # the matches (lead tier / name mention) first; NULL clarity coalesces to 0 (last).
+  defp top_order(query, nil) do
+    order_by(query, [f],
+      desc: fragment("(? = 'lead')", f.lay_tier),
+      desc: fragment("coalesce(?, 0)", f.lay_clarity),
+      asc: f.fact_id
+    )
+  end
+
+  defp top_order(query, term) do
+    like = "%" <> term <> "%"
+
+    order_by(query, [f],
+      desc: fragment("(? = 'lead')", f.lay_tier),
+      desc: fragment("(? ilike ?)", f.text, ^like),
+      desc: fragment("coalesce(?, 0)", f.lay_clarity),
+      asc: f.fact_id
+    )
+  end
+
+  defp normalize_term(term) when is_binary(term) do
+    case String.trim(term) do
+      "" -> nil
+      t -> t
+    end
+  end
+
+  defp normalize_term(_), do: nil
+
+  @doc """
+  Verdict tally `%{verified:, contradicted:, unverified:, total:}` for a species —
+  one grouped aggregate (not a row scan), so the honest "N corroborated / N
+  contradicted / N unverified" header is cheap even when the curated render shows
+  only the top 10.
+  """
+  def research_counts_for_species(species_id) do
+    by_label =
+      SpeciesMinedFact
+      |> where([f], f.foundemental_species_id == ^species_id)
+      |> group_by([f], f.label)
+      |> select([f], {f.label, count(f.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    verified = Map.get(by_label, "verified", 0)
+    contradicted = Map.get(by_label, "contradicted", 0)
+    total = by_label |> Map.values() |> Enum.sum()
+
+    %{
+      verified: verified,
+      contradicted: contradicted,
+      unverified: total - verified - contradicted,
+      total: total
+    }
+  end
+
+  @doc """
+  Fuzzy substring search over a species' mined facts (case-insensitive `ILIKE` on
+  the distilled `text`), across **all** labels and tiers — so corroborated,
+  contradicted, unverified, and off-subject facts are all findable. This is the
+  on-demand path for the bulk the curated top set omits; a blank query returns `[]`.
+  Capped at `:limit` (default 30).
+  """
+  def search_facts_for_species(species_id, query, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 30)
+
+    case normalize_term(query) do
+      nil ->
+        []
+
+      term ->
+        like = "%" <> term <> "%"
+
+        SpeciesMinedFact
+        |> where([f], f.foundemental_species_id == ^species_id)
+        |> where([f], ilike(f.text, ^like))
+        |> order_by([f],
+          desc: fragment("(? = 'verified')", f.label),
+          desc: fragment("(? = 'lead')", f.lay_tier),
+          desc: fragment("coalesce(?, 0)", f.lay_clarity),
+          asc: f.fact_id
+        )
+        |> limit(^limit)
+        |> Repo.all()
+    end
   end
 
   # ── Condition reads (the nutritionist research surface) ──────────────────────
@@ -484,7 +631,14 @@ defmodule Mehungry.FactMining do
   end
 
   defp study_meta(_absent) do
-    %{study_id: nil, title: nil, journal: nil, authors: [], publication_year: nil, medline?: false}
+    %{
+      study_id: nil,
+      title: nil,
+      journal: nil,
+      authors: [],
+      publication_year: nil,
+      medline?: false
+    }
   end
 
   # The fact whose study design sits highest in the evidence pyramid represents

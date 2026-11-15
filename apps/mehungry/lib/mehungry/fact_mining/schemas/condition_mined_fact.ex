@@ -56,6 +56,13 @@ defmodule Mehungry.FactMining.ConditionMinedFact do
     field :license_raw, :string
     field :scope_kind, :string
 
+    # Lay presentation hint (FactVerdict.lay) — orthogonal to `label`: `lay_tier`
+    # lead/show/hide ("hide" = off-subject), `lay_clarity` [0,1] readability, and
+    # `lay_flags` the demotion reasons. Mirrors SpeciesMinedFact (shared ingest).
+    field :lay_tier, :string
+    field :lay_clarity, :float
+    field :lay_flags, {:array, :string}
+
     belongs_to :condition, Condition
 
     timestamps()
@@ -63,7 +70,8 @@ defmodule Mehungry.FactMining.ConditionMinedFact do
 
   @castable ~w(condition_id label certainty reason conflicting_pmid assessment
                fact_id text claim_type evidence_id pmid quote char_span study_design source
-               pmcid doi pub_status structured_effect license license_raw scope_kind)a
+               pmcid doi pub_status structured_effect license license_raw scope_kind
+               lay_tier lay_clarity lay_flags)a
 
   def changeset(fact, attrs) do
     fact

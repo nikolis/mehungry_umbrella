@@ -33,24 +33,22 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
       Phoenix.PubSub.subscribe(Mehungry.PubSub, FactRuns.topic())
     end
 
-    batch_id = FactRuns.latest_batch_id()
-
     socket =
       socket
       |> assign(:page_title, "Health Conditions")
       # Transient UI state (not derived from the DB, so not rebuilt in load/0).
       |> assign(:crawling, MapSet.new())
-      # Admin-triggered "Mine all conditions" fan-out to the biomed-fact-miner —
-      # one job per condition, live aggregate progress via PubSub.
-      |> assign(:fact_batch_id, batch_id)
-      |> assign(:fact_counts, FactRuns.counts_for_batch(batch_id))
-      |> assign(:mining?, false)
       |> assign(:miner_reachable, :unknown)
-      # Per-condition "Mine facts": the condition_ids whose single-condition mine is
-      # in flight (drives the per-card button state), and the batch_ids those mines
-      # opened (so their PubSub events route to the card, not the "Mine all" hero).
+      # Per-condition "Mine facts": clicking a card opens a prompt modal; submitting
+      # it mines that one condition (a one-row batch on the serialized :fact_mining
+      # queue). `mining_conditions` = condition_ids whose mine is in flight (card
+      # button state); `single_batch_ids` = the batch_ids those mines opened (so their
+      # PubSub terminal events route back to the card). The modal holds the picked
+      # condition + its (editable) prompt.
       |> assign(:mining_conditions, MapSet.new())
       |> assign(:single_batch_ids, MapSet.new())
+      |> assign(:mine_modal_condition, nil)
+      |> assign(:mine_query, "")
 
     socket =
       if connected?(socket),
@@ -330,35 +328,46 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
      |> start_async({:crawl, cid}, fn -> Literature.crawl_condition(cid) end)}
   end
 
-  # Kick off the biomed-fact-miner "Mine all conditions" fan-out — one job per
-  # condition on the :fact_mining queue, with live aggregate progress via PubSub.
+  # Open the per-condition mine modal, pre-filling the prompt with the default
+  # question (editable before mining).
   @impl true
-  def handle_event("mine_all_conditions", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:mining?, true)
-     |> start_async(:mine_all, fn -> FactRuns.mine_all_conditions() end)}
+  def handle_event("open_mine_modal", %{"id" => id}, socket) do
+    socket =
+      case Health.get_condition(String.to_integer(id)) do
+        nil ->
+          put_flash(socket, :error, "That condition no longer exists.")
+
+        condition ->
+          socket
+          |> assign(:mine_modal_condition, condition)
+          |> assign(:mine_query, FactMining.query_for_condition(condition))
+      end
+
+    {:noreply, socket}
   end
 
-  # Mine a single condition from its card — a one-row batch on the same serialized
-  # :fact_mining queue. Isolated from the "Mine all" hero: its progress shows as the
-  # card's own "Mining…" state (and a result flash), not in the batch widget.
   @impl true
-  def handle_event("mine_condition", %{"id" => id}, socket) do
-    cid = String.to_integer(id)
-
-    {:noreply,
-     socket
-     |> update(:mining_conditions, &MapSet.put(&1, cid))
-     |> start_async({:mine_condition, cid}, fn -> FactRuns.mine_condition(cid) end)}
+  def handle_event("close_mine_modal", _params, socket) do
+    {:noreply, assign(socket, :mine_modal_condition, nil)}
   end
 
-  # Admin escape hatch: cancel the in-flight batch (cancels its jobs + marks
-  # unfinished rows failed; already-mined facts are kept).
+  # Mine a single condition with the (possibly edited) prompt from the modal — a
+  # one-row batch on the serialized :fact_mining queue. Its progress shows as the
+  # card's own "Mining…" state + a result flash, routed by batch_id. The condition is
+  # taken from the open modal's assign (the form carries only the edited query).
   @impl true
-  def handle_event("cancel_mining", _params, socket) do
-    FactRuns.cancel_batch(socket.assigns.fact_batch_id)
-    {:noreply, reload_fact_batch(socket, socket.assigns.fact_batch_id)}
+  def handle_event("mine_condition", %{"query" => query}, socket) do
+    case socket.assigns.mine_modal_condition do
+      %{id: cid} ->
+        {:noreply,
+         socket
+         |> assign(:mine_modal_condition, nil)
+         |> update(:mining_conditions, &MapSet.put(&1, cid))
+         |> start_async({:mine_condition, cid}, fn -> FactRuns.mine_condition(cid, query) end)}
+
+      nil ->
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -383,32 +392,22 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   @impl true
-  # Live progress from the "Mine all conditions" fan-out. Refresh the aggregate
-  # counts on every transition; reload the page data once the batch drains so the
-  # new catalog counts appear.
+  # Live progress from a per-condition mine. A terminal transition for one of our
+  # single-mine batches routes to the card (completion flash + button reset);
+  # everything else (bulk-sweep rows from the dormant path, other sessions) is
+  # ignored.
   def handle_info({:fact_mining_run, run}, socket) do
-    cond do
-      run.batch_id == socket.assigns.fact_batch_id ->
-        socket =
-          assign(socket, :fact_counts, FactRuns.counts_for_batch(socket.assigns.fact_batch_id))
-
-        {:noreply,
-         if(FactRuns.batch_in_flight?(socket.assigns.fact_batch_id), do: socket, else: load(socket))}
-
-      MapSet.member?(socket.assigns.single_batch_ids, run.batch_id) ->
-        {:noreply, handle_single_mine_run(socket, run)}
-
-      true ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_info({:fact_mining_processing, batch_id, _condition_id}, socket) do
-    if batch_id == socket.assigns.fact_batch_id do
-      {:noreply, assign(socket, :fact_counts, FactRuns.counts_for_batch(batch_id))}
+    if MapSet.member?(socket.assigns.single_batch_ids, run.batch_id) do
+      {:noreply, handle_single_mine_run(socket, run)}
     else
       {:noreply, socket}
     end
+  end
+
+  # The slim "processing" edge carries no card state we don't already show
+  # ("Mining…" is set when the mine is kicked off), so it's a no-op here.
+  def handle_info({:fact_mining_processing, _batch_id, _condition_id}, socket) do
+    {:noreply, socket}
   end
 
   @impl true
@@ -418,33 +417,6 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   def handle_async(:miner_reachable, {:exit, _reason}, socket) do
     {:noreply, assign(socket, :miner_reachable, {:error, :probe_crashed})}
-  end
-
-  def handle_async(:mine_all, {:ok, {:ok, batch_id}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:mining?, false)
-     |> put_flash(:info, "Mining started — one job per condition, watch the counts below.")
-     |> reload_fact_batch(batch_id)}
-  end
-
-  def handle_async(:mine_all, {:ok, {:error, {:unreachable, reason}}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:mining?, false)
-     |> assign(:miner_reachable, {:error, reason})
-     |> put_flash(:error, "Fact miner unreachable — #{inspect(reason)}")}
-  end
-
-  def handle_async(:mine_all, {:ok, {:error, :no_conditions}}, socket) do
-    {:noreply, socket |> assign(:mining?, false) |> put_flash(:error, "No conditions to mine.")}
-  end
-
-  def handle_async(:mine_all, {:exit, reason}, socket) do
-    {:noreply,
-     socket
-     |> assign(:mining?, false)
-     |> put_flash(:error, "Could not start mining — #{inspect(reason)}")}
   end
 
   # Per-condition mine kicked off: remember its batch so the terminal PubSub event
@@ -534,42 +506,6 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   defp handle_single_mine_run(socket, _run), do: socket
-
-  defp reload_fact_batch(socket, batch_id) do
-    socket
-    |> assign(:fact_batch_id, batch_id)
-    |> assign(:fact_counts, FactRuns.counts_for_batch(batch_id))
-  end
-
-  @doc false
-  def fact_in_flight?(counts), do: counts.pending + counts.processing > 0
-
-  # A human ETA for the in-flight mining batch, or nil when it can't be estimated
-  # yet (nothing started, nothing finished, or the batch has drained). Rate =
-  # elapsed-since-first-start ÷ conditions-done, recomputed on each PubSub event
-  # (events arrive per condition completion, so no ticking timer is needed).
-  defp mining_eta(%{started_at: %DateTime{} = started, total: total} = counts)
-       when total > 0 do
-    done = counts.completed + counts.failed
-    remaining = total - done
-
-    if done > 0 and remaining > 0 do
-      per = DateTime.diff(DateTime.utc_now(), started) / done
-      "~#{format_duration(round(per * remaining))} left · ~#{format_duration(round(per))}/condition"
-    end
-  end
-
-  defp mining_eta(_), do: nil
-
-  # Compact h / m / s duration label.
-  defp format_duration(secs) when secs < 60, do: "#{secs}s"
-  defp format_duration(secs) when secs < 3600, do: "#{div(secs, 60)}m"
-
-  defp format_duration(secs) do
-    h = div(secs, 3600)
-    m = div(rem(secs, 3600), 60)
-    if m == 0, do: "#{h}h", else: "#{h}h #{m}m"
-  end
 
   # Split a comma-separated synonyms field into the array the schema expects.
   defp normalize_synonyms(%{"synonyms" => syn} = params) when is_binary(syn) do

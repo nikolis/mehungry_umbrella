@@ -70,7 +70,9 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
   defp producers_block(_), do: nil
 
   # A mined biomedical fact. Only commercial_ok quotes are populated (non-commercial
-  # quotes are withheld upstream); render from `text` + `pmid` + `label`.
+  # quotes are withheld upstream); render from `text` + `pmid` + `label`. `lay` is the
+  # miner's presentation hint (tier lead/show/hide, clarity, flags) — orthogonal to
+  # `label` — so the client can apply the same lead/show/hide policy as the web page.
   defp research_fact(fact) do
     %{
       text: fact.text,
@@ -81,7 +83,12 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
       source: fact.source,
       pmid: fact.pmid,
       license: fact.license,
-      quote: fact.quote
+      quote: fact.quote,
+      lay: %{
+        tier: fact.lay_tier,
+        clarity: fact.lay_clarity,
+        flags: fact.lay_flags || []
+      }
     }
   end
 

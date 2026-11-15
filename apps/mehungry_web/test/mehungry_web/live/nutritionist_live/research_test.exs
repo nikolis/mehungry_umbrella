@@ -61,6 +61,16 @@ defmodule MehungryWeb.NutritionistLive.ResearchTest do
       study_design: "cohort"
     })
 
+    # A contradicted free claim — hidden under the default (Verified) filter.
+    mine_fact(condition, 55_002, %{
+      fact_id: "fx3",
+      text: "Fiber worsens flares in ulcerative colitis.",
+      quote: nil,
+      label: "contradicted",
+      license: "non_commercial",
+      study_design: "cohort"
+    })
+
     %{
       conn: log_in_user(conn, nutritionist),
       condition: condition,
@@ -146,6 +156,39 @@ defmodule MehungryWeb.NutritionistLive.ResearchTest do
     assert view
            |> element("form[phx-change=set_sort]")
            |> render_change(%{"sort" => "newest"}) =~ "Dietary fiber in ulcerative colitis"
+  end
+
+  test "defaults to the Verified filter and reveals contradicted findings on toggle", %{
+    conn: conn,
+    condition: condition
+  } do
+    {:ok, view, html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
+
+    # Verified-first default: verified facts show, the contradicted one is hidden.
+    assert html =~ "Dietary fiber is associated with remission"
+    refute html =~ "Fiber worsens flares"
+
+    # The label chips render.
+    assert has_element?(
+             view,
+             ~s(button[phx-click="set_label_filter"][phx-value-label="contradicted"])
+           )
+
+    # Switching to All reveals the contradicted finding.
+    revealed =
+      view
+      |> element(~s(button[phx-click="set_label_filter"][phx-value-label="all"]))
+      |> render_click()
+
+    assert revealed =~ "Fiber worsens flares"
+  end
+
+  test "collapses each publication's findings behind a details summary", %{
+    conn: conn,
+    condition: condition
+  } do
+    {:ok, view, _html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
+    assert has_element?(view, "details summary", "finding")
   end
 
   describe "suggested-note persistence (My notes)" do
