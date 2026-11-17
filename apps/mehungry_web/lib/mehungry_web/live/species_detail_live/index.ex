@@ -157,6 +157,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     socket =
       socket
       |> assign(:research_counts, FactMining.research_counts_for_species(species.id))
+      |> assign(:recipes_count, Food.count_recipes_for_ingredients(ingredient_ids))
       |> assign(:research_query, "")
       |> assign(:research_results, [])
 
@@ -164,7 +165,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
       assign_async(socket, [:research, :recipes], fn ->
         {:ok,
          %{
-           research: FactMining.top_facts_for_species(species.id, name_term: name_term),
+           research: FactMining.curated_facts_for_species(species.id, name_term: name_term),
            recipes: Food.list_sample_recipes_for_ingredients(ingredient_ids)
          }}
       end)
@@ -172,7 +173,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
       socket
       |> assign(
         :research,
-        AsyncResult.ok(FactMining.top_facts_for_species(species.id, name_term: name_term))
+        AsyncResult.ok(FactMining.curated_facts_for_species(species.id, name_term: name_term))
       )
       |> assign(
         :recipes,

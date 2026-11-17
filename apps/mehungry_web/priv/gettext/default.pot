@@ -8874,3 +8874,20 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Not enough data yet — recorded measurements (weight, body fat, waist, muscle mass, hands, glutes, feet) will chart here once there are at least two readings."
 msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "recipe"
+msgid_plural "recipes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Lab & mechanism studies"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "The corroborated findings for this food are preclinical or lab studies rather than human dietary research."
+msgstr ""

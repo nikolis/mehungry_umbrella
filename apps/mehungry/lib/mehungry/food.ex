@@ -139,6 +139,8 @@ defmodule Mehungry.Food do
   defdelegate list_sample_recipes_for_ingredients(ingredient_ids, limit \\ 6),
     to: IngredientQueries
 
+  defdelegate count_recipes_for_ingredients(ingredient_ids), to: IngredientQueries
+
   defdelegate list_random_recipes_including_excluding(
                 include_ingredient_ids,
                 exclude_ingredient_ids,
@@ -523,6 +525,10 @@ defmodule Mehungry.Food do
   defdelegate assign_foundemental_ingredients(species_id, pairs),
     to: FoundementalFoods,
     as: :assign_ingredients
+
+  defdelegate move_foundemental_ingredients(target_species_id, ingredient_ids),
+    to: FoundementalFoods,
+    as: :move_ingredients
 
   defdelegate assigned_foundemental_ingredient_ids(),
     to: FoundementalFoods,

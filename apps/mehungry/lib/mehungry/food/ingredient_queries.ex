@@ -120,6 +120,24 @@ defmodule Mehungry.Food.IngredientQueries do
   end
 
   @doc """
+  True count of distinct recipes using **any** of `ingredient_ids` — the honest
+  "N recipes" figure for the species-page header chip, independent of the capped
+  sample `list_sample_recipes_for_ingredients/2` renders. Returns 0 for no input.
+  """
+  def count_recipes_for_ingredients([]), do: 0
+
+  def count_recipes_for_ingredients(ingredient_ids) do
+    from(r in Recipe,
+      join: ri in RecipeIngredient,
+      on: ri.recipe_id == r.id,
+      where: ri.ingredient_id in ^ingredient_ids,
+      select: count(r.id, :distinct)
+    )
+    |> Repo.one()
+    |> Kernel.||(0)
+  end
+
+  @doc """
   Random recipes that use at least one ingredient from `include_ingredient_ids`
   and none from `exclude_ingredient_ids`.
 

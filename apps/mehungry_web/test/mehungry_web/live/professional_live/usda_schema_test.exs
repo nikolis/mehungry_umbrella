@@ -168,6 +168,28 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
     refute has_element?(view, "#results-#{b.id}")
   end
 
+  test "a curated leaf can be moved to another species", %{conn: conn} do
+    ingredient = ingredient_fixture(%{name: "Pear, bosc, raw"})
+    {:ok, wrong} = Food.create_foundemental_species(%{"name" => "Apple", "family" => "Rosaceae"})
+    {:ok, right} = Food.create_foundemental_species(%{"name" => "Pear", "family" => "Rosaceae"})
+    {:ok, _} = Food.assign_foundemental_ingredient(wrong.id, ingredient.id, "Pear, bosc, raw")
+
+    {:ok, view, _html} = live(conn, ~p"/professional/usda-schema")
+    _ = render(view)
+
+    # Expand the (wrong) species, select the mis-assigned leaf, move it.
+    view
+    |> element(~s|button[phx-value-key="species:#{wrong.id}"]|)
+    |> render_click()
+
+    render_click(view, "toggle_move_select", %{"id" => Integer.to_string(ingredient.id)})
+    render_click(view, "move_choose_species", %{"species_id" => Integer.to_string(right.id)})
+
+    view |> element("#assign-modal button", "Move") |> render_click()
+
+    assert Food.species_id_for_ingredient(ingredient.id) == right.id
+  end
+
   test "choosing '+ New species…' opens the create-species modal", %{conn: conn} do
     ingredient = ingredient_fixture(%{name: "Pear, raw"})
 

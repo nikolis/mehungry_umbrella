@@ -8877,3 +8877,20 @@ msgstr "Γλουτοί"
 #, elixir-autogen, elixir-format
 msgid "Feet"
 msgstr "Πόδια"
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "recipe"
+msgid_plural "recipes"
+msgstr[0] "συνταγή"
+msgstr[1] "συνταγές"
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Lab & mechanism studies"
+msgstr "Εργαστηριακές & μηχανιστικές μελέτες"
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "The corroborated findings for this food are preclinical or lab studies rather than human dietary research."
+msgstr "Τα επιβεβαιωμένα ευρήματα για αυτό το τρόφιμο προέρχονται από προκλινικές ή εργαστηριακές μελέτες και όχι από έρευνα διατροφής σε ανθρώπους."

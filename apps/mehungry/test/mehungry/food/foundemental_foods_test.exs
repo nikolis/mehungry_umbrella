@@ -26,7 +26,10 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
   end
 
   describe "ingredient_icons/1" do
-    test "a curated ingredient resolves through its species", %{species: species, spinach: spinach} do
+    test "a curated ingredient resolves through its species", %{
+      species: species,
+      spinach: spinach
+    } do
       # Spinach species → 🥬 from the species name keyword.
       assert Food.ingredient_icons([spinach.id]) == %{spinach.id => "🥬"}
 
@@ -82,6 +85,24 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
     test "an empty batch is a no-op", %{species: species} do
       assert {:ok, %{assigned: 0, skipped: 0}} =
                Food.assign_foundemental_ingredients(species.id, [])
+    end
+  end
+
+  describe "move_ingredients/2" do
+    test "re-points curated ingredients onto a different species", %{
+      species: source,
+      spinach: spinach
+    } do
+      {:ok, target} = Food.create_foundemental_species(%{"name" => "Chard"})
+      assert Food.species_id_for_ingredient(spinach.id) == source.id
+
+      assert {:ok, %{moved: 1}} = Food.move_foundemental_ingredients(target.id, [spinach.id])
+      assert Food.species_id_for_ingredient(spinach.id) == target.id
+    end
+
+    test "an un-curated id moves nothing", %{species: source} do
+      loose = ingredient_fixture(%{name: "loose end"})
+      assert {:ok, %{moved: 0}} = Food.move_foundemental_ingredients(source.id, [loose.id])
     end
   end
 

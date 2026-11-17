@@ -69,6 +69,11 @@ unique `ingredient_id` is honoured; an already-curated ingredient is counted **s
 fatal). The parser's schema-signature accordion (grouping by field pattern, with per-row single
 assign) is retained but **demoted** to a collapsed "Structural view"; the "Foundemental Foods"
 accordion below is the destination view (assigned leaves + per-species icon/visibility controls).
+Each leaf there is **selectable** — ticking one or more surfaces a "Move to species" tray that
+re-points the whole selection onto another species (existing or new) to fix a mis-assignment, via
+`Food.move_foundemental_ingredients/2` (`FoundementalFoods.move_ingredients/2`, an `update_all` of
+the join rows' `foundemental_species_id` — the `usda_name` snapshot and one-species-per-ingredient
+invariant are preserved).
 
 ## Constraints
 

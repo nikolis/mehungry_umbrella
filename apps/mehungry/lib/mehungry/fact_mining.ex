@@ -384,6 +384,53 @@ defmodule Mehungry.FactMining do
     |> Repo.all()
   end
 
+  # Upper bound on the verified pool re-sorted in Elixir by evidence altitude.
+  # A species rarely carries more than a few hundred verified facts; this bounds
+  # the work on a pathological one while still giving the diet-relevant buckets a
+  # full chance to surface ahead of the mechanistic pile.
+  @curated_pool_limit 200
+
+  @doc """
+  The species page's curated findings, **split by evidence altitude** —
+  `%{relevant: [...], mechanistic: [...], mechanistic_count: n}`.
+
+  `relevant` leads with human/clinical evidence; `mechanistic` is the
+  `ResearchType` `:preclinical_other` pile (molecular docking, in-vitro, animal)
+  that a diet-watcher can't read, demoted so the page doesn't open on a wall of
+  bench chemistry. Unclassified designs stay in `relevant` (not provably lab-only).
+
+  Ordering: the verified, non-`hide` pool is pulled in the existing lay order
+  (`top_order/2` — lead tier, name mention, clarity), then **stably** re-sorted by
+  `ResearchType.order/1` so stronger evidence rises *without* losing the lay
+  ranking within a bucket. Each list is capped at `:limit` (default 10). The
+  honest totals shown in the header come from `research_counts_for_species/1`,
+  unaffected by this split.
+  """
+  def curated_facts_for_species(species_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 10)
+    term = opts |> Keyword.get(:name_term) |> normalize_term()
+
+    pool =
+      SpeciesMinedFact
+      |> where([f], f.foundemental_species_id == ^species_id)
+      |> where([f], f.label == "verified")
+      |> where([f], is_nil(f.lay_tier) or f.lay_tier != "hide")
+      |> top_order(term)
+      |> limit(^@curated_pool_limit)
+      |> Repo.all()
+
+    {mechanistic, relevant} =
+      pool
+      |> Enum.sort_by(&ResearchType.order(ResearchType.bucket(&1.study_design)))
+      |> Enum.split_with(&(ResearchType.bucket(&1.study_design) == :preclinical_other))
+
+    %{
+      relevant: Enum.take(relevant, limit),
+      mechanistic: Enum.take(mechanistic, limit),
+      mechanistic_count: length(mechanistic)
+    }
+  end
+
   # Postgres sorts booleans false < true, so `desc:` on a boolean expression puts
   # the matches (lead tier / name mention) first; NULL clarity coalesces to 0 (last).
   defp top_order(query, nil) do

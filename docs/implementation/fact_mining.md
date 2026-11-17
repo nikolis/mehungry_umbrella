@@ -15,10 +15,19 @@ idempotent). Two entity surfaces share the machinery:
   page (`/foods/:slug` "Research findings") and the `/api/v1/species/:slug` detail (`research[]`).
   **The species page renders a _curated_ top set, not the full list (2026-11-14).** A well-studied
   species can carry **thousands** of mined facts; rendering them all bloated the page HTML (~1–2 MB)
-  and crawl weight without SEO benefit. So the page renders only the **on-subject verified top ~10**
-  (`FactMining.top_facts_for_species/2` — `label == "verified"`, `lay_tier != "hide"`, ranked
-  lead-tier → name-mention → `lay_clarity`), which is the crawlable SEO payload and the first paint.
-  The honest header tally (`✓ corroborated · ✕ contradicted · unverified`) still reports the **true**
+  and crawl weight without SEO benefit. So the page renders only the **on-subject verified top ~10**.
+  **Diet-relevance ordering + mechanistic collapse (2026-11-16):** `FactMining.curated_facts_for_species/2`
+  pulls the verified, non-`hide` pool in the existing lay order (lead-tier → name-mention → `lay_clarity`)
+  then **stably re-sorts by evidence altitude** (`Literature.ResearchType.order/1` over `bucket/1`, so
+  human/clinical evidence rises ahead of bench chemistry *without* losing the lay ranking within a
+  bucket) and **splits** it into `%{relevant, mechanistic, mechanistic_count}`. `relevant` (buckets
+  1–7 plus unclassified designs) leads the section; the `:preclinical_other` pile (molecular docking,
+  in-vitro, animal — all that a diet-watcher can't read) is demoted into a **collapsed, closed-by-default
+  `<details>`** ("Lab & mechanism studies (N)"). When a food's verified findings are *entirely*
+  preclinical, they render in the main list under an honest "…preclinical or lab studies rather than
+  human dietary research" note instead of a lonely toggle. (`top_facts_for_species/2` — the flat
+  verified top-N — remains for other callers; the species page now uses the split read.) The
+  honest header tally (`✓ corroborated · ✕ contradicted · unverified`) still reports the **true**
   totals via a cheap grouped count (`research_counts_for_species/1`), independent of the curated slice.
   Everything the top set omits — contradicted, unverified, and off-subject (`lay_tier == "hide"`)
   facts — is reached on demand through a **server-side fuzzy search box** (`phx-change` →
@@ -273,7 +282,7 @@ source link, no quote). `conditions_for_search/1` powers the `/nutritionist/rese
 
 | Module | File | Role |
 |---|---|---|
-| `Mehungry.FactMining` | `fact_mining.ex` | Context: `mine_species/2`, `mine_condition/2` (optional `opts[:query]` prompt override → default builder when blank), `map_fact_sheet/3`, species reads (`list_facts_for_species/2` full · `top_facts_for_species/2` curated SEO set · `research_counts_for_species/1` tally · `search_facts_for_species/3` on-demand fuzzy), `research_for_condition/1`, `conditions_for_search/1`. |
+| `Mehungry.FactMining` | `fact_mining.ex` | Context: `mine_species/2`, `mine_condition/2` (optional `opts[:query]` prompt override → default builder when blank), `map_fact_sheet/3`, species reads (`list_facts_for_species/2` full · `curated_facts_for_species/2` diet-relevance-split SEO set · `top_facts_for_species/2` flat verified top-N · `research_counts_for_species/1` tally · `search_facts_for_species/3` on-demand fuzzy), `research_for_condition/1`, `conditions_for_search/1`. |
 | `FactMining.Client` / `ClientBehaviour` | `fact_mining/client.ex`, `client_behaviour.ex` | `POST /mine` + `/health`, bearer-token header. |
 | `FactMining.Settings` | `fact_mining/settings.ex` | Singleton UI-managed connection row (`base_url` + JWT `auth_token`), read via `connection/0`. |
 | `FactMining.SpeciesMinedFact` / `ConditionMinedFact` | `fact_mining/schemas/…` | One row per mined fact (per species / condition). |

@@ -81,6 +81,55 @@ defmodule MehungryWeb.SpeciesDetailResearchTest do
     refute html =~ "Contradicted disputed claim"
   end
 
+  test "diet-relevant findings lead; mechanistic ones are demoted into a collapsed section",
+       %{conn: conn} do
+    sp = species_fixture()
+
+    insert_fact(sp, %{
+      fact_id: "h",
+      text: "Human cohort dietary finding",
+      lay_tier: "show",
+      study_design: "cohort"
+    })
+
+    # Strongest lay signal, but a mechanistic design — it must still be demoted.
+    insert_fact(sp, %{
+      fact_id: "m",
+      text: "Molecular docking lab finding",
+      lay_tier: "lead",
+      lay_clarity: 1.0,
+      study_design: "mechanistic_experiment"
+    })
+
+    {:ok, view, _html} = live(conn, ~p"/foods/#{String.downcase(sp.name)}")
+    html = render_async(view)
+
+    # Both render, but the mechanistic one sits under the collapsed disclosure.
+    assert html =~ "Human cohort dietary finding"
+    assert html =~ "Molecular docking lab finding"
+    assert html =~ "mechanism studies"
+    # Recipes anchor target is present; no chip/link since this species has no recipes.
+    assert html =~ ~s(id="recipes")
+    refute html =~ ~s(href="#recipes")
+  end
+
+  test "an all-mechanistic species shows the preclinical note instead of an empty section",
+       %{conn: conn} do
+    sp = species_fixture()
+
+    insert_fact(sp, %{
+      fact_id: "m1",
+      text: "In vitro assay result",
+      lay_tier: "lead",
+      study_design: "in_vitro"
+    })
+
+    html = conn |> get(~p"/foods/#{String.downcase(sp.name)}") |> html_response(200)
+
+    assert html =~ "In vitro assay result"
+    assert html =~ "preclinical or lab studies"
+  end
+
   test "search surfaces contradicted + off-subject facts the curated set omits",
        %{conn: conn} do
     sp = species_fixture()

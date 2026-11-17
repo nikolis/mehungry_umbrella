@@ -61,6 +61,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
       |> assign(:selected, MapSet.new())
       |> assign(:result_ids, [])
       |> assign(:results_capped, false)
+      |> assign(:move_selected, MapSet.new())
       |> assign_empty_analysis()
       |> stream(:rows, [])
       |> stream(:results, [])
@@ -200,6 +201,38 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     end
   end
 
+  # ── Move curated leaves between species (fix a mis-assignment) ─────────────────
+
+  def handle_event("toggle_move_select", %{"id" => id}, socket) do
+    id = String.to_integer(id)
+    {:noreply, assign(socket, :move_selected, toggle_member(socket.assigns.move_selected, id))}
+  end
+
+  def handle_event("clear_move_selection", _params, socket) do
+    {:noreply, assign(socket, :move_selected, MapSet.new())}
+  end
+
+  # Tray destination picker for the move selection. "__new__" creates the species
+  # then moves the leaves onto it; an existing id opens the confirm modal.
+  def handle_event("move_choose_species", %{"species_id" => ""}, socket), do: {:noreply, socket}
+
+  def handle_event("move_choose_species", %{"species_id" => "__new__"}, socket) do
+    case selected_move_ingredients(socket) do
+      [] -> {:noreply, socket}
+      ingredients -> {:noreply, open_new_species_modal(socket, ingredients, :move)}
+    end
+  end
+
+  def handle_event("move_choose_species", %{"species_id" => species_id}, socket) do
+    case selected_move_ingredients(socket) do
+      [] ->
+        {:noreply, socket}
+
+      ingredients ->
+        {:noreply, open_move_modal(socket, ingredients, String.to_integer(species_id))}
+    end
+  end
+
   # ── Per-row combobox (demoted Structural view) — a batch of one ───────────────
 
   # Blank selection ("— assign species —") is a no-op.
@@ -223,22 +256,37 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     {:noreply, open_assign_modal(socket, ingredients, String.to_integer(species_id))}
   end
 
-  # Submit of the confirmation modal for an existing species — assigns the batch.
+  # Submit of the confirmation modal for an existing species — assigns the batch
+  # (fresh curation) or moves it (re-curation), per the pending `:mode`.
   def handle_event("confirm_assignment", _params, socket) do
-    %{ingredients: ingredients, species_id: species_id} = socket.assigns.pending_assignment
+    %{ingredients: ingredients, species_id: species_id} =
+      pending = socket.assigns.pending_assignment
 
     socket =
       socket
       |> assign(:show_assign_modal, false)
       |> assign(:pending_assignment, nil)
 
-    {:ok, %{assigned: assigned, skipped: skipped}} =
-      Food.assign_foundemental_ingredients(species_id, pairs_for(ingredients))
+    case Map.get(pending, :mode, :assign) do
+      :assign ->
+        {:ok, %{assigned: assigned, skipped: skipped}} =
+          Food.assign_foundemental_ingredients(species_id, pairs_for(ingredients))
 
-    {:noreply,
-     socket
-     |> after_assign_data(Enum.map(ingredients, & &1.id))
-     |> put_flash(:info, assign_flash(assigned, skipped))}
+        {:noreply,
+         socket
+         |> after_assign_data(Enum.map(ingredients, & &1.id))
+         |> put_flash(:info, assign_flash(assigned, skipped))}
+
+      :move ->
+        {:ok, %{moved: moved}} =
+          Food.move_foundemental_ingredients(species_id, Enum.map(ingredients, & &1.id))
+
+        {:noreply,
+         socket
+         |> assign(:move_selected, MapSet.new())
+         |> reload_species()
+         |> put_flash(:info, "Moved #{moved} #{ngettext_ingredient(moved)}")}
+    end
   end
 
   def handle_event("close_assign_modal", _params, socket) do
@@ -476,9 +524,23 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:species_with_foods, Food.list_foundemental_species_with_foods())
   end
 
-  # Assign the pending batch to a freshly created species, then patch the lists.
+  # Wire a freshly created species to its pending batch — either curate the batch
+  # onto it (assign) or re-point already-curated leaves onto it (move), per `:mode`.
   # `restream_active/1` refreshes the accordion rows so their comboboxes include
   # the new species.
+  defp finish_create_species(socket, species, %{ingredients: ingredients, mode: :move}) do
+    {:ok, %{moved: moved}} =
+      Food.move_foundemental_ingredients(species.id, Enum.map(ingredients, & &1.id))
+
+    socket
+    |> assign(:move_selected, MapSet.new())
+    |> reload_species()
+    |> put_flash(
+      :info,
+      "Created “#{species.name}” — moved #{moved} #{ngettext_ingredient(moved)}"
+    )
+  end
+
   defp finish_create_species(socket, species, %{ingredients: ingredients}) do
     {:ok, %{assigned: assigned, skipped: skipped}} =
       Food.assign_foundemental_ingredients(species.id, pairs_for(ingredients))
@@ -514,8 +576,8 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
   end
 
-  # The current selection resolved to `%{id, name}` from the universe (ids that
-  # have since left the universe are dropped).
+  # The current console selection resolved to `%{id, name}` from the universe (ids
+  # that have since left the universe are dropped).
   defp selected_ingredients(socket) do
     socket.assigns.selected
     |> MapSet.to_list()
@@ -524,27 +586,55 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> Enum.map(&%{id: &1.id, name: &1.name})
   end
 
+  # The current leaf (move) selection resolved to `%{id, name}` from the curated
+  # `species_with_foods`, so a move knows each ingredient's usda_name label.
+  defp selected_move_ingredients(socket) do
+    lookup = leaf_lookup(socket.assigns.species_with_foods)
+
+    socket.assigns.move_selected
+    |> MapSet.to_list()
+    |> Enum.filter(&Map.has_key?(lookup, &1))
+    |> Enum.map(&%{id: &1, name: Map.fetch!(lookup, &1)})
+  end
+
+  defp leaf_lookup(species_with_foods) do
+    for s <- species_with_foods, f <- s.foundemental_foods, into: %{} do
+      {f.ingredient_id, f.usda_name}
+    end
+  end
+
   defp pairs_for(ingredients) do
     Enum.map(ingredients, fn %{id: id, name: name} -> %{ingredient_id: id, usda_name: name} end)
   end
 
-  defp open_new_species_modal(socket, ingredients) do
+  defp open_new_species_modal(socket, ingredients, mode \\ :assign) do
     socket
-    |> assign(:pending_assignment, %{ingredients: ingredients})
+    |> assign(:pending_assignment, %{ingredients: ingredients, mode: mode})
     |> assign(:species_form, new_species_form())
     |> assign(:show_species_modal, true)
   end
 
   defp open_assign_modal(socket, ingredients, species_id) do
+    socket
+    |> assign(:pending_assignment, pending_for(socket, ingredients, species_id, :assign))
+    |> assign(:show_assign_modal, true)
+  end
+
+  defp open_move_modal(socket, ingredients, species_id) do
+    socket
+    |> assign(:pending_assignment, pending_for(socket, ingredients, species_id, :move))
+    |> assign(:show_assign_modal, true)
+  end
+
+  defp pending_for(socket, ingredients, species_id, mode) do
     species = Enum.find(socket.assigns.species, &(&1.id == species_id))
 
-    socket
-    |> assign(:pending_assignment, %{
+    %{
       ingredients: ingredients,
       species_id: species_id,
-      species_label: species && species_label(species)
-    })
-    |> assign(:show_assign_modal, true)
+      species_label: species && species_label(species),
+      mode: mode
+    }
   end
 
   defp assign_flash(assigned, 0),
@@ -611,20 +701,24 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   end
 
   @doc """
-  Destination species picker for the Find & assign tray — applies to the **whole**
-  current selection. Same Alpine client-filter as `species_combobox/1`, but pushes
-  `choose_species` (no per-row ingredient context; the batch is read from
-  `@selected` server-side).
+  Destination species picker for a sticky tray — applies to the **whole** current
+  selection. Same Alpine client-filter as `species_combobox/1`, but pushes `@event`
+  (no per-row ingredient context; the batch is read server-side). Reused by both
+  the Find & assign tray (`choose_species`) and the move tray (`move_choose_species`).
   """
+  attr :species, :list, required: true
+  attr :event, :string, required: true
+  attr :label, :string, required: true
+
   def tray_species_combobox(assigns) do
     ~H"""
     <div class="relative" x-data="{ open: false, q: '' }" @click.outside="open = false">
       <button
         type="button"
         @click="open = !open"
-        class="bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-3 py-1.5 font-medium hover:opacity-90"
+        class="bg-paprika text-white rounded text-xs px-3 py-1.5 font-medium hover:opacity-90"
       >
-        Assign to species ▾
+        {@label} ▾
       </button>
       <div
         x-show="open"
@@ -643,7 +737,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
           :for={s <- @species}
           type="button"
           x-show={species_match_js(s)}
-          phx-click="choose_species"
+          phx-click={@event}
           phx-value-species_id={s.id}
           @click="open = false"
           class="block w-full text-left px-2 py-1 text-xs text-parchment hover:bg-ink-panel2"
@@ -653,7 +747,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
         <p :if={@species == []} class="px-2 py-1 text-xs text-parchment-dim">No species yet.</p>
         <button
           type="button"
-          phx-click="choose_species"
+          phx-click={@event}
           phx-value-species_id="__new__"
           @click="open = false"
           class="block w-full text-left px-2 py-1 text-xs text-parchment font-medium border-t border-ink-panel2 hover:bg-ink-panel2"

@@ -47,7 +47,7 @@ defmodule Mehungry.FactMiningTest do
         "pmid" => opts[:pmid] || "111",
         "quote" => opts[:quote] || "verbatim quote",
         "char_span" => [0, 5],
-        "study_design" => "systematic_review",
+        "study_design" => opts[:study_design] || "systematic_review",
         "source" => "pmc_oa_fulltext",
         "pmcid" => "PMC1",
         "doi" => nil,
@@ -266,6 +266,66 @@ defmodule Mehungry.FactMiningTest do
 
       assert FactMining.research_counts_for_species(species.id) ==
                %{verified: 1, contradicted: 1, unverified: 1, total: 3}
+    end
+
+    test "curated_facts_for_species splits mechanistic facts out of the diet-relevant lead",
+         %{species: species} do
+      mine(species, [
+        verdict(fact_id: "cohort", label: "verified", study_design: "cohort"),
+        verdict(fact_id: "mech", label: "verified", study_design: "mechanistic_experiment")
+      ])
+
+      curated = FactMining.curated_facts_for_species(species.id)
+
+      assert Enum.map(curated.relevant, & &1.fact_id) == ["cohort"]
+      assert Enum.map(curated.mechanistic, & &1.fact_id) == ["mech"]
+      assert curated.mechanistic_count == 1
+    end
+
+    test "curated_facts_for_species ranks human evidence above a higher-clarity mechanistic fact",
+         %{species: species} do
+      mine(species, [
+        # mechanistic has the strongest lay signal, but study design demotes it.
+        verdict(
+          fact_id: "mech_hi",
+          label: "verified",
+          study_design: "mechanistic_experiment",
+          lay: %{"tier" => "lead", "clarity" => 1.0}
+        ),
+        verdict(
+          fact_id: "cohort_lo",
+          label: "verified",
+          study_design: "cohort",
+          lay: %{"tier" => "show", "clarity" => 0.1}
+        ),
+        verdict(
+          fact_id: "review_lo",
+          label: "verified",
+          study_design: "systematic_review",
+          lay: %{"tier" => "show", "clarity" => 0.1}
+        )
+      ])
+
+      curated = FactMining.curated_facts_for_species(species.id)
+
+      # Human evidence leads, strongest-design first (systematic_review before cohort);
+      # the high-clarity mechanistic fact is pushed into the collapsed pile.
+      assert Enum.map(curated.relevant, & &1.fact_id) == ["review_lo", "cohort_lo"]
+      assert Enum.map(curated.mechanistic, & &1.fact_id) == ["mech_hi"]
+    end
+
+    test "curated_facts_for_species on an all-mechanistic species yields an empty lead",
+         %{species: species} do
+      mine(species, [
+        verdict(fact_id: "m1", label: "verified", study_design: "mechanistic_experiment"),
+        verdict(fact_id: "m2", label: "verified", study_design: "in_vitro")
+      ])
+
+      curated = FactMining.curated_facts_for_species(species.id)
+
+      assert curated.relevant == []
+      assert Enum.map(curated.mechanistic, & &1.fact_id) |> Enum.sort() == ["m1", "m2"]
+      assert curated.mechanistic_count == 2
     end
 
     test "search_facts_for_species matches text across all labels; blank → []",

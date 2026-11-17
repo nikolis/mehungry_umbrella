@@ -372,6 +372,24 @@ defmodule Mehungry.Food.FoundementalFoods do
     {:ok, %{assigned: assigned, skipped: skipped}}
   end
 
+  @doc """
+  Re-points already-curated ingredients onto a different species — the fix for a
+  mis-assignment. Only the existing join rows' `foundemental_species_id` changes
+  (the `usda_name` snapshot and the one-species-per-ingredient invariant are
+  preserved), so an ingredient that isn't curated is simply not matched. Returns
+  `{:ok, %{moved: n}}`.
+  """
+  def move_ingredients(target_species_id, ingredient_ids) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    {moved, _} =
+      FoundementalFood
+      |> where([f], f.ingredient_id in ^ingredient_ids)
+      |> Repo.update_all(set: [foundemental_species_id: target_species_id, updated_at: now])
+
+    {:ok, %{moved: moved}}
+  end
+
   @doc "The ingredient ids curated onto a species (its `foundemental_foods`)."
   def list_ingredient_ids_for_species(species_ids) when is_list(species_ids) do
     FoundementalFood

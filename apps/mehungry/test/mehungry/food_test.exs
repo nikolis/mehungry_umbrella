@@ -164,6 +164,36 @@ defmodule Mehungry.FoodTest do
       assert Food.list_sample_recipes_for_ingredients([]) == []
     end
 
+    test "count_recipes_for_ingredients returns the true distinct recipe count", %{
+      ingredient: ingredient,
+      measurement_unit: measurement_unit,
+      user: user
+    } do
+      {:ok, _recipe} =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: [
+            %{
+              ingredient_id: ingredient.id,
+              measurement_unit_id: measurement_unit.id,
+              quantity: 33
+            }
+          ],
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "uses the food"
+        })
+        |> Food.create_recipe()
+
+      other_ingredient = ingredient_fixture()
+
+      assert Food.count_recipes_for_ingredients([ingredient.id]) == 1
+      assert Food.count_recipes_for_ingredients([other_ingredient.id]) == 0
+      assert Food.count_recipes_for_ingredients([]) == 0
+    end
+
     test "Test Update Recipe Valid arguments", %{user: user} do
       recipe = recipe_fixture(user)
       assert {:ok, new_recipe} = Food.update_recipe(recipe, %{title: "New recipe title"})
