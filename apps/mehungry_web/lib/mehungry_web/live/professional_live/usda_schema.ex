@@ -341,6 +341,29 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     end
   end
 
+  # Edit an existing species' taxonomy (fix a mis-entered scientific name or
+  # family, correct a name/variety typo). Blank scientific_name/family/variety
+  # clear the column; name is required by the changeset.
+  def handle_event("update_species_details", %{"species_id" => id} = params, socket) do
+    species = Food.get_foundemental_species!(id)
+
+    attrs = %{
+      "name" => String.trim(params["name"] || ""),
+      "variety" => blank_to_nil(params["variety"]),
+      "scientific_name" => blank_to_nil(params["scientific_name"]),
+      "family" => blank_to_nil(params["family"])
+    }
+
+    case Food.update_foundemental_species(species, attrs) do
+      {:ok, updated} ->
+        {:noreply,
+         socket |> reload_species() |> put_flash(:info, "Updated “#{updated.name}”")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not update species details")}
+    end
+  end
+
   # Per-species emoji override. A blank value clears the override, so the row
   # falls back to the name/family-derived default from `Food.species_icon/1`.
   def handle_event("update_species_icon", %{"species_id" => id, "icon" => icon}, socket) do
@@ -635,6 +658,13 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
       species_label: species && species_label(species),
       mode: mode
     }
+  end
+
+  defp blank_to_nil(value) do
+    case String.trim(value || "") do
+      "" -> nil
+      trimmed -> trimmed
+    end
   end
 
   defp assign_flash(assigned, 0),

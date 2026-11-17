@@ -366,6 +366,59 @@
           class="border-t border-ink-panel2"
         >
           <form
+            phx-submit="update_species_details"
+            class="px-4 py-3 border-b border-ink-panel2 space-y-2"
+          >
+            <input type="hidden" name="species_id" value={species.id} />
+            <div class="text-parchment-dim text-xs uppercase tracking-wide">Edit details</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label class="block">
+                <span class="text-parchment-dim text-xs">Name</span>
+                <input
+                  type="text"
+                  name="name"
+                  value={species.name}
+                  required
+                  class="w-full bg-ink-panel2 text-parchment rounded border border-ink-panel2 px-2 py-1 text-sm"
+                />
+              </label>
+              <label class="block">
+                <span class="text-parchment-dim text-xs">Variety</span>
+                <input
+                  type="text"
+                  name="variety"
+                  value={species.variety}
+                  class="w-full bg-ink-panel2 text-parchment rounded border border-ink-panel2 px-2 py-1 text-sm"
+                />
+              </label>
+              <label class="block">
+                <span class="text-parchment-dim text-xs">Scientific name</span>
+                <input
+                  type="text"
+                  name="scientific_name"
+                  value={species.scientific_name}
+                  class="w-full bg-ink-panel2 text-parchment rounded border border-ink-panel2 px-2 py-1 text-sm"
+                />
+              </label>
+              <label class="block">
+                <span class="text-parchment-dim text-xs">Family</span>
+                <input
+                  type="text"
+                  name="family"
+                  value={species.family}
+                  class="w-full bg-ink-panel2 text-parchment rounded border border-ink-panel2 px-2 py-1 text-sm"
+                />
+              </label>
+            </div>
+            <button
+              type="submit"
+              phx-disable-with="Saving..."
+              class="text-parchment-dim text-xs hover:text-parchment px-2 py-1 rounded border border-ink-panel2"
+            >
+              Save details
+            </button>
+          </form>
+          <form
             phx-submit="update_species_icon"
             class="flex items-center gap-2 px-4 py-3 border-b border-ink-panel2"
           >
