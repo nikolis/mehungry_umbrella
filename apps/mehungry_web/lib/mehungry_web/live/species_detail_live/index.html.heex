@@ -11,9 +11,20 @@
           assigned synchronously on both renders), so the true totals are in the
           dead render for crawlers and don't wait on the async fact load. --%>
     <div class="mb-8 flex items-start gap-4 sm:gap-5">
-      <div class="shrink-0 text-5xl sm:text-6xl leading-none select-none" aria-hidden="true">
-        {Mehungry.Food.species_icon(@species)}
-      </div>
+      <%= if @species.image_url && @species.image_url != "" do %>
+        <img
+          src={@species.image_url}
+          alt={@display_name}
+          width="96"
+          height="96"
+          loading="lazy"
+          class="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover bg-ink-panel2"
+        />
+      <% else %>
+        <div class="shrink-0 text-5xl sm:text-6xl leading-none select-none" aria-hidden="true">
+          {Mehungry.Food.species_icon(@species)}
+        </div>
+      <% end %>
       <div class="min-w-0 flex-1">
         <h1 class="text-3xl font-display font-medium text-parchment mb-2">{@display_name}</h1>
         <div class="flex flex-wrap gap-2">
@@ -73,6 +84,8 @@
         </a>
       </div>
     </div>
+
+    <.species_photo_credit :if={@species.image_url && @species.image_url != ""} species={@species} />
 
     <%!-- ── Nutrients (per selected ingredient) ─────────────────────────── --%>
     <section class="mb-10">

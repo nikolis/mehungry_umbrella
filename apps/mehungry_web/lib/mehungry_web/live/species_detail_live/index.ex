@@ -745,6 +745,40 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   @doc "Whether a study design is a human controlled trial — worth highlighting."
   def rct?(design), do: ResearchType.bucket(design) == :controlled_trial
 
+  # ── Lead-photo credit ─────────────────────────────────────────────────────
+  # The species photo is a licence-gated Wikimedia Commons image; we always show a
+  # credit next to it (author · licence · source) — even for CC0/public-domain, where
+  # attribution isn't strictly required — because we chose to display it.
+  attr :species, :map, required: true
+
+  def species_photo_credit(assigns) do
+    ~H"""
+    <p class="mt-2 text-xs text-parchment-dim/70">
+      {gettext("Photo")}<span :if={present?(@species.image_attribution)}>: {@species.image_attribution}</span>
+      <span :if={present?(@species.image_license)} aria-hidden="true">·</span>
+      <a
+        :if={present?(@species.image_license) && present?(@species.image_license_url)}
+        href={@species.image_license_url}
+        target="_blank"
+        rel="noopener nofollow"
+        class="underline hover:text-parchment"
+      >{@species.image_license}</a>
+      <span :if={present?(@species.image_license) && !present?(@species.image_license_url)}>
+        {@species.image_license}
+      </span>
+      <span aria-hidden="true">·</span>
+      <a
+        href={@species.image_source_url}
+        target="_blank"
+        rel="noopener nofollow"
+        class="underline hover:text-parchment"
+      >{gettext("via Wikimedia Commons")}</a>
+    </p>
+    """
+  end
+
+  defp present?(value), do: is_binary(value) and value != ""
+
   # ── Research-finding row (shared by the curated + search lists) ───────────
   attr :fact, :map, required: true
 

@@ -17,6 +17,7 @@ the deep `/foods/*` pages the A–Z directory funnels link equity into.
 |---|---|---|---|
 | **Wikidata** | `origin_region`, `description` (en/el), `wikipedia_url` (en/el) | **CC0** (public domain) | None (we link the entity courteously) |
 | **FAOSTAT** — Production: Crops & livestock products (QCL) | `top_producers` | **CC BY 4.0** | **Attribution required** — rendered as "Production data: FAO FAOSTAT (CC BY 4.0)" next to the fact |
+| **Wikimedia Commons** (via Wikidata `P18`) | the **lead photo** (`image_*` columns) | **per-file** — only reused when CC0 / public domain / CC BY / CC BY-SA | **Attribution always shown** — author · licence (linked) · Commons source, even for CC0/PD |
 
 Only the **rank order** of producing countries is surfaced (country names + source year,
 never raw tonnage), so the display stays truthful as FAOSTAT tonnages are refreshed.
@@ -43,6 +44,35 @@ FAOSTAT item code. The section renders whatever is promoted — partial is fine.
 - **Provenance reuses `ingredient_enrichment_sources`** (`Food.IngredientEnrichmentSource`
   — the shared citation registry): a Wikidata entity is a `url` source (identifier =
   Q-id), FAOSTAT is one `dataset` source (identifier = `faostat_qcl`).
+- **`foundemental_food_species.image_*`** — the lead photo lives directly on the species
+  row (not `species_facts`), five columns that always travel together so the credit can
+  always be rendered: `image_url` (our re-hosted copy), `image_license` (display name),
+  `image_license_url`, `image_attribution` (author only), `image_source_url` (Commons file
+  page). Columns (not a fact) because licence + author + source must stay joined as one
+  canonical image — mirroring how a recipe carries `license`/`author`/`original_url` inline.
+
+### Lead photo (licence-gated Wikimedia Commons image)
+
+Each `/foods` surface shows an **emoji icon** by default (`Food.species_icon/1`); when the
+species has a reusable Commons photo we show **that instead**, always with a credit.
+
+- **Fetch** — `FoodData.Wikidata.Client.fetch/2` reads the entity's `P18` ("image") claim →
+  a Commons filename, then one `commons.wikimedia.org` `imageinfo` call for the rendered
+  thumbnail URL + `extmetadata` (`License`/`LicenseShortName`/`LicenseUrl`/`Artist`/
+  `Restrictions`). Returned as the result's `:image` map (absent when there's no `P18`).
+- **Licence gate** — `FoodData.Wikidata.ImageLicense.reusable?/1` **fails closed**: allows
+  CC0, public domain / PD mark, CC BY, CC BY-SA (any version); rejects NonCommercial (`nc`),
+  NoDerivs (`nd`), fair-use / non-free, any non-empty `Restrictions`, or an unrecognized
+  code. "On Wikipedia" is *not* a licence — some Commons files are non-free and are skipped.
+- **Re-host** — `SpeciesEnrichment` downloads the Commons thumbnail (seam:
+  `:species_image_http_adapter`) and `Storage.put`s it at `species_images/<id>.<ext>`, then
+  writes the five `image_*` columns. Idempotent: skipped when the same Commons file
+  (`image_source_url`) is already stored. **Auto-display** — no pending review gate (the
+  licence decision is the gate); an admin can still clear a bad pick by blanking the columns.
+- **Attribution** — shown even for CC0 / public domain ("if we display it, we credit it"):
+  author · licence (linked to `image_license_url`) · Commons source (`image_source_url`), on
+  the `/foods/:slug` hero (`species_photo_credit/1`) and carried on the gallery-card `alt`;
+  exposed as the `image` object on `/api/v1/species` (see the mobile spec §8).
 
 ## Pipeline
 
@@ -53,10 +83,11 @@ FAOSTAT item code. The section renders whatever is promoted — partial is fine.
 SpeciesEnrichmentRuns.enrich_all_species  ──▶  one SpeciesEnrichmentWorker job / species
    (one pending run row / species, grouped by batch_id, :species_enrichment queue)
                                                         ▼
-                     Food.enrich_species/2 ──▶ Wikidata.Client.fetch/2 ─┐
+                     Food.enrich_species/2 ──▶ Wikidata.Client.fetch/2 ─┐  (facts + P18 image)
                                                Faostat.Parser.top_producers/3 ─┤
                                                         ▼
                      Food.SpeciesEnrichment.record_{wikidata,faostat}_facts
+                       + licence-gated lead image ──▶ Storage.put ──▶ species.image_* columns
                                                         ▼
        FAOSTAT facts  ── auto-promoted ───────────┐
        Wikidata facts ── pending ──▶ admin promote / reject (same page)

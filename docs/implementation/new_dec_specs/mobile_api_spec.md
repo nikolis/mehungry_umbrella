@@ -519,24 +519,43 @@ language and are not translated.
 > web surfaces only. See `docs/legal/legal_review_2026-10.md`.
 
 ### `GET /api/v1/species` 🔓 `?q=apple&page=`
-Foods tab list. Each row: name, family/variety tag, slug, `icon`.
+Foods tab list. Each row: name, family/variety tag, slug, `icon`, `image`.
 Species an admin has marked **private** (`FoundementalFoodSpecies.private = true`)
 are **omitted** from both the list and search, and their `:slug` detail 404s —
 they exist only in the admin curation view, never in the app. See
 `docs/implementation/entities/foundemental_food_species.md`.
 ```json
-{ "data": [ {"id":1,"name":"Acerola","slug":"acerola","icon":"🍒","variety":"west indian cherry","family":null,"scientific_name":"Malpighia emarginata"},
-             {"id":2,"name":"Agave","slug":"agave","icon":"🥗","family":"Asparagaceae"} ],
+{ "data": [ {"id":1,"name":"Acerola","slug":"acerola","icon":"🍒","image":null,"variety":"west indian cherry","family":null,"scientific_name":"Malpighia emarginata"},
+             {"id":2,"name":"Agave","slug":"agave","icon":"🥗",
+              "image":{"url":"https://…/species_images/2.jpg","license":"CC BY-SA 3.0",
+                       "license_url":"https://creativecommons.org/licenses/by-sa/3.0",
+                       "attribution":"Alvesgaspar",
+                       "source_url":"https://commons.wikimedia.org/wiki/File:Agave.jpg"},
+              "family":"Asparagaceae"} ],
   "meta": { "total": 7 } }
 ```
 `icon` is a single emoji (always present, never null): a curator's per-species
 override if set, else derived from the species name/family by `Food.species_icon/1`
 (`Food.SpeciesIcons`). Present on both the list rows and the detail payload.
+
+`image` is a **licence-gated Wikimedia Commons photo** re-hosted on our storage, or
+**`null`** when the species has none (fetched by the species-enrichment sweep only when
+the Commons licence is reusable — CC0 / public domain / CC BY / CC BY-SA). **Prefer
+`image.url` over `icon` when present; fall back to `icon` otherwise.** When you show the
+photo you **must** render its credit — `attribution` (author, may be `null`), `license`
+(+ `license_url`), and a link to `source_url` (the Commons file page) — we display it
+even where the licence doesn't strictly require it. See
+`docs/implementation/science/species_enrichment.md`.
 ### `GET /api/v1/species/:slug` 🔓
 Species detail: description, nutrition facts, **mined research findings**, ingredients.
 ```json
 { "data": {
-  "id": 12, "name": "Spinach", "slug": "spinach", "icon": "🥬", "scientific_name": "Spinacia oleracea",
+  "id": 12, "name": "Spinach", "slug": "spinach", "icon": "🥬",
+  "image": {"url": "https://…/species_images/12.jpg", "license": "CC BY-SA 3.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+            "attribution": "Alvesgaspar",
+            "source_url": "https://commons.wikimedia.org/wiki/File:Spinach.jpg"},
+  "scientific_name": "Spinacia oleracea",
   "family": "Amaranthaceae", "variety": null,
   "research": [ { "text": "Spinach is a rich source of dietary nitrate.",
     "label": "verified", "certainty": "high", "claim_type": "other",

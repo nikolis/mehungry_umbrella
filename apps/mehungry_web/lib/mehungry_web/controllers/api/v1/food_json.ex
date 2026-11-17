@@ -8,12 +8,28 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
       name: species.name,
       slug: slug(species.name),
       icon: Mehungry.Food.species_icon(species),
+      image: species_image(species),
       variety: species.variety,
       family: species.family,
       scientific_name: species.scientific_name,
       alternative_name: species.alternative_name
     }
   end
+
+  # A licence-gated Wikimedia Commons photo + its attribution, or nil (client falls
+  # back to `icon`). The attribution fields are always present so the client can
+  # render the credit, which we show even where the licence doesn't demand it.
+  defp species_image(%{image_url: url} = species) when is_binary(url) and url != "" do
+    %{
+      url: url,
+      license: species.image_license,
+      license_url: species.image_license_url,
+      attribution: species.image_attribution,
+      source_url: species.image_source_url
+    }
+  end
+
+  defp species_image(_), do: nil
 
   @doc """
   Full species detail. `research` is a list of `SpeciesMinedFact` structs (mined

@@ -22,8 +22,13 @@ defmodule Mehungry.FoodData.Wikidata.Client do
 
   @api "https://www.wikidata.org/w/api.php"
   @entity "https://www.wikidata.org/wiki/Special:EntityData"
+  @commons_api "https://commons.wikimedia.org/w/api.php"
   # Origin properties, tried in order; first present wins.
   @origin_properties ~w(P495 P2341 P183)
+  # P18 = "image" — a Wikimedia Commons filename.
+  @image_property "P18"
+  # Width (px) we ask Commons to render the lead thumbnail at; we re-host this size.
+  @image_width 800
   @locales ~w(en el)
   @timeout_ms 12_000
   @user_agent "Mehungry/1.0 (species enrichment; +https://www.m3hungry.com)"
@@ -40,7 +45,8 @@ defmodule Mehungry.FoodData.Wikidata.Client do
          qid: qid,
          descriptions: localized_values(entity, "descriptions"),
          wikipedia_urls: wikipedia_urls(entity),
-         origin_region: origin_region(entity)
+         origin_region: origin_region(entity),
+         image: image_info(entity)
        }
        |> prune()}
     else
@@ -151,6 +157,84 @@ defmodule Mehungry.FoodData.Wikidata.Client do
       _ -> nil
     end
   end
+
+  # ── Image + licence (P18 → Commons imageinfo) ─────────────────────────────────
+
+  # Resolve the entity's lead image (`P18`) to a re-hostable URL plus the licence /
+  # attribution metadata Commons carries for it. Returns nil when there is no image or
+  # the Commons lookup fails — the caller leaves the species image-less (emoji stays).
+  defp image_info(entity) do
+    with filename when is_binary(filename) <- image_filename(entity),
+         info when is_map(info) <- commons_image_info(filename) do
+      extmeta = Map.get(info, "extmetadata", %{})
+
+      prune(%{
+        filename: filename,
+        url: Map.get(info, "thumburl") || Map.get(info, "url"),
+        original_url: Map.get(info, "url"),
+        descriptionurl: Map.get(info, "descriptionurl"),
+        license_code: extmeta_value(extmeta, "License"),
+        license_name: extmeta_value(extmeta, "LicenseShortName"),
+        license_url: extmeta_value(extmeta, "LicenseUrl"),
+        artist: extmeta |> extmeta_value("Artist") |> strip_html(),
+        restrictions: extmeta_value(extmeta, "Restrictions")
+      })
+      |> presence()
+    else
+      _ -> nil
+    end
+  end
+
+  defp image_filename(entity) do
+    case get_in(entity, ["claims", @image_property]) do
+      [claim | _] -> get_in(claim, ["mainsnak", "datavalue", "value"])
+      _ -> nil
+    end
+  end
+
+  defp commons_image_info(filename) do
+    params =
+      URI.encode_query(%{
+        action: "query",
+        titles: "File:#{filename}",
+        prop: "imageinfo",
+        iiprop: "url|extmetadata",
+        iiurlwidth: @image_width,
+        format: "json"
+      })
+
+    with {:ok, %{"query" => %{"pages" => pages}}} <- get_json("#{@commons_api}?#{params}"),
+         [%{"imageinfo" => [info | _]} | _] <- Map.values(pages) do
+      info
+    else
+      _ -> nil
+    end
+  end
+
+  defp extmeta_value(extmeta, key) do
+    case get_in(extmeta, [key, "value"]) do
+      value when is_binary(value) and value != "" -> value
+      _ -> nil
+    end
+  end
+
+  # Commons `Artist` (and some fields) are HTML snippets; reduce to plain text.
+  defp strip_html(nil), do: nil
+
+  defp strip_html(html) when is_binary(html) do
+    html
+    |> String.replace(~r/<[^>]*>/, " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    |> case do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  # An image map is only useful if we got a URL to fetch; otherwise treat as absent.
+  defp presence(%{url: url} = map) when is_binary(url) and url != "", do: map
+  defp presence(_), do: nil
 
   # ── helpers ─────────────────────────────────────────────────────────────────
 

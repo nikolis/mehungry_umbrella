@@ -11,6 +11,7 @@ defmodule Mehungry.FoodData.Wikidata.ClientTest do
           String.contains?(url, "wbsearchentities") -> search_json()
           String.contains?(url, "Special:EntityData/Q89.json") -> entity_json()
           String.contains?(url, "wbgetentities") and String.contains?(url, "Q668") -> label_json()
+          String.contains?(url, "commons.wikimedia.org") -> commons_json()
           true -> ~s({})
         end
 
@@ -31,6 +32,36 @@ defmodule Mehungry.FoodData.Wikidata.ClientTest do
     assert result.wikipedia_urls["en"] == "https://en.wikipedia.org/wiki/Apple"
     # elwiki carried only a title → URL built from it
     assert result.wikipedia_urls["el"] =~ "el.wikipedia.org/wiki/"
+  end
+
+  test "resolves the P18 image to a re-hostable URL + licence/attribution from Commons" do
+    assert {:ok, %{image: image}} = Client.fetch("Apple", "Malus domestica")
+
+    assert image.filename == "Apple.jpg"
+    assert image.url =~ "800px-Apple.jpg"
+    assert image.original_url == "https://upload.wikimedia.org/Apple.jpg"
+    assert image.descriptionurl == "https://commons.wikimedia.org/wiki/File:Apple.jpg"
+    assert image.license_code == "cc-by-sa-3.0"
+    assert image.license_name == "CC BY-SA 3.0"
+    assert image.license_url == "https://creativecommons.org/licenses/by-sa/3.0"
+    # Artist HTML stripped to plain text
+    assert image.artist == "Jane Doe"
+  end
+
+  test "omits :image when the entity has no P18 claim" do
+    Application.put_env(:mehungry, :wikidata_http_adapter, fn url, _h, _o ->
+      body =
+        cond do
+          String.contains?(url, "wbsearchentities") -> ~s({"search": [{"id": "Q89"}]})
+          String.contains?(url, "Special:EntityData/Q89.json") -> ~s({"entities": {"Q89": {}}})
+          true -> ~s({})
+        end
+
+      {:ok, %{status_code: 200, body: body}}
+    end)
+
+    assert {:ok, result} = Client.fetch("Apple", nil)
+    refute Map.has_key?(result, :image)
   end
 
   test "returns {:ok, %{}} when the search resolves nothing" do
@@ -64,7 +95,8 @@ defmodule Mehungry.FoodData.Wikidata.ClientTest do
             "elwiki": {"title": "Μήλο"}
           },
           "claims": {
-            "P495": [{"mainsnak": {"datavalue": {"value": {"id": "Q668"}}}}]
+            "P495": [{"mainsnak": {"datavalue": {"value": {"id": "Q668"}}}}],
+            "P18": [{"mainsnak": {"datavalue": {"value": "Apple.jpg"}}}]
           }
         }
       }
@@ -72,4 +104,27 @@ defmodule Mehungry.FoodData.Wikidata.ClientTest do
   end
 
   defp label_json, do: ~s({"entities": {"Q668": {"labels": {"en": {"value": "India"}}}}})
+
+  defp commons_json do
+    ~s({
+      "query": {
+        "pages": {
+          "-1": {
+            "title": "File:Apple.jpg",
+            "imageinfo": [{
+              "url": "https://upload.wikimedia.org/Apple.jpg",
+              "thumburl": "https://upload.wikimedia.org/thumb/Apple.jpg/800px-Apple.jpg",
+              "descriptionurl": "https://commons.wikimedia.org/wiki/File:Apple.jpg",
+              "extmetadata": {
+                "License": {"value": "cc-by-sa-3.0"},
+                "LicenseShortName": {"value": "CC BY-SA 3.0"},
+                "LicenseUrl": {"value": "https://creativecommons.org/licenses/by-sa/3.0"},
+                "Artist": {"value": "<a href=\\"//commons.wikimedia.org/wiki/User:Jane\\">Jane Doe</a>"}
+              }
+            }]
+          }
+        }
+      }
+    })
+  end
 end

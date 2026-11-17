@@ -16,6 +16,32 @@ defmodule MehungryWeb.Api.V1.FoodJSONTest do
     assert summary.icon == "🦄"
   end
 
+  test "species_summary/1 image is nil without a stored photo" do
+    summary = FoodJSON.species_summary(%FoundementalFoodSpecies{id: 1, name: "Apple"})
+    assert summary.image == nil
+  end
+
+  test "species_summary/1 exposes the photo + attribution when present" do
+    summary =
+      FoodJSON.species_summary(%FoundementalFoodSpecies{
+        id: 1,
+        name: "Fennel",
+        image_url: "https://stub/species_images/1.jpg",
+        image_license: "CC BY-SA 3.0",
+        image_license_url: "https://creativecommons.org/licenses/by-sa/3.0",
+        image_attribution: "Alvesgaspar",
+        image_source_url: "https://commons.wikimedia.org/wiki/File:Fennel.jpg"
+      })
+
+    assert summary.image == %{
+             url: "https://stub/species_images/1.jpg",
+             license: "CC BY-SA 3.0",
+             license_url: "https://creativecommons.org/licenses/by-sa/3.0",
+             attribution: "Alvesgaspar",
+             source_url: "https://commons.wikimedia.org/wiki/File:Fennel.jpg"
+           }
+  end
+
   test "species_detail/3 carries the icon through the merged summary" do
     detail = FoodJSON.species_detail(%FoundementalFoodSpecies{id: 2, name: "Spinach"}, [], [])
     assert detail.data.icon == "🥬"

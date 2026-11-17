@@ -21,12 +21,17 @@ defmodule Mehungry.Food.SpeciesEnrichment do
 
   import Ecto.Query, warn: false
 
+  require Logger
+
   alias Mehungry.Repo
+  alias Mehungry.Storage
 
   alias Mehungry.Food.Enrichment
+  alias Mehungry.Food.FoundementalFoods
   alias Mehungry.Food.SpeciesFact
   alias Mehungry.FoodData.Faostat
   alias Mehungry.FoodData.Wikidata
+  alias Mehungry.FoodData.Wikidata.ImageLicense
 
   @faostat_source %{
     source_type: "dataset",
@@ -37,6 +42,10 @@ defmodule Mehungry.Food.SpeciesEnrichment do
 
   # Be polite to the Wikidata API between species.
   @wikidata_pause_ms 250
+
+  # Re-hosting the licence-gated Commons lead image.
+  @image_user_agent "Mehungry/1.0 (species images; +https://www.m3hungry.com)"
+  @image_timeout_ms 20_000
 
   # ── Fetch orchestration (one species) ─────────────────────────────────────────
 
@@ -67,6 +76,9 @@ defmodule Mehungry.Food.SpeciesEnrichment do
   defp enrich_wikidata(species) do
     {:ok, result} = Wikidata.Client.impl().fetch(species.name, species.scientific_name)
     count = record_wikidata_facts(species.id, result)
+    # Re-host the lead image (same fetch result → no extra Q-id lookup) when its
+    # Commons licence is reusable. Best-effort: a failure leaves the emoji fallback.
+    maybe_store_species_image(species, result[:image])
     Process.sleep(@wikidata_pause_ms)
     count
   end
@@ -77,6 +89,87 @@ defmodule Mehungry.Food.SpeciesEnrichment do
     rows = Keyword.get_lazy(opts, :faostat_rows, &load_faostat_rows/0)
     producers = Faostat.Parser.top_producers(rows, code)
     record_faostat_facts(species.id, producers)
+  end
+
+  # ── Lead image (licence-gated Commons photo) ──────────────────────────────────
+
+  defp maybe_store_species_image(_species, nil), do: :ok
+
+  defp maybe_store_species_image(species, image) when is_map(image) do
+    cond do
+      not ImageLicense.reusable?(image) ->
+        :ok
+
+      already_stored?(species, image) ->
+        :ok
+
+      true ->
+        store_species_image(species, image)
+    end
+  end
+
+  # Skip the re-download when we already hold this exact Commons file.
+  defp already_stored?(%{image_url: url, image_source_url: src}, image)
+       when is_binary(url) and url != "",
+       do: src == image[:descriptionurl]
+
+  defp already_stored?(_species, _image), do: false
+
+  defp store_species_image(species, image) do
+    {ext, content_type} = image_content_type(image[:url])
+
+    with {:ok, binary} <- download_image(image[:url]),
+         key = "species_images/#{species.id}.#{ext}",
+         {:ok, %{url: url}} <- Storage.put(key, binary, content_type: content_type),
+         {:ok, _} <- FoundementalFoods.update_species(species, image_attrs(image, url)) do
+      :ok
+    else
+      error ->
+        Logger.warning(
+          "[SpeciesEnrichment] species ##{species.id} image skipped: #{inspect(error)}"
+        )
+
+        :ok
+    end
+  end
+
+  defp image_attrs(image, stored_url) do
+    %{
+      image_url: stored_url,
+      image_license: image[:license_name],
+      image_license_url: image[:license_url],
+      # The author alone — surfaces compose the full "artist · licence · Commons"
+      # credit from the separate columns (and the API via `attribution_text/1`).
+      image_attribution: image[:artist],
+      image_source_url: image[:descriptionurl]
+    }
+  end
+
+  defp download_image(url) when is_binary(url) do
+    headers = [{"User-Agent", @image_user_agent}]
+    opts = [recv_timeout: @image_timeout_ms, follow_redirect: true]
+
+    case image_adapter().(url, headers, opts) do
+      {:ok, %{status_code: 200, body: body}} -> {:ok, body}
+      {:ok, %{status_code: code}} -> {:error, {:http, code}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp download_image(_), do: {:error, :no_url}
+
+  # HTTP seam for the image download, stubbable in tests (mirrors the Wikidata client).
+  defp image_adapter,
+    do: Application.get_env(:mehungry, :species_image_http_adapter, &HTTPoison.get/3)
+
+  defp image_content_type(url) do
+    base = url |> to_string() |> String.downcase() |> String.split("?") |> hd()
+
+    cond do
+      String.ends_with?(base, ".png") -> {"png", "image/png"}
+      String.ends_with?(base, ".webp") -> {"webp", "image/webp"}
+      true -> {"jpg", "image/jpeg"}
+    end
   end
 
   @doc "Load the bundled FAOSTAT production rows (24h-cached), or `[]` on failure."
