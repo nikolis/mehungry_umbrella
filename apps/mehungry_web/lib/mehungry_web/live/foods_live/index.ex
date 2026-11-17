@@ -59,7 +59,7 @@ defmodule MehungryWeb.FoodsLive.Index do
   # name, spaces hyphenated. Raw/unencoded to match `SpeciesDetailLive`'s canonical
   # slug byte-for-byte (the browser percent-encodes any non-ASCII on request), so a
   # card links to the detail page's own canonical URL rather than an encoded variant.
-  def species_slug(species), do: String.replace(species_label(species) || "", " ", "-")
+  def species_slug(species), do: Food.species_slug(species_label(species) || "")
 
   # The label shown on a card — the injected Greek name, else the English name.
   def species_label(species), do: Map.get(species, :display_name) || species.name
@@ -150,7 +150,7 @@ defmodule MehungryWeb.FoodsLive.Index do
       slug_name = if language == "el" and el_name, do: el_name, else: species.name
       label = if language == "el" and el_name, do: el_name, else: species.name
 
-      %{label: label, path: "/#{language}/foods/#{String.replace(slug_name || "", " ", "-")}"}
+      %{label: label, path: "/#{language}/foods/#{Food.species_slug(slug_name || "")}"}
     end)
     |> Enum.reject(&(&1.label in [nil, ""]))
     |> Enum.sort_by(&String.downcase(&1.label))

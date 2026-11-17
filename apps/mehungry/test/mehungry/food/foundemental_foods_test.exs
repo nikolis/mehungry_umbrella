@@ -148,6 +148,29 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
     test "returns nil for an unknown slug" do
       assert Food.get_species_by_slug("no-such-species") == nil
     end
+
+    test "resolves a name with a comma whose lossy slug can't be reverse-decoded" do
+      {:ok, bear} = Food.create_foundemental_species(%{"name" => "Bear, black"})
+
+      # The clean shared encoder and every malformed historical variant all resolve.
+      assert Food.species_slug("Bear, black") == "Bear-black"
+      assert Food.get_species_by_slug("Bear-black").id == bear.id
+      # The dead URL actually seen in production: comma dropped, trailing dash.
+      assert Food.get_species_by_slug("Bear-black-").id == bear.id
+      assert Food.get_species_by_slug("bear,-black").id == bear.id
+    end
+
+    test "resolves a name with a trailing space / doubled space" do
+      {:ok, sp} = Food.create_foundemental_species(%{"name" => "Beef,  ground "})
+      assert Food.get_species_by_slug(Food.species_slug("Beef,  ground ")).id == sp.id
+      assert Food.get_species_by_slug("Beef--ground-").id == sp.id
+    end
+
+    test "a private species stays unresolvable through the tolerant path" do
+      {:ok, _} = Food.create_foundemental_species(%{"name" => "Bear, polar", "private" => true})
+      assert Food.get_species_by_slug("Bear-polar") == nil
+      assert Food.get_species_by_slug("Bear-polar-") == nil
+    end
   end
 
   describe "pagination" do

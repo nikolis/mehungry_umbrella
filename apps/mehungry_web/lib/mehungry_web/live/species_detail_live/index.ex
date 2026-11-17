@@ -566,8 +566,8 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
-  @doc "The URL slug for a species — its name with spaces hyphenated."
-  def species_slug(%{name: name}), do: String.replace(name || "", " ", "-")
+  @doc "The URL slug for a species — the shared clean, decode-tolerant slug."
+  def species_slug(%{name: name}), do: Food.species_slug(name || "")
 
   # ── String-keyed nutrient-tree accessors ──────────────────────────────────
   defp top_node(tree, name) when is_map(tree), do: Map.get(tree, name)

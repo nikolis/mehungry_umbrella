@@ -104,18 +104,7 @@ defmodule Mehungry.Food.FoundementalFoods do
   `Mehungry.Food.Ingredients.get_ingredient_by_slug/1`.
   """
   def get_species_by_slug(slug) do
-    name = String.replace(slug, "-", " ")
-
-    species =
-      Repo.one(
-        from(s in FoundementalFoodSpecies,
-          where: fragment("lower(?) = lower(?)", s.name, ^name) and s.private == false,
-          order_by: [asc: s.variety],
-          limit: 1
-        )
-      ) || get_species_by_translation_name(name)
-
-    case species do
+    case find_public_species_by_slug(slug) do
       nil ->
         nil
 
@@ -125,6 +114,96 @@ defmodule Mehungry.Food.FoundementalFoods do
           :translations
         ])
     end
+  end
+
+  # Resolve a slug to a public species. Fast path: the historical decode (hyphens
+  # → spaces) with an exact case-insensitive `name` match, then a translated-name
+  # match. Slow path (only on a fast-path miss): a punctuation/whitespace-
+  # insensitive match, so slugs for names carrying a comma, a trailing space, or a
+  # doubled space — which the lossy `name |> replace(" ", "-")` encoder could never
+  # round-trip (e.g. "Bear, black" surfaced as the dead "/foods/Bear-black-") —
+  # still resolve instead of 404ing.
+  defp find_public_species_by_slug(slug) do
+    name = String.replace(slug, "-", " ")
+
+    exact =
+      Repo.one(
+        from(s in FoundementalFoodSpecies,
+          where: fragment("lower(?) = lower(?)", s.name, ^name) and s.private == false,
+          order_by: [asc: s.variety],
+          limit: 1
+        )
+      ) || get_species_by_translation_name(name)
+
+    exact || get_public_species_by_normalized_slug(slug)
+  end
+
+  # Compare the slug against every public species on a punctuation-insensitive key
+  # (lowercased, all non-alphanumerics stripped) — the convergent form every slug
+  # variant of a given name collapses to. Scans the whole (small, ~150-row) table,
+  # but only on a fast-path miss, i.e. the rare malformed slug. A `name` match wins
+  # over a translation match; earliest `variety` breaks ties, mirroring the fast
+  # path.
+  defp get_public_species_by_normalized_slug(slug) do
+    target = normalize_slug(slug)
+
+    if target == "" do
+      nil
+    else
+      by_name =
+        Repo.all(
+          from(s in FoundementalFoodSpecies,
+            where: s.private == false,
+            order_by: [asc: s.variety],
+            select: {s.id, s.name}
+          )
+        )
+        |> find_species_id_matching(target)
+
+      id = by_name || translation_species_id_matching(target)
+      id && Repo.get(FoundementalFoodSpecies, id)
+    end
+  end
+
+  defp translation_species_id_matching(target) do
+    Repo.all(
+      from(t in FoundementalFoodSpeciesTranslation,
+        join: s in FoundementalFoodSpecies,
+        on: s.id == t.foundemental_species_id,
+        where: s.private == false,
+        select: {t.foundemental_species_id, t.name}
+      )
+    )
+    |> find_species_id_matching(target)
+  end
+
+  defp find_species_id_matching(rows, target) do
+    Enum.find_value(rows, fn {id, name} ->
+      if normalize_slug(name) == target, do: id
+    end)
+  end
+
+  @doc """
+  The URL slug for a species label — Unicode letters and digits kept as-is, every
+  run of other characters (punctuation, whitespace) collapsed to a single hyphen,
+  leading/trailing hyphens trimmed. Shared by `/foods`, the A–Z directory, the
+  species detail canonical/hreflang, and the sitemap so every surface emits the
+  same clean slug, and built so `get_species_by_slug/1` can always decode it.
+  """
+  def species_slug(name) when is_binary(name) do
+    name
+    |> String.replace(~r/[^\p{L}\p{N}]+/u, "-")
+    |> String.trim("-")
+  end
+
+  def species_slug(_), do: ""
+
+  # The punctuation-insensitive key both a stored name and an incoming slug reduce
+  # to for tolerant matching: downcased, every non-alphanumeric removed.
+  defp normalize_slug(str) do
+    (str || "")
+    |> String.downcase()
+    |> String.replace(~r/[^\p{L}\p{N}]+/u, "")
   end
 
   defp get_species_by_translation_name(name) do

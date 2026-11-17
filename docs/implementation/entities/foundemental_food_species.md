@@ -24,6 +24,25 @@ are the key the compound facts and health advice hinge on.
 | `faostat_item_code` | string | optional **curated crosswalk** to a FAOSTAT crop/livestock item code — the key the top-producers enrichment (FAOSTAT, CC BY 4.0) joins on. Nullable: many species have no FAOSTAT item. Suggested by `mix species.faostat_crosswalk`. See [`../science/species_enrichment.md`](../science/species_enrichment.md). |
 | `private` | boolean | default `false`. When `true` the species is **hidden from every public/consumer surface** — the `/foods` browse feed (EN/EL), name search, compound filter, A–Z directory, its `/foods/:slug` detail page (resolves to a 404), the sitemap, and the mobile API (`/api/v1/species` list + show) — while staying visible in the admin `/professional/usda-schema` "Foundemental Foods" view for curation. Enforced at the query layer: the `/foods`-only reads compose a `public_only` scope, the shared reads have explicit public variants (`Food.list_public_foundemental_species/0`, `Food.search_public_species/2`) the API uses, and `get_species_by_slug/1` filters private out so detail/API `show` 404. Toggled per species in the USDA-schema accordion ("Make private"/"Make public") or via the "Private" checkbox on the new-species modal. |
 
+### URL slug
+
+A species has no stored slug column — its `/foods/:slug` URL is derived from
+`name` (or the EL translation on `/el`). The single shared encoder is
+`Food.species_slug/1`: Unicode letters/digits kept, every run of other characters
+(punctuation, whitespace) collapsed to one hyphen, ends trimmed (so
+`"Bear, black"` → `Bear-black`). It's used by **every** surface that links to a
+species — the `/foods` feed cards, the A–Z directory, the detail page's
+canonical/hreflang, and the sitemap — so they all emit the same clean slug.
+
+Lookup (`FoundementalFoods.get_species_by_slug/1`) is **decode-tolerant** rather
+than an exact inverse: a fast case-insensitive `name` (then translation) match on
+`hyphens → spaces`, and on a miss a punctuation/whitespace-insensitive scan that
+reduces both the slug and each public name to a normalized key (lowercased, all
+non-alphanumerics stripped). This means any historical lossy slug for a punctuated
+name — e.g. the dead `/foods/Bear-black-` (comma dropped, trailing dash) that the
+old `name |> replace(" ", "-")` encoder produced and could never reverse — still
+resolves instead of 404ing. Private species stay unresolvable through both paths.
+
 ## Relationships
 
 - `has_many :foundemental_foods` — the species ↔ ingredient curation (below)

@@ -134,7 +134,7 @@ defmodule MehungryWeb.SitemapController do
 
     food_urls =
       Enum.map(species, fn s ->
-        slug = String.replace(s.name, " ", "-")
+        slug = Mehungry.Food.species_slug(s.name)
         date = s.updated_at |> NaiveDateTime.to_date() |> to_string()
 
         localized_entries("/foods/#{slug}",

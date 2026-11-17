@@ -538,6 +538,7 @@ defmodule Mehungry.Food do
   defdelegate species_id_for_ingredient(ingredient_id), to: FoundementalFoods
   defdelegate list_curated_ingredients(), to: FoundementalFoods
   defdelegate get_species_by_slug(slug), to: FoundementalFoods
+  defdelegate species_slug(name), to: FoundementalFoods
   defdelegate find_species_translation(language_name, species_id), to: FoundementalFoods
   defdelegate list_species_paginated(), to: FoundementalFoods
   defdelegate list_species_paginated(cursor_after), to: FoundementalFoods
