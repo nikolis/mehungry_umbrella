@@ -70,11 +70,22 @@ defmodule Mehungry.RecipePutNutrientsWorker do
         # steps are idempotent — see Posts.sync_recipe_post_media/1.
         Mehungry.Posts.sync_recipe_post_media(recipe)
 
-        Cachex.del(:recipes_cache, {Mehungry.Food, recipe_id})
+        result =
+          changeset
+          |> Food.put_nutrient_info(Map.from_struct(recipe))
+          |> Repo.update()
 
-        changeset
-        |> Food.put_nutrient_info(Map.from_struct(recipe))
-        |> Repo.update()
+        # Invalidate AFTER the write commits, not before. If we del first, a read
+        # landing in the gap between the del and the commit would re-cache the
+        # still-empty struct, leaving `nutrients` stale until the next update or
+        # eviction. Deleting post-commit guarantees the next read reloads the
+        # freshly-computed nutrients.
+        case result do
+          {:ok, _recipe} -> Cachex.del(:recipes_cache, {Mehungry.Food, recipe_id})
+          _ -> :ok
+        end
+
+        result
     end
   end
 end
