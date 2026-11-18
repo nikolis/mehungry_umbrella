@@ -7,7 +7,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
   # upon in production, and the substantive risks (health claims, Art. 9 basis,
   # erasure cascade) in docs/implementation/legal/legal_review_2026-10.md remain open.
 
-  @last_updated "3 November 2026"
+  @last_updated "18 November 2026"
 
   @impl true
   def mount(_params, _session, socket) do
@@ -87,7 +87,8 @@ defmodule MehungryWeb.PrivacyPolicyLive do
             {"Content you create", "Recipes, comments, votes, posts, meal plans, shopping baskets, images and media you upload."},
             {"Nutritionist client records", "If you are (or are a client of) a nutritionist: intake data such as height, weight, BMI/BMR/TDEE, goals, free-text notes and consultation notes."},
             {"Payment data", "Subscription tier and billing status. Card details are handled directly by Stripe — we do not store full card numbers."},
-            {"Usage & device data", "If you accept analytics cookies, Google Analytics processes usage data (pages visited, referrer, approximate location, device/browser type). We ourselves keep only an anonymous daily session counter that stores no IP, cookie or identifier."}
+            {"Usage & device data", "If you accept analytics cookies, Google Analytics processes usage data (pages visited, referrer, approximate location, device/browser type). We ourselves keep only an anonymous daily session counter that stores no IP, cookie or identifier."},
+            {"Crash & error diagnostics (mobile app)", "When the mobile app crashes or hits an unexpected error, we send a diagnostic report to our error-monitoring provider (Sentry): the app version, your device model and operating system, and a technical stack trace. Sentry derives an approximate, city-level location from your network connection. We configure Sentry so that it does not store your IP address and does not attach your name, email or account identity to the report."}
           ]} />
         </.section>
 
@@ -143,7 +144,8 @@ defmodule MehungryWeb.PrivacyPolicyLive do
             {"Google", "Sign-in (OAuth) and Google Analytics 4 (only after you accept analytics cookies)."},
             {"Meta (Facebook / Instagram)", "Sign-in (OAuth) and, if you choose, social-media publishing integrations."},
             {"Pinterest", "Social-media publishing integration (only if you connect it)."},
-            {"Cloudflare Turnstile", "Bot/abuse protection on sign-up forms."}
+            {"Cloudflare Turnstile", "Bot/abuse protection on sign-up forms."},
+            {"Sentry", "Crash and error monitoring for the mobile app, hosted in the EU region (reports are stored in the European Union). A report contains app and device diagnostics and an approximate, city-level location Sentry derives from your connection; we disable IP-address storage and attach no account identity."}
           ]} />
           <p class="mt-3">
             We may also disclose data where required by law, or to protect our rights, users or the
