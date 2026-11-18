@@ -278,11 +278,42 @@ The nutritionist then reads it offline: `FactMining.research_for_condition/1` gr
 verbatim quotes, grouped by research type) vs a flat **free-claims** section (distilled wording + a
 source link, no quote). `conditions_for_search/1` powers the `/nutritionist/research` landing count.
 
+**Within-condition search (2026-11-18).** `FactMining.search_condition_research/2` is a full-text
+search over one condition's research, returning a flat **rank-ordered** list of the same
+`build_publication/3` publication maps (plus `:rank` and `:matched_in_finding`). Ranking is a
+**weighted `tsvector`**: a publication's findings (`text` + `quote`) sit in band **A**, its `title`
+in **B**, its `abstract` in **C**, scored by `ts_rank_cd(websearch_to_tsquery('english', unaccent(q)))`
+— so a term appearing **as a finding** outranks one that only appears in the title/abstract (the
+nutritionist's requirement). It's **query-time, no migration/materialized view** (per-condition
+corpora are small); a `?::text = ?` left-join bridges the string `f.pmid` to the integer `s.pmid`, and
+result ordering (`rank` desc, `verified`-present tie-break — a tie-break, *not* a score multiplier, so
+weak/contradicted matches stay visible, then the usual publication sort) happens in Elixir. Matching is
+**abstract-level only** — full paper body is not indexed.
+
+**Global cross-condition search (Phase 2, 2026-11-18).** `FactMining.search_all_research/2` searches
+*every* condition's research at once and returns **one card per PMID** — `%{pmid, study_id, card_rank,
+any_in_finding, conditions: [%{condition_id, condition_name, label, finding_text, in_finding}], study,
+abstract_snippet}` (+ `study_meta` fields). It reads a **`research_search` materialized view** (one row
+per `condition_mined_fact`: `document` = findings`text`+`quote` **A** / `title` **B** / `abstract`
+**C**, plus a findings-only `finding_tsv` to tell "matched in a finding" from "matched in abstract").
+The query ranks each row (`ts_rank_cd`), keeps the best finding per `(pmid, condition)` (`DISTINCT ON`),
+then `GROUP BY pmid` → `jsonb_agg` the per-condition rows (verified-first) with `MAX(rank)` as the card
+sort and `bool_or(in_finding)` as the card cue. **Abstract-inclusive**: a paper surfaces on an abstract
+hit even with no matching finding (`any_in_finding: false` → `abstract_snippet` shown); abstract sits in
+band C so those cards rank last. PMID dedupe is exact `GROUP BY` (not entity resolution); every
+per-condition row keeps its own label (never collapsed). Capped at 50. The MV is **refreshed app-side**
+by `FactMining.refresh_research_search/0` (`REFRESH MATERIALIZED VIEW CONCURRENTLY research_search`),
+called from `ConditionFactMiningWorker`'s success branch **after** `mine_condition/2` commits (NOT a DB
+trigger — CONCURRENTLY can't run in the mine's wipe-insert transaction; best-effort, a refresh failure
+never fails the mine). Migration: `…_create_research_search.exs` (GIN index on `document`, unique index
+on `fact_row_id` for CONCURRENTLY). Within-condition search stays query-time (no MV). See
+`docs/features/professionals/research_search.md`.
+
 ## Module map
 
 | Module | File | Role |
 |---|---|---|
-| `Mehungry.FactMining` | `fact_mining.ex` | Context: `mine_species/2`, `mine_condition/2` (optional `opts[:query]` prompt override → default builder when blank), `map_fact_sheet/3`, species reads (`list_facts_for_species/2` full · `curated_facts_for_species/2` diet-relevance-split SEO set · `top_facts_for_species/2` flat verified top-N · `research_counts_for_species/1` tally · `search_facts_for_species/3` on-demand fuzzy), `research_for_condition/1`, `conditions_for_search/1`. |
+| `Mehungry.FactMining` | `fact_mining.ex` | Context: `mine_species/2`, `mine_condition/2` (optional `opts[:query]` prompt override → default builder when blank), `map_fact_sheet/3`, species reads (`list_facts_for_species/2` full · `curated_facts_for_species/2` diet-relevance-split SEO set · `top_facts_for_species/2` flat verified top-N · `research_counts_for_species/1` tally · `search_facts_for_species/3` on-demand fuzzy), `research_for_condition/1`, `search_condition_research/2` (within-condition weighted-tsvector search, findings=A/title=B/abstract=C), `search_all_research/2` (global, one card per PMID, over the `research_search` MV), `refresh_research_search/0` (rebuild that MV post-mine), `conditions_for_search/1`. |
 | `FactMining.Client` / `ClientBehaviour` | `fact_mining/client.ex`, `client_behaviour.ex` | `POST /mine` + `/health`, bearer-token header. |
 | `FactMining.Settings` | `fact_mining/settings.ex` | Singleton UI-managed connection row (`base_url` + JWT `auth_token`), read via `connection/0`. |
 | `FactMining.SpeciesMinedFact` / `ConditionMinedFact` | `fact_mining/schemas/…` | One row per mined fact (per species / condition). |

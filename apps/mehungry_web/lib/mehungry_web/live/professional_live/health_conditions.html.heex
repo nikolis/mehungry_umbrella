@@ -3,10 +3,12 @@
     <div>
       <h1 class="text-2xl font-semibold text-parchment">Health Conditions</h1>
       <p class="text-parchment-dim text-sm">
-        Curate the advice layer: create conditions and attach compound recommendations
-        (condition → <span class="font-medium">compound</span> → advice). Recommendations
-        reference compounds only — the implicated food species are resolved at read time and
-        shown on <code class="text-parchment">/conditions/:id</code>.
+        The condition registry behind the advice layer: create conditions and mine their
+        facts below. Compound recommendations (condition → <span class="font-medium">compound</span>
+        → advice) aren't entered here — they arrive through the review-gated promote flows and
+        are listed per condition with a Remove action. Recommendations reference compounds
+        only — the implicated food species are resolved at read time and shown on
+        <code class="text-parchment">/nutritionist/conditions/:id</code>.
       </p>
     </div>
     <%!-- Everyday mining lives in the hero card below; the header keeps only
@@ -519,6 +521,7 @@
     >
       <% rec_count = length(@recs[condition.id] || []) + length(@nutrient_recs[condition.id] || []) %>
       <% paper_count = length(@condition_studies[condition.id] || []) %>
+      <% facts = @fact_counts[condition.id] || %{total: 0, verified: 0} %>
 
       <%!-- Compact row: expand toggle (chevron + name + category) · count badges ·
            per-condition actions. The detail block is revealed on expand. --%>
@@ -548,8 +551,20 @@
           </span>
         </button>
 
+        <%!-- Counts; the fact tally doubles as the link to the nutritionist research
+             surface where the mined facts actually render (new tab — a different live
+             session). Plain dim text when there are no facts yet. --%>
         <span class="text-[11px] text-parchment-dim tabular-nums whitespace-nowrap">
-          {rec_count} advice · {paper_count} paper{if paper_count == 1, do: "", else: "s"}
+          {rec_count} advice · {paper_count} paper{if paper_count == 1, do: "", else: "s"} ·
+          <a
+            :if={facts.total > 0}
+            href={~p"/nutritionist/research/#{condition.id}"}
+            target="_blank"
+            rel="noopener"
+            class="text-basil hover:underline"
+          >{facts.total} fact{if facts.total == 1, do: "", else: "s"}<span :if={
+              facts.verified > 0
+            }> ({facts.verified} verified)</span> →</a><span :if={facts.total == 0}>0 facts</span>
         </span>
 
         <%!-- Primary per-condition action: open the mine modal to edit the prompt,

@@ -158,37 +158,200 @@ defmodule MehungryWeb.NutritionistLive.ResearchTest do
            |> render_change(%{"sort" => "newest"}) =~ "Dietary fiber in ulcerative colitis"
   end
 
-  test "defaults to the Verified filter and reveals contradicted findings on toggle", %{
+  test "defaults to Verified + Unverified and reveals contradicted findings on toggle", %{
     conn: conn,
     condition: condition
   } do
     {:ok, view, html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
 
-    # Verified-first default: verified facts show, the contradicted one is hidden.
+    # Default (verified + unverified selected): verified facts show, contradicted hidden.
     assert html =~ "Dietary fiber is associated with remission"
     refute html =~ "Fiber worsens flares"
 
-    # The label chips render.
+    # The label chips render as independent toggles.
     assert has_element?(
              view,
-             ~s(button[phx-click="set_label_filter"][phx-value-label="contradicted"])
+             ~s(button[phx-click="toggle_label"][phx-value-label="contradicted"])
            )
 
-    # Switching to All reveals the contradicted finding.
+    # Turning on the Contradicted chip reveals the contradicted finding, without
+    # dropping the already-shown verified ones.
     revealed =
       view
-      |> element(~s(button[phx-click="set_label_filter"][phx-value-label="all"]))
+      |> element(~s(button[phx-click="toggle_label"][phx-value-label="contradicted"]))
       |> render_click()
 
     assert revealed =~ "Fiber worsens flares"
+    assert revealed =~ "Dietary fiber is associated with remission"
   end
 
-  test "collapses each publication's findings behind a details summary", %{
+  test "collapses each publication's findings behind a disclosure toggle", %{
     conn: conn,
     condition: condition
   } do
     {:ok, view, _html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
-    assert has_element?(view, "details summary", "finding")
+    assert has_element?(view, "button", "finding")
+  end
+
+  describe "within-condition search" do
+    defp search(view, q) do
+      view |> element("#condition-research-search") |> render_change(%{"q" => q})
+    end
+
+    test "ranks a finding-match above a title/abstract-only match", %{
+      conn: conn,
+      condition: condition
+    } do
+      # P1 — the term is a FINDING (weight band A), absent from the title.
+      {:ok, _} =
+        Literature.upsert_study(%{pmid: 60_001, title: "Trial on gut remission", journal: "Gut"})
+
+      mine_fact(condition, 60_001, %{
+        fact_id: "mg1",
+        text: "Magnesium supplementation improved remission.",
+        license: "commercial_ok",
+        study_design: "randomized_controlled_trial"
+      })
+
+      # P2 — the term lives only in the ABSTRACT (band C); its finding omits it.
+      {:ok, _} =
+        Literature.upsert_study(%{
+          pmid: 60_002,
+          title: "A dietary survey",
+          abstract: "The survey discusses magnesium intake.",
+          journal: "J Nutr"
+        })
+
+      mine_fact(condition, 60_002, %{
+        fact_id: "mg2",
+        text: "Surveys reported mixed dietary results.",
+        license: "commercial_ok",
+        study_design: "randomized_controlled_trial"
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
+      html = search(view, "magnesium")
+
+      # Both papers surface; the finding-match ranks first and self-labels.
+      assert html =~ "Trial on gut remission"
+      assert html =~ "A dietary survey"
+      assert html =~ "Matched in a finding"
+
+      {p1, _} = :binary.match(html, "Trial on gut remission")
+      {p2, _} = :binary.match(html, "A dietary survey")
+      assert p1 < p2
+    end
+
+    test "a term in no finding or abstract shows the honest empty state", %{
+      conn: conn,
+      condition: condition
+    } do
+      {:ok, view, _html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
+      html = search(view, "zzqnope")
+
+      # (apostrophe/em-dash are HTML-escaped in the render — assert clean ASCII)
+      assert html =~ "open papers on PubMed to check"
+      refute html =~ "Dietary fiber is associated with remission"
+    end
+
+    test "composes with the verification chips (a contradicted-only match is gated)", %{
+      conn: conn,
+      condition: condition
+    } do
+      # A paper whose ONLY finding is contradicted — hidden under the default filter.
+      {:ok, _} = Literature.upsert_study(%{pmid: 60_003, title: "Zinc and flares", journal: "Gut"})
+
+      mine_fact(condition, 60_003, %{
+        fact_id: "zn1",
+        text: "Zincium intake worsened flare duration.",
+        label: "contradicted",
+        license: "non_commercial",
+        study_design: "cohort"
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
+
+      # Matched, but filtered out while Contradicted is off.
+      html = search(view, "zincium")
+      assert html =~ "none under the current verification filters"
+      refute html =~ "Zinc and flares"
+
+      # Toggling Contradicted on reveals it (re-filters the loaded results, no re-query).
+      revealed =
+        view
+        |> element(~s(button[phx-click="toggle_label"][phx-value-label="contradicted"]))
+        |> render_click()
+
+      assert revealed =~ "Zinc and flares"
+    end
+
+    test "clearing the query returns to the grouped browse view", %{
+      conn: conn,
+      condition: condition
+    } do
+      {:ok, view, _html} = live(conn, ~p"/nutritionist/research/#{condition.id}")
+
+      search(view, "fiber")
+      cleared = search(view, "")
+
+      # Browse mode restores the research-type grouping.
+      assert cleared =~ "Randomized &amp; controlled trials"
+    end
+  end
+
+  describe "global (all-research) mode on the landing" do
+    setup %{condition: condition} do
+      # An abstract-only match: the term is in the abstract, not the finding.
+      {:ok, _} =
+        Literature.upsert_study(%{
+          pmid: 55_010,
+          title: "Zinc survey",
+          abstract: "A survey mentioning fiber in passing.",
+          journal: "J Nutr"
+        })
+
+      mine_fact(condition, 55_010, %{
+        fact_id: "ab1",
+        text: "Zinc intake was measured.",
+        license: "non_commercial",
+        study_design: "cohort"
+      })
+
+      # Plain REFRESH — CONCURRENTLY can't run in the test transaction.
+      Repo.query!("REFRESH MATERIALIZED VIEW research_search")
+      :ok
+    end
+
+    test "toggles to All research and renders one card per paper with condition + label", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/nutritionist/research")
+
+      view |> element(~s(button[phx-value-mode="papers"])) |> render_click()
+      html = view |> element("#research-search-form") |> render_change(%{"q" => "fiber"})
+
+      # (The matched term "fiber" is wrapped in <mark>, so assert on non-term spans.)
+      # Finding-matches from the UC papers, each carrying the condition chip.
+      assert html =~ "Curcumin in UC"
+      assert html =~ "is associated with remission"
+      assert html =~ "Ulcerative Colitis"
+      assert html =~ "Matched in a finding"
+      # The 55002 fiber hit is a contradicted finding — shown labelled, not laundered.
+      assert html =~ "contradicted"
+      # The abstract-only paper surfaces with the abstract cue.
+      assert html =~ "Zinc survey"
+      assert html =~ "Matched in abstract"
+    end
+
+    test "toggling back to Conditions restores the catalog", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/nutritionist/research")
+
+      view |> element(~s(button[phx-value-mode="papers"])) |> render_click()
+      html = view |> element(~s(button[phx-value-mode="conditions"])) |> render_click()
+
+      assert html =~ "Ulcerative Colitis"
+      assert html =~ "studies"
+    end
   end
 
   describe "suggested-note persistence (My notes)" do

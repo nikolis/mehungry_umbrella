@@ -53,6 +53,44 @@
 > `license`/`certainty` constants in the miner-response mapping (which currently keep the
 > presentable/quote/grouping path dormant).
 
+> **Within-condition search + multi-select filter + no-collapse-on-save (2026-11-18).** Three
+> changes to `/nutritionist/research/:condition_id`:
+> - **Search box** (top of the toolbar): a full-text search over the condition's research — matching
+>   **distilled findings + title + abstract** (placeholder *"Search findings & abstracts in
+>   {Condition}"* + a persistent scope line *"…not full paper text"* so the affordance never implies
+>   full-text). Backed by `FactMining.search_condition_research/2` — a **weighted `tsvector`** (findings
+>   = band **A**, title = **B**, abstract = **C**, `ts_rank_cd`) so a term that appears **as a finding**
+>   ranks the paper above one where it's only in the title/abstract. In search mode the page switches
+>   from the grouped browse to a **flat, rank-ordered** result list; a card that matched on its findings
+>   shows a **"Matched in a finding"** cue, matched terms are highlighted, and the sort select is hidden
+>   (rank *is* the order). The verification chips still compose (filter the result set); a no-match query
+>   shows an honest empty state pointing to PubMed, not a bare "no results". Query-time, no migration.
+>   Query-time, no migration. (See the Phase 2 block for the global counterpart.)
+> - **Verification filter is now multi-select** — the chips are independent toggles (the **All** chip
+>   is gone), **default `verified` + `unverified`** (contradicted hidden) rather than single-select
+>   `:verified`. A contradicted match still surfaces, clearly labelled, never laundered as fact.
+> - **Accordions survive Save** — the per-bucket and per-publication disclosures are now **Alpine**
+>   (`x-data`/`x-show`), not native `<details>`, so saving a finding no longer collapses the open
+>   publication; a nutritionist can save several findings from one open paper.
+
+> **Global cross-condition search — Phase 2 (shipped 2026-11-18).** The landing `/nutritionist/research`
+> (`ResearchSearch`) is now **dual-mode** via a segmented toggle: **Conditions** (the fast path —
+> `conditions_for_search/1`, unchanged) and **All research** (global). All-research searches mined
+> findings + paper titles/abstracts across **every** condition (`FactMining.search_all_research/2`) and
+> renders **one card per PMID** — PMID dedupe is an exact `GROUP BY`, never entity resolution. Each card
+> carries the paper (title/journal/year/PubMed link) + a card cue (**"Matched in a finding"** vs
+> **"Matched in abstract"**) + an in-card **per-condition row list** (`{condition chip → the condition
+> page} — {label} · {matched finding}`, verified-first), each row keeping **its own** label — a paper
+> verified-for-X / contradicted-for-Y shows both, never collapsed to one "winning" label. **Depth is
+> abstract-inclusive**: a paper surfaces on an abstract match even when no finding mentions the term
+> (then the card shows the abstract snippet + the "Matched in abstract" cue); because the abstract sits
+> in weight band **C**, abstract-only cards rank below finding-matches automatically. Backed by a
+> `research_search` **materialized view** (one row per fact; `document` = findings A / title B /
+> abstract C + a findings-only `finding_tsv`), GIN-indexed, **refreshed app-side after a condition mine
+> completes** (`FactMining.refresh_research_search/0` from `ConditionFactMiningWorker` — post-commit,
+> outside the mine transaction, since `REFRESH … CONCURRENTLY` can't run in a txn). Capped at 50 cards.
+> True full paper body remains out of scope. See `docs/implementation/fact_mining.md`.
+
 ## 1. Goal
 
 A search engine of **pre-digested PubMed publications** for professional nutritionists. The

@@ -542,6 +542,29 @@ defmodule Mehungry.FactMining do
     |> Repo.aggregate(:count, :id)
   end
 
+  @doc """
+  Mined-fact tallies for many conditions in a single query — `%{condition_id =>
+  %{total: n, verified: n}}`, defaulting every id to zeros. Lets the admin
+  condition list show a per-card count (and a link to the research surface where
+  the facts actually render) without an N+1 over ~200 conditions.
+  """
+  def fact_counts_by_conditions(condition_ids) when is_list(condition_ids) do
+    rows =
+      ConditionMinedFact
+      |> where([f], f.condition_id in ^condition_ids)
+      |> group_by([f], [f.condition_id, f.label])
+      |> select([f], {f.condition_id, f.label, count(f.id)})
+      |> Repo.all()
+
+    base = Map.new(condition_ids, fn id -> {id, %{total: 0, verified: 0}} end)
+
+    Enum.reduce(rows, base, fn {cid, label, n}, acc ->
+      Map.update!(acc, cid, fn %{total: t, verified: v} ->
+        %{total: t + n, verified: v + if(label == "verified", do: n, else: 0)}
+      end)
+    end)
+  end
+
   @label_order %{
     "verified" => 0,
     "contradicted" => 1,
@@ -606,6 +629,318 @@ defmodule Mehungry.FactMining do
       publication_count: length(publications),
       fact_count: length(facts)
     }
+  end
+
+  @doc """
+  Within-condition full-text search over a condition's mined research. Returns a
+  flat, **rank-ordered** list of publications matching `query`, each the same
+  `build_publication/3` shape plus `:rank` (float) and `:matched_in_finding`
+  (bool).
+
+  Ranking is Postgres weighted `tsvector`: a publication's findings (`text` +
+  `quote`) sit in band **A**, its `title` in **B**, its `abstract` in **C** — so a
+  term that appears **as a finding** outranks one that only appears in the
+  title/abstract (`ts_rank_cd`). Matching is abstract-level (findings + title +
+  abstract); full paper body is not indexed. Results are ordered by rank, then a
+  `verified`-present tie-break (the label is a tie-break, **not** a score
+  multiplier, so weak/contradicted matches stay visible), then the usual
+  publication sort. A blank query returns no results (the caller treats blank as
+  browse mode).
+  """
+  def search_condition_research(condition_id, query) do
+    q = String.trim(query || "")
+
+    if q == "" do
+      %{results: [], result_count: 0}
+    else
+      ranked = ranked_pmids_for_condition(condition_id, q)
+      rank_by_pmid = Map.new(ranked, fn r -> {r.pmid, r} end)
+      pmids = Enum.map(ranked, & &1.pmid)
+
+      results =
+        case pmids do
+          [] ->
+            []
+
+          _ ->
+            facts =
+              ConditionMinedFact
+              |> where([f], f.condition_id == ^condition_id and f.pmid in ^pmids)
+              |> Repo.all()
+
+            studies = studies_by_pmid(facts)
+
+            facts
+            |> Enum.group_by(& &1.pmid)
+            |> Enum.map(fn {pmid, pmid_facts} ->
+              r = Map.get(rank_by_pmid, pmid, %{rank: 0.0, matched_in_finding: false})
+
+              build_publication(pmid, pmid_facts, studies)
+              |> Map.put(:rank, r.rank)
+              |> Map.put(:matched_in_finding, r.matched_in_finding)
+            end)
+            |> Enum.sort_by(&search_result_sort_key/1)
+        end
+
+      %{results: results, result_count: length(results)}
+    end
+  end
+
+  # Rank each matching PMID for a condition by a weighted tsvector document
+  # (findings text+quote = A, title = B, abstract = C). One grouped query;
+  # ordering happens in Elixir (small per-condition corpora) so the document
+  # isn't repeated in an ORDER BY too. The `?::text = ?` join bridges the string
+  # `f.pmid` to the integer `s.pmid`; an unenriched pmid gets a null study
+  # (findings-only rank). The weighted document is inlined as a literal fragment
+  # in both HAVING and SELECT (Ecto `fragment/1` needs a compile-time string).
+  defp ranked_pmids_for_condition(condition_id, q) do
+    ConditionMinedFact
+    |> where([f], f.condition_id == ^condition_id)
+    |> join(:left, [f], s in ScientificStudy, on: fragment("?::text = ?", s.pmid, f.pmid))
+    |> group_by([f, s], [f.pmid, s.id, s.title, s.abstract])
+    |> having(
+      [f, s],
+      fragment(
+        "(setweight(to_tsvector('english', unaccent(coalesce(string_agg(?, ' '), ''))), 'A') || setweight(to_tsvector('english', unaccent(coalesce(string_agg(coalesce(?, ''), ' '), ''))), 'A') || setweight(to_tsvector('english', unaccent(coalesce(?, ''))), 'B') || setweight(to_tsvector('english', unaccent(coalesce(?, ''))), 'C')) @@ websearch_to_tsquery('english', unaccent(?))",
+        f.text,
+        f.quote,
+        s.title,
+        s.abstract,
+        ^q
+      )
+    )
+    |> select([f, s], %{
+      pmid: f.pmid,
+      rank:
+        fragment(
+          "ts_rank_cd((setweight(to_tsvector('english', unaccent(coalesce(string_agg(?, ' '), ''))), 'A') || setweight(to_tsvector('english', unaccent(coalesce(string_agg(coalesce(?, ''), ' '), ''))), 'A') || setweight(to_tsvector('english', unaccent(coalesce(?, ''))), 'B') || setweight(to_tsvector('english', unaccent(coalesce(?, ''))), 'C')), websearch_to_tsquery('english', unaccent(?)))",
+          f.text,
+          f.quote,
+          s.title,
+          s.abstract,
+          ^q
+        ),
+      matched_in_finding:
+        fragment(
+          "to_tsvector('english', unaccent(coalesce(string_agg(?, ' '), ''))) @@ websearch_to_tsquery('english', unaccent(?))",
+          f.text,
+          ^q
+        )
+    })
+    |> Repo.all()
+  end
+
+  # Search result order: rank desc, then verified-present (tie-break only, never a
+  # score multiplier so weak/contradicted matches stay visible), then the usual
+  # MEDLINE→year→title publication sort.
+  defp search_result_sort_key(pub) do
+    has_verified = if Enum.any?(pub.facts, &(&1.label == "verified")), do: 0, else: 1
+    {-(pub.rank || 0.0), has_verified, publication_sort_key(pub)}
+  end
+
+  @global_search_limit 50
+
+  @doc """
+  Global, cross-condition research search (Phase 2). Returns a ranked list of
+  **one card per PMID**, each carrying the publication metadata plus the per-
+  condition rows it's filed under:
+
+      %{pmid, study_id, card_rank, any_in_finding, study, abstract_snippet,
+        conditions: [%{condition_id, condition_name, label, finding_text, in_finding}]}
+
+  Reads the `research_search` materialized view (findings=A, title=B, abstract=C):
+  a finding-match outranks a title/abstract-only one, and **abstract-inclusive** —
+  a paper surfaces on an abstract hit even when no finding mentions the term
+  (`any_in_finding: false` → the card shows a "Matched in abstract" snippet). PMID
+  dedupe is an exact `GROUP BY` (not entity resolution); every per-condition row
+  keeps its own label (never collapsed to one "winning" label). Capped at
+  #{@global_search_limit} cards. A blank query returns `[]`.
+  """
+  def search_all_research(query, _opts \\ []) do
+    q = String.trim(query || "")
+
+    if q == "" do
+      []
+    else
+      rows = global_search_rows(q)
+
+      pmids = Enum.map(rows, & &1.pmid)
+      studies = studies_by_pmid_strings(pmids)
+
+      Enum.map(rows, fn row ->
+        study = Map.get(studies, row.pmid)
+
+        %{
+          pmid: row.pmid,
+          study_id: row.study_id,
+          card_rank: row.card_rank,
+          any_in_finding: row.any_in_finding,
+          conditions: normalize_condition_rows(row.conditions),
+          study: study,
+          # The abstract is why this card surfaced only when no finding matched.
+          abstract_snippet: unless(row.any_in_finding, do: study && study.abstract)
+        }
+        |> Map.merge(study_meta(study))
+      end)
+    end
+  end
+
+  # Raw SQL: rank each MV row, keep the best finding per (pmid, condition), then
+  # collapse to one card per PMID with a jsonb array of its per-condition rows
+  # (verified-first inside the card). Card order = MAX(rank), finding-match as a
+  # tie-break (label is displayed, never folded into the score).
+  defp global_search_rows(q) do
+    sql = """
+    WITH tsq AS (SELECT websearch_to_tsquery('english', unaccent($1)) AS q),
+    hits AS (
+      SELECT rs.*, ts_rank_cd(rs.document, tsq.q) AS rank, (rs.finding_tsv @@ tsq.q) AS in_finding
+      FROM research_search rs, tsq
+      WHERE rs.document @@ tsq.q
+    ),
+    per_condition AS (
+      SELECT DISTINCT ON (pmid, condition_id) *
+      FROM hits
+      ORDER BY pmid, condition_id, rank DESC
+    )
+    SELECT
+      pmid,
+      MAX(rank) AS card_rank,
+      bool_or(in_finding) AS any_in_finding,
+      (array_agg(study_id) FILTER (WHERE study_id IS NOT NULL))[1] AS study_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'condition_id', condition_id, 'condition_name', condition_name,
+          'label', label, 'finding_text', finding_text, 'in_finding', in_finding
+        )
+        ORDER BY (label = 'verified') DESC, rank DESC
+      ) AS conditions
+    FROM per_condition
+    GROUP BY pmid
+    ORDER BY MAX(rank) DESC, bool_or(in_finding) DESC
+    LIMIT #{@global_search_limit}
+    """
+
+    %{rows: rows} = Repo.query!(sql, [q])
+
+    Enum.map(rows, fn [pmid, card_rank, any_in_finding, study_id, conditions] ->
+      %{
+        pmid: pmid,
+        card_rank: card_rank,
+        any_in_finding: any_in_finding,
+        study_id: study_id,
+        conditions: conditions
+      }
+    end)
+  end
+
+  # The jsonb array comes back with string keys; atomize to the render shape.
+  defp normalize_condition_rows(conditions) when is_list(conditions) do
+    Enum.map(conditions, fn c ->
+      %{
+        condition_id: c["condition_id"],
+        condition_name: c["condition_name"],
+        label: c["label"],
+        finding_text: c["finding_text"],
+        in_finding: c["in_finding"]
+      }
+    end)
+  end
+
+  defp normalize_condition_rows(_), do: []
+
+  # Like `studies_by_pmid/1` but keyed off raw pmid strings (global rows carry no
+  # fact structs). Reused for card display metadata.
+  defp studies_by_pmid_strings(pmid_strings) do
+    pmids =
+      pmid_strings
+      |> Enum.map(&parse_pmid/1)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    case pmids do
+      [] ->
+        %{}
+
+      _ ->
+        ScientificStudy
+        |> where([s], s.pmid in ^pmids)
+        |> Repo.all()
+        |> Map.new(fn s -> {to_string(s.pmid), s} end)
+    end
+  end
+
+  @doc """
+  Trigram spelling correction for the global search. For each whitespace token,
+  finds the closest lexeme in the `research_search` corpus (`pg_trgm` similarity
+  over `ts_stat`); returns the corrected query string when it differs from the
+  input, else `nil`. Used to auto-retry a typo'd query (e.g. "mediteranean" →
+  "mediterranean") that `websearch_to_tsquery` can't match on its own.
+  """
+  def spelling_suggestion(query) do
+    tokens =
+      (query || "")
+      |> String.trim()
+      |> String.split(~r/\s+/u, trim: true)
+
+    case tokens do
+      [] ->
+        nil
+
+      _ ->
+        corrected = Enum.map(tokens, &closest_corpus_word/1)
+
+        if Enum.map(corrected, &String.downcase/1) != Enum.map(tokens, &String.downcase/1) do
+          Enum.join(corrected, " ")
+        end
+    end
+  end
+
+  # The corpus **surface word** most trigram-similar to `token` (≥ 0.4), else the
+  # token unchanged. Built from the raw finding/title/abstract text (NOT `ts_stat`
+  # lexemes — those are stemmed, e.g. "ulcerative"→"ulcer", so a typo like
+  # "ulclerative" wouldn't match the stem). Only called when a search already
+  # returned nothing, so the full-text scan is off the hot path.
+  defp closest_corpus_word(token) do
+    sql = """
+    SELECT word
+    FROM (
+      SELECT DISTINCT lower(w) AS word
+      FROM condition_mined_facts f
+      LEFT JOIN scientific_studies s ON s.pmid::text = f.pmid
+      CROSS JOIN LATERAL regexp_split_to_table(
+        coalesce(f.text, '') || ' ' || coalesce(s.title, '') || ' ' || coalesce(s.abstract, ''),
+        '[^[:alpha:]]+'
+      ) AS w
+      WHERE length(w) >= 4
+    ) vocab
+    WHERE similarity(word, $1) > 0.4
+    ORDER BY similarity(word, $1) DESC
+    LIMIT 1
+    """
+
+    case Repo.query!(sql, [token]) do
+      %{rows: [[word]]} -> word
+      _ -> token
+    end
+  end
+
+  @doc """
+  Rebuild the `research_search` materialized view (global search index). Called
+  app-side after a condition mine commits — `REFRESH … CONCURRENTLY` must run
+  outside a transaction, so this is NOT a DB trigger. Tolerant: logs and returns
+  `:error` if the view can't be refreshed concurrently (e.g. never populated / a
+  sandboxed transaction) rather than failing the mine.
+  """
+  def refresh_research_search do
+    case Repo.query("REFRESH MATERIALIZED VIEW CONCURRENTLY research_search") do
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        require Logger
+        Logger.warning("[FactMining] research_search refresh failed: #{inspect(reason)}")
+        :error
+    end
   end
 
   @doc """

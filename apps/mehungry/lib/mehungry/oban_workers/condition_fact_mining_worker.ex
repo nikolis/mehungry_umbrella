@@ -54,6 +54,10 @@ defmodule Mehungry.ObanWorkers.ConditionFactMiningWorker do
         )
 
         Runs.mark_completed(tracking_id, counts)
+        # Rebuild the global cross-condition search index now that this condition's
+        # facts changed. Post-commit + outside any txn (REFRESH … CONCURRENTLY);
+        # best-effort — a refresh failure must not fail an otherwise-successful mine.
+        FactMining.refresh_research_search()
         :ok
 
       # Miner concurrency saturated (429). Back off per Retry-After without burning a

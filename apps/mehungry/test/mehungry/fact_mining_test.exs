@@ -3,7 +3,8 @@ defmodule Mehungry.FactMiningTest do
 
   alias Mehungry.Food
   alias Mehungry.FactMining
-  alias Mehungry.FactMining.SpeciesMinedFact
+  alias Mehungry.FactMining.{ConditionMinedFact, SpeciesMinedFact}
+  alias Mehungry.{Health, Literature}
 
   setup do
     {:ok, species} =
@@ -19,6 +20,23 @@ defmodule Mehungry.FactMiningTest do
     end)
 
     %{species: species}
+  end
+
+  defp condition_fact(condition, pmid, attrs) do
+    %ConditionMinedFact{}
+    |> ConditionMinedFact.changeset(
+      Map.merge(
+        %{
+          condition_id: condition.id,
+          pmid: to_string(pmid),
+          label: "verified",
+          certainty: "high",
+          scope_kind: "relational"
+        },
+        attrs
+      )
+    )
+    |> Repo.insert!()
   end
 
   defp sheet(facts) do
@@ -396,6 +414,133 @@ defmodule Mehungry.FactMiningTest do
     test "rejects a non-http(s) base_url" do
       assert {:error, changeset} = FactMining.update_settings(%{"base_url" => "not-a-url"})
       assert %{base_url: _} = errors_on(changeset)
+    end
+  end
+
+  describe "search_condition_research/2 (within-condition weighted full-text)" do
+    setup do
+      {:ok, condition} = Health.create_condition(%{name: "Search Test Condition"})
+
+      # P1: the search term lives in a FINDING (weight band A), not in the title.
+      {:ok, _} =
+        Literature.upsert_study(%{pmid: 70_001, title: "Trial on gut remission", journal: "Gut"})
+
+      condition_fact(condition, 70_001, %{
+        fact_id: "a1",
+        text: "Magnesium supplementation improved remission."
+      })
+
+      # P2: the term lives only in the ABSTRACT (band C); its finding never mentions it.
+      {:ok, _} =
+        Literature.upsert_study(%{
+          pmid: 70_002,
+          title: "A dietary survey",
+          abstract: "The survey discusses magnesium intake at length.",
+          journal: "J Nutr"
+        })
+
+      condition_fact(condition, 70_002, %{
+        fact_id: "b1",
+        text: "Surveys reported mixed dietary results."
+      })
+
+      %{condition: condition}
+    end
+
+    test "ranks a finding-match above an abstract-only match", %{condition: condition} do
+      %{results: results, result_count: count} =
+        FactMining.search_condition_research(condition.id, "magnesium")
+
+      assert count == 2
+      assert [first, second] = results
+      # The finding-match (band A) ranks first; the abstract-only match (band C) second.
+      assert first.pmid == "70001"
+      assert first.matched_in_finding
+      assert second.pmid == "70002"
+      refute second.matched_in_finding
+    end
+
+    test "a blank query returns no results", %{condition: condition} do
+      assert %{results: [], result_count: 0} =
+               FactMining.search_condition_research(condition.id, "   ")
+    end
+
+    test "a term in neither findings nor abstracts returns no results", %{condition: condition} do
+      assert %{results: [], result_count: 0} =
+               FactMining.search_condition_research(condition.id, "zzqnope")
+    end
+  end
+
+  describe "search_all_research/2 (global cross-condition, one card per PMID)" do
+    setup do
+      {:ok, cond_a} = Health.create_condition(%{name: "Global Cond A"})
+      {:ok, cond_b} = Health.create_condition(%{name: "Global Cond B"})
+
+      # Paper P1 — shared across BOTH conditions, each with its own label, the term
+      # in the FINDING (band A) on both sides.
+      {:ok, _} = Literature.upsert_study(%{pmid: 80_001, title: "Shared omega paper", journal: "Gut"})
+      condition_fact(cond_a, 80_001, %{fact_id: "s_a", text: "Omega3 reduced inflammatory markers."})
+
+      condition_fact(cond_b, 80_001, %{
+        fact_id: "s_b",
+        text: "Omega3 had no effect on symptoms.",
+        label: "contradicted"
+      })
+
+      # Paper P2 — the term is only in the ABSTRACT (band C); its finding omits it.
+      {:ok, _} =
+        Literature.upsert_study(%{
+          pmid: 80_002,
+          title: "A mineral survey",
+          abstract: "The review discusses omega3 supplementation briefly.",
+          journal: "J Nutr"
+        })
+
+      condition_fact(cond_a, 80_002, %{fact_id: "o1", text: "Iron status was unrelated to outcomes."})
+
+      # Materialize the global index (plain form — CONCURRENTLY can't run in the
+      # test transaction; mirrors the recipe_search test).
+      Repo.query!("REFRESH MATERIALIZED VIEW research_search")
+
+      %{cond_a: cond_a, cond_b: cond_b}
+    end
+
+    test "dedupes to one card per PMID, keeping each condition's own label" do
+      cards = FactMining.search_all_research("omega3")
+
+      # Two distinct papers, not four fact rows.
+      assert length(cards) == 2
+      pmids = Enum.map(cards, & &1.pmid)
+      assert "80001" in pmids
+      assert "80002" in pmids
+
+      shared = Enum.find(cards, &(&1.pmid == "80001"))
+      assert shared.any_in_finding
+      labels = shared.conditions |> Enum.map(& &1.label) |> Enum.sort()
+      # Both conditions present, each with its OWN label (never collapsed).
+      assert labels == ["contradicted", "verified"]
+    end
+
+    test "ranks a finding-match above an abstract-only match (abstract-inclusive)" do
+      cards = FactMining.search_all_research("omega3")
+
+      assert [first, second] = cards
+      assert first.pmid == "80001"
+      assert first.any_in_finding
+      # P2 surfaced on the abstract alone — abstract-inclusive, ranked last.
+      assert second.pmid == "80002"
+      refute second.any_in_finding
+    end
+
+    test "a blank query returns no cards" do
+      assert FactMining.search_all_research("   ") == []
+    end
+
+    test "spelling_suggestion corrects a corpus typo (surface words, not stems)" do
+      # "inflammatory" is a corpus word (a finding mentions it); the typo corrects.
+      assert FactMining.spelling_suggestion("inflamatory") == "inflammatory"
+      # An exact corpus word needs no correction.
+      assert FactMining.spelling_suggestion("omega") == nil
     end
   end
 end

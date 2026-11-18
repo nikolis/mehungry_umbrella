@@ -84,11 +84,16 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
     condition_ids = Enum.map(conditions, & &1.id)
     recs = Health.recommendations_by_conditions(condition_ids)
     nutrient_recs = Health.nutrient_recommendations_by_conditions(condition_ids)
+    # Mined-fact tallies (total + verified) per condition, so each card can show
+    # what a mine produced and link to the research surface where it renders —
+    # the facts don't live on this page (see `handle_single_mine_run/2`).
+    fact_counts = FactMining.fact_counts_by_conditions(condition_ids)
 
     socket
     |> assign(:conditions, conditions)
     |> assign(:recs, recs)
     |> assign(:nutrient_recs, nutrient_recs)
+    |> assign(:fact_counts, fact_counts)
     |> assign(:condition_studies, condition_studies)
     |> assign(:rec_candidates, RecommendationCandidates.list_pending_candidates())
     |> assign(:phase_candidates, ConditionRecCandidates.list_pending_candidates())
@@ -495,8 +500,8 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   # A tracking-row transition for a single-condition mine. On a terminal status
   # (completed/failed/cancelled) clear the card's "Mining…" state + flash the outcome;
   # a revert to `pending` (a 429 snooze / pending retry) leaves the card mining — it's
-  # still queued. Mined facts feed the nutritionist research surface, not this page, so
-  # no reload is needed.
+  # still queued. On completion we reload so the card's mined-fact count reflects the
+  # new facts (they render on the nutritionist research surface, linked from the card).
   defp handle_single_mine_run(socket, %{status: status} = run)
        when status in ["completed", "failed", "cancelled"] do
     socket =
@@ -508,7 +513,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
     case status do
       "completed" ->
-        put_flash(socket, :info, "Mined #{run.facts_total} fact(s) for “#{name}”.")
+        socket
+        |> load()
+        |> put_flash(:info, "Mined #{run.facts_total} fact(s) for “#{name}”.")
 
       "failed" ->
         put_flash(socket, :error, "Mining failed for “#{name}”: #{run.error}")

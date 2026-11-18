@@ -17,6 +17,8 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
   """
   use MehungryWeb, :live_view
 
+  import MehungryWeb.NutritionistLive.ResearchFormatting
+
   alias Mehungry.FactMining
   alias Mehungry.Health
   alias Mehungry.Professionals.ResearchNotes
@@ -44,10 +46,14 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
      |> assign(:publication_count, research.publication_count)
      |> assign(:fact_count, research.fact_count)
      |> assign(:sort, :relevance)
-     |> assign(:label_filter, :verified)
+     |> assign(:selected_labels, MapSet.new([:verified, :unverified]))
      |> assign(:label_counts, label_counts(research))
      |> assign(:saved_keys, ResearchNotes.saved_claim_keys(user.id, condition.id))
-     |> assign(:composing_study_id, nil)}
+     |> assign(:composing_study_id, nil)
+     # Search: `query` is the raw box text; `search` is nil in browse mode and a
+     # `%{results, result_count}` in search mode (a flat, rank-ordered list).
+     |> assign(:query, "")
+     |> assign(:search, nil)}
   end
 
   @impl true
@@ -55,8 +61,35 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
     {:noreply, assign(socket, :sort, sort_key_atom(sort))}
   end
 
-  def handle_event("set_label_filter", %{"label" => label}, socket) do
-    {:noreply, assign(socket, :label_filter, filter_atom(label))}
+  # Within-condition search. Blank query → browse mode (`search: nil`); otherwise
+  # a rank-ordered result set from the weighted-tsvector ranker. Debounced in the
+  # template, so this runs at most every ~250ms while typing.
+  def handle_event("search", %{"q" => q}, socket) do
+    case String.trim(q) do
+      "" ->
+        {:noreply, assign(socket, query: "", search: nil)}
+
+      trimmed ->
+        search = FactMining.search_condition_research(socket.assigns.condition.id, trimmed)
+        {:noreply, assign(socket, query: q, search: search)}
+    end
+  end
+
+  def handle_event("clear_search", _params, socket) do
+    {:noreply, assign(socket, query: "", search: nil)}
+  end
+
+  # Each chip is an independent toggle — several labels can be shown at once.
+  def handle_event("toggle_label", %{"label" => label}, socket) do
+    key = filter_atom(label)
+    selected = socket.assigns.selected_labels
+
+    selected =
+      if MapSet.member?(selected, key),
+        do: MapSet.delete(selected, key),
+        else: MapSet.put(selected, key)
+
+    {:noreply, assign(socket, :selected_labels, selected)}
   end
 
   # Save ⇄ unsave a fact (the per-fact bookmark toggle). `claim_id` carries the
@@ -124,29 +157,31 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
 
   # ── Verification-label filter ───────────────────────────────────────────────
 
-  # Chip order (and the segmented control). `:verified` is the default so the
-  # page leads with the highest-trust findings.
+  # The independent-toggle chips. Multi-select — `verified` + `unverified` are on
+  # by default (contradicted hidden) so the page leads with usable findings but
+  # doesn't drop the many unverified ones.
   defp filter_options do
     [
       verified: gettext("Verified"),
       contradicted: gettext("Contradicted"),
-      unverified: gettext("Unverified"),
-      all: gettext("All")
+      unverified: gettext("Unverified")
     ]
   end
 
-  defp filter_atom(l), do: Enum.find(Keyword.keys(filter_options()), &(to_string(&1) == l)) || :all
+  defp filter_atom(l),
+    do: Enum.find(Keyword.keys(filter_options()), &(to_string(&1) == l)) || :verified
 
-  # Does a fact pass the active label filter? The miner emits several
+  # Fold a fact's raw label into its chip group. The miner emits several
   # `unverified_*` variants (quality/fulltext/insufficient/verification) that all
-  # fold into the one "Unverified" chip.
-  defp fact_visible?(_fact, :all), do: true
-  defp fact_visible?(%{label: "verified"}, :verified), do: true
-  defp fact_visible?(%{label: "contradicted"}, :contradicted), do: true
-  defp fact_visible?(%{label: "unverified" <> _}, :unverified), do: true
-  defp fact_visible?(_fact, _filter), do: false
+  # belong to the one "Unverified" chip.
+  defp fact_group(%{label: "verified"}), do: :verified
+  defp fact_group(%{label: "contradicted"}), do: :contradicted
+  defp fact_group(_fact), do: :unverified
 
-  defp visible_facts(pub, filter), do: Enum.filter(pub.facts, &fact_visible?(&1, filter))
+  # Does a fact pass the active filter set? Visible iff its group is selected.
+  defp fact_visible?(fact, selected), do: MapSet.member?(selected, fact_group(fact))
+
+  defp visible_facts(pub, selected), do: Enum.filter(pub.facts, &fact_visible?(&1, selected))
 
   # Condition-wide counts for the chip badges (static — independent of the active
   # filter), computed once in `mount/3` from every loaded fact.
@@ -222,13 +257,18 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         @groups
         |> sorted_groups(@sort)
         |> Enum.map(fn group ->
-          %{group | publications: Enum.filter(group.publications, &(visible_facts(&1, @label_filter) != []))}
+          %{group | publications: Enum.filter(group.publications, &(visible_facts(&1, @selected_labels) != []))}
         end)
         |> Enum.reject(&(&1.publications == [])) %>
       <% visible_free =
         @free_publications
         |> sort_publications(@sort)
-        |> Enum.filter(&(visible_facts(&1, @label_filter) != [])) %>
+        |> Enum.filter(&(visible_facts(&1, @selected_labels) != [])) %>
+      <%!-- Search results keep their rank order; the label chips still filter. --%>
+      <% visible_results =
+        if @search,
+          do: Enum.filter(@search.results, &(visible_facts(&1, @selected_labels) != [])),
+          else: [] %>
       <% has_data = @groups != [] or @free_publications != [] %>
 
       <header class="mb-4">
@@ -242,85 +282,183 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         </p>
       </header>
 
-      <div
-        :if={has_data}
-        class="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-ink-panel2"
-      >
-        <div
-          class="flex flex-wrap items-center gap-1.5"
-          role="group"
-          aria-label={gettext("Filter by verification")}
-        >
-          <button
-            :for={{key, label} <- filter_options()}
-            type="button"
-            phx-click="set_label_filter"
-            phx-value-label={key}
-            aria-pressed={to_string(@label_filter == key)}
-            class={[
-              "px-2.5 py-1 rounded-full text-xs transition-colors",
-              if(@label_filter == key,
-                do: "bg-basil/15 text-basil",
-                else: "bg-ink-panel2 text-parchment-dim hover:text-parchment"
-              )
-            ]}
+      <div :if={has_data} class="mb-6 pb-4 border-b border-ink-panel2 space-y-3">
+        <%!-- Within-condition search: findings + title + abstract, with
+             finding-matches ranked above title/abstract-only ones. The scope line
+             is load-bearing honesty — full paper text is not indexed. --%>
+        <div>
+          <form
+            id="condition-research-search"
+            phx-change="search"
+            phx-submit="search"
+            class="relative"
+            role="search"
           >
-            {label} <span class="opacity-70">{label_count(@label_counts, key)}</span>
-          </button>
+            <input
+              type="search"
+              name="q"
+              value={@query}
+              phx-debounce="250"
+              autocomplete="off"
+              placeholder={
+                gettext("Search findings & abstracts in %{condition}", condition: @condition.name)
+              }
+              aria-label={gettext("Search this condition's research")}
+              class="w-full rounded-md border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 pr-8 placeholder:text-parchment-dim focus:outline-none focus:ring-1 focus:ring-basil/50"
+            />
+            <button
+              :if={@query != ""}
+              type="button"
+              phx-click="clear_search"
+              aria-label={gettext("Clear search")}
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-parchment-dim hover:text-parchment"
+            >
+              ✕
+            </button>
+          </form>
+          <p class="mt-1 text-[11px] text-parchment-dim/80">
+            {gettext("Searches distilled findings, titles, and abstracts — not full paper text.")}
+          </p>
         </div>
 
-        <form id="research-sort" phx-change="set_sort" class="ml-auto flex items-center gap-1.5">
-          <label for="sort" class="text-xs text-parchment-dim">{gettext("Sort")}</label>
-          <select
-            id="sort"
-            name="sort"
-            class="rounded-md border border-ink-panel2 bg-ink-panel2 text-parchment text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-basil/50"
+        <div class="flex flex-wrap items-center gap-2">
+          <div
+            class="flex flex-wrap items-center gap-1.5"
+            role="group"
+            aria-label={gettext("Filter by verification")}
           >
-            <option :for={{key, label} <- sort_options()} value={key} selected={@sort == key}>
-              {label}
-            </option>
-          </select>
-        </form>
+            <button
+              :for={{key, label} <- filter_options()}
+              type="button"
+              phx-click="toggle_label"
+              phx-value-label={key}
+              aria-pressed={to_string(MapSet.member?(@selected_labels, key))}
+              class={[
+                "px-2.5 py-1 rounded-full text-xs transition-colors",
+                if(MapSet.member?(@selected_labels, key),
+                  do: "bg-basil/15 text-basil",
+                  else: "bg-ink-panel2 text-parchment-dim hover:text-parchment"
+                )
+              ]}
+            >
+              {label} <span class="opacity-70">{label_count(@label_counts, key)}</span>
+            </button>
+          </div>
+
+          <%!-- Sort is browse-only; in search mode rank IS the order. --%>
+          <form
+            :if={@search == nil}
+            id="research-sort"
+            phx-change="set_sort"
+            class="ml-auto flex items-center gap-1.5"
+          >
+            <label for="sort" class="text-xs text-parchment-dim">{gettext("Sort")}</label>
+            <select
+              id="sort"
+              name="sort"
+              class="rounded-md border border-ink-panel2 bg-ink-panel2 text-parchment text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-basil/50"
+            >
+              <option :for={{key, label} <- sort_options()} value={key} selected={@sort == key}>
+                {label}
+              </option>
+            </select>
+          </form>
+        </div>
       </div>
 
       <p :if={not has_data} class="text-sm text-parchment-dim py-8 text-center">
         {gettext("No digested research for this condition yet.")}
       </p>
 
+      <%!-- ── Search mode: a flat, rank-ordered result list ──────────────── --%>
+      <div :if={has_data and @search != nil}>
+        <p
+          :if={@search.result_count == 0}
+          class="text-sm text-parchment-dim py-8 text-center"
+        >
+          {gettext(
+            "No findings or abstracts mention “%{q}” in %{condition}. Full paper text isn't searchable — open papers on PubMed to check.",
+            q: @query,
+            condition: @condition.name
+          )}
+        </p>
+
+        <p
+          :if={@search.result_count > 0 and visible_results == []}
+          class="text-sm text-parchment-dim py-8 text-center"
+        >
+          {gettext("Matches found, but none under the current verification filters.")}
+        </p>
+
+        <p :if={visible_results != []} class="text-xs text-parchment-dim mb-3">
+          {ngettext(
+            "%{count} matching publication — best match first.",
+            "%{count} matching publications — best match first.",
+            length(visible_results)
+          )}
+        </p>
+
+        <.publication_card
+          :for={pub <- visible_results}
+          pub={pub}
+          presentable={pub.presentable?}
+          selected_labels={@selected_labels}
+          saved_keys={@saved_keys}
+          composing_study_id={@composing_study_id}
+          query={@query}
+          matched_in_finding={pub.matched_in_finding}
+        />
+      </div>
+
+      <%!-- ── Browse mode: publications grouped by research type ──────────── --%>
       <p
-        :if={has_data and visible_groups == [] and visible_free == []}
+        :if={has_data and @search == nil and visible_groups == [] and visible_free == []}
         class="text-sm text-parchment-dim py-8 text-center"
       >
-        {gettext("No findings match this filter.")}
+        {gettext("No findings match these filters.")}
       </p>
 
-      <%!-- Presentable publications — grouped by research type, with quotes. --%>
-      <details :for={group <- visible_groups} class="mb-8 group/bucket" open>
-        <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim hover:text-parchment">
-          <.icon
-            name="hero-chevron-right"
-            class="w-3.5 h-3.5 transition-transform group-open/bucket:rotate-90"
-          />
+      <%!-- Presentable publications — grouped by research type, with quotes.
+           Alpine disclosure (not <details>) so the open state is held on the DOM
+           node and survives LiveView re-renders on Save. --%>
+      <div
+        :for={group <- if(@search == nil, do: visible_groups, else: [])}
+        id={"bucket-#{group.key}"}
+        class="mb-8"
+        x-data="{ open: true }"
+      >
+        <button
+          type="button"
+          @click="open = !open"
+          x-bind:aria-expanded="open"
+          class="w-full cursor-pointer select-none mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim hover:text-parchment"
+        >
+          <span
+            class="inline-flex transition-transform motion-reduce:transition-none"
+            x-bind:class="open && 'rotate-90'"
+          >
+            <.icon name="hero-chevron-right" class="w-3.5 h-3.5" />
+          </span>
           {group.label}
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim normal-case tracking-normal">
             {length(group.publications)}
           </span>
-        </summary>
+        </button>
 
-        <div>
+        <div x-show="open" x-cloak>
           <.publication_card
             :for={pub <- group.publications}
             pub={pub}
             presentable={true}
-            label_filter={@label_filter}
+            selected_labels={@selected_labels}
             saved_keys={@saved_keys}
             composing_study_id={@composing_study_id}
           />
         </div>
-      </details>
+      </div>
 
       <%!-- Free claims — distilled facts from papers we may not reproduce. --%>
-      <section :if={visible_free != []} class="mb-8">
+      <section :if={@search == nil and visible_free != []} class="mb-8">
         <div class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim">
           {gettext("Free claims")}
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim normal-case tracking-normal">
@@ -337,7 +475,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
           :for={pub <- visible_free}
           pub={pub}
           presentable={false}
-          label_filter={@label_filter}
+          selected_labels={@selected_labels}
           saved_keys={@saved_keys}
           composing_study_id={@composing_study_id}
         />
@@ -350,22 +488,29 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
 
   attr :pub, :map, required: true
   attr :presentable, :boolean, required: true
-  attr :label_filter, :any, required: true
+  attr :selected_labels, :any, required: true
   attr :saved_keys, :any, required: true
   attr :composing_study_id, :any, required: true
+  # Search-mode only (browse keeps the defaults): the active query for term
+  # highlighting, and whether the match hit this paper's findings band.
+  attr :query, :any, default: nil
+  attr :matched_in_finding, :boolean, default: false
 
   defp publication_card(assigns) do
-    assigns = assign(assigns, :facts, visible_facts(assigns.pub, assigns.label_filter))
+    assigns = assign(assigns, :facts, visible_facts(assigns.pub, assigns.selected_labels))
 
     ~H"""
-    <article class="mb-3 p-4 rounded-xl bg-ink-panel2 border border-ink-panel2">
+    <article
+      id={"pub-#{@pub.study_id || @pub.pmid}"}
+      class="mb-3 p-4 rounded-xl bg-ink-panel2 border border-ink-panel2"
+    >
       <a
         href={pubmed_url(@pub)}
         target="_blank"
         rel="noopener"
         class="text-parchment font-medium hover:text-basil hover:underline"
       >
-        {@pub.title || gettext("PMID %{pmid}", pmid: @pub.pmid || "—")}
+        <.highlighted text={@pub.title || gettext("PMID %{pmid}", pmid: @pub.pmid || "—")} query={@query} />
       </a>
 
       <p :if={authors_line(@pub.authors)} class="text-xs text-parchment-dim mt-1">
@@ -373,6 +518,16 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
       </p>
 
       <div class="flex flex-wrap items-center gap-1.5 mt-2 text-[10px]">
+        <%!-- Search self-explains its ranking: this paper rose because the term is
+             a finding, not just body text. Relevance cue only — the per-fact
+             verified/contradicted label still governs trust. --%>
+        <span
+          :if={@matched_in_finding}
+          class="px-2 py-0.5 rounded-full bg-basil/15 text-basil font-medium"
+          title={gettext("Your search term appears in a distilled finding of this paper, not just its title or abstract.")}
+        >
+          {gettext("Matched in a finding")}
+        </span>
         <span
           :if={@pub.medline?}
           class="px-2 py-0.5 rounded-full bg-basil/15 text-basil font-medium"
@@ -395,19 +550,30 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
         </span>
       </div>
 
-      <details class="mt-2 group/pub">
-        <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none flex items-center gap-1.5 text-xs text-parchment-dim hover:text-parchment">
-          <.icon
-            name="hero-chevron-right"
-            class="w-3 h-3 transition-transform group-open/pub:rotate-90"
-          />
+      <%!-- Alpine disclosure (not <details>) so the open state is held on the DOM
+           node and survives the LiveView re-render a Save triggers — letting the
+           nutritionist save several findings from one open publication. --%>
+      <div class="mt-2" x-data="{ open: false }">
+        <button
+          type="button"
+          @click="open = !open"
+          x-bind:aria-expanded="open"
+          class="cursor-pointer select-none flex items-center gap-1.5 text-xs text-parchment-dim hover:text-parchment"
+        >
+          <span
+            class="inline-flex transition-transform motion-reduce:transition-none"
+            x-bind:class="open && 'rotate-90'"
+          >
+            <.icon name="hero-chevron-right" class="w-3 h-3" />
+          </span>
           {ngettext("%{count} finding", "%{count} findings", length(@facts))}
-        </summary>
+        </button>
 
+        <div x-show="open" x-cloak>
         <ul class="mt-3 space-y-2">
           <li :for={fact <- @facts} class="pl-3 border-l-2 border-ink text-xs">
             <div class="text-parchment">
-              {fact.text}
+              <.highlighted text={fact.text} query={@query} />
               <span class={["ml-1", label_class(fact.label)]}>{label_text(fact.label)}</span>
               <span
                 :if={@presentable or fact.certainty not in [nil, "very_low"]}
@@ -497,38 +663,18 @@ defmodule MehungryWeb.NutritionistLive.ResearchCondition do
           </button>
         </div>
       </form>
-      </details>
+      </div>
+      </div>
     </article>
     """
   end
 
   # ── View helpers ────────────────────────────────────────────────────────────
+  # (label_text/label_class/highlighted/highlight_segments/pubmed_url/authors_line
+  # are shared via MehungryWeb.NutritionistLive.ResearchFormatting.)
 
   defp saved?(saved_keys, study_id, fact_id),
     do: MapSet.member?(saved_keys, {study_id, fact_id})
-
-  defp pubmed_url(%{pmid: pmid}) when is_binary(pmid) and pmid != "",
-    do: "https://pubmed.ncbi.nlm.nih.gov/#{pmid}/"
-
-  defp pubmed_url(_), do: "https://pubmed.ncbi.nlm.nih.gov/"
-
-  defp authors_line(authors) when is_list(authors) and authors != [] do
-    case authors do
-      [a] -> a
-      [a, b] -> "#{a}, #{b}"
-      [a, b | _] -> "#{a}, #{b}, et al."
-    end
-  end
-
-  defp authors_line(_), do: nil
-
-  defp label_text("verified"), do: gettext("verified")
-  defp label_text("contradicted"), do: gettext("contradicted")
-  defp label_text(_unverified), do: gettext("unverified")
-
-  defp label_class("verified"), do: "text-basil"
-  defp label_class("contradicted"), do: "text-paprika"
-  defp label_class(_unverified), do: "text-parchment-dim"
 
   defp certainty_text("high"), do: gettext("high certainty")
   defp certainty_text("moderate"), do: gettext("moderate certainty")
