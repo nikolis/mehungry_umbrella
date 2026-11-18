@@ -91,6 +91,15 @@
 > outside the mine transaction, since `REFRESH … CONCURRENTLY` can't run in a txn). Capped at 50 cards.
 > True full paper body remains out of scope. See `docs/implementation/fact_mining.md`.
 
+> **Search pending indicator (shipped 2026-11-18).** `run_query/2` is synchronous (the LiveView
+> only re-renders once results are in), so the in-flight cue is driven purely by LiveView's automatic
+> `phx-change-loading`/`phx-submit-loading` classes on `#research-search-form` (registered as Tailwind
+> variants) — **no server/assign change**. While a search is in flight the field's magnifier icon swaps
+> to a spinning `basil` ring and an indeterminate `animate-sweep` bar runs under the input (both
+> `motion-reduce`-safe); the All-research results container is `aria-live="polite"` so the result count
+> is announced. Most visible on the slower All-research full-text path; the Conditions path is an
+> in-memory filter. (If the field cue proves too quiet, the follow-up is `start_async` + skeleton cards.)
+
 ## 1. Goal
 
 A search engine of **pre-digested PubMed publications** for professional nutritionists. The

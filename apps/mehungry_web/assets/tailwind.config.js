@@ -90,6 +90,15 @@ module.exports = {
       fontFamily: {
         display: ['"Iowan Old Style"', '"Palatino Linotype"', '"Book Antiqua"', 'Georgia', 'serif'],
       },
+      keyframes: {
+        sweep: {
+          '0%': { transform: 'translateX(-120%)' },
+          '100%': { transform: 'translateX(420%)' },
+        },
+      },
+      animation: {
+        sweep: 'sweep 1s ease-in-out infinite',
+      },
     },
   },
   plugins: [

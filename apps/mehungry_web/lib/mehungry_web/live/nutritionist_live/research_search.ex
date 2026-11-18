@@ -121,10 +121,23 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
 
       <form id="research-search-form" phx-change="search" phx-submit="search" class="mb-2">
         <div class="relative">
+          <%!-- Magnifier (idle) swaps to a spinner while a search request is in
+               flight. LiveView stamps phx-change-loading/phx-submit-loading on this
+               form the instant the event is pushed and strips it when the diff
+               lands — so this is the pending cue even though run_query is sync. --%>
           <.icon
             name="hero-magnifying-glass"
-            class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-parchment-dim"
+            class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-parchment-dim phx-change-loading:hidden phx-submit-loading:hidden"
           />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            class="hidden phx-change-loading:block phx-submit-loading:block w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-basil animate-spin motion-reduce:animate-none"
+          >
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" class="opacity-25" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+          </svg>
           <input
             type="text"
             name="q"
@@ -138,6 +151,13 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
             }
             class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-ink-panel2 border border-ink-panel2 text-parchment placeholder:text-parchment-dim focus:outline-none focus:border-basil"
           />
+          <%!-- Indeterminate sweep under the field — motion even on a fast query. --%>
+          <span
+            aria-hidden="true"
+            class="hidden phx-change-loading:block phx-submit-loading:block absolute inset-x-0 -bottom-1 h-0.5 overflow-hidden rounded-full"
+          >
+            <span class="block h-full w-1/3 bg-basil animate-sweep motion-reduce:animate-none"></span>
+          </span>
         </div>
       </form>
 
@@ -171,7 +191,7 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
       </div>
 
       <%!-- ── All-research mode (global, one card per PMID) ─────────────────── --%>
-      <div :if={@mode == :papers}>
+      <div :if={@mode == :papers} aria-live="polite">
         <p :if={@query == ""} class="text-sm text-parchment-dim py-8 text-center">
           {gettext("Type a term to search findings and abstracts across every condition.")}
         </p>
