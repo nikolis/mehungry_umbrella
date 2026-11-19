@@ -11,8 +11,11 @@ defmodule MehungryWeb.CalendarFeatureTest do
       session
       |> visit(Routes.calendar_index_path(Endpoint, :index))
       |> sleep()
-      |> click(button("button_calendar"))
+      # The old single `button_calendar` control is gone; a meal is now added
+      # through the per-day "Add a meal" buttons, which open the meal-form modal.
+      |> click(css("button[phx-click='pick-date']", minimum: 1, at: 0))
       |> sleep()
+      |> assert_has(css("#calendar_modal", count: 1))
     end
   end
 
@@ -24,7 +27,12 @@ defmodule MehungryWeb.CalendarFeatureTest do
   @user_remember_me "_mehungry_web_user_remember_me"
 
   def log_in(%{session: session} = _context) do
-    user = Mehungry.AccountsFixtures.user_fixture()
+    # Authenticated routes require a confirmed email; fixtures start unconfirmed.
+    {:ok, %{user: user}} =
+      Mehungry.AccountsFixtures.user_fixture()
+      |> Mehungry.Accounts.confirm_user_multi()
+      |> Mehungry.Repo.transaction()
+
     user_token = Mehungry.Accounts.generate_user_session_token(user)
 
     endpoint_opts = Application.get_env(:mehungry_web, MehungryWeb.Endpoint)
