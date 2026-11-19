@@ -317,6 +317,20 @@ leaves). `primary_nutrients_size` is the count of top-level keys that are
 "primary" (shown first in the nutrition panel). Clients should render the tree
 and treat `measurement_unit` as a free-text label.
 
+**Identifying a nutrient — `canonical_name`.** Every node, at every depth and in
+**every** locale, also carries `canonical_name`: the nutrient's **English display
+name**, captured before localization (after fatty-acid resolution, so a fatty-acid
+leaf's `canonical_name` is its common name). `name` and the map keys are display
+text and change with the request locale (see **Localization** below), so a client
+must never match on them — to decide "is this the fat total / energy / sodium?"
+(macro split, ordering, diet-target lookup) match on `canonical_name`. For `en`
+it equals `name`. It is the English *display* name, not a normalized code:
+spelling variants the stored data carries side by side (e.g. a `0`-amount
+`"Lipids"` next to `"Total Fat"`) are still distinct nodes, so when picking a
+macro total take the **largest** matching node (as `NutrientUtils.macro_totals/1`
+does). Stamped by `MehungryWeb.Api.V1.JSON.Helpers.localize_nutrients/2`, the one
+serializer every REST nutrient tree goes through.
+
 Fatty-acid leaves are **resolved to canonical common names at read time** (via
 `Food.Nutrition.FattyAcidMatcher`, the same resolver the web nutrition accordion
 uses): storage keeps the raw USDA lipid notation (`"MUFA 16:1 c"`,
@@ -332,6 +346,8 @@ For `el` the tree is keyed/labelled in Greek (`"Ενέργεια"`, `"Ολικά
 stored. Individual fatty-acid common names are **left in English** in every locale.
 A name with no known translation falls back to its English display name. The same
 localization applies to the daily-nutrition map (§9 `GET /meals/day/:date/nutrition`).
+`canonical_name` is **never** localized — with `?lang=el` a node reads
+`{"name":"Ολικά λιπαρά","canonical_name":"Total Fat", …}`.
 
 ### `POST /api/v1/recipes` 🔒
 Create a recipe (the "+" / Create Recipe stepper). Multi-step in the UI but a
@@ -697,10 +713,10 @@ meal as the `free_foods` array (see the GET example above).
 { "data": {
   "date": "2026-08-12",
   "nutrition": {
-    "Energy": {"name":"Energy","measurement_unit":"kcal","amount":540.0},
-    "Protein": {"name":"Protein","measurement_unit":"grammar","amount":32.0},
-    "Total Fat": {"name":"Total Fat","measurement_unit":"grammar","amount":18.0,
-      "children": [ {"name":"Saturated Fat","measurement_unit":"grammar","amount":6.0} ] }
+    "Energy": {"name":"Energy","canonical_name":"Energy","measurement_unit":"kcal","amount":540.0},
+    "Protein": {"name":"Protein","canonical_name":"Protein","measurement_unit":"grammar","amount":32.0},
+    "Total Fat": {"name":"Total Fat","canonical_name":"Total Fat","measurement_unit":"grammar","amount":18.0,
+      "children": [ {"name":"Saturated Fat","canonical_name":"Saturated Fat","measurement_unit":"grammar","amount":6.0} ] }
   }
 } }
 ```

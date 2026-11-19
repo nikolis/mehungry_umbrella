@@ -41,14 +41,57 @@ defmodule MehungryWeb.Api.V1.JSON.Helpers do
   fatty-acid leaves to their common names (same as the web accordion) and then
   translates the display names via `MehungryWeb.NutrientLabels`. No-op for the
   source locale; `nil`/empty in → `%{}`.
+
+  Every node (at every depth, in every locale) also gets a `canonical_name`: its
+  English display name, captured **before** translation. `name` and the map keys
+  are localized display text, so clients must identify a nutrient ("is this the
+  fat total?") by `canonical_name` — matching on `name` silently breaks outside
+  English.
   """
   def localize_nutrients(nil, _locale), do: %{}
 
   def localize_nutrients(map, locale) when is_map(map) do
     map
     |> Map.new(fn {name, node} ->
-      {name, Mehungry.Food.Nutrition.FattyAcidMatcher.resolve_names(node)}
+      node =
+        node
+        |> Mehungry.Food.Nutrition.FattyAcidMatcher.resolve_names()
+        |> put_canonical_names(name)
+
+      {name, node}
     end)
     |> MehungryWeb.NutrientLabels.translate_tree(locale)
+  end
+
+  # Stamp `canonical_name` on a node and its `children`, recursively. `fallback`
+  # is the map key, used for a top-level node that carries no `name` of its own.
+  defp put_canonical_names(node, fallback \\ nil)
+
+  defp put_canonical_names(node, fallback) when is_map(node) and not is_struct(node) do
+    node =
+      case node_get(node, "name") || fallback do
+        name when is_binary(name) -> node_put(node, "canonical_name", name)
+        _ -> node
+      end
+
+    case node_get(node, "children") do
+      children when is_list(children) and children != [] ->
+        node_put(node, "children", Enum.map(children, &put_canonical_names/1))
+
+      _ ->
+        node
+    end
+  end
+
+  defp put_canonical_names(other, _fallback), do: other
+
+  # Read/write a node key tolerant of string- or atom-keyed maps, writing in
+  # whichever representation the node already uses.
+  defp node_get(node, key), do: Map.get(node, key) || Map.get(node, String.to_atom(key))
+
+  defp node_put(node, key, value) do
+    if Enum.any?(Map.keys(node), &is_atom/1),
+      do: Map.put(node, String.to_atom(key), value),
+      else: Map.put(node, key, value)
   end
 end

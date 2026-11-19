@@ -235,6 +235,13 @@ defmodule MehungryWeb.Api.V1.MealTest do
 
     assert %{"Ενέργεια" => %{"name" => "Ενέργεια"}} = el_nutrition
     refute Map.has_key?(el_nutrition, "Energy")
+
+    # `canonical_name` stays English in every locale, so a client can identify a
+    # nutrient without matching on the translated display name.
+    assert el_nutrition["Ενέργεια"]["canonical_name"] == "Energy"
+
+    assert %{"data" => %{"nutrition" => %{"Energy" => %{"canonical_name" => "Energy"}}}} =
+             conn |> get(~p"/api/v1/meals/day/2026-08-12/nutrition") |> json_response(200)
   end
 
   describe "free food (arbitrary) entries" do
