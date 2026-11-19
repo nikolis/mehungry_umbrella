@@ -19,7 +19,7 @@ strong**. Accuracy is capped by the weakest lever a given diet depends on.
 
 | Lever | Field | How it's enforced at generation | Strength |
 |---|---|---|---|
-| **Exclude specific foods** | `avoid_foods` | Literal **substring** filter removes catalog candidates before the model sees them, and an end-to-end name re-check on the final plan (`MealPlanAgent.reject_avoided/3`, scorer `avoid_foods`) | **Hard** (but literal) |
+| **Exclude specific foods** | `avoid_foods` | Literal **substring** filter removes catalog candidates before the model sees them, and an end-to-end name re-check on the final plan (`MealPlanCore.reject_avoided/3`, scorer `avoid_foods`) | **Hard** (but literal) |
 | **Exclude a whole food category** | derived `diet_mode` | Taxonomy filter (`#vegan`/`#vegetarian` tags + `Categories.diet_category_ids/1`) — **only `:vegan` / `:vegetarian`** are inferred (`diet_mode_from_blueprint/1`) | **Hard**, but only two diets |
 | **Prefer foods** | `preferred_foods` | Named in the free-text brief; model's discretion | **Soft** |
 | **Prefer / limit nutrients** | `required_nutrients` / `avoid_nutrients` | Named in the brief; **not** verified against `recipe.nutrients` at plan time | **Soft** |

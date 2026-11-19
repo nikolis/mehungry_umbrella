@@ -136,19 +136,29 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
       <% end %>
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g {gettext("protein")}
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g {gettext(
+        "protein"
+      )}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fat_g}</span>g {gettext("fat")}
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fat_g}</span>g {gettext(
+        "fat"
+      )}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@carbs_g}</span>g {gettext("carbs")}
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@carbs_g}</span>g {gettext(
+        "carbs"
+      )}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@sugars_g}</span>g {gettext("sugars")}
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@sugars_g}</span>g {gettext(
+        "sugars"
+      )}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fiber_g}</span>g {gettext("fiber")}
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fiber_g}</span>g {gettext(
+        "fiber"
+      )}
     </span>
     <%!-- Sodium + saturated fat matter for the conditions people track (BP, heart,
           kidney). They're hidden when 0 — many logged recipes simply lack the data,
@@ -456,7 +466,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
     # defaulted so landing/demo cards that don't pass the assign render clean.
     assigns =
       assign_new(assigns, :avoided, fn ->
-        Mehungry.AI.Agents.MealPlanAgent.matched_avoid_terms(
+        Mehungry.AI.Agents.MealPlanCore.matched_avoid_terms(
           [assigns.title],
           Map.get(assigns, :avoid_terms, [])
         )
@@ -473,7 +483,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
             <% not is_nil(@img_url) -> %>
               <img src={@img_url} class="h-full w-full object-cover" />
             <% not is_nil(@icon) -> %>
-              <div class="h-full w-full bg-ink-panel2 flex items-center justify-center text-4xl sm:text-5xl" aria-hidden="true">
+              <div
+                class="h-full w-full bg-ink-panel2 flex items-center justify-center text-4xl sm:text-5xl"
+                aria-hidden="true"
+              >
                 {@icon}
               </div>
             <% true -> %>
@@ -615,5 +628,4 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
     </div>
     """
   end
-
 end

@@ -22,8 +22,8 @@ whether we need a framework:
    autonomously, persist its output, and gate the *next side effect* (publish,
    apply to a client) on human approval.
 
-**Our agents are shape (2), not (1).** `RecipeAgent`, `MealPlanAgent`, and
-`NutritionistAgent` run to completion in one `AI.Agent.run/6` call and return a
+**Our agents are shape (2), not (1).** `RecipeAgent`, `UserMealPlanAgent`, and
+`NutritionistMealPlanAgent` run to completion in one `AI.Agent.run/6` call and return a
 finished artifact. The human reviews the *output*, never a half-finished
 conversation. So the mid-conversation snapshot/resume that Jido specializes in
 solves a problem we don't have — while adding a framework, a new dependency
@@ -116,9 +116,9 @@ is deep and multi-step; ours mostly isn't:
 
 - **RecipeAgent** — runs unattended (`DailyRecipeGenerationWorker`, 2am). No human is
   present to ask. Zero benefit.
-- **MealPlanAgent** — user-facing, but shallow reasoning (search → assemble →
+- **UserMealPlanAgent** — user-facing, but shallow reasoning (search → assemble →
   validate). The user can just regenerate; mid-loop buys little over draft-then-revise.
-- **NutritionistAgent** — **the real case.** A professional steering a draft as it is
+- **NutritionistMealPlanAgent** — **the real case.** A professional steering a draft as it is
   built ("client hates fish, swap dinner day 3; keep the breakfasts") is genuinely
   better mid-loop: full context preserved, wrong direction corrected early rather than
   after 21 meals are assembled, and the human is already engaged live. A premium,
@@ -188,9 +188,9 @@ only revisit Managed Agents if the plumbing proves heavier than expected.
 
 ### Recommendation
 
-Scope it to the **NutritionistAgent** as an interactive co-pilot, **build on Oban +
+Scope it to the **NutritionistMealPlanAgent** as an interactive co-pilot, **build on Oban +
 Ecto** (extending the review-gate pattern above), and use the **1-hour cache TTL** on
-resumes. Do not retrofit it onto RecipeAgent (unattended) or MealPlanAgent (marginal).
+resumes. Do not retrofit it onto RecipeAgent (unattended) or UserMealPlanAgent (marginal).
 It is an architecture change, not a model upgrade — and on our token economics the cost
 is dominated by latency and engineering, not the API bill.
 

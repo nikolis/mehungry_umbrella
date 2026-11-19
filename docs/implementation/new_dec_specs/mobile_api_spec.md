@@ -706,8 +706,9 @@ meal as the `free_foods` array (see the GET example above).
 ```
 
 ### `POST /api/v1/meals/plan-with-ai` 🔒 🎯 quota-gated
-The "Plan with AI" button. Delegates to `AI.MealPlanGenerator` /
-`MealPlanAgent`. Enforce `Subscriptions.check_quota(user, :meal_plan)`; on
+The "Plan with AI" button. Runs `UserMealPlanAgent` in
+`MehungryWeb.Api.MealPlanWorker` — the **same** job the web calendar enqueues
+(REST ↔ LiveView parity). Enforce `Subscriptions.check_quota(user, :meal_plan)`; on
 exhaustion return `403` with an upgrade hint. Because generation is slow, this
 returns `202 Accepted` with a job id and the client subscribes to the
 `meal_plan:<user_id>` channel (§13) for progress + result, OR polls
@@ -720,12 +721,31 @@ and an enqueue failure returns a retryable `502` (standard error envelope).
 
 Job `status` is `queued` → `generating` → `done` | `error`. **`done` and
 `error` are terminal — stop polling on either.** `error` covers a failed
-generation, a worker crash, and a job orphaned in `generating` for more than
-10 minutes (reported with `error: "generation timed out"` on the next poll).
-The poll response is `{ job_id, status, result, error }`.
+generation, a worker crash, a job orphaned in `generating` for more than
+10 minutes (`error: "generation timed out"`), and a job whose background worker
+is gone — cancelled or killed while `queued` or `generating` (`error: "Meal plan
+generation was interrupted. Please try again."`); the last two are resolved on
+the next poll.
+The poll response is `{ job_id, status, result, error }`. `error` is a
+human-readable, displayable message (e.g. `"Meal plan generation failed. Please
+try again."`) — internal failure details are logged, never returned. On `done`,
+`result` is `{ created_count, skipped_count, meal_ids }`.
+
+**`existing_meals`** (optional) — what to do with meals already on the plan
+week. The client should count the week's meals first and, if there are any, ask
+the user before posting:
+
+| Value | Behaviour |
+|---|---|
+| `"fill_gaps"` (default; also used for any unknown value) | Every existing meal stays; a generated meal is written only where that `(date, meal slot)` cell is empty. |
+| `"replace_week"` | Every meal in the 7 days from `start` is **deleted**, then the plan is written, atomically — if the new plan cannot be saved the week is left untouched and the job ends in `error`. Destructive — confirm with the user. The generated plan always covers breakfast, lunch and dinner for every day. Nothing is deleted if generation fails. |
+
+A run that creates no meals ends in `error` and does not consume quota.
+Quota is checked at `POST` time **including runs still in flight**, so a user
+with one generation left cannot start two at once (`403` on the second).
 ```json
 // request
-{ "start": "2026-08-11", "days": 5, "meals_per_day": ["breakfast","lunch","dinner"], "notes": "high protein" }
+{ "start": "2026-08-11", "days": 5, "meals_per_day": ["breakfast","lunch","dinner"], "notes": "high protein", "existing_meals": "fill_gaps" }
 // 202
 { "data": { "job_id": "…", "status": "queued" } }
 // 403 when out of quota
@@ -1644,9 +1664,13 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
   push). The push `data` carries this same object so a tap deep-links identically.
 
 ### `meal_plan:<user_id>` 🔒 — AI meal-plan generation progress
-- **Push → client**: `"progress"` `{ job_id, status: "generating"|"done"|"error", pct }`,
-  `"result"` `{ job_id, meals: [ … ] }` (same shape as §9 day meals). Client
-  refreshes the calendar on `result`. Mirrors the "Plan with AI" async flow.
+- **Push → client**: `"progress"` `{ job_id, blueprint_plan_id, status: "generating"|"error", error? }`
+  (`error` — the displayable message — is present when `status` is `"error"`),
+  `"result"` `{ job_id, blueprint_plan_id, status: "done", meals: { created_count, skipped_count, meal_ids } }`.
+  Client refreshes the calendar on `result`. Mirrors the "Plan with AI" async flow.
+  `blueprint_plan_id` is `null` for calendar runs; the topic also carries the web
+  app's blueprint-plan runs (non-null `blueprint_plan_id`) — **ignore any event
+  whose `job_id` is not the one you started**.
   A crashed generation also pushes `"progress"` with `status: "error"`; a
   hard-killed one pushes nothing, so clients on the channel should still fall
   back to polling `GET /meals/plan-with-ai/:job_id` (which resolves it to

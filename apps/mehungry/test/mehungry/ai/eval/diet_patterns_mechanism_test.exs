@@ -7,7 +7,7 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
   Whether a diet is honored is decided by two deterministic levers, not by the
   model:
 
-    1. **The avoid-foods filter** (`MealPlanAgent.reject_avoided/3`) — removes
+    1. **The avoid-foods filter** (`MealPlanCore.reject_avoided/3`) — removes
        catalog candidates whose name contains an avoid term *before* the model
        ever sees them.
     2. **The brief** (`MealBlueprints.blueprint_preferences/1`) — the free-text
@@ -25,7 +25,7 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
   """
   use Mehungry.DataCase, async: false
 
-  alias Mehungry.AI.Agents.MealPlanAgent
+  alias Mehungry.AI.Agents.{MealPlanCore, UserMealPlanAgent}
   alias Mehungry.AI.Eval.MealPlanCatalog
   alias Mehungry.MealBlueprints
   alias Mehungry.MealBlueprints.{Blueprint, DietPatterns}
@@ -37,11 +37,11 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
   describe "avoid-foods filter (reject_avoided/3) — the agent's real gate" do
     test "for every diet, no surviving catalog item contains an avoid term", %{catalog: cat} do
       for d <- DietPatterns.all() do
-        terms = MealPlanAgent.avoid_terms(blueprint_from(d))
+        terms = MealPlanCore.avoid_terms(blueprint_from(d))
 
         survivors =
-          names(cat.recipes, & &1.title) ++ names(cat.ingredients, & &1.name)
-          |> MealPlanAgent.reject_avoided(terms, & &1)
+          (names(cat.recipes, & &1.title) ++ names(cat.ingredients, & &1.name))
+          |> MealPlanCore.reject_avoided(terms, & &1)
 
         leaked =
           for name <- survivors, term <- terms, String.contains?(String.downcase(name), term) do
@@ -53,9 +53,9 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
     end
 
     test "Low-FODMAP drops the garlic recipe but keeps a clean breakfast", %{catalog: cat} do
-      terms = MealPlanAgent.avoid_terms(blueprint_from(DietPatterns.get(:low_fodmap)))
+      terms = MealPlanCore.avoid_terms(blueprint_from(DietPatterns.get(:low_fodmap)))
 
-      kept = cat.recipes |> MealPlanAgent.reject_avoided(terms, & &1.title) |> Enum.map(& &1.title)
+      kept = cat.recipes |> MealPlanCore.reject_avoided(terms, & &1.title) |> Enum.map(& &1.title)
 
       refute "Slow Roasted Garlic Chicken Dinner" in kept
       assert "Light Oatmeal Breakfast with Berries" in kept
@@ -63,8 +63,8 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
 
     test "every diet leaves at least one snack ingredient to build from", %{catalog: cat} do
       for d <- DietPatterns.all() do
-        terms = MealPlanAgent.avoid_terms(blueprint_from(d))
-        kept = MealPlanAgent.reject_avoided(cat.ingredients, terms, & &1.name)
+        terms = MealPlanCore.avoid_terms(blueprint_from(d))
+        kept = MealPlanCore.reject_avoided(cat.ingredients, terms, & &1.name)
 
         assert kept != [], "#{d.name}: avoid filter left no usable ingredients"
       end
@@ -86,7 +86,9 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
         assert String.contains?(brief, "Avoid foods"), "#{d.name}: brief omits avoid foods"
 
         first = hd(d.avoid_foods)
-        assert String.contains?(brief, first), "#{d.name}: brief omits avoid food #{inspect(first)}"
+
+        assert String.contains?(brief, first),
+               "#{d.name}: brief omits avoid food #{inspect(first)}"
       end
     end
   end
@@ -100,8 +102,8 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
     # proven in `meal_plan_diet_filter_test.exs`. This test pins the division of
     # labour: don't expect the substring layer to do the category layer's job.
     test "the substring layer alone leaves a chicken recipe under Vegan's 'meat'", %{catalog: cat} do
-      terms = MealPlanAgent.avoid_terms(blueprint_from(DietPatterns.get(:vegan)))
-      kept = cat.recipes |> MealPlanAgent.reject_avoided(terms, & &1.title) |> Enum.map(& &1.title)
+      terms = MealPlanCore.avoid_terms(blueprint_from(DietPatterns.get(:vegan)))
+      kept = cat.recipes |> MealPlanCore.reject_avoided(terms, & &1.title) |> Enum.map(& &1.title)
 
       assert "Grilled Chicken Caesar Lunch Wrap" in kept,
              "substring is the specific-food layer; category exclusion is the agent's diet layer"
@@ -112,9 +114,9 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
   test "per-diet survivor coverage report", %{catalog: cat} do
     rows =
       for d <- DietPatterns.all() do
-        terms = MealPlanAgent.avoid_terms(blueprint_from(d))
-        r = length(MealPlanAgent.reject_avoided(cat.recipes, terms, & &1.title))
-        i = length(MealPlanAgent.reject_avoided(cat.ingredients, terms, & &1.name))
+        terms = MealPlanCore.avoid_terms(blueprint_from(d))
+        r = length(MealPlanCore.reject_avoided(cat.recipes, terms, & &1.title))
+        i = length(MealPlanCore.reject_avoided(cat.ingredients, terms, & &1.name))
 
         :io_lib.format("  ~-32ts recipes=~2w/~2w  ingredients=~2w/~2w  avoid_terms=~2w", [
           d.name,
@@ -127,7 +129,9 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
         |> IO.iodata_to_binary()
       end
 
-    IO.puts("\n[diets] catalog survivors after each diet's avoid filter\n" <> Enum.join(rows, "\n"))
+    IO.puts(
+      "\n[diets] catalog survivors after each diet's avoid filter\n" <> Enum.join(rows, "\n")
+    )
   end
 
   defp blueprint_from(d) do

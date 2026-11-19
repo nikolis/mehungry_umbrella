@@ -17,7 +17,12 @@ defmodule Mehungry.Subscriptions.AiUsage do
     usage
     |> cast(attrs, [:user_id, :feature, :used_at])
     |> validate_required([:user_id, :feature, :used_at])
-    |> validate_inclusion(:feature, ["recipe_generation", "meal_plan", "graphic_generation"])
+    |> validate_inclusion(:feature, [
+      "recipe_generation",
+      "meal_plan",
+      "nutritionist_meal_plan",
+      "graphic_generation"
+    ])
     |> foreign_key_constraint(:user_id)
   end
 end

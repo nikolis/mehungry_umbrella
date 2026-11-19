@@ -31,14 +31,18 @@ entries); plans list under their blueprint in an accordion and each can be
 ## Generated plans (phase 2)
 
 The blueprint library's **Generate** button (next to Edit/Duplicate/Delete) kicks
-off an async `Task` calling `AI.MealPlanGenerator.generate_entries/5` with a
+off an **Oban job** (`MehungryWeb.Api.MealPlanWorker.enqueue/1` with the new
+plan row's `blueprint_plan_id` — leaving the page does not cancel it, and
+re-opening it shows the blueprint still "Generating…"; a run whose worker died
+is detected within ~15 s and the button re-enabled) that runs
+`AI.MealPlanGenerator.generate_entries/4` with a
 free-text brief distilled from the blueprint
 (`MealBlueprints.blueprint_preferences/1` — name, description, condition,
 required/avoid nutrient & compound names, preferred foods). Quota is
 checked/recorded via `Subscriptions` under the `"meal_plan"` key.
 
 **Generated plans are independent instances, not calendar entries.** Generation
-returns *normalized, calendar-independent entries* (`MealPlanAgent.normalize_entry/2`
+returns *normalized, calendar-independent entries* (`MealPlanCore.normalize_entry/2`
 — relative `day_index` 1..7, canonical `meal_type`, and a recipe **or** ingredient
 with unit resolved to FKs). The LiveView stores them via
 `MealBlueprints.store_plan_meals/2` as **`BlueprintPlanMeal`** rows
@@ -75,7 +79,7 @@ meals get live-computed nutrition as the same structured tree a recipe has
 **Re-import is allowed** (a `data-confirm` warns when re-importing an already
 imported plan); `imported_at` flags the plan and shows an "imported" badge.
 
-**Generation covers all 5 blueprint slots and both meal kinds.** `MealPlanAgent`
+**Generation covers all 5 blueprint slots and both meal kinds.** `UserMealPlanAgent`
 plans Breakfast, Morning Snack, Lunch, Afternoon Snack, Dinner (35 entries). A
 slot may be a **recipe** (via `search_catalog`) or a single whole-food
 **ingredient** (via the `search_ingredients` tool → `Food.IngredientSearch`, which
@@ -345,14 +349,16 @@ The calendar's "Plan with AI" panel has a **"Follow blueprint"** dropdown plus a
 blueprints; arriving via `/calendar?blueprint_id=…` (the preview's "Use this
 blueprint") preselects the blueprint and opens the panel. The selection threads a
 `blueprint_id` through `handle_event("ai_plan_week", …)` →
-`Mehungry.AI.MealPlanGenerator.run/5` → `Mehungry.AI.Agents.MealPlanAgent.run/5`.
+`MehungryWeb.Api.MealPlanWorker` (Oban) → `Mehungry.AI.Agents.UserMealPlanAgent.run/4`.
+If the viewed week already has meals the calendar first asks **fill the gaps**
+or **replace the week** (see `docs/implementation/ai/meal_plan.md`).
 The blueprint is resolved with `get_blueprint_for_generation/2` (owned **or**
 saved **or** public) and its targets reach the planner as the free-text brief
 from `blueprint_preferences/1` (which now also emits an `Avoid foods: …` line).
 The agent already plans all **5** slots × 7 days and supports recipe-or-ingredient
 slots.
 
-**Avoid-foods enforcement (structured, not just brief).** `MealPlanAgent.run/5`
+**Avoid-foods enforcement (structured, not just brief).** `UserMealPlanAgent.run/4`
 threads the `%Blueprint{}` through, derives a downcased `avoid_terms` set from
 `avoid_foods`, and **filters any recipe/ingredient whose name contains an avoid
 term out of the `search_catalog`/`search_ingredients` results** before the ids

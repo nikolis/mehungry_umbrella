@@ -2,8 +2,8 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
   @moduledoc """
   Layer-1 (deterministic) quality scorer for AI-generated meal plans.
 
-  Takes the normalized plan entries `MealPlanAgent.run/5` returns (see
-  `MealPlanAgent.normalize_entry/2`) plus a context map, and returns a structured
+  Takes the normalized plan entries `UserMealPlanAgent.run/5` returns (see
+  `MealPlanCore.normalize_entry/2`) plus a context map, and returns a structured
   **scorecard** of objective, LLM-free checks. This is the backbone of the
   meal-plan eval harness: cheap, reproducible, and regression-safe.
 
@@ -137,7 +137,9 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
         |> Enum.map(fn {_id, c} -> max(c - @max_recipe_repeats, 0) end)
         |> Enum.sum()
 
-      offenders = Enum.count(Enum.frequencies(recipe_ids), fn {_, c} -> c > @max_recipe_repeats end)
+      offenders =
+        Enum.count(Enum.frequencies(recipe_ids), fn {_, c} -> c > @max_recipe_repeats end)
+
       status = if over == 0, do: :pass, else: :warn
 
       check(
@@ -186,7 +188,12 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
             do: {name, term}
 
       if violations == [] do
-        check(:avoid_foods, :pass, 1.0, "none of #{length(entries)} entries contain an avoided food")
+        check(
+          :avoid_foods,
+          :pass,
+          1.0,
+          "none of #{length(entries)} entries contain an avoided food"
+        )
       else
         examples = violations |> Enum.take(3) |> Enum.map_join(", ", fn {n, t} -> "#{n}~#{t}" end)
 

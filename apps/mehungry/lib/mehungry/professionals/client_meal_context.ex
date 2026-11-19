@@ -19,10 +19,9 @@ defmodule Mehungry.Professionals.ClientMealContext do
   nutritionist-side field today, so they stay client-sourced (there is nothing
   on the nutritionist's end to prefer).
 
-  Both nutritionist-side draft paths — the agentic `NutritionistAgent`
-  (`get_client_record` tool) and the calendar quick-draft
-  (`client_calendar.ex` `build_client_preferences/2`) — resolve through this one
-  function so the precedence is defined once and cannot drift.
+  `NutritionistMealPlanAgent` resolves it once per run: it is what the
+  `get_client_record` tool returns and what the agent's deterministic diet /
+  avoid guards are built from, so the precedence is defined once and cannot drift.
   """
 
   alias Mehungry.{Accounts, Health, Professionals}
@@ -39,6 +38,8 @@ defmodule Mehungry.Professionals.ClientMealContext do
         goal: String.t() | nil,                  # intake
         conditions: [String.t()],                # ClientCondition names
         avoid: [String.t()],                     # profile avoid ∪ intake terms ∪ condition foods
+        avoid_free_text: [String.t()],           # the subset of `avoid` typed as intake free text
+        avoid_ingredient_ids: [integer],         # exact ingredient ids implicated by the conditions
         anthropometrics: map | nil,              # intake
         latest_note: %{body: _, todo: _} | nil   # latest ConsultationNote
       }
@@ -50,7 +51,13 @@ defmodule Mehungry.Professionals.ClientMealContext do
     conditions = if record, do: Professionals.list_client_conditions(record.id), else: []
 
     latest_note =
-      record && (record.id |> Professionals.list_consultation_notes() |> List.last())
+      record && record.id |> Professionals.list_consultation_notes() |> List.last()
+
+    # Condition-implicated foods, resolved once: their names feed the prompt-facing
+    # `avoid` list, their ids feed the planner's exact (composition-aware) filter —
+    # a USDA name like "Spinach, raw" never matches a recipe title by substring.
+    condition_avoid =
+      Enum.flat_map(conditions, fn c -> Health.ingredients_for_condition(c.id, "avoid") end)
 
     %{
       has_record: not is_nil(record),
@@ -59,7 +66,11 @@ defmodule Mehungry.Professionals.ClientMealContext do
       calorie_target: calorie_target(intake, profile),
       goal: intake && intake.goal,
       conditions: Enum.map(conditions, & &1.name),
-      avoid: avoid_list(profile, intake, conditions),
+      avoid: avoid_list(profile, intake, condition_avoid),
+      # Free text is too loose to enforce like a curated list (a stray "no" or
+      # "oil" would match half the catalog), so the planner treats it separately.
+      avoid_free_text: free_text_only(profile, intake, condition_avoid),
+      avoid_ingredient_ids: condition_avoid |> Enum.map(& &1.ingredient.id) |> Enum.uniq(),
       anthropometrics: anthropometrics_summary(intake),
       latest_note: latest_note && %{body: latest_note.body, todo: latest_note.todo}
     }
@@ -87,18 +98,31 @@ defmodule Mehungry.Professionals.ClientMealContext do
   # allergy/intolerance terms + condition-implicated foods resolved through the same
   # curated Health engine the /foods filter uses (condition → "avoid" compound
   # recommendations → species → ingredients). Deduped + capped.
-  defp avoid_list(profile, intake, conditions) do
-    condition_avoid =
-      conditions
-      |> Enum.flat_map(fn c -> Health.ingredients_for_condition(c.id, "avoid") end)
-      |> Enum.map(& &1.ingredient.name)
+  defp avoid_list(profile, intake, condition_avoid) do
+    condition_names = Enum.map(condition_avoid, & &1.ingredient.name)
 
-    [(profile && profile.avoid_foods) || [], intake_avoid_terms(intake), condition_avoid]
+    [(profile && profile.avoid_foods) || [], intake_avoid_terms(intake), condition_names]
     |> List.flatten()
     |> Enum.map(&String.trim(to_string(&1)))
     |> Enum.reject(&(&1 == ""))
     |> Enum.uniq()
     |> Enum.take(40)
+  end
+
+  # Intake free-text terms that are not also on a curated list (the client's
+  # avoid chips, a condition's foods) — a term confirmed there keeps its
+  # stricter handling.
+  defp free_text_only(profile, intake, condition_avoid) do
+    curated =
+      [(profile && profile.avoid_foods) || [], Enum.map(condition_avoid, & &1.ingredient.name)]
+      |> List.flatten()
+      |> MapSet.new(&(&1 |> to_string() |> String.trim() |> String.downcase()))
+
+    intake
+    |> intake_avoid_terms()
+    |> Enum.map(&String.trim(to_string(&1)))
+    |> Enum.reject(&(&1 == "" or MapSet.member?(curated, String.downcase(&1))))
+    |> Enum.uniq()
   end
 
   defp anthropometrics_summary(nil), do: nil

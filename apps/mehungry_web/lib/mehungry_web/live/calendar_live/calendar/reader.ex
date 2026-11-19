@@ -23,7 +23,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   alias MehungryWeb.CalendarLive.Calendar.MealCore
   alias Mehungry.NutrientUtils, as: Nu
   alias Mehungry.History.MealType
-  alias Mehungry.AI.Agents.MealPlanAgent
+  alias Mehungry.AI.Agents.MealPlanCore
 
   @impl true
   def mount(socket) do
@@ -100,19 +100,30 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
       <div class="flex items-center justify-center px-3 py-3 sm:px-4">
         <div class="flex items-center gap-1.5 sm:gap-3 bg-ink-panel border border-ink-panel2 rounded-full px-2.5 sm:px-3 py-2 shadow-lg max-w-full">
           <.nav_btn label={gettext("Previous week")} event="prev-week" myself={@myself}>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M18.75 19.5 11.25 12l7.5-7.5m-6 15L5.25 12l7.5-7.5"
+            />
           </.nav_btn>
           <.nav_btn label={gettext("Previous day")} event="prev-day" myself={@myself}>
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </.nav_btn>
           <h3 class="flex-1 min-w-0 text-center text-sm sm:text-lg font-display font-medium text-parchment whitespace-nowrap truncate px-1">
-            {day_name(@focus, @current_language)}, {Calendar.strftime(@focus, "%d")} {month_short(@focus, @current_language)}
+            {day_name(@focus, @current_language)}, {Calendar.strftime(@focus, "%d")} {month_short(
+              @focus,
+              @current_language
+            )}
           </h3>
           <.nav_btn label={gettext("Next day")} event="next-day" myself={@myself}>
             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
           </.nav_btn>
           <.nav_btn label={gettext("Next week")} event="next-week" myself={@myself}>
-            <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5"
+            />
           </.nav_btn>
         </div>
       </div>
@@ -144,7 +155,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
             <div class="text-base font-bold [font-variant-numeric:tabular-nums] text-parchment leading-tight">
               {meal_count(@day_summaries[day])}
             </div>
-            <span class={["inline-block w-1.5 h-1.5 rounded-full mt-0.5", dot_class(@day_summaries[day], @calorie_target)]}></span>
+            <span class={[
+              "inline-block w-1.5 h-1.5 rounded-full mt-0.5",
+              dot_class(@day_summaries[day], @calorie_target)
+            ]}></span>
           </button>
         </div>
       </div>
@@ -190,7 +204,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
           {gettext("Rest of the week")}
         </p>
         <div class="space-y-2">
-          <div :for={day <- @other_days} class="rounded-xl border border-ink-panel2 bg-ink-panel overflow-hidden" id={"row_" <> Date.to_string(day)}>
+          <div
+            :for={day <- @other_days}
+            class="rounded-xl border border-ink-panel2 bg-ink-panel overflow-hidden"
+            id={"row_" <> Date.to_string(day)}
+          >
             <button
               type="button"
               aria-expanded="false"
@@ -198,12 +216,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
               class="w-full flex items-center gap-2 px-3 py-2.5 bg-black/20 text-left cursor-pointer select-none"
               phx-click={
                 Phoenix.LiveView.JS.toggle(to: "#rowbody-" <> Date.to_string(day))
-                |> Phoenix.LiveView.JS.toggle_class("rotate-180", to: "#rowchev-" <> Date.to_string(day))
+                |> Phoenix.LiveView.JS.toggle_class("rotate-180",
+                  to: "#rowchev-" <> Date.to_string(day)
+                )
                 |> Phoenix.LiveView.JS.toggle_attribute({"aria-expanded", "true", "false"})
               }
             >
               <span class="font-semibold text-parchment text-sm">{day_name(day, @current_language)}</span>
-              <span class="text-parchment-dim text-xs">{Calendar.strftime(day, "%d")} {month_short(day, @current_language)}</span>
+              <span class="text-parchment-dim text-xs">{Calendar.strftime(day, "%d")} {month_short(
+                day,
+                @current_language
+              )}</span>
               <span class="ml-auto flex items-center gap-2">
                 <.row_badge summary={@day_summaries[day]} calorie_target={@calorie_target} />
                 <svg
@@ -213,7 +236,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </span>
             </button>
@@ -221,7 +249,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
               <%= if empty_day?(@day_summaries[day]) do %>
                 <div class="flex items-center justify-between gap-3 px-2 py-3">
                   <span class="text-parchment-dim/70 text-xs italic">{gettext("No meals planned")}</span>
-                  <.add_meal_button day={day} myself={@myself} current_language={@current_language} compact />
+                  <.add_meal_button
+                    day={day}
+                    myself={@myself}
+                    current_language={@current_language}
+                    compact
+                  />
                 </div>
               <% else %>
                 <.day_meal_groups
@@ -231,7 +264,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
                   current_language={@current_language}
                 />
                 <div class="mt-2">
-                  <.add_meal_button day={day} myself={@myself} current_language={@current_language} compact />
+                  <.add_meal_button
+                    day={day}
+                    myself={@myself}
+                    current_language={@current_language}
+                    compact
+                  />
                 </div>
               <% end %>
             </div>
@@ -292,7 +330,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
       phx-target={@myself}
       phx-click={@event}
     >
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-5">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2.5"
+        stroke="currentColor"
+        class="size-5"
+      >
         {render_slot(@inner_block)}
       </svg>
     </button>
@@ -332,9 +377,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
           P {@macro.protein_g} · C {@macro.carbs_g} · F {@macro.fat_g}
         </span>
         <.ontrack_pill kcal={@macro.energy_kcal} target={@calorie_target} />
-        <span :if={@flagged > 0} class="inline-flex items-center gap-1 text-amber-300 text-xs font-semibold">
+        <span
+          :if={@flagged > 0}
+          class="inline-flex items-center gap-1 text-amber-300 text-xs font-semibold"
+        >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           {ngettext("%{count} avoid-flag", "%{count} avoid-flags", @flagged, count: @flagged)}
         </span>
@@ -400,12 +453,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
               consume_portions={re_u_m.consume_portions}
               myself={@myself}
               recipe_id={re_u_m.recipe_id}
-              recipe={%{
-                nutrients: re_u_m.recipe_nutrients,
-                primary_size: re_u_m.primary_size,
-                servings: re_u_m.servings,
-                id: "#{re_u_m.recipe_id}-#{meal.id}"
-              }}
+              recipe={
+                %{
+                  nutrients: re_u_m.recipe_nutrients,
+                  primary_size: re_u_m.primary_size,
+                  servings: re_u_m.servings,
+                  id: "#{re_u_m.recipe_id}-#{meal.id}"
+                }
+              }
             />
             <MealCore.card_meal
               :for={re_u_m <- meal.ingredient_user_meals}
@@ -419,12 +474,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
               title={re_u_m.title}
               cooking_portions={re_u_m.portions}
               consume_portions={nil}
-              recipe={%{
-                nutrients: re_u_m.recipe.nutrients,
-                primary_size: re_u_m.primary_size,
-                servings: re_u_m.portions,
-                id: "#{re_u_m.recipe.id}-#{meal.id}"
-              }}
+              recipe={
+                %{
+                  nutrients: re_u_m.recipe.nutrients,
+                  primary_size: re_u_m.primary_size,
+                  servings: re_u_m.portions,
+                  id: "#{re_u_m.recipe.id}-#{meal.id}"
+                }
+              }
             />
             <MealCore.card_meal
               :for={ff_m <- Map.get(meal, :free_food_user_meals, [])}
@@ -436,12 +493,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
               title={ff_m.title}
               cooking_portions={"#{round(ff_m.grams)} g"}
               consume_portions={nil}
-              recipe={%{
-                nutrients: ff_m.recipe.nutrients,
-                primary_size: ff_m.primary_size,
-                servings: nil,
-                id: "freefood-#{ff_m.id}-#{meal.id}"
-              }}
+              recipe={
+                %{
+                  nutrients: ff_m.recipe.nutrients,
+                  primary_size: ff_m.primary_size,
+                  servings: nil,
+                  id: "freefood-#{ff_m.id}-#{meal.id}"
+                }
+              }
             />
           <% end %>
         </div>
@@ -466,12 +525,20 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
       class={[
         "inline-flex items-center gap-1.5 rounded-full font-bold transition-colors",
         if(@compact,
-          do: "px-3 py-1.5 border border-ink-panel2 text-paprika-soft hover:border-paprika/50 text-xs",
+          do:
+            "px-3 py-1.5 border border-ink-panel2 text-paprika-soft hover:border-paprika/50 text-xs",
           else: "px-4 py-2 bg-paprika hover:bg-paprika-soft text-ink text-sm"
         )
       ]}
     >
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        stroke="currentColor"
+        class="size-4"
+      >
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
       </svg>
       {gettext("Add a meal")}
@@ -486,8 +553,19 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
     ~H"""
     <div class="flex flex-col items-center gap-3 py-8">
       <div class="w-14 h-14 rounded-full bg-ink-panel2/60 border border-ink-panel2/50 flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor" class="size-7 text-parchment-dim">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-1.5-.75M3 13.5l1.5.75a3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 1.5-.75M3 13.5v6.75a.75.75 0 0 0 .75.75h16.5a.75.75 0 0 0 .75-.75V13.5" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.2"
+          stroke="currentColor"
+          class="size-7 text-parchment-dim"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-1.5-.75M3 13.5l1.5.75a3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 1.5-.75M3 13.5v6.75a.75.75 0 0 0 .75.75h16.5a.75.75 0 0 0 .75-.75V13.5"
+          />
         </svg>
       </div>
       <p class="text-parchment-dim text-sm font-medium">{gettext("No meals planned")}</p>
@@ -506,7 +584,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
         <span class="text-basil font-bold">{@summary.meal_count}</span>
         <span class="text-parchment-dim">{ngettext("meal", "meals", @summary.meal_count)}</span>
       </span>
-      <span class={["px-2 py-0.5 rounded-full bg-ink-panel2 text-xs font-bold [font-variant-numeric:tabular-nums]", kcal_text_class(@summary.macro.energy_kcal, @calorie_target)]}>
+      <span class={[
+        "px-2 py-0.5 rounded-full bg-ink-panel2 text-xs font-bold [font-variant-numeric:tabular-nums]",
+        kcal_text_class(@summary.macro.energy_kcal, @calorie_target)
+      ]}>
         {@summary.macro.energy_kcal} kcal
       </span>
     <% else %>
@@ -559,7 +640,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   end
 
   defp summarize([], _language),
-    do: %{meals: [], total_nutrients: nil, macro: nil, meal_count: 0, total_items: 0, type_summaries: []}
+    do: %{
+      meals: [],
+      total_nutrients: nil,
+      macro: nil,
+      meal_count: 0,
+      total_items: 0,
+      type_summaries: []
+    }
 
   defp summarize(meals, language) do
     total = Nu.summarize_meals_nutrients(meals)
@@ -647,7 +735,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   defp flagged_count(summary, terms) do
     summary.meals
     |> Enum.flat_map(&item_titles/1)
-    |> Enum.count(fn title -> MealPlanAgent.matched_avoid_terms([title], terms) != [] end)
+    |> Enum.count(fn title -> MealPlanCore.matched_avoid_terms([title], terms) != [] end)
   end
 
   defp item_titles(meal) do
@@ -666,6 +754,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   # Week-strip dot: muted when empty / no target, paprika when over, basil at/under.
   defp dot_class(nil, _target), do: "bg-ink-panel2"
   defp dot_class(%{meal_count: 0}, _target), do: "bg-ink-panel2"
+
   defp dot_class(%{macro: %{energy_kcal: kcal}}, target) when is_number(target) do
     if kcal > target * 1.05, do: "bg-paprika", else: "bg-basil"
   end

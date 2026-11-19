@@ -15,51 +15,78 @@ defmodule Mehungry.AI.Agents.MealPlanDietFilterTest do
   alias Mehungry.{Food, Repo}
   alias Mehungry.Food.{Categories, Category}
   alias Mehungry.Accounts.UserProfile
-  alias Mehungry.AI.Agents.MealPlanAgent
+  alias Mehungry.AI.Agents.{MealPlanCore, UserMealPlanAgent}
   alias Mehungry.MealBlueprints.{Blueprint, DietPatterns}
 
   defp bp(descriptor), do: %Blueprint{avoid_foods: descriptor.avoid_foods}
 
   describe "diet_mode_from_blueprint/1" do
     test "maps the vegan patterns to :vegan" do
-      assert MealPlanAgent.diet_mode_from_blueprint(bp(DietPatterns.get(:vegan))) == :vegan
-      assert MealPlanAgent.diet_mode_from_blueprint(bp(DietPatterns.get(:whole_food_plant_based))) ==
+      assert MealPlanCore.diet_mode_from_blueprint(bp(DietPatterns.get(:vegan))) == :vegan
+
+      assert MealPlanCore.diet_mode_from_blueprint(bp(DietPatterns.get(:whole_food_plant_based))) ==
                :vegan
     end
 
     test "maps the vegetarian pattern to :vegetarian" do
-      assert MealPlanAgent.diet_mode_from_blueprint(bp(DietPatterns.get(:vegetarian))) ==
+      assert MealPlanCore.diet_mode_from_blueprint(bp(DietPatterns.get(:vegetarian))) ==
                :vegetarian
     end
 
     test "maps the pescatarian pattern to :pescatarian (meat+poultry, fish kept)" do
-      assert MealPlanAgent.diet_mode_from_blueprint(bp(DietPatterns.get(:pescatarian))) ==
+      assert MealPlanCore.diet_mode_from_blueprint(bp(DietPatterns.get(:pescatarian))) ==
                :pescatarian
     end
 
     test "non-category diets and nil → nil" do
-      assert MealPlanAgent.diet_mode_from_blueprint(bp(DietPatterns.get(:mediterranean))) == nil
-      assert MealPlanAgent.diet_mode_from_blueprint(bp(DietPatterns.get(:ketogenic))) == nil
-      assert MealPlanAgent.diet_mode_from_blueprint(nil) == nil
+      assert MealPlanCore.diet_mode_from_blueprint(bp(DietPatterns.get(:mediterranean))) == nil
+      assert MealPlanCore.diet_mode_from_blueprint(bp(DietPatterns.get(:ketogenic))) == nil
+      assert MealPlanCore.diet_mode_from_blueprint(nil) == nil
     end
   end
 
   describe "effective_diet_mode/2" do
     test "a vegan blueprint wins regardless of profile" do
       user = user_fixture()
-      assert MealPlanAgent.effective_diet_mode(user.id, bp(DietPatterns.get(:vegan))) == :vegan
+
+      assert UserMealPlanAgent.effective_diet_mode(user.id, bp(DietPatterns.get(:vegan))) ==
+               :vegan
     end
 
     test "falls back to the user's persisted profile diet" do
       user = user_fixture()
       set_profile_diet(user.id, "vegetarian")
-      assert MealPlanAgent.effective_diet_mode(user.id, nil) == :vegetarian
+      assert UserMealPlanAgent.effective_diet_mode(user.id, nil) == :vegetarian
     end
 
     test "nil when neither blueprint nor profile set a diet" do
       user = user_fixture()
       set_profile_diet(user.id, "omnivore")
-      assert MealPlanAgent.effective_diet_mode(user.id, nil) == nil
+      assert UserMealPlanAgent.effective_diet_mode(user.id, nil) == nil
+    end
+  end
+
+  describe "UserMealPlanAgent.guards/2 — what a person's own plan enforces" do
+    test "a pescatarian profile is enforced (the feed filter has no tag for it, the planner does)" do
+      user = user_fixture()
+      set_profile_diet(user.id, "pescatarian")
+      assert UserMealPlanAgent.guards(user.id, nil).diet_mode == :pescatarian
+    end
+
+    test "the personal avoid list applies with or without a blueprint" do
+      user = user_fixture()
+
+      from(p in UserProfile, where: p.user_id == ^user.id)
+      |> Repo.update_all(set: [avoid_foods: ["Peanuts", " shellfish "]])
+
+      assert UserMealPlanAgent.guards(user.id, nil).avoid_terms == ["peanuts", "shellfish"]
+
+      blueprint = %Blueprint{avoid_foods: ["Onion", "peanuts"], required_hashtags: ["Raw"]}
+      guards = UserMealPlanAgent.guards(user.id, blueprint)
+
+      assert guards.avoid_terms == ["onion", "peanuts", "shellfish"]
+      assert guards.required_tags == ["raw"]
+      assert guards.catalog == {:user, user.id}
     end
   end
 
@@ -77,10 +104,16 @@ defmodule Mehungry.AI.Agents.MealPlanDietFilterTest do
       veg_ing = categorized_ingredient("Spinach", veg_cat.id)
 
       beef_recipe =
-        recipe_fixture(user, %{title: "Beef and Vegetable Stew", recipe_ingredients: [ri(beef_ing)]})
+        recipe_fixture(user, %{
+          title: "Beef and Vegetable Stew",
+          recipe_ingredients: [ri(beef_ing)]
+        })
 
       veg_recipe =
-        recipe_fixture(user, %{title: "Spinach and Chickpea Bowl", recipe_ingredients: [ri(veg_ing)]})
+        recipe_fixture(user, %{
+          title: "Spinach and Chickpea Bowl",
+          recipe_ingredients: [ri(veg_ing)]
+        })
 
       %{beef_ing: beef_ing, veg_ing: veg_ing, beef_recipe: beef_recipe, veg_recipe: veg_recipe}
     end
@@ -125,14 +158,19 @@ defmodule Mehungry.AI.Agents.MealPlanDietFilterTest do
 
       meat_cat_id = hd(pescatarian_excluded)
       fish_cat_id = hd(allowed_animal)
-      veg_cat = Repo.all(Category) |> Enum.find(&(&1.id not in Categories.diet_category_ids(:vegan)))
+
+      veg_cat =
+        Repo.all(Category) |> Enum.find(&(&1.id not in Categories.diet_category_ids(:vegan)))
 
       chicken_ing = categorized_ingredient("Chicken Breast", meat_cat_id)
       salmon_ing = categorized_ingredient("Salmon Fillet", fish_cat_id)
       veg_ing = categorized_ingredient("Kale", veg_cat.id)
 
       chicken_recipe =
-        recipe_fixture(user, %{title: "Roast Chicken Dinner", recipe_ingredients: [ri(chicken_ing)]})
+        recipe_fixture(user, %{
+          title: "Roast Chicken Dinner",
+          recipe_ingredients: [ri(chicken_ing)]
+        })
 
       salmon_recipe =
         recipe_fixture(user, %{title: "Grilled Salmon Bowl", recipe_ingredients: [ri(salmon_ing)]})
@@ -149,7 +187,8 @@ defmodule Mehungry.AI.Agents.MealPlanDietFilterTest do
       }
     end
 
-    test "pescatarian_recipe_ids keeps the salmon + plant recipe, drops the chicken recipe", ctx do
+    test "pescatarian_recipe_ids keeps the salmon + plant recipe, drops the chicken recipe",
+         ctx do
       ids = [ctx.chicken_recipe.id, ctx.salmon_recipe.id, ctx.veg_recipe.id]
       keep = Food.pescatarian_recipe_ids(ids)
 
@@ -207,21 +246,21 @@ defmodule Mehungry.AI.Agents.MealPlanDietFilterTest do
     end
 
     test "required_recipe_tags/1 reads a blueprint's required_hashtags (downcased, nil-safe)" do
-      assert MealPlanAgent.required_recipe_tags(%Blueprint{required_hashtags: ["Raw", " raw "]}) ==
+      assert MealPlanCore.required_recipe_tags(%Blueprint{required_hashtags: ["Raw", " raw "]}) ==
                ["raw"]
 
-      assert MealPlanAgent.required_recipe_tags(%Blueprint{required_hashtags: []}) == []
-      assert MealPlanAgent.required_recipe_tags(nil) == []
+      assert MealPlanCore.required_recipe_tags(%Blueprint{required_hashtags: []}) == []
+      assert MealPlanCore.required_recipe_tags(nil) == []
     end
 
     test "the raw patterns carry required_hashtags [\"raw\"]" do
-      assert MealPlanAgent.required_recipe_tags(
-               %Blueprint{required_hashtags: DietPatterns.get(:raw_vegan).required_hashtags}
-             ) == ["raw"]
+      assert MealPlanCore.required_recipe_tags(%Blueprint{
+               required_hashtags: DietPatterns.get(:raw_vegan).required_hashtags
+             }) == ["raw"]
 
-      assert MealPlanAgent.required_recipe_tags(
-               %Blueprint{required_hashtags: DietPatterns.get(:raw_vegetarian).required_hashtags}
-             ) == ["raw"]
+      assert MealPlanCore.required_recipe_tags(%Blueprint{
+               required_hashtags: DietPatterns.get(:raw_vegetarian).required_hashtags
+             }) == ["raw"]
     end
 
     test "recipe_ids_with_all_hashtags keeps only the #raw recipe for [\"raw\"]", ctx do

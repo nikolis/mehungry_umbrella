@@ -259,7 +259,8 @@ defmodule Mehungry.History do
     # the same resolution `load_recipe_translations_map/2` does for recipes.
     codes = Mehungry.Languages.Locale.data_codes(locale)
 
-    ingredient_ids = Enum.uniq(for m <- meals, ium <- m.ingredient_user_meals, do: ium.ingredient_id)
+    ingredient_ids =
+      Enum.uniq(for m <- meals, ium <- m.ingredient_user_meals, do: ium.ingredient_id)
 
     unit_ids =
       Enum.uniq(
@@ -728,7 +729,10 @@ defmodule Mehungry.History do
     try do
       put_ingredient_user_meal_nutrients(meal.id)
     rescue
-      e -> Logger.warning("Failed to store ingredient-meal nutrients for meal #{meal.id}: #{inspect(e)}")
+      e ->
+        Logger.warning(
+          "Failed to store ingredient-meal nutrients for meal #{meal.id}: #{inspect(e)}"
+        )
     end
 
     {:ok, meal}
@@ -796,6 +800,25 @@ defmodule Mehungry.History do
   """
   def delete_user_meal(%UserMeal{} = user_meal) do
     Repo.delete(user_meal)
+  end
+
+  @doc """
+  How many `UserMeal`s `user_id` has whose `start_dt` falls in the inclusive
+  `start_date..end_date` span. The cheap "is this week already populated?" check
+  the AI planners use before asking whether to fill gaps or replace the week.
+  """
+  def count_user_meals_in_date_range(user_id, %Date{} = start_date, %Date{} = end_date) do
+    range_start = NaiveDateTime.new!(start_date, ~T[00:00:00])
+    range_end = NaiveDateTime.new!(end_date, ~T[23:59:59])
+
+    Repo.aggregate(
+      from(m in UserMeal,
+        where:
+          m.user_id == ^user_id and m.start_dt >= ^range_start and
+            m.start_dt <= ^range_end
+      ),
+      :count
+    )
   end
 
   @doc """

@@ -16,12 +16,12 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   use MehungryWeb, :live_view
 
   alias Mehungry.Accounts
-  alias Mehungry.Food
   alias Mehungry.History.MealType
   alias Mehungry.MealBlueprints
   alias Mehungry.MealBlueprints.DietPatterns
   alias Mehungry.Professionals
   alias Mehungry.Subscriptions
+  alias MehungryWeb.Api.MealPlanWorker
 
   @impl true
   def render(assigns) do
@@ -576,18 +576,26 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
       |> assign(:expanded_plans, MapSet.new())
       |> assign(:compat, %{})
       |> assign(:generating_ids, MapSet.new())
-      |> assign(:gen_tasks, %{})
       |> assign(:import_plan_id, nil)
       |> assign(:import_form, nil)
       |> assign(:editing_plan_meal, nil)
 
     socket =
       if connected?(socket) do
+        # Generation runs as an Oban job and reports on this topic. A run whose
+        # worker was hard-killed is failed first so its plan stops reading
+        # "generating".
+        MehungryWeb.Endpoint.subscribe(MealPlanWorker.topic(user.id))
+        Mehungry.MealPlanJobs.fail_stale_for_user(user.id)
+        schedule_generation_liveness()
+
         blueprints = MealBlueprints.list_blueprints_for_user(user.id)
+        plans_by_blueprint = load_plans(user.id, blueprints)
 
         socket
         |> assign(:blueprints, blueprints)
-        |> assign(:plans_by_blueprint, load_plans(user.id, blueprints))
+        |> assign(:plans_by_blueprint, plans_by_blueprint)
+        |> assign(:generating_ids, generating_ids(plans_by_blueprint))
         |> assign(:clients, load_client_targets(user.id))
       else
         socket
@@ -629,7 +637,8 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     # repeatedly). The blueprints are self-contained — no backing condition.
     {:ok, tally} = DietPatterns.sync_for_user(user.id)
 
-    {:noreply, socket |> put_flash(:info, DietPatterns.sync_summary(tally)) |> reload_blueprints()}
+    {:noreply,
+     socket |> put_flash(:info, DietPatterns.sync_summary(tally)) |> reload_blueprints()}
   end
 
   @impl true
@@ -673,7 +682,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
       MapSet.member?(socket.assigns.generating_ids, blueprint_id) ->
         {:noreply, socket}
 
-      Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded} ->
+      Mehungry.MealPlanJobs.check_quota(user.id) == {:error, :quota_exceeded} ->
         {:noreply,
          put_flash(
            socket,
@@ -784,6 +793,9 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     end
   end
 
+  # Creates the plan row ("generating") and hands the run to the shared
+  # `MealPlanWorker` — an Oban job, so it finishes even if this page is closed.
+  # The worker stores the meals on the plan (or marks it failed).
   defp start_generation(socket, blueprint_id) do
     user = socket.assigns.user
     blueprint = MealBlueprints.get_blueprint!(user.id, blueprint_id)
@@ -798,26 +810,26 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
         user_id: user.id
       })
 
-    preferences = MealBlueprints.blueprint_preferences(blueprint)
-    recipes = Food.list_user_recipes_for_selection(user)
+    enqueued =
+      MealPlanWorker.enqueue(%{
+        user_id: user.id,
+        start_date: start_date,
+        notes: MealBlueprints.blueprint_preferences(blueprint),
+        blueprint_id: blueprint.id,
+        blueprint_plan_id: plan.id
+      })
 
-    task =
-      Task.async(fn ->
-        Mehungry.AI.MealPlanGenerator.generate_entries(
-          preferences,
-          recipes,
-          start_date,
-          user.id,
-          blueprint
-        )
-      end)
+    socket =
+      case enqueued do
+        {:ok, _job} ->
+          assign(socket, :expanded_plans, MapSet.put(socket.assigns.expanded_plans, plan.id))
 
-    {:noreply,
-     socket
-     |> assign(:generating_ids, MapSet.put(socket.assigns.generating_ids, blueprint_id))
-     |> assign(:gen_tasks, Map.put(socket.assigns.gen_tasks, task.ref, {blueprint_id, plan.id}))
-     |> assign(:expanded_plans, MapSet.put(socket.assigns.expanded_plans, plan.id))
-     |> reload_blueprints()}
+        {:error, _reason} ->
+          MealBlueprints.update_plan(plan, %{status: "failed", error: "could not start"})
+          put_flash(socket, :error, "Could not start the plan generation. Please try again.")
+      end
+
+    {:noreply, reload_blueprints(socket)}
   end
 
   # ── plan-meal edit form (PlanMealFormComponent) ─────────────────────────────────
@@ -837,77 +849,83 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     {:noreply, assign(socket, :editing_plan_meal, nil)}
   end
 
-  # ── async generation result ────────────────────────────────────────────────────
+  # ── async generation result (MealPlanWorker → `meal_plan:<user_id>`) ──────────
+  # Only blueprint-plan runs are handled here; the same topic also carries the
+  # user's calendar generations.
 
   @impl true
-  def handle_info({ref, result}, socket) when is_reference(ref) do
-    Process.demonitor(ref, [:flush])
+  def handle_info(
+        %Phoenix.Socket.Broadcast{
+          event: "result",
+          payload: %{blueprint_plan_id: plan_id, meals: result}
+        },
+        socket
+      )
+      when not is_nil(plan_id) do
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       "Generated a #{result["created_count"]}-meal plan. Review it, then import to your calendar."
+     )
+     |> reload_blueprints()}
+  end
 
-    case Map.pop(socket.assigns.gen_tasks, ref) do
-      {nil, _} ->
-        {:noreply, socket}
+  def handle_info(
+        %Phoenix.Socket.Broadcast{
+          event: "progress",
+          payload: %{blueprint_plan_id: plan_id, status: "error"} = payload
+        },
+        socket
+      )
+      when not is_nil(plan_id) do
+    {:noreply,
+     socket
+     |> put_flash(:error, payload[:error] || "Could not generate the plan.")
+     |> reload_blueprints()}
+  end
 
-      {{blueprint_id, plan_id}, gen_tasks} ->
-        user = socket.assigns.user
-        plan = MealBlueprints.get_plan!(user.id, plan_id)
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "meal_plan:" <> _}, socket) do
+    {:noreply, socket}
+  end
 
-        socket =
-          case result do
-            {:ok, entries} ->
-              MealBlueprints.store_plan_meals(plan, entries)
-              Subscriptions.record_usage(user.id, "meal_plan")
+  # A worker that is hard-killed broadcasts nothing, so while any blueprint reads
+  # "Generating…" the runs are reconciled periodically and the list reloaded.
+  def handle_info(:generation_liveness, socket) do
+    schedule_generation_liveness()
 
-              put_flash(
-                socket,
-                :info,
-                "Generated a #{length(entries)}-meal plan. Review it, then import to your calendar."
-              )
-
-            {:error, reason} ->
-              MealBlueprints.update_plan(plan, %{status: "failed", error: to_string(reason)})
-              put_flash(socket, :error, "Could not generate plan: #{reason}")
-          end
-
-        {:noreply,
-         socket
-         |> assign(:gen_tasks, gen_tasks)
-         |> assign(:generating_ids, MapSet.delete(socket.assigns.generating_ids, blueprint_id))
-         |> reload_blueprints()}
+    if MapSet.size(socket.assigns.generating_ids) > 0 do
+      Mehungry.MealPlanJobs.fail_stale_for_user(socket.assigns.user.id)
+      {:noreply, reload_blueprints(socket)}
+    else
+      {:noreply, socket}
     end
   end
 
-  @impl true
-  def handle_info({:DOWN, ref, :process, _, _reason}, socket) when is_reference(ref) do
-    case Map.pop(socket.assigns.gen_tasks, ref) do
-      {nil, _} ->
-        {:noreply, socket}
-
-      {{blueprint_id, plan_id}, gen_tasks} ->
-        user = socket.assigns.user
-
-        with %_{} = plan <- safe_get_plan(user.id, plan_id) do
-          MealBlueprints.update_plan(plan, %{status: "failed", error: "generation crashed"})
-        end
-
-        {:noreply,
-         socket
-         |> assign(:gen_tasks, gen_tasks)
-         |> assign(:generating_ids, MapSet.delete(socket.assigns.generating_ids, blueprint_id))
-         |> put_flash(:error, "Plan generation failed unexpectedly.")
-         |> reload_blueprints()}
-    end
-  end
-
-  # ── helpers ────────────────────────────────────────────────────────────────────
+  @generation_liveness_ms 15_000
+  defp schedule_generation_liveness,
+    do: Process.send_after(self(), :generation_liveness, @generation_liveness_ms)
 
   defp reload_blueprints(socket) do
     user = socket.assigns.user
     blueprints = MealBlueprints.list_blueprints_for_user(user.id)
 
+    plans_by_blueprint = load_plans(user.id, blueprints)
+
     socket
     |> assign(:blueprints, blueprints)
-    |> assign(:plans_by_blueprint, load_plans(user.id, blueprints))
+    |> assign(:plans_by_blueprint, plans_by_blueprint)
+    |> assign(:generating_ids, generating_ids(plans_by_blueprint))
     |> refresh_compat()
+  end
+
+  # The blueprints with a run in flight — read from the plan rows (the durable
+  # truth), so the "Generating…" state survives leaving and re-opening the page.
+  defp generating_ids(plans_by_blueprint) do
+    for {blueprint_id, plans} <- plans_by_blueprint,
+        Enum.any?(plans, &(&1.status == "generating")),
+        into: MapSet.new(),
+        do: blueprint_id
   end
 
   # Recomputes the blueprint-compatibility report for every currently-expanded,

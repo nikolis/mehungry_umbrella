@@ -5,6 +5,13 @@ defmodule Mehungry.Subscriptions do
   Tiers: "free"          (0 recipe / 0 meal_plan per month),
          "m3hungry_plus" (15 recipe / 4 meal_plan per month — consumer premium),
          "pro"           (30 recipe / 10 meal_plan per month — professional/nutritionist).
+
+  Two meal-plan features are metered separately:
+
+    * `"meal_plan"` — a person's **own** plan (`UserMealPlanAgent`: calendar,
+      blueprint plans, mobile "Plan with AI").
+    * `"nutritionist_meal_plan"` — a nutritionist drafting a **client's** week
+      (`NutritionistMealPlanAgent`). Pro only: 40 per month.
   """
 
   import Ecto.Query
@@ -12,9 +19,24 @@ defmodule Mehungry.Subscriptions do
   alias Mehungry.Subscriptions.{UserSubscription, AiUsage}
 
   @monthly_limits %{
-    "free" => %{"recipe_generation" => 0, "meal_plan" => 0, "graphic_generation" => 0},
-    "m3hungry_plus" => %{"recipe_generation" => 15, "meal_plan" => 4, "graphic_generation" => 10},
-    "pro" => %{"recipe_generation" => 30, "meal_plan" => 10, "graphic_generation" => 30}
+    "free" => %{
+      "recipe_generation" => 0,
+      "meal_plan" => 0,
+      "nutritionist_meal_plan" => 0,
+      "graphic_generation" => 0
+    },
+    "m3hungry_plus" => %{
+      "recipe_generation" => 15,
+      "meal_plan" => 4,
+      "nutritionist_meal_plan" => 0,
+      "graphic_generation" => 10
+    },
+    "pro" => %{
+      "recipe_generation" => 30,
+      "meal_plan" => 10,
+      "nutritionist_meal_plan" => 40,
+      "graphic_generation" => 30
+    }
   }
 
   # ── Subscription ──────────────────────────────────────────────────────────────
@@ -139,7 +161,7 @@ defmodule Mehungry.Subscriptions do
   Returns :ok if the user has remaining quota for feature this month,
   or {:error, :quota_exceeded}.
   """
-  def check_quota(user_id, feature) do
+  def check_quota(user_id, feature, in_flight \\ 0) do
     user = Mehungry.Accounts.get_user!(user_id)
 
     if user.email == @owner_email do
@@ -152,7 +174,7 @@ defmodule Mehungry.Subscriptions do
         limit == 0 ->
           {:error, :quota_exceeded}
 
-        get_usage_this_month(user_id, feature) < limit ->
+        get_usage_this_month(user_id, feature) + in_flight < limit ->
           :ok
 
         true ->

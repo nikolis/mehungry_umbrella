@@ -98,9 +98,12 @@ Booking/ICS flow: [`professionals/appointments_booking.md`](professionals/appoin
   assignable to clients.
 - **AI drafting principle** — AI *drafts*; the nutritionist reviews, adjusts, and
   approves. The assistant never sends advice to a client on its own
-  (`product_foundation.md` principle 1). Agents: `AI.Agents.{MealPlanAgent,
-  NutritionistAgent}`. Quotas: Pro tier = 30 AI recipes / 10 meal plans per
-  month.
+  (`product_foundation.md` principle 1). Agents: `AI.Agents.{UserMealPlanAgent,
+  NutritionistMealPlanAgent}` — only `NutritionistMealPlanAgent` drafts **for a
+  client** (client file "AI Assist" + client calendar "AI draft week"; both ask
+  fill-gaps vs replace-week when the week has meals, run as an Oban job, and
+  never touch the client's past days). Quotas: Pro tier = 30 AI recipes / 10 own
+  meal plans / **40 client meal-plan drafts** per month.
 - **Exact nutrition moat** — every recipe/meal is computed from real USDA
   FoodData Central ingredients → full 168-nutrient profile per serving
   (calculated, not estimated). This is the professional-credibility

@@ -214,169 +214,180 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
     ~H"""
     <div class="mb-6">
-    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
-      <!-- Goal — edits inline; one sentence shouldn't open the whole intake form -->
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
-        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim inline-flex items-center gap-1">
-          <.icon name="hero-flag" class="w-3 h-3 text-paprika" /> {gettext("Goal")}
-        </span>
-        <%= cond do %>
-          <% @goal_editing? -> %>
-            <form phx-submit="save_goal" class="flex items-center gap-1 mt-0.5">
-              <input
-                type="text"
-                name="goal"
-                value={@summary.goal}
-                autofocus
-                aria-label={gettext("Goal")}
-                class="w-full min-w-0 bg-ink border border-ink-panel2 rounded-lg px-2 py-1 text-parchment text-xs focus:outline-none focus:border-paprika"
-              />
-              <button
-                type="submit"
-                aria-label={gettext("Save goal")}
-                class="text-basil hover:text-parchment shrink-0"
-              >
-                <.icon name="hero-check" class="w-4 h-4" />
-              </button>
+      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+        <!-- Goal — edits inline; one sentence shouldn't open the whole intake form -->
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+          <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim inline-flex items-center gap-1">
+            <.icon name="hero-flag" class="w-3 h-3 text-paprika" /> {gettext("Goal")}
+          </span>
+          <%= cond do %>
+            <% @goal_editing? -> %>
+              <form phx-submit="save_goal" class="flex items-center gap-1 mt-0.5">
+                <input
+                  type="text"
+                  name="goal"
+                  value={@summary.goal}
+                  autofocus
+                  aria-label={gettext("Goal")}
+                  class="w-full min-w-0 bg-ink border border-ink-panel2 rounded-lg px-2 py-1 text-parchment text-xs focus:outline-none focus:border-paprika"
+                />
+                <button
+                  type="submit"
+                  aria-label={gettext("Save goal")}
+                  class="text-basil hover:text-parchment shrink-0"
+                >
+                  <.icon name="hero-check" class="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  phx-click="cancel_goal"
+                  aria-label={gettext("Cancel")}
+                  class="text-parchment-dim hover:text-parchment shrink-0"
+                >
+                  <.icon name="hero-x-mark" class="w-4 h-4" />
+                </button>
+              </form>
+            <% present?(@summary.goal) -> %>
               <button
                 type="button"
-                phx-click="cancel_goal"
-                aria-label={gettext("Cancel")}
-                class="text-parchment-dim hover:text-parchment shrink-0"
+                phx-click="edit_goal"
+                title={gettext("Edit goal")}
+                class="text-left group/goal"
               >
-                <.icon name="hero-x-mark" class="w-4 h-4" />
+                <span class="text-parchment text-sm font-medium leading-snug line-clamp-2">
+                  {@summary.goal}
+                  <.icon
+                    name="hero-pencil"
+                    class="w-3 h-3 inline text-parchment-dim opacity-0 group-hover/goal:opacity-100"
+                  />
+                </span>
               </button>
-            </form>
-          <% present?(@summary.goal) -> %>
-            <button
-              type="button"
-              phx-click="edit_goal"
-              title={gettext("Edit goal")}
-              class="text-left group/goal"
-            >
-              <span class="text-parchment text-sm font-medium leading-snug line-clamp-2">
-                {@summary.goal}
-                <.icon
-                  name="hero-pencil"
-                  class="w-3 h-3 inline text-parchment-dim opacity-0 group-hover/goal:opacity-100"
-                />
+            <% true -> %>
+              <.action
+                variant={:ghost}
+                size={:sm}
+                phx-click="edit_goal"
+                class="self-start px-0 mt-0.5"
+              >
+                {gettext("Set a goal")}
+              </.action>
+          <% end %>
+        </div>
+
+        <!-- Weight → target -->
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+          <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
+            {gettext("Weight")}
+          </span>
+          <%= if @summary.weight_card do %>
+            <span class="font-display text-xl text-parchment leading-tight tabular-nums">
+              {@summary.weight_card.current_display}
+            </span>
+            <span class={["text-xs font-semibold tabular-nums", tone_text(@summary.weight_card.tone)]}>
+              {@summary.weight_card.arrow} {@summary.weight_card.delta_abs}
+              <span :if={@summary.ideal_weight_kg} class="text-parchment-dim font-normal">
+                {gettext("/ goal %{w} kg", w: MeasurementChart.fmt_num(@summary.ideal_weight_kg))}
               </span>
-            </button>
-          <% true -> %>
-            <.action variant={:ghost} size={:sm} phx-click="edit_goal" class="self-start px-0 mt-0.5">
-              {gettext("Set a goal")}
-            </.action>
-        <% end %>
-      </div>
-
-      <!-- Weight → target -->
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
-        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
-          {gettext("Weight")}
-        </span>
-        <%= if @summary.weight_card do %>
-          <span class="font-display text-xl text-parchment leading-tight tabular-nums">
-            {@summary.weight_card.current_display}
-          </span>
-          <span class={["text-xs font-semibold tabular-nums", tone_text(@summary.weight_card.tone)]}>
-            {@summary.weight_card.arrow} {@summary.weight_card.delta_abs}
-            <span :if={@summary.ideal_weight_kg} class="text-parchment-dim font-normal">
-              {gettext("/ goal %{w} kg", w: MeasurementChart.fmt_num(@summary.ideal_weight_kg))}
             </span>
-          </span>
-        <% else %>
-          <span class="text-parchment-dim text-sm">{gettext("No readings yet")}</span>
-        <% end %>
-      </div>
+          <% else %>
+            <span class="text-parchment-dim text-sm">{gettext("No readings yet")}</span>
+          <% end %>
+        </div>
 
-      <!-- BMI with healthy-band dot -->
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
-        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
-          {gettext("BMI")}
-        </span>
-        <%= if @summary.bmi do %>
-          <span class="font-display text-xl text-parchment leading-tight tabular-nums inline-flex items-center gap-1.5">
-            {@summary.bmi}
+        <!-- BMI with healthy-band dot -->
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+          <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
+            {gettext("BMI")}
+          </span>
+          <%= if @summary.bmi do %>
+            <span class="font-display text-xl text-parchment leading-tight tabular-nums inline-flex items-center gap-1.5">
+              {@summary.bmi}
+              <span
+                :if={@bmi_dot}
+                class={[
+                  "w-2 h-2 rounded-full",
+                  @bmi_dot == :good && "bg-basil",
+                  @bmi_dot == :warn && "bg-warning-500"
+                ]}
+                title={band_label(@bmi_dot)}
+              ></span>
+            </span>
+          <% else %>
+            <span class="text-parchment-dim text-sm">—</span>
+          <% end %>
+        </div>
+
+        <!-- Energy needs from the latest intake: TDEE leads, BMR rides along -->
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+          <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
+            {gettext("Energy")}
+          </span>
+          <%= if @summary.intake && (@summary.intake.tdee_kcal || @summary.intake.bmr_kcal) do %>
             <span
-              :if={@bmi_dot}
-              class={[
-                "w-2 h-2 rounded-full",
-                @bmi_dot == :good && "bg-basil",
-                @bmi_dot == :warn && "bg-warning-500"
-              ]}
-              title={band_label(@bmi_dot)}
-            ></span>
-          </span>
-        <% else %>
-          <span class="text-parchment-dim text-sm">—</span>
-        <% end %>
-      </div>
-
-      <!-- Energy needs from the latest intake: TDEE leads, BMR rides along -->
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
-        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
-          {gettext("Energy")}
-        </span>
-        <%= if @summary.intake && (@summary.intake.tdee_kcal || @summary.intake.bmr_kcal) do %>
-          <span :if={@summary.intake.tdee_kcal} class="font-display text-xl text-parchment leading-tight tabular-nums">
-            {@summary.intake.tdee_kcal}<span class="text-xs text-parchment-dim ml-0.5 font-sans">
-              {gettext("kcal TDEE")}
+              :if={@summary.intake.tdee_kcal}
+              class="font-display text-xl text-parchment leading-tight tabular-nums"
+            >
+              {@summary.intake.tdee_kcal}
+              <span class="text-xs text-parchment-dim ml-0.5 font-sans">
+                {gettext("kcal TDEE")}
+              </span>
             </span>
+            <span :if={@summary.intake.bmr_kcal} class="text-parchment-dim text-xs tabular-nums">
+              {gettext("BMR %{kcal} kcal", kcal: @summary.intake.bmr_kcal)}
+            </span>
+          <% else %>
+            <span class="text-parchment-dim text-sm">—</span>
+          <% end %>
+        </div>
+
+        <!-- Last visit -->
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+          <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
+            {gettext("Last visit")}
           </span>
-          <span :if={@summary.intake.bmr_kcal} class="text-parchment-dim text-xs tabular-nums">
-            {gettext("BMR %{kcal} kcal", kcal: @summary.intake.bmr_kcal)}
+          <%= if @summary.last_visit do %>
+            <span class="text-parchment text-sm font-medium">
+              {if @summary.last_visit.visit_date,
+                do: Calendar.strftime(@summary.last_visit.visit_date, "%b %d, %Y"),
+                else: "—"}
+            </span>
+            <span class="text-parchment-dim text-xs">{modality_label(@summary.last_visit.modality)}</span>
+          <% else %>
+            <span class="text-parchment-dim text-sm">{gettext("No visits yet")}</span>
+          <% end %>
+        </div>
+
+        <!-- Next steps — the to-do agreed at the last visit, surfaced for prep -->
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
+          <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim inline-flex items-center gap-1">
+            <.icon name="hero-arrow-right-circle" class="w-3 h-3 text-paprika" /> {gettext(
+              "Next steps"
+            )}
           </span>
-        <% else %>
-          <span class="text-parchment-dim text-sm">—</span>
-        <% end %>
+          <%= if present?(@summary.next_steps) do %>
+            <span
+              class="text-parchment text-sm font-medium leading-snug line-clamp-2"
+              title={@summary.next_steps}
+            >
+              {@summary.next_steps}
+            </span>
+          <% else %>
+            <span class="text-parchment-dim text-sm">
+              {if @summary.last_visit, do: gettext("Nothing recorded"), else: "—"}
+            </span>
+          <% end %>
+        </div>
       </div>
 
-      <!-- Last visit -->
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
-        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
-          {gettext("Last visit")}
+      <!-- Reference values from the latest intake -->
+      <div
+        :if={@reference_items != []}
+        class="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 px-1 text-xs text-parchment-dim"
+      >
+        <span :for={{label, value} <- @reference_items} class="whitespace-nowrap">
+          {label} <span class="text-parchment font-medium tabular-nums">{value}</span>
         </span>
-        <%= if @summary.last_visit do %>
-          <span class="text-parchment text-sm font-medium">
-            {if @summary.last_visit.visit_date,
-              do: Calendar.strftime(@summary.last_visit.visit_date, "%b %d, %Y"),
-              else: "—"}
-          </span>
-          <span class="text-parchment-dim text-xs">{modality_label(@summary.last_visit.modality)}</span>
-        <% else %>
-          <span class="text-parchment-dim text-sm">{gettext("No visits yet")}</span>
-        <% end %>
       </div>
-
-      <!-- Next steps — the to-do agreed at the last visit, surfaced for prep -->
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
-        <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim inline-flex items-center gap-1">
-          <.icon name="hero-arrow-right-circle" class="w-3 h-3 text-paprika" /> {gettext("Next steps")}
-        </span>
-        <%= if present?(@summary.next_steps) do %>
-          <span
-            class="text-parchment text-sm font-medium leading-snug line-clamp-2"
-            title={@summary.next_steps}
-          >
-            {@summary.next_steps}
-          </span>
-        <% else %>
-          <span class="text-parchment-dim text-sm">
-            {if @summary.last_visit, do: gettext("Nothing recorded"), else: "—"}
-          </span>
-        <% end %>
-      </div>
-    </div>
-
-    <!-- Reference values from the latest intake -->
-    <div
-      :if={@reference_items != []}
-      class="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 px-1 text-xs text-parchment-dim"
-    >
-      <span :for={{label, value} <- @reference_items} class="whitespace-nowrap">
-        {label} <span class="text-parchment font-medium tabular-nums">{value}</span>
-      </span>
-    </div>
     </div>
     """
   end
@@ -502,7 +513,11 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       end
 
     assigns =
-      assign(assigns, :viewing_latest?, assigns.selected_intake_id == latest_id and latest_id != nil)
+      assign(
+        assigns,
+        :viewing_latest?,
+        assigns.selected_intake_id == latest_id and latest_id != nil
+      )
 
     ~H"""
     <.panel_card class="mb-6">
@@ -569,7 +584,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
       </div>
 
       <p
-        :if={not @intake_editing? and @intake && not @viewing_latest?}
+        :if={(not @intake_editing? and @intake) && not @viewing_latest?}
         class="text-xs text-parchment-dim italic mb-3"
       >
         {gettext("Viewing a past assessment (read-only). Open the latest to edit.")}
@@ -1279,7 +1294,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         </div>
       </dl>
 
-      <p :if={present?(@visit.body)} class="text-parchment-dim text-xs whitespace-pre-line line-clamp-6">
+      <p
+        :if={present?(@visit.body)}
+        class="text-parchment-dim text-xs whitespace-pre-line line-clamp-6"
+      >
         {@visit.body}
       </p>
 
@@ -1434,6 +1452,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
   attr(:ai_result, :any, default: nil)
   attr(:ai_error, :any, default: nil)
   attr(:ai_preferences, :string, default: "")
+  attr(:ai_pending, :any, default: nil)
   attr(:client_id, :any, required: true)
 
   def ai_assist_panel(assigns) do
@@ -1470,10 +1489,33 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
           placeholder={gettext("Dietary notes for this client, e.g. 'low-carb, avoid shellfish'")}
           class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm placeholder-parchment-dim focus:outline-none focus:border-paprika"
         />
-        <.action variant={:secondary} size={:sm} type="submit" class="whitespace-nowrap">
+        <select
+          name="week"
+          aria-label={gettext("Week to plan")}
+          class="bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
+        >
+          <option value="this">{gettext("This week")}</option>
+          <option value="next">{gettext("Next week")}</option>
+        </select>
+        <.action
+          variant={:secondary}
+          size={:sm}
+          type="submit"
+          class="whitespace-nowrap"
+          disabled={not is_nil(@ai_pending)}
+        >
           {gettext("Draft 7-day Plan")}
         </.action>
       </.form>
+
+      <!-- The chosen week already has meals: fill gaps or replace? -->
+      <MehungryWeb.MealPlanModePrompt.mode_prompt
+        :if={@state == :idle and @ai_pending}
+        existing={@ai_pending.existing}
+        whose={:client}
+        mode_event="ai_assist_mode"
+        cancel_event="ai_assist_cancel"
+      />
 
       <!-- Running / streamed steps -->
       <div :if={@ai_running or @ai_steps != []} class="space-y-1.5 mt-2" aria-live="polite">
@@ -1609,7 +1651,6 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     </.panel_card>
     """
   end
-
 
   # ── Zone 4: history (appointments / ratings / plans) ──────────────────────────────────
 

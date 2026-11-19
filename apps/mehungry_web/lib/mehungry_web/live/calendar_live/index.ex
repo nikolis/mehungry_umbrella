@@ -11,7 +11,10 @@ defmodule MehungryWeb.CalendarLive.Index do
   alias Mehungry.Professionals
   alias Mehungry.Food
   alias Mehungry.Users
-  alias Mehungry.AI.Agents.MealPlanAgent
+  alias Mehungry.AI.Agents.MealPlanCore
+  alias Mehungry.AI.MealPlanGenerator
+  alias Mehungry.MealPlanJobs
+  alias MehungryWeb.Api.MealPlanWorker
 
   # https://gist.github.com/cblavier/0e227de6fd1dfa00814b88642cdcb2a9
   # def render(assigns) do
@@ -29,7 +32,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     # normalized terms (reusing the meal-plan enforcement engine) the calendar
     # uses to flag logged meals that contain one.
     avoid_foods = (profile && profile.avoid_foods) || []
-    avoid_terms = MealPlanAgent.avoid_terms(%{avoid_foods: avoid_foods})
+    avoid_terms = MealPlanCore.avoid_terms(%{avoid_foods: avoid_foods})
 
     socket =
       socket
@@ -44,7 +47,11 @@ defmodule MehungryWeb.CalendarLive.Index do
       |> assign(:page_title, "Meal planner")
       |> assign(:detail_return_to, nil)
       |> assign(:ai_plan_generating, false)
-      |> assign(:ai_plan_task_ref, nil)
+      # The tracking row of the in-flight generation (an Oban job — it survives
+      # leaving the page), and the request parked while the user picks what to do
+      # with meals already in the week.
+      |> assign(:ai_plan_job_id, nil)
+      |> assign(:ai_plan_pending, nil)
       |> assign(:ai_plan_result, nil)
       |> assign(:share_generating, false)
       |> assign(:share_posted, false)
@@ -86,10 +93,20 @@ defmodule MehungryWeb.CalendarLive.Index do
 
     # The blueprint the user was following persists on their profile, so the
     # calendar re-opens "following" it until they switch or stop.
-    followed_blueprint = load_selected_blueprint(user.id, profile && profile.followed_blueprint_id)
+    followed_blueprint =
+      load_selected_blueprint(user.id, profile && profile.followed_blueprint_id)
+
     blueprints = load_calendar_blueprints(user.id) |> prepend_blueprint(followed_blueprint)
 
+    # Generation runs in Oban and reports on this topic; a run started before
+    # this mount (the user left and came back) is picked up again here.
+    MehungryWeb.Endpoint.subscribe(MealPlanWorker.topic(user.id))
+    active_job = MealPlanJobs.active_calendar_job(user.id)
+    if connected?(socket), do: schedule_ai_plan_liveness()
+
     socket
+    |> assign(:ai_plan_generating, not is_nil(active_job))
+    |> assign(:ai_plan_job_id, active_job && active_job.id)
     |> assign(:user_meals, user_meals)
     |> assign(:day_notes, day_notes_for(user.id, Date.utc_today()))
     |> assign(:recipes, list_recipes(user))
@@ -273,54 +290,85 @@ defmodule MehungryWeb.CalendarLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
+  # ── AI plan generation (Oban job → `meal_plan:<user_id>` broadcasts) ─────────
+  # Only the run this page is following is acted on; blueprint-plan runs and
+  # other tabs' runs share the topic.
   @impl true
-  def handle_info({ref, result}, socket) when is_reference(ref) do
-    Process.demonitor(ref, [:flush])
+  def handle_info(
+        %Phoenix.Socket.Broadcast{event: "result", payload: %{job_id: job_id, meals: result}},
+        %{assigns: %{ai_plan_job_id: job_id}} = socket
+      )
+      when not is_nil(job_id) do
+    user_meals =
+      load_and_format_user_meals(
+        socket.assigns.user.id,
+        current_calendar_date(socket),
+        current_language(socket)
+      )
 
-    if socket.assigns.ai_plan_task_ref == ref do
-      case result do
-        {:ok, created, skipped} ->
-          Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "meal_plan")
+    result_msg = build_result_message(result["created_count"], result["skipped_count"] || 0)
 
-          user_meals =
-            load_and_format_user_meals(
-            socket.assigns.user.id,
-            current_calendar_date(socket),
-            current_language(socket)
-          )
-          result_msg = build_result_message(length(created), skipped)
-
-          {:noreply,
-           socket
-           |> assign(:ai_plan_generating, false)
-           |> assign(:ai_plan_task_ref, nil)
-           |> assign(:ai_plan_result, result_msg)
-           |> assign(:user_meals, user_meals)
-           |> assign_blueprint_progress()
-           |> push_event("create_meals", %{meals: user_meals})}
-
-        {:error, reason} ->
-          {:noreply,
-           socket
-           |> assign(:ai_plan_generating, false)
-           |> assign(:ai_plan_task_ref, nil)
-           |> put_flash(:error, "Could not generate plan: #{reason}")}
-      end
-    else
-      {:noreply, socket}
-    end
+    {:noreply,
+     socket
+     |> assign(:ai_plan_generating, false)
+     |> assign(:ai_plan_job_id, nil)
+     |> assign(:ai_plan_result, result_msg)
+     |> assign(:user_meals, user_meals)
+     |> assign_blueprint_progress()
+     |> push_event("create_meals", %{meals: user_meals})}
   end
 
-  @impl true
-  def handle_info({:DOWN, ref, :process, _, _reason}, socket) when is_reference(ref) do
-    if socket.assigns.ai_plan_task_ref == ref do
-      {:noreply,
-       socket
-       |> assign(:ai_plan_generating, false)
-       |> assign(:ai_plan_task_ref, nil)
-       |> put_flash(:error, "AI plan generation failed unexpectedly")}
-    else
-      {:noreply, socket}
+  def handle_info(
+        %Phoenix.Socket.Broadcast{
+          event: "progress",
+          payload: %{job_id: job_id, status: "error"} = payload
+        },
+        %{assigns: %{ai_plan_job_id: job_id}} = socket
+      )
+      when not is_nil(job_id) do
+    {:noreply,
+     socket
+     |> assign(:ai_plan_generating, false)
+     |> assign(:ai_plan_job_id, nil)
+     |> put_flash(:error, payload[:error] || "Could not generate the plan.")}
+  end
+
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "meal_plan:" <> _}, socket) do
+    {:noreply, socket}
+  end
+
+  # A worker that is hard-killed (timeout, deploy) broadcasts nothing, so while a
+  # run is being followed its tracking row is re-read periodically; a terminal
+  # row is replayed through the same handlers a broadcast would hit.
+  def handle_info(:ai_plan_liveness, socket) do
+    schedule_ai_plan_liveness()
+    job_id = socket.assigns.ai_plan_job_id
+    job = job_id && job_id |> MealPlanJobs.get_job() |> MealPlanJobs.fail_if_stale()
+    topic = MealPlanWorker.topic(socket.assigns.user.id)
+
+    case job do
+      %{status: "done"} ->
+        handle_info(
+          %Phoenix.Socket.Broadcast{
+            topic: topic,
+            event: "result",
+            payload: %{job_id: job.id, meals: job.result || %{}}
+          },
+          socket
+        )
+
+      %{status: "error"} ->
+        handle_info(
+          %Phoenix.Socket.Broadcast{
+            topic: topic,
+            event: "progress",
+            payload: %{job_id: job.id, status: "error", error: job.error}
+          },
+          socket
+        )
+
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -328,10 +376,10 @@ defmodule MehungryWeb.CalendarLive.Index do
   def handle_info({:meal_saved, %{return_to: return_to, flash: flash}}, socket) do
     user_meals =
       load_and_format_user_meals(
-            socket.assigns.user.id,
-            current_calendar_date(socket),
-            current_language(socket)
-          )
+        socket.assigns.user.id,
+        current_calendar_date(socket),
+        current_language(socket)
+      )
 
     socket =
       socket
@@ -393,7 +441,7 @@ defmodule MehungryWeb.CalendarLive.Index do
 
     case Accounts.set_avoid_foods(profile, raw) do
       {:ok, updated} ->
-        avoid_terms = MealPlanAgent.avoid_terms(%{avoid_foods: updated.avoid_foods})
+        avoid_terms = MealPlanCore.avoid_terms(%{avoid_foods: updated.avoid_foods})
 
         {:noreply,
          socket
@@ -411,32 +459,28 @@ defmodule MehungryWeb.CalendarLive.Index do
   def handle_event("ai_plan_week", %{"prompt" => prompt} = params, socket) when prompt != "" do
     user = socket.assigns.user
 
-    case Mehungry.Subscriptions.check_quota(user.id, "meal_plan") do
+    case MealPlanJobs.check_quota(user.id) do
       :ok ->
-        recipes = socket.assigns.recipes
         # Anchor the generated 7-day plan to the Monday of the week currently in
         # view — the same framing the calendar grid (Widget `beginning_of_week`)
-        # and the blueprint-progress panel (`assign_blueprint_progress`) use. Laying
-        # the plan from `Date.utc_today()` instead straddled two display weeks when
-        # generating mid-week, so the just-generated plan filled only part of the
-        # visible grid and the progress panel read half-empty.
+        # and the blueprint-progress panel (`assign_blueprint_progress`) use.
         start_date = Date.beginning_of_week(current_calendar_date(socket))
-        # Optional blueprint to constrain generation. Loaded (owner-scoped) and
-        # threaded through now; the generator treats it as an inert hint until
-        # blueprint-aware planning lands.
-        blueprint = load_selected_blueprint(user.id, params["blueprint_id"])
 
-        task =
-          Task.async(fn ->
-            Mehungry.AI.MealPlanGenerator.run(prompt, recipes, start_date, user.id, blueprint)
-          end)
+        request = %{
+          prompt: prompt,
+          blueprint_id: params["blueprint_id"],
+          start_date: start_date,
+          existing: MealPlanGenerator.existing_meal_count(user.id, start_date)
+        }
 
-        {:noreply,
-         socket
-         |> assign(:ai_plan_generating, true)
-         |> assign(:ai_plan_task_ref, task.ref)
-         |> assign(:ai_plan_result, nil)
-         |> assign(:ai_quota_exceeded, false)}
+        # A week that already has meals: the user decides what happens to them
+        # before anything is generated.
+        if request.existing > 0 do
+          {:noreply,
+           socket |> assign(:ai_plan_pending, request) |> assign(:ai_quota_exceeded, false)}
+        else
+          {:noreply, start_ai_plan(socket, request, :fill_gaps)}
+        end
 
       {:error, :quota_exceeded} ->
         {:noreply, assign(socket, :ai_quota_exceeded, true)}
@@ -445,6 +489,20 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   def handle_event("ai_plan_week", _params, socket) do
     {:noreply, socket}
+  end
+
+  # The user's answer to "this week already has meals".
+  @impl true
+  def handle_event("ai_plan_mode", %{"mode" => mode}, socket) do
+    case socket.assigns.ai_plan_pending do
+      nil -> {:noreply, socket}
+      request -> {:noreply, start_ai_plan(socket, request, MealPlanGenerator.parse_mode(mode))}
+    end
+  end
+
+  @impl true
+  def handle_event("ai_plan_cancel", _params, socket) do
+    {:noreply, assign(socket, :ai_plan_pending, nil)}
   end
 
   # ── Weekly-plan share card ──────────────────────────────────────────────────
@@ -649,7 +707,11 @@ defmodule MehungryWeb.CalendarLive.Index do
     case History.duplicate_user_meal(user_id, meal_id, Date.utc_today()) do
       {:ok, _meal} ->
         user_meals =
-          load_and_format_user_meals(user_id, current_calendar_date(socket), current_language(socket))
+          load_and_format_user_meals(
+            user_id,
+            current_calendar_date(socket),
+            current_language(socket)
+          )
 
         {:noreply,
          socket
@@ -919,6 +981,39 @@ defmodule MehungryWeb.CalendarLive.Index do
     first = Date.beginning_of_week(date)
     {first, Date.add(first, 6)}
   end
+
+  # Enqueues the generation as an Oban job (so it outlives this page) and starts
+  # following it. The blueprint is authorised here and re-resolved in the worker.
+  defp start_ai_plan(socket, request, mode) do
+    user = socket.assigns.user
+    blueprint = load_selected_blueprint(user.id, request.blueprint_id)
+
+    attrs = %{
+      user_id: user.id,
+      start_date: request.start_date,
+      notes: request.prompt,
+      blueprint_id: blueprint && blueprint.id,
+      mode: to_string(mode)
+    }
+
+    socket = assign(socket, :ai_plan_pending, nil)
+
+    case MealPlanWorker.enqueue(attrs) do
+      {:ok, job} ->
+        socket
+        |> assign(:ai_plan_generating, true)
+        |> assign(:ai_plan_job_id, job.id)
+        |> assign(:ai_plan_result, nil)
+        |> assign(:ai_quota_exceeded, false)
+
+      {:error, _reason} ->
+        put_flash(socket, :error, "Could not start the plan generation. Please try again.")
+    end
+  end
+
+  @ai_plan_liveness_ms 15_000
+  defp schedule_ai_plan_liveness,
+    do: Process.send_after(self(), :ai_plan_liveness, @ai_plan_liveness_ms)
 
   defp build_result_message(created, 0),
     do: "Added #{created} meals to your calendar."

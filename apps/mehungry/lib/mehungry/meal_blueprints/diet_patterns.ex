@@ -30,7 +30,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       nutrients/compounds + preferred foods, with a macro split tuned to the pattern.
     * *Avoidance* patterns (e.g. **Low-FODMAP**, **Vegan**, **Gluten-Free**): the
       defining lever is `avoid_foods` (onion, garlic, wheat…), enforced during
-      generation by `Mehungry.AI.Agents.MealPlanAgent`.
+      generation by `Mehungry.AI.Agents.UserMealPlanAgent`.
 
   ## Usage
 
@@ -151,7 +151,8 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
     by_name = Map.new(existing, &{&1.name, &1})
 
     tally =
-      Enum.reduce(all(), %{created: 0, refreshed: 0, skipped: 0, adopted: 0}, fn descriptor, acc ->
+      Enum.reduce(all(), %{created: 0, refreshed: 0, skipped: 0, adopted: 0}, fn descriptor,
+                                                                                 acc ->
         key = Atom.to_string(descriptor.key)
 
         cond do
@@ -779,7 +780,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "cold-pressed olive oil",
         "dates"
       ],
-      # The vegan defining set *exactly* so MealPlanAgent.diet_mode_from_blueprint/1
+      # The vegan defining set *exactly* so MealPlanCore.diet_mode_from_blueprint/1
       # infers :vegan (meat+poultry+fish + dairy+eggs); the raw restriction itself
       # is enforced by the `required_hashtags` #raw gate, not avoid_foods.
       avoid_foods: [
@@ -858,7 +859,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "nuts"
       ],
       # Pescatarian is the one "no-meat" pattern that does NOT get the
-      # vegan/vegetarian category filter (see MealPlanAgent.diet_mode_from_blueprint/1),
+      # vegan/vegetarian category filter (see MealPlanCore.diet_mode_from_blueprint/1),
       # so the literal substring avoid-list is the *only* flesh gate — it must name
       # the specific meats, not just the category words "meat"/"poultry".
       avoid_foods: [
@@ -1125,11 +1126,15 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
 
   # Assembles a descriptor; the blueprint's compound/nutrient tag arrays are
   # *derived* from the pattern spec so direction stays consistent.
-  defp descriptor(key, spec, %{
-         preferred_foods: preferred_foods,
-         avoid_foods: avoid_foods,
-         macro_split: macro_split
-       } = opts) do
+  defp descriptor(
+         key,
+         spec,
+         %{
+           preferred_foods: preferred_foods,
+           avoid_foods: avoid_foods,
+           macro_split: macro_split
+         } = opts
+       ) do
     %{
       key: key,
       name: spec.name,
@@ -1296,7 +1301,8 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
   defp harvard_fat_ref do
     %{
       "label" => "Harvard T.H. Chan — Types of Fat",
-      "url" => "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/"
+      "url" =>
+        "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/"
     }
   end
 

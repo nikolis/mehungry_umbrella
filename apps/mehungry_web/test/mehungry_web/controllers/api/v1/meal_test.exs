@@ -18,7 +18,10 @@ defmodule MehungryWeb.Api.V1.MealTest do
     }
 
     created = conn |> post(~p"/api/v1/meals", body) |> json_response(201)
-    assert %{"data" => %{"id" => meal_id, "meal_type" => "dinner", "recipes" => recipes}} = created
+
+    assert %{"data" => %{"id" => meal_id, "meal_type" => "dinner", "recipes" => recipes}} =
+             created
+
     assert [%{"recipe_id" => rid, "servings" => 2}] = recipes
     assert rid == recipe.id
 
@@ -288,7 +291,8 @@ defmodule MehungryWeb.Api.V1.MealTest do
 
       # The week range (the calendar overview's source) carries it per meal too —
       # this is the surface that previously read zeros.
-      listed = conn |> get(~p"/api/v1/meals?start=2026-08-10&end=2026-08-16") |> json_response(200)
+      listed =
+        conn |> get(~p"/api/v1/meals?start=2026-08-10&end=2026-08-16") |> json_response(200)
 
       meal =
         listed["data"]["days"]
@@ -386,7 +390,11 @@ defmodule MehungryWeb.Api.V1.MealTest do
 
       accepted =
         conn
-        |> post(~p"/api/v1/meals/plan-with-ai", %{"start" => "2026-08-11", "days" => 5, "notes" => "high protein"})
+        |> post(~p"/api/v1/meals/plan-with-ai", %{
+          "start" => "2026-08-11",
+          "days" => 5,
+          "notes" => "high protein"
+        })
         |> json_response(202)
 
       assert %{"data" => %{"job_id" => job_id, "status" => "queued"}} = accepted
@@ -401,6 +409,30 @@ defmodule MehungryWeb.Api.V1.MealTest do
         queue: :ai_interactive,
         args: %{"job_id" => job_id}
       )
+    end
+
+    test "existing_meals picks the mode; anything else falls back to fill_gaps", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _sub} = Mehungry.Subscriptions.upsert_subscription(user.id, %{tier: "m3hungry_plus"})
+
+      %{"data" => %{"job_id" => replace_id}} =
+        conn
+        |> post(~p"/api/v1/meals/plan-with-ai", %{"existing_meals" => "replace_week"})
+        |> json_response(202)
+
+      %{"data" => %{"job_id" => default_id}} =
+        conn |> post(~p"/api/v1/meals/plan-with-ai", %{}) |> json_response(202)
+
+      %{"data" => %{"job_id" => junk_id}} =
+        conn
+        |> post(~p"/api/v1/meals/plan-with-ai", %{"existing_meals" => "wipe"})
+        |> json_response(202)
+
+      assert Mehungry.MealPlanJobs.get_job(replace_id).mode == "replace_week"
+      assert Mehungry.MealPlanJobs.get_job(default_id).mode == "fill_gaps"
+      assert Mehungry.MealPlanJobs.get_job(junk_id).mode == "fill_gaps"
     end
 
     test "polling a job orphaned in generating resolves to error", %{conn: conn, user: user} do

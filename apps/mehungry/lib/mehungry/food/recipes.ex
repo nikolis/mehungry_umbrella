@@ -9,6 +9,7 @@ defmodule Mehungry.Food.Recipes do
 
   alias Mehungry.Repo
   alias Mehungry.Hashtag
+
   alias Mehungry.Food.{
     Categories,
     DietClassifier,
@@ -665,7 +666,7 @@ defmodule Mehungry.Food.Recipes do
 
   The general preparation-/style-tag gate behind blueprint `required_hashtags`
   (e.g. `["raw"]` for the Raw Vegan / Raw Vegetarian diet patterns), enforced in
-  `MealPlanAgent.search_catalog` on top of the vegan/vegetarian diet filter.
+  the meal-plan agents' recipe search on top of the vegan/vegetarian diet filter.
   """
   def recipe_ids_with_all_hashtags(recipe_ids, []) when is_list(recipe_ids),
     do: MapSet.new(recipe_ids)
@@ -716,6 +717,28 @@ defmodule Mehungry.Food.Recipes do
     end)
     |> Enum.map(fn {rid, _} -> rid end)
     |> MapSet.new()
+  end
+
+  @doc """
+  Given a candidate list of recipe ids, returns the subset (a `MapSet`) whose
+  recipe **contains** any of `ingredient_ids`. The ingredient-composition check
+  the meal-plan agents use to drop recipes holding a food a client must avoid —
+  exact by id, so it catches what a title substring never could.
+  """
+  def recipe_ids_containing_ingredients(recipe_ids, ingredient_ids)
+      when is_list(recipe_ids) and is_list(ingredient_ids) do
+    if recipe_ids == [] or ingredient_ids == [] do
+      MapSet.new()
+    else
+      from(r in Recipe,
+        join: ri in assoc(r, :recipe_ingredients),
+        where: r.id in ^recipe_ids and ri.ingredient_id in ^ingredient_ids,
+        distinct: true,
+        select: r.id
+      )
+      |> Repo.all()
+      |> MapSet.new()
+    end
   end
 
   @doc """

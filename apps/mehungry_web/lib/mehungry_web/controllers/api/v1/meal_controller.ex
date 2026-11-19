@@ -11,9 +11,9 @@ defmodule MehungryWeb.Api.V1.MealController do
 
   alias Mehungry.History
   alias Mehungry.History.MealType
+  alias Mehungry.AI.MealPlanGenerator
   alias Mehungry.MealPlanJobs
   alias Mehungry.NutrientUtils
-  alias Mehungry.Subscriptions
   alias MehungryWeb.Api.MealPlanWorker
   alias MehungryWeb.Api.V1.Locale
   alias MehungryWeb.Api.V1.MealJSON
@@ -77,22 +77,26 @@ defmodule MehungryWeb.Api.V1.MealController do
   @doc """
   POST /api/v1/meals/plan-with-ai — quota-gated async generation. Returns 202 +
   job id; the client watches `meal_plan:<user_id>` or polls `plan_status`.
+
+  `existing_meals` chooses what happens to meals already in the target week:
+  `"fill_gaps"` (default — keep them, fill only empty slots) or `"replace_week"`.
+  Runs through the same `MealPlanWorker` the web calendar uses.
   """
   def plan_with_ai(conn, params) do
     user_id = uid(conn)
 
-    case Subscriptions.check_quota(user_id, "meal_plan") do
+    case MealPlanJobs.check_quota(user_id) do
       :ok ->
         attrs = %{
           user_id: user_id,
-          status: "queued",
           start_date: parse_optional_date(params["start"]),
           days: params["days"],
-          notes: params["notes"]
+          notes: params["notes"],
+          mode: params["existing_meals"] |> MealPlanGenerator.parse_mode() |> to_string()
         }
 
         # Row + Oban job commit together, so a 202 always has a job behind it.
-        case MealPlanJobs.create_and_enqueue(attrs, &MealPlanWorker.new(%{"job_id" => &1.id})) do
+        case MealPlanWorker.enqueue(attrs) do
           {:ok, job} ->
             conn |> put_status(:accepted) |> json(data(%{job_id: job.id, status: "queued"}))
 
@@ -119,7 +123,11 @@ defmodule MehungryWeb.Api.V1.MealController do
         # An orphaned `generating` row (worker hard-killed) resolves to `error`
         # here, so the client never polls forever.
         job = MealPlanJobs.fail_if_stale(job)
-        json(conn, data(%{job_id: job.id, status: job.status, result: job.result, error: job.error}))
+
+        json(
+          conn,
+          data(%{job_id: job.id, status: job.status, result: job.result, error: job.error})
+        )
     end
   end
 
@@ -137,7 +145,11 @@ defmodule MehungryWeb.Api.V1.MealController do
           "start_dt" => start_dt,
           "end_dt" => NaiveDateTime.add(start_dt, 1800, :second)
         }
-        |> put_if(params, "recipe_user_meals", &recipe_user_meals(&1, existing_recipe_user_meals(existing)))
+        |> put_if(
+          params,
+          "recipe_user_meals",
+          &recipe_user_meals(&1, existing_recipe_user_meals(existing))
+        )
         |> put_if(params, "ingredient_user_meals", &ingredient_user_meals/1)
         |> put_if(params, "free_food_user_meals", &free_food_user_meals/1)
 

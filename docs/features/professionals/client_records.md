@@ -309,7 +309,7 @@ unread count for the thread is `Professionals.count_unread_in_thread/3`.
 ## The payoff — the client file feeds the AI meal-plan draft
 
 The record is not just a filing cabinet: when the nutritionist clicks **"Draft 7-day Plan"** on the
-Planning tab, the `NutritionistAgent` reads the whole file so the draft honours it. Progress streams
+Planning tab (choosing **this week** or **next week**), the `NutritionistMealPlanAgent` reads the whole file so the draft honours it. Progress streams
 live over PubSub; if the nutritionist navigates away and re-mounts mid-draft, the panel **resumes
 its running state** (`NutritionistAgentWorker.running?/2` checks Oban for an active job for this
 professional+client on mount) instead of flashing the idle form. Its
@@ -321,10 +321,21 @@ Where the client's self-entered profile and the nutritionist's file overlap, the
 value wins** (the clinician's intake TDEE beats the client's own calorie target; the avoid list
 unions both) — the same precedence drives the calendar's "AI draft week", since both share one
 resolver (`Professionals.resolve_client_meal_context/2`).
-A second tool, `get_assigned_plan`, reads any meals the nutritionist already assigned to the week
-and the agent **leaves those cells untouched** (skip-filled-slots). So filling in a client's
+The same resolved context also drives **deterministic guards** (diet, avoid terms,
+condition-implicated ingredient ids): matching recipes/ingredients are filtered out of the agent's
+search results, not merely discouraged in the prompt.
+When the chosen week already has meals, the nutritionist is **asked** what to do: **fill the gaps**
+(every assigned meal stays) or **replace the week** (meals from today on are deleted and redrafted).
+Either way the client's **past days are never touched**. A second tool, `get_assigned_plan`, shows
+the agent those meals with the matching instruction. Drafts are metered under the Pro
+`"nutritionist_meal_plan"` quota (40/month; drafts still running count against it).
+**Intake free text is enforced carefully:** allergies / intolerances / aversions are typed prose,
+so non-answers ("no", "-", "όχι") and fragments under three characters are ignored and the rest
+match only at the start of a word ("oil" excludes "Olive oil", not "Boiled eggs"). The draft's
+result — or its failure message — lists the **foods excluded for this client**, so a loose intake
+entry is visible and fixable. So filling in a client's
 intake/conditions and assigning part of a week both directly shape (and constrain) the AI draft —
-see [`../../implementation/ai/ai_agents.md`](../../implementation/ai/ai_agents.md) §NutritionistAgent.
+see [`../../implementation/ai/ai_agents.md`](../../implementation/ai/ai_agents.md) §NutritionistMealPlanAgent.
 
 ## Files
 

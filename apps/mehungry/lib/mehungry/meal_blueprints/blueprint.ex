@@ -45,7 +45,7 @@ defmodule Mehungry.MealBlueprints.Blueprint do
     field(:avoid_foods, {:array, :string}, default: [])
     # Recipe hashtags (titles, no leading `#`) a generated plan must carry — the
     # lever behind preparation-method patterns like Raw Vegan / Raw Vegetarian
-    # (`["raw"]`). Enforced in `MealPlanAgent` via
+    # (`["raw"]`). Enforced in `MealPlanCore` via
     # `Food.recipe_ids_with_all_hashtags/2`; mirrors the other array tag fields.
     field(:required_hashtags, {:array, :string}, default: [])
 

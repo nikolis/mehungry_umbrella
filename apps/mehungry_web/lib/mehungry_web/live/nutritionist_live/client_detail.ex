@@ -16,6 +16,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   alias Mehungry.MealBlueprints
   alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Progress
+  alias Mehungry.AI.Agents.MealPlanCore
   alias Mehungry.ObanWorkers.NutritionistAgentWorker
   alias MehungryWeb.MeasurementChart
 
@@ -76,6 +77,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:ai_result, nil)
          |> assign(:ai_error, nil)
          |> assign(:ai_preferences, "")
+         # The request parked while the nutritionist picks fill-gaps vs replace.
+         |> assign(:ai_pending, nil)
          |> assign(:record, record)
          |> assign(:onboarding_answers, Mehungry.Onboarding.answers_for_user(client_id_int))
          |> assign(:onboarding_locale, Gettext.get_locale(MehungryWeb.Gettext))
@@ -140,32 +143,44 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   # ── AI Assist events ──────────────────────────────────────────────────────────
 
+  # `NutritionistMealPlanAgent` drafts the chosen week onto the client's calendar
+  # as an Oban job (leaving this page does not cancel it). When that week already
+  # has meals the nutritionist first chooses fill-gaps vs replace.
   @impl true
-  def handle_event("ai_assist", %{"preferences" => prefs}, socket) do
-    professional_id = socket.assigns.current_user.id
-    client = socket.assigns.client
+  def handle_event("ai_assist", %{"preferences" => prefs} = params, socket) do
+    start_date = ai_week_start(params["week"])
 
-    case NutritionistAgentWorker.enqueue(
-           professional_id,
-           socket.assigns.client_id,
-           client.name || client.email,
-           prefs
-         ) do
-      {:ok, _job} ->
-        {:noreply,
-         socket
-         |> assign(:ai_running, true)
-         |> assign(:ai_steps, [])
-         |> assign(:ai_result, nil)
-         |> assign(:ai_error, nil)
-         |> assign(:ai_preferences, prefs)}
+    request = %{
+      preferences: prefs,
+      start_date: start_date,
+      existing: NutritionistAgentWorker.existing_meal_count(socket.assigns.client_id, start_date)
+    }
 
-      {:error, reason} ->
-        Logger.error("Nutritionist AI assistant could not start: #{inspect(reason)}")
+    socket = assign(socket, :ai_preferences, prefs)
 
-        {:noreply,
-         put_flash(socket, :error, gettext("Could not start the AI assistant. Please try again."))}
+    if request.existing > 0 do
+      {:noreply, assign(socket, :ai_pending, request)}
+    else
+      {:noreply, start_ai_assist(socket, request, :fill_gaps)}
     end
+  end
+
+  # The nutritionist's answer to "this week already has meals".
+  @impl true
+  def handle_event("ai_assist_mode", %{"mode" => mode}, socket) do
+    case socket.assigns.ai_pending do
+      nil ->
+        {:noreply, socket}
+
+      request ->
+        mode = Mehungry.AI.MealPlanGenerator.parse_mode(mode)
+        {:noreply, start_ai_assist(socket, request, mode)}
+    end
+  end
+
+  @impl true
+  def handle_event("ai_assist_cancel", _params, socket) do
+    {:noreply, assign(socket, :ai_pending, nil)}
   end
 
   @impl true
@@ -574,7 +589,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     else
       {:error, reason} ->
         Logger.error("Could not save goal: #{inspect(reason)}")
-        {:noreply, put_flash(socket, :error, gettext("Could not save the goal. Please try again."))}
+
+        {:noreply,
+         put_flash(socket, :error, gettext("Could not save the goal. Please try again."))}
     end
   end
 
@@ -960,33 +977,32 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   # ── PubSub messages ───────────────────────────────────────────────────────────
 
+  # The topic is per professional, so only this client's run is acted on.
   @impl true
-  def handle_info({:nutritionist_agent, {:started, client_name}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:ai_running, true)
-     |> assign(:ai_steps, [gettext("Starting analysis for %{name}…", name: client_name)])
-     |> assign(:ai_result, nil)
-     |> assign(:ai_error, nil)}
+  def handle_info({:nutritionist_agent, client_id, event}, socket) do
+    if client_id == socket.assigns.client_id do
+      {:noreply, handle_ai_event(socket, event)}
+    else
+      {:noreply, socket}
+    end
   end
 
-  def handle_info({:nutritionist_agent, {:step, label}}, socket) do
-    steps = socket.assigns.ai_steps ++ [label]
-    {:noreply, assign(socket, :ai_steps, steps)}
+  # A draft that is hard-killed (the worker's timeout, a deploy) broadcasts
+  # nothing, so while one is shown as running the Oban job is re-checked. A dead
+  # job is confirmed once more a moment later — its own {:done, _}/{:error, _}
+  # may still be in flight — before the page gives up on it.
+  def handle_info(:ai_liveness, socket) do
+    Process.send_after(self(), :ai_liveness, 15_000)
+    if ai_draft_dead?(socket), do: Process.send_after(self(), :ai_liveness_confirm, 3_000)
+    {:noreply, socket}
   end
 
-  def handle_info({:nutritionist_agent, {:done, summary}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:ai_running, false)
-     |> assign(:ai_result, summary)}
-  end
-
-  def handle_info({:nutritionist_agent, {:error, reason}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:ai_running, false)
-     |> assign(:ai_error, reason)}
+  def handle_info(:ai_liveness_confirm, socket) do
+    if ai_draft_dead?(socket) do
+      {:noreply, handle_ai_event(socket, {:error, MealPlanCore.error_message(:crashed)})}
+    else
+      {:noreply, socket}
+    end
   end
 
   # A new message in this thread: append it, then mark it read only if the
@@ -1182,6 +1198,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
           ai_result={@ai_result}
           ai_error={@ai_error}
           ai_preferences={@ai_preferences}
+          ai_pending={@ai_pending}
           client_id={@client_id}
         />
         <.assign_plan_panel
@@ -1206,5 +1223,73 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <.client_details_modal :if={@show_client_form} client_form={@client_form} />
     </main>
     """
+  end
+
+  # ── AI Assist helpers ─────────────────────────────────────────────────────────
+
+  defp ai_draft_dead?(socket) do
+    socket.assigns.ai_running and
+      not NutritionistAgentWorker.running?(
+        socket.assigns.current_user.id,
+        socket.assigns.client_id
+      )
+  end
+
+  defp handle_ai_event(socket, {:started, client_name}) do
+    socket
+    |> assign(:ai_running, true)
+    |> assign(:ai_steps, [gettext("Starting analysis for %{name}…", name: client_name)])
+    |> assign(:ai_result, nil)
+    |> assign(:ai_error, nil)
+  end
+
+  defp handle_ai_event(socket, {:step, label}),
+    do: assign(socket, :ai_steps, socket.assigns.ai_steps ++ [label])
+
+  defp handle_ai_event(socket, {:done, summary}),
+    do: socket |> assign(:ai_running, false) |> assign(:ai_result, summary)
+
+  defp handle_ai_event(socket, {:error, reason}),
+    do: socket |> assign(:ai_running, false) |> assign(:ai_error, reason)
+
+  # "next" → next week's Monday; anything else → this week's Monday.
+  defp ai_week_start("next"), do: Date.add(Date.beginning_of_week(Date.utc_today()), 7)
+  defp ai_week_start(_), do: Date.beginning_of_week(Date.utc_today())
+
+  defp start_ai_assist(socket, request, mode) do
+    client = socket.assigns.client
+    socket = assign(socket, :ai_pending, nil)
+
+    case NutritionistAgentWorker.start(%{
+           professional_id: socket.assigns.current_user.id,
+           client_id: socket.assigns.client_id,
+           client_name: client.name || client.email,
+           preferences: request.preferences,
+           start_date: request.start_date,
+           mode: mode
+         }) do
+      {:ok, _job} ->
+        socket
+        |> assign(:ai_running, true)
+        |> assign(:ai_steps, [])
+        |> assign(:ai_result, nil)
+        |> assign(:ai_error, nil)
+
+      {:error, :quota_exceeded} ->
+        put_flash(
+          socket,
+          :error,
+          gettext("You've reached your AI client-plan limit for this month.")
+        )
+
+      {:error, :already_running} ->
+        socket
+        |> assign(:ai_running, true)
+        |> put_flash(:info, gettext("A draft for this client is already in progress."))
+
+      {:error, reason} ->
+        Logger.error("Nutritionist AI assistant could not start: #{inspect(reason)}")
+        put_flash(socket, :error, gettext("Could not start the AI assistant. Please try again."))
+    end
   end
 end

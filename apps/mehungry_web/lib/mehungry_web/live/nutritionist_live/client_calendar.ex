@@ -7,8 +7,9 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   alias Mehungry.History
   alias Mehungry.History.UserMeal
   alias Mehungry.Food
-  alias Mehungry.Subscriptions
   alias Mehungry.AI.MealPlanGenerator
+  alias Mehungry.AI.Agents.MealPlanCore
+  alias Mehungry.ObanWorkers.NutritionistAgentWorker
 
   @impl true
   def mount(%{"id" => client_id_str} = _params, _session, socket) do
@@ -18,7 +19,9 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     case Professionals.get_assignment(professional_id, client_id) do
       nil ->
         {:ok,
-         socket |> put_flash(:error, gettext("Client not found.")) |> redirect(to: "/nutritionist/clients")}
+         socket
+         |> put_flash(:error, gettext("Client not found."))
+         |> redirect(to: "/nutritionist/clients")}
 
       _assignment ->
         client = Accounts.get_user!(client_id)
@@ -31,6 +34,19 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
         socket = assign_device_kind(socket)
 
+        # The draft runs as an Oban job (it outlives this page) and reports on the
+        # professional's topic; a run already in flight is picked up again here.
+        if connected?(socket) do
+          Phoenix.PubSub.subscribe(
+            Mehungry.PubSub,
+            NutritionistAgentWorker.topic(professional_id)
+          )
+
+          Process.send_after(self(), :ai_liveness, 15_000)
+        end
+
+        ai_running? = NutritionistAgentWorker.running?(professional_id, client_id)
+
         {:ok,
          socket
          |> assign(:client, client)
@@ -41,8 +57,8 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
          |> assign(:calendar_view, "week_view")
          |> assign(:calorie_target, profile && profile.daily_calorie_target)
          |> assign(:pending_meal_type, nil)
-         |> assign(:ai_plan_generating, false)
-         |> assign(:ai_plan_task_ref, nil)
+         |> assign(:ai_plan_generating, ai_running?)
+         |> assign(:ai_plan_pending, nil)
          |> assign(:ai_plan_result, nil)
          |> assign(:ai_quota_exceeded, false)
          |> assign(:child_ids, [])
@@ -120,7 +136,10 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
   defp deny_past_date(socket) do
     socket
-    |> put_flash(:error, gettext("You can't assign meals on a past date — pick today or a future day."))
+    |> put_flash(
+      :error,
+      gettext("You can't assign meals on a past date — pick today or a future day.")
+    )
     |> push_patch(to: "/nutritionist/clients/#{socket.assigns.client_id}/calendar")
   end
 
@@ -138,50 +157,63 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     {:noreply, push_patch(socket, to: "/nutritionist/clients/#{client_id}/calendar/#{date}")}
   end
 
-  # AI draft task finished: record the nutritionist's usage, reload the viewed
-  # week so the new meals show in the grid, and surface a result message.
+  # ── AI draft progress (NutritionistAgentWorker → PubSub) ─────────────────────
+  # The topic is per professional, so only this client's run is acted on.
   @impl true
-  def handle_info({ref, result}, socket) when is_reference(ref) do
-    Process.demonitor(ref, [:flush])
-
-    if socket.assigns[:ai_plan_task_ref] == ref do
-      case result do
-        {:ok, created, skipped} ->
-          Subscriptions.record_usage(socket.assigns.current_user.id, "meal_plan")
-
-          user_meals =
-            load_and_format_user_meals(socket.assigns.client_id, current_calendar_date(socket))
-
-          {:noreply,
-           socket
-           |> assign(:ai_plan_generating, false)
-           |> assign(:ai_plan_task_ref, nil)
-           |> assign(:ai_plan_result, ai_result_message(length(created), skipped))
-           |> assign(:user_meals, user_meals)}
-
-        {:error, reason} ->
-          {:noreply,
-           socket
-           |> assign(:ai_plan_generating, false)
-           |> assign(:ai_plan_task_ref, nil)
-           |> put_flash(:error, gettext("Could not generate plan: %{reason}", reason: inspect(reason)))}
-      end
+  def handle_info({:nutritionist_agent, client_id, event}, socket) do
+    if client_id == socket.assigns.client_id do
+      {:noreply, handle_ai_event(socket, event)}
     else
       {:noreply, socket}
     end
   end
 
-  @impl true
-  def handle_info({:DOWN, ref, :process, _, _reason}, socket) when is_reference(ref) do
-    if socket.assigns[:ai_plan_task_ref] == ref do
-      {:noreply,
-       socket
-       |> assign(:ai_plan_generating, false)
-       |> assign(:ai_plan_task_ref, nil)
-       |> put_flash(:error, gettext("AI plan generation failed unexpectedly"))}
+  # A draft that is hard-killed (the worker's timeout, a deploy) broadcasts
+  # nothing, so while one is shown as running the Oban job is re-checked. A dead
+  # job is confirmed once more a moment later — its own {:done, _}/{:error, _}
+  # may still be in flight — before the page gives up on it.
+  def handle_info(:ai_liveness, socket) do
+    Process.send_after(self(), :ai_liveness, 15_000)
+    if ai_draft_dead?(socket), do: Process.send_after(self(), :ai_liveness_confirm, 3_000)
+    {:noreply, socket}
+  end
+
+  def handle_info(:ai_liveness_confirm, socket) do
+    if ai_draft_dead?(socket) do
+      {:noreply, handle_ai_event(socket, {:error, MealPlanCore.error_message(:crashed)})}
     else
       {:noreply, socket}
     end
+  end
+
+  defp ai_draft_dead?(socket) do
+    socket.assigns.ai_plan_generating and
+      not NutritionistAgentWorker.running?(
+        socket.assigns.current_user.id,
+        socket.assigns.client_id
+      )
+  end
+
+  defp handle_ai_event(socket, {:started, _client_name}),
+    do: assign(socket, ai_plan_generating: true, ai_plan_result: nil)
+
+  defp handle_ai_event(socket, {:step, _label}), do: socket
+
+  # The draft is on the client's calendar: reload the viewed week to show it.
+  defp handle_ai_event(socket, {:done, summary}) do
+    user_meals =
+      load_and_format_user_meals(socket.assigns.client_id, current_calendar_date(socket))
+
+    socket
+    |> assign(:ai_plan_generating, false)
+    |> assign(:ai_plan_result, summary)
+    |> assign(:user_meals, user_meals)
+  end
+
+  defp handle_ai_event(socket, {:error, message}) do
+    socket
+    |> assign(:ai_plan_generating, false)
+    |> put_flash(:error, message)
   end
 
   @impl true
@@ -226,7 +258,12 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   @impl true
   def handle_event("add_cell", %{"date" => date} = params, socket) do
     client_id = socket.assigns.client_id
-    meal_type = case Map.get(params, "type", "") do "" -> nil; t -> t end
+
+    meal_type =
+      case Map.get(params, "type", "") do
+        "" -> nil
+        t -> t
+      end
 
     if past_date?(date) do
       {:noreply, deny_past_date(socket)}
@@ -238,40 +275,40 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     end
   end
 
-  # AI draft: generate a week of meals onto the *client's* calendar, anchored to
-  # the viewed week. The prompt is enriched with the client's patient-file data
-  # (goal, conditions, calorie target, diet, foods to avoid, latest measurements)
-  # so the plan is tailored to this client. Quota is drawn from the nutritionist
-  # (the pro-tier account doing the work).
+  # AI draft: `NutritionistMealPlanAgent` plans the viewed week onto the
+  # *client's* calendar (today onward — past days are never rewritten). The agent
+  # reads the client's file itself; the typed prompt is optional extra guidance.
+  # When the week already has meals the nutritionist first chooses fill-gaps vs
+  # replace. Quota is drawn from the nutritionist.
   @impl true
   def handle_event("ai_plan_week", params, socket) do
-    nutritionist_id = socket.assigns.current_user.id
-    prompt = params |> Map.get("prompt", "") |> String.trim()
+    start_date = Date.beginning_of_week(current_calendar_date(socket))
 
-    case Subscriptions.check_quota(nutritionist_id, "meal_plan") do
-      :ok ->
-        # The client's recorded profile drives the draft; the typed prompt is
-        # optional extra guidance on top.
-        preferences = build_client_preferences(prompt, socket)
-        recipes = socket.assigns.recipes
-        start_date = Date.beginning_of_week(current_calendar_date(socket))
-        client_id = socket.assigns.client_id
+    request = %{
+      prompt: params |> Map.get("prompt", "") |> String.trim(),
+      start_date: start_date,
+      existing: NutritionistAgentWorker.existing_meal_count(socket.assigns.client_id, start_date)
+    }
 
-        task =
-          Task.async(fn ->
-            MealPlanGenerator.run(preferences, recipes, start_date, client_id, nil)
-          end)
-
-        {:noreply,
-         socket
-         |> assign(:ai_plan_generating, true)
-         |> assign(:ai_plan_task_ref, task.ref)
-         |> assign(:ai_plan_result, nil)
-         |> assign(:ai_quota_exceeded, false)}
-
-      {:error, :quota_exceeded} ->
-        {:noreply, assign(socket, :ai_quota_exceeded, true)}
+    if request.existing > 0 do
+      {:noreply, assign(socket, ai_plan_pending: request, ai_quota_exceeded: false)}
+    else
+      {:noreply, start_ai_draft(socket, request, :fill_gaps)}
     end
+  end
+
+  # The nutritionist's answer to "this week already has meals".
+  @impl true
+  def handle_event("ai_plan_mode", %{"mode" => mode}, socket) do
+    case socket.assigns.ai_plan_pending do
+      nil -> {:noreply, socket}
+      request -> {:noreply, start_ai_draft(socket, request, MealPlanGenerator.parse_mode(mode))}
+    end
+  end
+
+  @impl true
+  def handle_event("ai_plan_cancel", _params, socket) do
+    {:noreply, assign(socket, :ai_plan_pending, nil)}
   end
 
   @impl true
@@ -325,7 +362,9 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
           </div>
         <% end %>
         <p class="text-parchment-dim text-sm">
-          {gettext("Editing")} <span class="font-medium text-parchment">{@client.name || @client.email}</span>{gettext("'s meal plan")}
+          {gettext("Editing")} <span class="font-medium text-parchment">{@client.name || @client.email}</span>{gettext(
+            "'s meal plan"
+          )}
         </p>
       </div>
 
@@ -340,30 +379,40 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-basil/40 text-basil-soft hover:text-basil hover:border-basil text-sm font-medium transition-colors"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
               </svg>
               {gettext("AI draft week")}
             </button>
           </div>
-          <div id="nutri-ai-panel" class="hidden mt-2 bg-ink-panel border border-ink-panel2 rounded-xl p-4">
+          <div
+            id="nutri-ai-panel"
+            class="hidden mt-2 bg-ink-panel border border-ink-panel2 rounded-xl p-4"
+          >
             <h3 class="font-display font-medium text-parchment text-sm mb-1">
               {gettext("Draft %{name}'s week with AI", name: @client.name || @client.email)}
             </h3>
             <p class="text-parchment-dim/70 text-xs mb-3 max-w-prose">
               {gettext(
-                "The draft is tailored to this client's recorded profile — goal, health conditions, calorie target, diet, and foods to avoid. Review and adjust before sharing."
+                "The draft is tailored to this client's recorded profile — goal, health conditions, calorie target, diet, and foods to avoid — and covers today onward. You can leave this page while it runs. Review and adjust before sharing."
               )}
             </p>
             <form phx-submit="ai_plan_week" class="flex flex-col sm:flex-row gap-3">
               <textarea
                 name="prompt"
                 rows="2"
-                placeholder={gettext("Optional extra guidance… e.g. 'Mediterranean, 5 meals/day, no pork'")}
+                placeholder={
+                  gettext("Optional extra guidance… e.g. 'Mediterranean, 5 meals/day, no pork'")
+                }
                 class="flex-1 bg-ink text-parchment rounded-lg p-3 text-sm resize-none border border-ink-panel2 focus:border-basil focus:outline-none"
               ></textarea>
               <button
                 type="submit"
-                disabled={@ai_plan_generating}
+                disabled={@ai_plan_generating or not is_nil(@ai_plan_pending)}
                 class="px-5 py-2 rounded-lg bg-basil hover:bg-basil-soft text-ink font-semibold text-sm self-end disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 <%= if @ai_plan_generating do %>
@@ -373,7 +422,16 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
                 <% end %>
               </button>
             </form>
-            <p :if={@ai_plan_result} class="text-basil text-xs mt-3">{@ai_plan_result}</p>
+            <MehungryWeb.MealPlanModePrompt.mode_prompt
+              :if={@ai_plan_pending}
+              existing={@ai_plan_pending.existing}
+              whose={:client}
+              mode_event="ai_plan_mode"
+              cancel_event="ai_plan_cancel"
+            />
+            <p :if={@ai_plan_result} class="text-basil text-xs mt-3 whitespace-pre-line">
+              {@ai_plan_result}
+            </p>
             <div
               :if={@ai_quota_exceeded}
               class="mt-3 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 flex items-center justify-between gap-3"
@@ -417,75 +475,40 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     |> History.format_user_meals()
   end
 
-  defp ai_result_message(created, 0),
-    do: gettext("Added %{n} meals to the plan.", n: created)
+  defp start_ai_draft(socket, request, mode) do
+    client = socket.assigns.client
+    socket = assign(socket, :ai_plan_pending, nil)
 
-  defp ai_result_message(created, skipped),
-    do: gettext("Added %{n} meals (%{s} skipped).", n: created, s: skipped)
+    case NutritionistAgentWorker.start(%{
+           professional_id: socket.assigns.current_user.id,
+           client_id: socket.assigns.client_id,
+           client_name: client.name || client.email,
+           preferences: request.prompt,
+           start_date: request.start_date,
+           mode: mode
+         }) do
+      {:ok, _job} ->
+        assign(socket, ai_plan_generating: true, ai_plan_result: nil, ai_quota_exceeded: false)
 
-  # Enriches the nutritionist's free-text prompt with the client's patient-file
-  # data so the AI tailors the plan to this client. Only present fields are
-  # included; with nothing on file it returns the prompt unchanged.
-  defp build_client_preferences(prompt, socket) do
-    professional_id = socket.assigns.current_user.id
-    client_id = socket.assigns.client_id
+      {:error, :quota_exceeded} ->
+        assign(socket, :ai_quota_exceeded, true)
 
-    # Shared precedence resolver — where the client's own profile and the
-    # nutritionist's file overlap, the nutritionist's value wins (clinician TDEE
-    # over the profile calorie target; avoid list unions both). Same brief the
-    # agentic draft's get_client_record reads.
-    ctx = Professionals.resolve_client_meal_context(professional_id, client_id)
-    anthro = ctx.anthropometrics
+      {:error, :already_running} ->
+        socket
+        |> assign(:ai_plan_generating, true)
+        |> put_flash(:info, gettext("A draft for this client is already in progress."))
 
-    lines =
-      [
-        ctx.goal && "Goal: #{humanize_token(ctx.goal)}",
-        anthro && anthro.sex && anthro.age && "Sex / age: #{anthro.sex}, #{anthro.age}",
-        anthro && anthro.activity_level &&
-          "Activity level: #{humanize_token(anthro.activity_level)}",
-        calorie_target_line(ctx.calorie_target),
-        ctx.diet && "Diet: #{ctx.diet}",
-        ctx.conditions != [] && "Health conditions: #{Enum.join(ctx.conditions, ", ")}",
-        avoid_foods_line(ctx.avoid),
-        weight_line(anthro)
-      ]
-      |> Enum.filter(& &1)
+      {:error, :week_in_past} ->
+        put_flash(
+          socket,
+          :error,
+          gettext("That week is already over — pick the current or a future week.")
+        )
 
-    context =
-      case lines do
-        [] -> nil
-        _ -> "Client profile — tailor the plan to this client:\n- " <> Enum.join(lines, "\n- ")
-      end
-
-    preferences =
-      [blank_to_nil(prompt), context]
-      |> Enum.filter(& &1)
-      |> Enum.join("\n\n")
-
-    if preferences == "", do: gettext("A balanced, varied week of meals."), else: preferences
+      {:error, _reason} ->
+        put_flash(socket, :error, gettext("Could not start the AI draft. Please try again."))
+    end
   end
-
-  defp blank_to_nil(s) when is_binary(s), do: if(String.trim(s) == "", do: nil, else: s)
-  defp blank_to_nil(_), do: nil
-
-  defp calorie_target_line(kcal) when is_integer(kcal),
-    do: "Daily calorie target: #{kcal} kcal"
-
-  defp calorie_target_line(_), do: nil
-
-  defp avoid_foods_line(foods) when is_list(foods) and foods != [],
-    do: "Foods to avoid: #{Enum.join(foods, ", ")}"
-
-  defp avoid_foods_line(_), do: nil
-
-  defp weight_line(%{weight_kg: w, bmi: bmi}) when is_number(w) and is_number(bmi),
-    do: "Current weight: #{w} kg (BMI #{Float.round(bmi / 1.0, 1)})"
-
-  defp weight_line(%{weight_kg: w}) when is_number(w), do: "Current weight: #{w} kg"
-  defp weight_line(_intake), do: nil
-
-  defp humanize_token(value) when is_binary(value), do: String.replace(value, "_", " ")
-  defp humanize_token(value), do: value
 
   defp current_calendar_date(socket) do
     case socket.assigns[:particular_date] do

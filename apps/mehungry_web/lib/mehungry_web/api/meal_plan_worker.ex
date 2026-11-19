@@ -1,24 +1,47 @@
 defmodule MehungryWeb.Api.MealPlanWorker do
   @moduledoc """
-  Runs an asynchronous "Plan with AI" generation for the mobile API (spec §9):
-  generates a meal plan via `AI.MealPlanGenerator`, persists the meals, records
-  quota usage, updates the `MealPlanJob` tracking row, and broadcasts progress to
-  the `meal_plan:<user_id>` channel. Lives in the web app so it can broadcast
+  Runs one asynchronous "plan my own week" generation (`UserMealPlanAgent`) for
+  **every** client of that feature — the web calendar, blueprint plans, and the
+  mobile API (spec §9). One code path, so the surfaces cannot drift, and the run
+  lives in Oban rather than in a page's process: leaving the page never cancels
+  it.
+
+  It generates the plan, then either writes it to the user's calendar (honouring
+  the job's existing-meals `mode`) or stores it on an independent blueprint plan
+  (`blueprint_plan_id`), records quota usage, updates the `MealPlanJob` tracking
+  row, and broadcasts to `meal_plan:<user_id>` — the topic both the mobile
+  channel and the LiveViews follow. Lives in the web app so it can broadcast
   through `MehungryWeb.Endpoint`.
 
-  Runs on its own `:ai_interactive` queue — a client is waiting on it, so it must
+  Runs on its own `:ai_interactive` queue — a person is waiting on it, so it must
   not queue behind batch work on `:ai_agents`. A crash marks the tracking row
   `error` (never left `generating`); a hard kill is caught by
-  `MealPlanJobs.fail_if_stale/1` on the next poll.
+  `MealPlanJobs.fail_if_stale/1` on the next poll / page mount.
   """
   use Oban.Worker, queue: :ai_interactive, max_attempts: 1
 
   require Logger
 
+  alias Mehungry.AI.Agents.MealPlanCore
   alias Mehungry.AI.MealPlanGenerator
-  alias Mehungry.Food
+  alias Mehungry.MealBlueprints
   alias Mehungry.MealPlanJobs
   alias Mehungry.Subscriptions
+
+  @doc """
+  Creates the tracking row and enqueues its job in one transaction. `attrs` are
+  `MealPlanJob` attrs (`user_id`, `start_date`, `notes`, and optionally
+  `blueprint_id`, `blueprint_plan_id`, `mode`). Returns `{:ok, job}` or
+  `{:error, reason}`.
+  """
+  def enqueue(attrs) do
+    attrs
+    |> Map.put_new(:status, "queued")
+    |> MealPlanJobs.create_and_enqueue(&new(%{"job_id" => &1.id}))
+  end
+
+  @doc "The topic a user's generation progress is broadcast on."
+  def topic(user_id), do: "meal_plan:#{user_id}"
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"job_id" => job_id}}) do
@@ -43,45 +66,118 @@ defmodule MehungryWeb.Api.MealPlanWorker do
         "MealPlanWorker crashed: " <> Exception.format(:error, exception, __STACKTRACE__)
       )
 
-      fail(job, Exception.message(exception))
+      fail(job, :crashed)
       {:error, exception}
   catch
     kind, reason ->
       Logger.error("MealPlanWorker crashed: " <> Exception.format(kind, reason, __STACKTRACE__))
-      fail(job, inspect(reason))
+      fail(job, :crashed)
       {:error, {kind, reason}}
-  end
-
-  defp fail(job, message) do
-    MealPlanJobs.update_job(job, %{status: "error", error: String.slice(message, 0, 500)})
-    broadcast(job.user_id, "progress", %{job_id: job.id, status: "error"})
   end
 
   defp run(job) do
     {:ok, job} = MealPlanJobs.update_job(job, %{status: "generating"})
-    broadcast(job.user_id, "progress", %{job_id: job.id, status: "generating", pct: 10})
+    broadcast(job, "progress", %{status: "generating", pct: 10})
 
-    recipes = Food.list_user_recipes_for_selection(job.user_id)
     start_date = job.start_date || Date.utc_today()
 
-    case MealPlanGenerator.run(job.notes || "", recipes, start_date, job.user_id, nil) do
-      {:ok, created, _skipped} ->
-        Subscriptions.record_usage(job.user_id, "meal_plan")
+    with {:ok, blueprint} <- load_blueprint(job),
+         {:ok, entries} <-
+           MealPlanGenerator.generate_entries(
+             job.notes || "",
+             start_date,
+             job.user_id,
+             blueprint,
+             generation_opts(job)
+           ),
+         {:ok, result} <- deliver(job, entries, start_date) do
+      Subscriptions.record_usage(job.user_id, "meal_plan")
 
-        result = %{"created_count" => length(created), "meal_ids" => Enum.map(created, & &1.id)}
-        {:ok, _} = MealPlanJobs.update_job(job, %{status: "done", result: result})
-        broadcast(job.user_id, "result", %{job_id: job.id, status: "done", meals: result})
-        :ok
-
+      {:ok, _} = MealPlanJobs.update_job(job, %{status: "done", result: result})
+      broadcast(job, "result", %{status: "done", meals: result})
+      :ok
+    else
       {:error, reason} ->
-        {:ok, _} = MealPlanJobs.update_job(job, %{status: "error", error: inspect(reason)})
-        broadcast(job.user_id, "progress", %{job_id: job.id, status: "error"})
+        Logger.warning("MealPlanWorker: generation failed: #{inspect(reason)}")
+        fail(job, reason)
         # Surfaced to the client via the tracking row; don't retry (max_attempts: 1).
         :ok
     end
   end
 
-  defp broadcast(user_id, event, payload) do
-    MehungryWeb.Endpoint.broadcast("meal_plan:#{user_id}", event, payload)
+  # A requested blueprint that can no longer be resolved fails the run: planning
+  # on without it would silently drop its diet / avoid constraints.
+  defp load_blueprint(%{blueprint_id: nil}), do: {:ok, nil}
+
+  defp load_blueprint(%{blueprint_id: id, user_id: user_id}) do
+    {:ok, MealBlueprints.get_blueprint_for_generation(user_id, id)}
+  rescue
+    Ecto.NoResultsError -> {:error, :blueprint_unavailable}
+  end
+
+  # A calendar run tells the agent its mode (a week-replacing plan must cover
+  # every day's main meals); a blueprint plan has no week to replace.
+  defp generation_opts(%{blueprint_plan_id: nil, mode: mode}),
+    do: [mode: MealPlanGenerator.parse_mode(mode)]
+
+  defp generation_opts(_job), do: []
+
+  # Calendar target: write the entries in the job's existing-meals mode.
+  defp deliver(%{blueprint_plan_id: nil} = job, entries, start_date) do
+    case MealPlanGenerator.persist_entries_to_calendar(
+           entries,
+           job.user_id,
+           start_date,
+           job.mode
+         ) do
+      {:ok, [], _skipped} ->
+        {:error, :no_meals_created}
+
+      {:ok, created, skipped} ->
+        {:ok,
+         %{
+           "created_count" => length(created),
+           "skipped_count" => skipped,
+           "meal_ids" => Enum.map(created, & &1.id)
+         }}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Blueprint-plan target: store the entries on the independent plan.
+  defp deliver(%{blueprint_plan_id: plan_id} = job, entries, _start_date) do
+    plan = MealBlueprints.get_plan!(job.user_id, plan_id)
+    MealBlueprints.store_plan_meals(plan, entries)
+
+    {:ok, %{"created_count" => length(entries), "blueprint_plan_id" => plan_id}}
+  end
+
+  defp fail(job, reason) do
+    message = error_message(reason)
+
+    MealPlanJobs.update_job(job, %{status: "error", error: String.slice(message, 0, 500)})
+    fail_blueprint_plan(job, message)
+    broadcast(job, "progress", %{status: "error", error: message})
+  end
+
+  defp error_message(:blueprint_unavailable), do: "That blueprint is no longer available."
+  defp error_message(reason), do: MealPlanCore.error_message(reason)
+
+  defp fail_blueprint_plan(%{blueprint_plan_id: nil}, _message), do: :ok
+
+  defp fail_blueprint_plan(%{blueprint_plan_id: plan_id, user_id: user_id}, message) do
+    plan = MealBlueprints.get_plan!(user_id, plan_id)
+    MealBlueprints.update_plan(plan, %{status: "failed", error: message})
+  rescue
+    Ecto.NoResultsError -> :ok
+  end
+
+  defp broadcast(job, event, payload) do
+    payload =
+      Map.merge(payload, %{job_id: job.id, blueprint_plan_id: job.blueprint_plan_id})
+
+    MehungryWeb.Endpoint.broadcast(topic(job.user_id), event, payload)
   end
 end

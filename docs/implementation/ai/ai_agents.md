@@ -17,8 +17,8 @@ Everything AI-related lives in `apps/mehungry/lib/mehungry/ai/`. This document e
    │  Agents (tool-use  │   │  Single-shot utils   │   │  Non-Anthropic       │
    │  loops)            │   │  RecipeTranslator    │   │  ImageGenerator      │
    │  RecipeAgent       │   │  IngredientTranslator│   │  (OpenAI gpt-image-1)│
-   │  MealPlanAgent     │   │                      │   │  EmbeddingClient     │
-   │  NutritionistAgent │   │                      │   │  (OpenAI embeddings) │
+   │  UserMealPlanAgent     │   │                      │   │  EmbeddingClient     │
+   │  NutritionistMealPlanAgent │   │                      │   │  (OpenAI embeddings) │
    └──────────┬─────────┘   └───────────┬──────────┘   └──────────────────────┘
               │                         │
         ┌─────▼─────┐                   │
@@ -148,7 +148,7 @@ end
 The same accumulator carries **provenance** state: `:offered` records every
 id→name the search/create tools handed the model this run, so `submit_*` can
 reject any id the model never actually received. All three agents now do this —
-`RecipeAgent` for ingredient ids, `MealPlanAgent`/`NutritionistAgent` for
+`RecipeAgent` for ingredient ids, `UserMealPlanAgent`/`NutritionistMealPlanAgent` for
 recipe ids.
 
 ### 1. `RecipeAgent` — natural language → complete recipe
@@ -254,150 +254,46 @@ Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(json_string, da
 
 One quirk worth knowing: the gram unit is looked up by the literal name `"grammar"` (`Food.get_measurement_unit_by_name("grammar")`) — a legacy naming artifact of the units table. Renaming that unit would silently remove the gram option from every agent run.
 
-### 2. `MealPlanAgent` — 7-day meal plan for a user
+### 2 & 3. The meal-plan agents — `UserMealPlanAgent` and `NutritionistMealPlanAgent`
 
-**Used by:** the calendar LiveView (via `MealPlanGenerator.run/4`), quota-gated by subscription tier. The LiveView checks quota first, runs the pipeline in a `Task` so the socket stays responsive, and records usage only on success:
+Two agents split by **who is planning for whom**, sharing one core. Full detail
+(surfaces, guards, modes, quotas, eval) is in [`meal_plan.md`](meal_plan.md); the
+shape:
 
-```elixir
-# calendar_live/index.ex
-case Mehungry.Subscriptions.check_quota(user.id, "meal_plan") do
-  :ok ->
-    task =
-      Task.async(fn ->
-        Mehungry.AI.MealPlanGenerator.run(prompt, recipes, start_date, user.id)
-      end)
-    # assigns :ai_plan_generating, :ai_plan_task_ref …
+| | `UserMealPlanAgent` | `NutritionistMealPlanAgent` |
+|---|---|---|
+| Serves | A person planning their **own** week (calendar, blueprint plans, mobile) | A nutritionist drafting a **client's** week — the only meal-plan agent on the nutritionist side |
+| Learns about the person from | The free-text brief (prompt / flattened blueprint) | Tools: `get_client_record`, `get_assigned_plan`, `get_client_summary`, `get_recent_meals`, `get_ratings` |
+| Catalog | The user's own recipes | The nutritionist's own recipes, else the public catalog |
+| Runs in | `MehungryWeb.Api.MealPlanWorker` (`:ai_interactive`) | `Mehungry.ObanWorkers.NutritionistAgentWorker` (`:ai_agents`) |
+| Quota feature | `"meal_plan"` | `"nutritionist_meal_plan"` (Pro: 40/mo) |
 
-  {:error, :quota_exceeded} ->
-    {:noreply, assign(socket, :ai_quota_exceeded, true)}
-end
-```
+**`Mehungry.AI.Agents.MealPlanCore`** holds everything else, so the two cannot
+drift:
 
-**Tools:** `get_recent_meals` (last 21 days of history, so the plan avoids repeats), `search_catalog` (semantic vector search over the user's recipes), `submit_plan` (validate + persist all 21 entries).
+- **Guards** (`guards/1`) — diet mode, avoid terms, required hashtags, avoided
+  ingredient ids. Applied inside the search tools: a filtered-out id never
+  reaches the model and never enters the provenance set.
+- **Search tools** — `search_recipes_tool/2` (guarded `RecipeVectorSearch`, with
+  per-serving calories) and `search_ingredients_tool/2` (whole-food snacks with
+  unit options).
+- **`submit_plan_tool/2`** — provenance + shape validation (`validate_plan/7`),
+  then normalization to calendar-independent entries. It stores
+  `%{entries, rationale}` in the accumulator and **persists nothing**.
+- **`error_message/1`** — the readable text a failed run shows; internal reasons
+  never reach the UI.
 
-**Semantic search instead of prompt stuffing.** The legacy generator inlined up to 80 recipes as text into the prompt. The agent instead searches by meaning:
+Neither agent persists. The worker writes the returned entries with
+`MealPlanGenerator.persist_entries_to_calendar/5` in the mode the invoker chose
+(`:fill_gaps` / `:replace_week`) — or, for a blueprint plan, with
+`MealBlueprints.store_plan_meals/2` — and records usage only when meals were
+created. Both workers are `max_attempts: 1`: a failed run is reported, not
+retried, and there is **no fallback generator**.
 
-```elixir
-defp handle_tool("search_catalog", %{"query" => query}, %{user_id: user_id}) do
-  recipes =
-    RecipeVectorSearch.search(query, user_id: user_id, limit: 20)
-    |> Enum.map(fn r ->
-      %{id: r.id, title: r.title, difficulty: r.difficulty || 1, servings: r.servings || 2}
-    end)
-```
-
-`RecipeVectorSearch` (`search/recipe_vector_search.ex`) embeds the query via OpenAI and orders by pgvector cosine distance, with a full-text-search fallback if embedding fails:
-
-```elixir
-case EmbeddingClient.embed(query_text) do
-  {:ok, vector} ->
-    vector_search(vector, user_id, limit, exclude_ids)
-
-  {:error, reason} ->
-    Logger.warning("RecipeVectorSearch: embedding failed (#{reason}), falling back to FTS")
-    fts_fallback(query_text, user_id, limit)
-end
-
-# vector_search/4:
-from r in Recipe,
-  where: not is_nil(r.embedding),
-  order_by: fragment("embedding <=> ?", ^pg_vector),
-  limit: ^limit,
-  select: %{id: r.id, title: r.title, difficulty: r.difficulty, servings: r.servings}
-```
-
-**`submit_plan` validation** checks four things and reports each failure in words the model can act on: recipe IDs must be in the user's catalog, dates inside the 7-day window, slots exactly `Breakfast/Lunch/Dinner`, and no `(date, slot)` pair twice:
-
-```elixir
-defp check_duplicate_slots(entries) do
-  entries
-  |> Enum.group_by(fn e -> {e["date"], e["slot"]} end)
-  |> Enum.filter(fn {_key, group} -> length(group) > 1 end)
-  |> Enum.map(fn {{date, slot}, _} -> "Duplicate slot: #{date} #{slot}" end)
-end
-```
-
-**Partial persistence is allowed at the save step** — entries that pass validation but still fail on insert are counted as skipped rather than rolling back the whole plan. A plan with 19/21 meals is more useful than nothing:
-
-```elixir
-{created, skipped} = persist_plan(entries, user_id)
-# result threaded back via the accumulator, not the process dictionary:
-{%{success: true, created: length(created), skipped: skipped, message: "…"},
- %{acc | submitted: {:ok, created, skipped}}}
-```
-
-Meal times are fixed by convention rather than asked of the model:
-
-```elixir
-defp slot_time("Breakfast"), do: ~T[08:00:00]
-defp slot_time("Lunch"), do: ~T[13:00:00]
-defp slot_time("Dinner"), do: ~T[19:00:00]
-```
-
-### 3. `NutritionistAgent` — 7-day plan drafted *for a client* by a professional
-
-**Used by:** `NutritionistAgentWorker` (Oban, `ai_agents` queue), triggered from the nutritionist's client-detail LiveView. Pro-tier feature.
-
-Same skeleton as `MealPlanAgent`, with three differences that matter:
-
-**1. Two-party context.** Recipes come from the *professional's* catalog; the plan is persisted to the *client's* account:
-
-```elixir
-defp do_handle_tool("submit_plan", %{"entries" => entries, "rationale" => rationale}, context) do
-  %{client_id: client_id, start_date: start_date, professional_id: professional_id} = context
-
-  valid_ids =
-    Food.list_user_recipes(professional_id)   # professional's recipes…
-    |> MapSet.new(& &1.id)
-  # …
-  {created, skipped} = persist_entries(entries, client_id)   # …client's meals
-```
-
-**2. More input tools — the whole client file, not just history.** On top of `get_recent_meals`, the agent reads the nutritionist's curated record and the client's own profile so the draft honours them:
-
-- `get_client_record` — merges the client's `ClientIntake` (goal, TDEE/BMR, weight/BMI/activity), linked `Health.Condition`s, the latest `ConsultationNote`, and the client's `UserProfile` (diet, lactose, `avoid_foods`) into one brief. It exposes a single `calorie_target` and a unified **`avoid` list** = personal avoid foods + intake allergies/intolerances + **condition-implicated foods** (resolved through `Health.ingredients_for_condition(id, "avoid")`, the same curated engine the `/foods` filter uses). **Nutritionist-over-user precedence:** where the client's own profile and the nutritionist's file hold the same concept, the nutritionist's value wins — `calorie_target` is the clinician's intake **TDEE** first (only falling back to the client's profile target when no TDEE is on file), and the `avoid` list *unions* both sides. (`diet`/`lactose` have no nutritionist-side field today, so they stay client-sourced — there is nothing on the nutritionist's end to prefer.) The precedence lives in **one** resolver, `Mehungry.Professionals.ClientMealContext.resolve/2` (facade `Professionals.resolve_client_meal_context/2`), shared with the calendar quick-draft path (`client_calendar.ex` `build_client_preferences/2` → `MealPlanGenerator`) so the two nutritionist-side drafts can't drift apart on this rule.
-- `get_assigned_plan` — reads the meals the nutritionist already assigned to the client's calendar for the plan week (`History.list_calendar_user_meals/3`) and records their `(date, slot)` cells into the run accumulator. The prompt tells the model to leave those cells alone, and `submit_plan` **enforces skip-filled-slots** — it drops any submitted entry whose `(date, slot)` is already assigned (reported as `left_assigned`) so the AI never overwrites the nutritionist's own plan.
-- `get_client_summary` and `get_ratings` — recent-activity counts + what the client rated well.
-
-The system prompt turns the record into hard rules: respect the client's **diet** (vegetarian/vegan → never select meat/fish), **never** select anything on the `avoid` list, and keep each day's total near the **calorie_target** using the per-serving **calories** now returned by `search_recipes` (derived from each recipe's stored `nutrients` via `NutrientUtils.macro_summary/1`). `submit_plan` also *requires* a `rationale` ("2–3 sentence professional note explaining the plan choices") — making the model justify the plan doubles as a light quality check and gives the nutritionist something to show the client.
-
-**3. Live progress streaming.** The agent accepts an `on_event` callback that wraps every tool call; the Oban worker turns tool names into human-readable labels and broadcasts them over PubSub, so the nutritionist watches the agent work instead of staring at a spinner:
-
-```elixir
-# nutritionist_agent.ex — the agent stays transport-agnostic
-handler = fn name, input, ctx ->
-  on_event.({:tool_call, name})
-  result = do_handle_tool(name, input, ctx)
-  on_event.({:tool_result, name, result})
-  result
-end
-```
-
-```elixir
-# nutritionist_agent_worker.ex — the worker owns the transport
-@tool_labels %{
-  "get_client_record" => "Reading client file…",
-  "get_assigned_plan" => "Checking the assigned plan…",
-  "get_client_summary" => "Reading client profile…",
-  "get_recent_meals" => "Checking recent meal history…",
-  "get_ratings" => "Reviewing meal ratings…",
-  "search_recipes" => "Searching recipe catalog…",
-  "search_ingredients" => "Finding whole-food snacks…",
-  "submit_plan" => "Validating and creating meal plan…"
-}
-
-on_event = fn
-  {:tool_call, name} ->
-    broadcast(topic, {:step, Map.get(@tool_labels, name, "Working…")})
-  {:tool_result, _name, _result} -> :ok
-end
-```
-
-**Why a callback and not PubSub inside the agent:** the agent stays pure and testable; topic naming and event shapes are the worker's concern.
-
-It runs with `max_iterations: 16` (vs 10–12 for the others) because it has more information-gathering tools to call, and `max_attempts: 1` in Oban — retrying a whole agent run after a partial failure could create duplicate meals for the client.
-
----
+The nutritionist agent resolves `Professionals.ClientMealContext` once per run —
+the same map `get_client_record` returns is what its guards are built from — and
+never plans a client's past days (`first_day/1`). It sends the model the
+client's first name only (no email).
 
 ## Single-Shot Utilities (no tool loop)
 
@@ -407,7 +303,6 @@ Plain "one prompt → parse JSON" calls. A tool loop would be overkill: these ta
 |---|---|---|
 | `RecipeTranslator` | Sonnet | Translates title/description/steps to a target language (en/el today). Enforces same step count; preserves times, quantities, temperatures. |
 | `IngredientTranslator` | Sonnet | Batch-translates USDA ingredient names to everyday Greek kitchen names. |
-| `MealPlanGenerator` legacy path | Haiku | Old single-shot plan generation — now only the fallback for `MealPlanAgent`. |
 | `RecipeGenerator` legacy path | Sonnet | Old multi-phase recipe pipeline — now only the fallback for `RecipeAgent`. |
 
 **Why Sonnet for translation but Haiku for agent loops?** Translation quality *is* the product of those modules — a clumsy Greek ingredient name is immediately visible to users — and the calls are infrequent and batched. Agents mostly do structured tool calling, where Haiku is sufficient and much cheaper.
@@ -462,7 +357,7 @@ end
 
 ## Recipe Embeddings & Semantic Search
 
-Three pieces make up the write side of semantic search: an OpenAI HTTP client, the Oban worker that writes embeddings, and the pgvector column they're written to. The read side (`RecipeVectorSearch`) was already introduced under `MealPlanAgent` above — this section is the full picture. It also documents a schema gap that used to make the write side fail on every run (now fixed — see below).
+Three pieces make up the write side of semantic search: an OpenAI HTTP client, the Oban worker that writes embeddings, and the pgvector column they're written to. The read side (`RecipeVectorSearch`) was already introduced under `UserMealPlanAgent` above — this section is the full picture. It also documents a schema gap that used to make the write side fail on every run (now fixed — see below).
 
 ### `AI.EmbeddingClient` (`ai/embedding_client.ex`)
 
@@ -574,7 +469,7 @@ For a long time `Mehungry.Food.Recipe` had **no corresponding `field :embedding,
 
 So the one write path that actually stores an embedding — `RecipeEmbeddingWorker.perform/1` — raised every single time it ran. Oban retried it up to `max_attempts: 3`, then marked the job `discarded`. The `Logger.info("... embedding stored ...")` line right after that `Repo.update_all` call never fired. Every recipe's `embedding` column stayed `NULL` — clicking "Backfill Recipe Embeddings" in the maintenance page enqueued jobs that all failed, and the "missing embeddings" counter never moved.
 
-**Downstream effect on search (before the fix):** `RecipeVectorSearch.search/2` only falls back to full-text search when `EmbeddingClient.embed/1` itself errors (e.g. OpenAI is unreachable). Given a working OpenAI call, it embedded the *query* successfully, then ran `where: not is_nil(r.embedding)` against a table where that was true for zero rows, and returned `[]` — silently, without falling back. So `MealPlanAgent`'s `search_catalog` tool (and any other caller of `RecipeVectorSearch`) wasn't "degraded to full-text search"; it got nothing back from the vector path at all.
+**Downstream effect on search (before the fix):** `RecipeVectorSearch.search/2` only falls back to full-text search when `EmbeddingClient.embed/1` itself errors (e.g. OpenAI is unreachable). Given a working OpenAI call, it embedded the *query* successfully, then ran `where: not is_nil(r.embedding)` against a table where that was true for zero rows, and returned `[]` — silently, without falling back. So `UserMealPlanAgent`'s `search_catalog` tool (and any other caller of `RecipeVectorSearch`) wasn't "degraded to full-text search"; it got nothing back from the vector path at all.
 
 **The fix was one line** — declare the field the migration already created a column for:
 
@@ -605,7 +500,7 @@ WRITE PATH (fixed 2026-08-14)
   recipes.embedding set for that row.  (Older rows stay NULL until a backfill runs.)
 
 READ PATH
-  MealPlanAgent "search_catalog" tool  /  any RecipeVectorSearch.search/2 caller
+  UserMealPlanAgent "search_catalog" tool  /  any RecipeVectorSearch.search/2 caller
         │
         ▼
   EmbeddingClient.embed/1 (OpenAI, query text)   ✓ succeeds
@@ -621,7 +516,7 @@ READ PATH
 
 ## Fallback Strategy
 
-Both public entry points keep the legacy pipeline as a safety net:
+`RecipeGenerator` keeps the legacy pipeline as a safety net (the meal-plan fallback was removed — see `meal_plan.md`):
 
 ```elixir
 # recipe_generator.ex
@@ -661,7 +556,8 @@ Agent and image work runs on the `ai_agents` queue with **concurrency 2** — de
 | Worker | Queue | Attempts | Trigger | Calls |
 |---|---|---|---|---|
 | `DailyRecipeGenerationWorker` | ai_agents | 2 | Cron, 2am UTC daily | `RecipeAgent` per meal type |
-| `NutritionistAgentWorker` | ai_agents | 1 | Nutritionist clicks "draft plan" | `NutritionistAgent` + PubSub progress |
+| `NutritionistAgentWorker` | ai_agents | 1 | Nutritionist drafts a client's week (client file or client calendar) via `start/1` | `NutritionistMealPlanAgent` → persist in the chosen mode + PubSub progress |
+| `MehungryWeb.Api.MealPlanWorker` | ai_interactive | 1 | A person plans their own week (web calendar, blueprint plan, mobile) via `enqueue/1` | `UserMealPlanAgent` → persist / store + `meal_plan:<user_id>` broadcasts |
 | `RecipeTranslationWorker` | ai_agents | 3 | After recipe generation | `RecipeTranslator` |
 | `RecipeImageWorker` | ai_agents | 2 | `Food.create_recipe/1` when no image | `ImageGenerator` + S3 upload |
 | `RecipeEmbeddingWorker`¹ | default | 3 | Recipe create/update + backfill | `EmbeddingClient` |
@@ -723,7 +619,7 @@ Two human/business safeguards sit on top of the technology:
 2. **Validate, don't trust** — every ID the model produces is checked against the DB via a `submit_*` tool; errors go back to the model to fix. Legacy fallbacks patch silently; agents correct openly.
 3. **The submit tool is the only exit** — an agent run that never submits is a failure, not a silent no-op.
 4. **Cheap model for the loop, expensive model for the prose** — Haiku drives tools, Sonnet writes user-visible text.
-5. **Degrade gracefully** — legacy pipelines as fallbacks, best-effort prose polish, FTS fallback for vector search, partial plan persistence.
+5. **Degrade gracefully** — a legacy pipeline as fallback for recipe generation (not meal plans), best-effort prose polish, FTS fallback for vector search, partial plan persistence.
 6. **Humans in the loop where it's public** — review queue for bot recipes, quotas for user generation.
 7. **Real data over generated data** — USDA API before AI nutrition estimates, with the source tagged.
 
@@ -735,7 +631,7 @@ Found while checking this document against the code. Roughly ordered by expected
 
 1. **Anthropic prompt caching.** Every loop iteration re-sends the full system prompt + tool definitions + growing conversation with no `cache_control` markers. Agent runs make 5–16 API calls each, so the (large, static) prefix is re-billed every time. Adding a cache breakpoint after the tool definitions in `AI.Client.build_body/1` would cut input-token cost substantially for every agent run — likely the single highest-leverage change in this layer.
 
-2. **Conversation growth inside the loop.** `AI.Agent.loop/6` appends every tool result forever. A `MealPlanAgent` run that calls `search_catalog` five times carries ~100 recipe entries in context by the time it submits. Older tool results could be truncated or summarized once consumed (e.g. keep only the last N tool-result turns).
+2. **Conversation growth inside the loop.** `AI.Agent.loop/6` appends every tool result forever. A `UserMealPlanAgent` run that calls `search_catalog` five times carries ~100 recipe entries in context by the time it submits. Older tool results could be truncated or summarized once consumed (e.g. keep only the last N tool-result turns).
 
 3. **Timeout mismatch in the daily worker.** `Task.async_stream(…, timeout: 180_000)` kills a recipe generation after 3 minutes, but a single `RecipeAgent` run can legitimately take longer: up to 10 loop iterations × up to 90s HTTP timeout each, plus the Sonnet polish call, plus 529 backoff sleeps. A slow-API day turns into killed tasks that then re-run on the next Oban attempt. Either raise the per-task timeout or lower `@timeout_ms` / `max_iterations` so the worst case fits.
 
@@ -749,15 +645,15 @@ Found while checking this document against the code. Roughly ordered by expected
 
 7. **~~Process-dictionary result smuggling is fragile.~~ ✅ Done.** `Agent.run/6` now threads an accumulator: the handler is `fn(name, input, acc) -> {result, new_acc}` and `run/6` returns `{:ok, text, final_acc}`. All three agents carry their `:submitted` result and `:offered` provenance set in the accumulator — no more `Process.put(__MODULE__, …)`. The plan agents also gained the same recipe-id provenance gate `RecipeAgent` had for ingredients (a test-covered `validate_plan`/`validate_entries` rejects any id not surfaced by search).
 
-8. **Idempotent persistence would allow retries.** `NutritionistAgentWorker` uses `max_attempts: 1` because a retry after a partial `submit_plan` would duplicate meals. A uniqueness guard on `(user_id, start_dt, title)` for agent-created meals (or an upsert in `persist_entries/2`) would make retries safe and recover today's lost-run failure mode. The same guard would harden `MealPlanAgent` against users double-clicking generate.
+8. **Idempotent persistence would allow retries.** `NutritionistAgentWorker` uses `max_attempts: 1` because a retry after a partial `submit_plan` would duplicate meals. A uniqueness guard on `(user_id, start_dt, title)` for agent-created meals (or an upsert in `persist_entries/2`) would make retries safe and recover today's lost-run failure mode. The same guard would harden `UserMealPlanAgent` against users double-clicking generate.
 
 ### Data & code quality
 
 9. **N+1 queries in `submit_recipe` validation.** `check_ingredient_unit/3` runs `Food.get_ingredient/1` plus a portions query per recipe ingredient — ~20+ queries per submit, and again on every resubmit. Batch them: one query for all ingredient IDs, one for all portions (the helper `get_measurement_unit_portions_for_ingredients/1` already exists and is used by `search_ingredient`).
 
-10. **`submit_plan` loads full recipe structs just for IDs.** Both plan agents do `Food.list_user_recipes(user_id) |> MapSet.new(& &1.id)` — loading every recipe (with whatever preloads that context function does) to build an ID set. A `select: r.id` query would do.
+10. **~~`submit_plan` loads full recipe structs just for IDs.~~ ✅ Done.** `MealPlanCore.submit_plan_tool/2` validates against the provenance sets only (every offered id came from a guarded DB search this run); the per-submit `Food.list_user_recipes/1` load is gone.
 
-11. **Deduplicate the two plan agents.** `MealPlanAgent` and `NutritionistAgent` share ~70% of their code: slot validation, date-window checks, duplicate-slot detection, `persist_*`, `slot_time/1`. Extract a shared `PlanValidation`/`PlanPersistence` module so the two can't drift (their date validations are already subtly different: one uses `Date.compare`, the other struct comparison operators). Likewise `rerank_by_name` / `filter_by_name_relevance` / `reject_partial_variants` are duplicated between `RecipeAgent` and legacy `RecipeGenerator`.
+11. **~~Deduplicate the two plan agents.~~ ✅ Done.** `MealPlanCore` holds the guards, search tools, validation and normalization; `UserMealPlanAgent` and `NutritionistMealPlanAgent` keep only their prompt + context tools, and persistence is the shared `MealPlanGenerator.persist_entries_to_calendar/5`.
 
 12. **Centralize model IDs.** `"claude-haiku-4-5-20251001"` and `"claude-sonnet-4-6"` are hardcoded as module attributes in 7 files. A single config (`config :mehungry, :ai_models, loop: …, writer: …`) would make a model upgrade a one-line change and allow per-environment overrides (e.g. a stub model in test).
 
@@ -765,7 +661,7 @@ Found while checking this document against the code. Roughly ordered by expected
 
 13. **~~Token usage is parsed and then dropped.~~ ✅ Done.** `AI.Client` now emits `[:mehungry, :ai, :client, :request, :stop]` per request (`duration` + `input/output_tokens`, tagged by `model`/`status`), and `AI.Agent` emits run + per-tool telemetry tagged by `agent`. `MehungryWeb.PromEx.AiPlugin` aggregates them onto the Prometheus scrape (`mehungry_web_prom_ex_ai_*`), mirrored into LiveDashboard, with `grafana/ai_agents_dashboard.json` for panels — outcome/error rates, iteration-ceiling watch, no-submit retries, and token cost by model. See `docs/infrastructure/observability.md`. Remaining nuance: token cost is attributed by model, not per agent (the client can't see the caller) — thread `usage` back through the loop if per-agent cost matters.
 
-14. **User-facing generation has no progress feedback.** The nutritionist flow streams tool-by-tool progress over PubSub; the consumer create-recipe and meal-plan flows run a `Task.async` and show a static spinner for what can be 1–3 minutes. The `on_event` callback mechanism already exists in `NutritionistAgent` — lifting it into `RecipeAgent`/`MealPlanAgent` and broadcasting from the LiveView would reuse a proven pattern.
+14. **User-facing generation has no progress feedback.** The nutritionist flow streams tool-by-tool progress over PubSub; the consumer create-recipe flow runs a `Task.async` and the consumer meal-plan flow (now an Oban job) shows a static spinner for what can be 1–3 minutes. The `on_event` callback mechanism already exists in `NutritionistMealPlanAgent` — lifting it into `RecipeAgent`/`UserMealPlanAgent` and broadcasting from the LiveView would reuse a proven pattern.
 
 15. **Small doc/code drifts.** `RecipeImageWorker`'s moduledoc says "DALL-E 3" but the code uses `gpt-image-1`. The gram measurement unit is looked up by the name `"grammar"` — worth a comment at the lookup site (or a data migration to rename it) so nobody "fixes" the unit name and breaks every agent run.
 

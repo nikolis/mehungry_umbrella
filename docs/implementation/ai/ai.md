@@ -11,8 +11,8 @@ section links to the doc that covers it in depth.
 | **Recipe generation** | A full validated recipe (ingredients, steps, prose) from a description | Create-recipe LiveView; `DailyRecipeGenerationWorker`; `RecipeOrderWorker` | [`ai_agents.md`](ai_agents.md) · [`ai_bot.md`](ai_bot.md) |
 | **Persona-voiced authoring** | Recipes written in a character's voice (grandma, tavern, dietologist) | `RecipeSetup` bound to a config/order | [`ai_bot_personas.md`](ai_bot_personas.md) |
 | **Social publishing pipeline** | Review-gated recipes fanned out to IG/FB/Pinterest | `/professional/ai-bot/**` | [`ai_bot.md`](ai_bot.md) · [`../social_publishing.md`](../../growth/social_publishing.md) |
-| **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar LiveView (`MealPlanAgent`) | [`meal_plan.md`](meal_plan.md) |
-| **Nutritionist plan drafting** | A 7-day plan a pro drafts *for a client*, with a rationale | `NutritionistAgentWorker` | [`ai_agents.md`](ai_agents.md) |
+| **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar / blueprint plans / mobile → `MealPlanWorker` (`UserMealPlanAgent`) | [`meal_plan.md`](meal_plan.md) |
+| **Nutritionist plan drafting** | A 7-day plan a pro drafts *for a client*, with a rationale | Client file + client calendar → `NutritionistAgentWorker` (`NutritionistMealPlanAgent`) | [`meal_plan.md`](meal_plan.md) |
 | **Translation** | Recipe + ingredient/unit text in other languages (en/el) | `RecipeTranslator`, `IngredientTranslator` | [`ai_agents.md`](ai_agents.md) |
 | **Cover images** | Food-photography image per recipe | `RecipeImageWorker` → `AI.ImageGenerator` (provider seam: OpenAI `gpt-image-2` **or** FLUX 2 pro) | [`ai_agents.md`](ai_agents.md) |
 | **Semantic search / embeddings** | pgvector recipe embeddings for meaning-based catalog search | `RecipeEmbeddingWorker`, `RecipeVectorSearch` | [`ai_agents.md`](ai_agents.md) |
@@ -54,7 +54,7 @@ integration surface and blast radius):
 
 - **`apps/mehungry/lib/mehungry/ai/`** — the deployed AI layer: `AI.Client`
   (HTTP), `AI.Agent` (generic tool-use loop), the three agents
-  (`RecipeAgent`, `MealPlanAgent`, `NutritionistAgent`), and single-shot
+  (`RecipeAgent`, `UserMealPlanAgent`, `NutritionistMealPlanAgent`), and single-shot
   utilities. Full anatomy in [`ai_agents.md`](ai_agents.md).
 - **`apps/mehungry/lib/mehungry/ai/bot/`** — the recipe→social pipeline domain
   (configs, personas, setups, orders, workers). See [`ai_bot.md`](ai_bot.md).
@@ -78,7 +78,7 @@ These hold across every AI feature (elaborated in
 3. **The submit tool is the only exit.** A run that never submits is a failure, not a
    silent partial save.
 4. **Cheap model for the loop, expensive model for the prose** (Haiku → Sonnet).
-5. **Degrade gracefully.** Legacy pipelines as fallbacks, best-effort prose polish,
+5. **Degrade gracefully.** A legacy pipeline as fallback for recipe generation (meal plans have none — an unguarded fallback could not honour diet/avoid guarantees), best-effort prose polish,
    FTS fallback for vector search, partial plan persistence.
 6. **Humans in the loop where it's public.** Bot recipes are **never auto-published** —
    they enter `pending_review` and an admin approves each one. Science candidates are

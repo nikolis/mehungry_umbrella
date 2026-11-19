@@ -4,7 +4,7 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
   harness: one owner user, a spread of slot- and cuisine-tagged recipes (each
   with real per-serving nutrition), a set of whole-food snack ingredients (also
   with nutrition), and two blueprints (a plain one and a Low-FODMAP one with an
-  avoid list). Returns a `context` map ready to hand to the real `MealPlanAgent`
+  avoid list). Returns a `context` map ready to hand to the real `UserMealPlanAgent`
   and to `MealPlanScorer.score/2`.
 
   Realism notes (Layer 1):
@@ -115,7 +115,8 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
       ingredient_names: Map.new(ingredients, &{&1.id, &1.name}),
       blueprint_plain: %Blueprint{
         name: "Balanced Week",
-        description: "A balanced, varied Mediterranean week with light breakfasts and hearty dinners.",
+        description:
+          "A balanced, varied Mediterranean week with light breakfasts and hearty dinners.",
         avoid_foods: []
       },
       blueprint_low_fodmap: %Blueprint{

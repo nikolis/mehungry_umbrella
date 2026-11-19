@@ -27,48 +27,139 @@ A plan is **7 days × 5 slots** = 35 entries. The five slots per day are
   snacks and light sides are usually an ingredient.
 
 The agent returns *normalized, calendar-independent* entries (relative
-`day_index` 1..7 + canonical `meal_type`, see `MealPlanAgent.normalize_entry/2`),
+`day_index` 1..7 + canonical `meal_type`, see `MealPlanCore.normalize_entry/2`),
 so the same output can land on the calendar **or** be stored as a standalone plan.
 
-## Where users trigger it
+## Two agents, one core
 
-Three surfaces, all funnelling through the same core (`Mehungry.AI.MealPlanGenerator`):
+There are two meal-plan agents, split by **who is planning for whom**:
 
-| Surface | Entry point | What happens with the plan |
+| Agent | Who it serves | How it learns about the person |
 |---|---|---|
-| **Calendar** | `CalendarLive.Index` → `MealPlanGenerator.run/5` | Materialized onto the week's calendar dates as `UserMeal`s |
-| **Meal Blueprints** | `MealBlueprintLive.Index` → `MealPlanGenerator.generate_entries/5` → `MealBlueprints.store_plan_meals/2` | Stored as independent `BlueprintPlanMeal` rows (not the calendar) |
-| **Mobile REST API** | `MehungryWeb.Api.MealPlanWorker` (async Oban job on the dedicated `:ai_interactive` queue) → `MealPlanGenerator.run/5` | Same calendar materialization, driven from the React Native client |
+| **`UserMealPlanAgent`** | A person planning **their own** week | A free-text brief: the typed prompt, or a blueprint flattened by `blueprint_preferences/1` |
+| **`NutritionistMealPlanAgent`** | A nutritionist drafting **a client's** week — the only agent on the nutritionist side | Tools that read the client: `get_client_record` (file + profile via `ClientMealContext`), `get_assigned_plan`, `get_client_summary`, `get_recent_meals`, `get_ratings` |
 
-The mobile job is tracked by an `api_meal_plan_jobs` row (`Mehungry.MealPlanJobs`).
-It has its own single-slot queue so a waiting user never queues behind batch
-work on `:ai_agents` (the web calendar runs the same generator in an immediate
-`Task`). The row can't be left non-terminal: it is inserted in the same
-transaction as the Oban job (`MealPlanJobs.create_and_enqueue/2`), a crash in
-the worker marks it `error`, the worker is killed after 8 minutes
-(`timeout/1`), and a row still `generating` after 10 minutes is failed on the
-next status poll (`MealPlanJobs.fail_if_stale/1`).
+That is the **only** difference. Everything that decides what may end up in a
+plan is shared in **`Mehungry.AI.Agents.MealPlanCore`**, so the two cannot drift:
+the guards (diet / avoid / required hashtags / condition-implicated ingredients),
+the guarded recipe + ingredient search tools (with per-serving calories),
+provenance + validation (`submit_plan`), and normalization. Both agents only
+**generate** — neither persists.
 
-Generation is **quota-gated** by subscription tier (`Subscriptions.check_quota/2`
-before, `record_usage/2` after success): free `0`, `m3hungry_plus` `4`/mo,
-`pro` `10`/mo. The owner email bypasses quotas.
+## Where it is triggered
 
-## The agent (`Mehungry.AI.Agents.MealPlanAgent`)
+| Surface | Agent | Runs as | What happens with the plan |
+|---|---|---|---|
+| **Calendar** (`CalendarLive.Index`) | `UserMealPlanAgent` | `MehungryWeb.Api.MealPlanWorker` | Written to the viewed week of the user's calendar |
+| **Mobile REST API** (`POST /meals/plan-with-ai`) | `UserMealPlanAgent` | `MehungryWeb.Api.MealPlanWorker` | Same |
+| **Meal Blueprints** (`MealBlueprintLive.Index`) | `UserMealPlanAgent` | `MehungryWeb.Api.MealPlanWorker` (`blueprint_plan_id` set) | Stored as independent `BlueprintPlanMeal` rows (`MealBlueprints.store_plan_meals/2`), not the calendar |
+| **Client file "AI Assist"** (`NutritionistLive.ClientDetail`) | `NutritionistMealPlanAgent` | `Mehungry.ObanWorkers.NutritionistAgentWorker` | Written to the chosen week (this / next) of the **client's** calendar |
+| **Client calendar "AI draft week"** (`NutritionistLive.ClientCalendar`) | `NutritionistMealPlanAgent` | `Mehungry.ObanWorkers.NutritionistAgentWorker` | Written to the viewed week of the **client's** calendar |
 
-The planner is a **history-aware tool-use loop** built on `AI.Agent`, running on
-**Haiku 4.5** (`claude-haiku-4-5-20251001`) — cheap, fast structured tool calling.
-`run/5` threads a pure accumulator (no process state) and returns `{:ok, entries}`
-or `{:error, reason}`. Config: `max_tokens: 4096`, `max_iterations: 14`,
-telemetry-tagged `agent: "meal_plan"`.
+### Every run is an Oban job
+
+No surface runs generation in the page's process — **leaving the page never
+cancels a run**, and a page that re-mounts mid-run resumes its "running" state.
+
+- **Own plans** (`MealPlanWorker`, `:ai_interactive` queue): one tracking row per
+  run in `api_meal_plan_jobs` (`Mehungry.MealPlanJobs`), inserted in the same
+  transaction as the Oban job (`MealPlanWorker.enqueue/1` →
+  `MealPlanJobs.create_and_enqueue/2`). The row carries the target and options:
+  `blueprint_id`, `blueprint_plan_id` (set ⇒ store on that blueprint plan instead
+  of the calendar) and `mode`. The worker broadcasts `"progress"` / `"result"` on
+  `meal_plan:<user_id>` — the **same** topic the mobile channel and the web
+  LiveViews follow. A crash marks the row `error` and the worker is killed after
+  8 minutes (`timeout/1`).
+  **A row is only "live" while a live Oban job stands behind it.**
+  `MealPlanJobs.fail_if_stale/1` fails a `queued`/`generating` row whose Oban job
+  is gone (cancelled, discarded, timeout-killed) or that has been `generating`
+  for over 10 minutes, and fails the blueprint plan row it was filling;
+  `fail_stale_for_user/1` does that for every in-flight row of a user and also
+  fails a blueprint plan left `generating` with no run behind it. These run on
+  page mount, on the mobile status poll, before quota is counted, and every ~15 s
+  while a page shows a run in progress (a hard-killed worker broadcasts nothing,
+  so the pages re-check rather than wait).
+- **Client drafts** (`NutritionistAgentWorker`, `:ai_agents` queue):
+  `NutritionistAgentWorker.start/1` is the single front door for both
+  nutritionist surfaces — it checks quota, refuses a second concurrent draft for
+  the same client (Oban `unique` on `professional_id` + `client_id`), and
+  enqueues. Progress streams over PubSub as
+  `{:nutritionist_agent, client_id, event}` on `nutritionist_agent:<professional_id>`;
+  `running?/2` restores the state on re-mount, and both pages re-check it every
+  ~15 s while a draft shows as running — a draft whose job died without an event
+  (timeout kill, deploy) is reported as failed instead of spinning.
+
+### When the week already has meals: the invoker chooses
+
+Before anything is enqueued for a **calendar** target, the page counts the meals
+already in the target week. If there are any, it shows the shared
+`MehungryWeb.MealPlanModePrompt` and the person who invoked the planner picks:
+
+| Mode | What happens |
+|---|---|
+| **`fill_gaps`** (default) | Every existing meal stays. An entry is written only where that `(date, meal slot)` cell is empty. |
+| **`replace_week`** | Every meal in the 7-day span is deleted (confirmed, with the count shown), then the plan is written — **in one transaction**: if any insert fails, everything rolls back and the week is left as it was (`:replace_failed`). Because the plan replaces the week, `submit_plan` only accepts it when **every day in range has Breakfast, Lunch and Dinner** (snacks optional); a thinner plan is sent back to the model. Nothing is deleted when generation fails. |
+
+Both are enforced at persistence (`MealPlanGenerator.persist_entries_to_calendar/5`)
+from the calendar itself — `fill_gaps` holds no matter what the model was told.
+The mobile API takes the same choice as `existing_meals` (default `fill_gaps`).
+
+**A nutritionist's draft never touches a client's past days.** Those hold what
+the client actually ate. The nutritionist agent plans from *today* onward
+(`first_day/1`), `submit_plan` rejects an earlier date, and persistence is called
+with `from: today` so `replace_week` deletes only from today on. A week that is
+entirely in the past is refused (`:week_in_past`).
+
+### Quotas
+
+Generation is **quota-gated** (checked before enqueue, `record_usage/2` only
+when meals were actually created), under two separate features. Because usage
+is recorded on completion, **runs still in flight count against the limit at
+enqueue** (`MealPlanJobs.check_quota/1`; `NutritionistAgentWorker.start/1` with
+`in_flight_count/1`) — several queued runs cannot all pass the check and
+overshoot it:
+
+| Feature key | Meters | free | `m3hungry_plus` | `pro` |
+|---|---|---|---|---|
+| `"meal_plan"` | A person's own plan (`UserMealPlanAgent`) | 0 | 4/mo | 10/mo |
+| `"nutritionist_meal_plan"` | A client draft (`NutritionistMealPlanAgent`), charged to the nutritionist | 0 | 0 | **40/mo** |
+
+The owner email bypasses quotas.
+
+## The agents
+
+Both are **tool-use loops** built on `AI.Agent`, running on **Haiku 4.5**
+(`claude-haiku-4-5-20251001`) — cheap, fast structured tool calling — threading a
+pure accumulator (no process state). `UserMealPlanAgent.run/4` returns
+`{:ok, entries}`; `NutritionistMealPlanAgent.run/4` returns
+`{:ok, %{entries, rationale, summary}}`; both return `{:error, reason}` on
+failure. Config: `max_tokens: 4096`, `max_iterations` 14 / 16, telemetry-tagged
+`agent: "user_meal_plan"` / `"nutritionist_meal_plan"`.
+
+**There is no fallback pipeline.** The earlier single-shot "legacy" generator was
+removed: it ignored the blueprint, the diet and the avoid list, and drew from
+every user's recipes. A failed run now fails, with a readable message
+(`MealPlanCore.error_message/1`) and no quota charge.
+
+### Whose recipes
+
+- `UserMealPlanAgent` — the user's **own** recipes.
+- `NutritionistMealPlanAgent` — the nutritionist's **own** recipes, or, when they
+  have authored none, the **public** catalog (`MealPlanCore.catalog_for_professional/1`;
+  `RecipeVectorSearch` `public_only: true`, which excludes `private` recipes so
+  nobody's staged/private recipes leak into another person's plan).
 
 ### Tools the model is given
 
 | Tool | Purpose |
 |---|---|
-| `get_recent_meals` | Last 21 days of the user's meal history, so the plan avoids repeating what they just ate |
-| `search_catalog` | Semantic search of the user's recipe catalog by natural-language query (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings |
+| `get_recent_meals` | Last 21 days of the person's meal history, so the plan avoids repeating what they just ate |
+| `search_catalog` (user) / `search_recipes` (nutritionist) | Guarded semantic search of the catalog (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings and **per-serving calories** (`MealPlanCore.per_serving_calories/1`, the same `NutrientUtils.macro_summary/1` the calendar uses) |
 | `search_ingredients` | Whole-food ingredient search (fruit, nuts, cheese, yogurt…) for snacks/sides, with unit options |
-| `submit_plan` | Validate + accept the complete 35-entry plan; the **only** way to finish |
+| `submit_plan` | Validate + accept the plan; the **only** way to finish. An empty plan is rejected |
+
+The nutritionist agent adds its client-context tools (see the table above); the
+three tools here are the shared `MealPlanCore` implementations in both agents.
 
 ### The invariants it enforces
 
@@ -80,10 +171,10 @@ model retry when:
   this run (the dominant hallucination mode) — steers the model back to search.
 - **Shape:** an entry with both a recipe *and* an ingredient, or neither; a bad
   date/slot; a duplicate (day, slot); a non-positive ingredient quantity.
-- **Avoid-foods** (e.g. Low-FODMAP): terms from the blueprint's `avoid_foods` are
+- **Avoid-foods** (e.g. Low-FODMAP): the avoid terms (see the guards table below) are
   filtered out of search results *before* the model sees them (so a filtered id
   never enters the provenance set) **and** forbidden in the prompt. Belt and
-  suspenders. `avoid_terms/1`, `reject_avoided/3`. This is the **specific-food**
+  suspenders. `MealPlanCore.avoid_terms/1`, `reject_avoided/3`. This is the **specific-food**
   layer (onion, garlic, honey) — literal substring matching.
 - **Diet (vegan/vegetarian/pescatarian)**: a separate **category** layer.
   `search_catalog` keeps only diet-compatible recipes and `search_ingredients`
@@ -94,10 +185,37 @@ model retry when:
   **pescatarian** has no such tag (it's "vegetarian ∪ fish-only"), so it uses the
   **inverse** `Food.pescatarian_recipe_ids/1` — keep recipes with no meat/poultry
   ingredient, fish allowed, computed over the candidate set, conservative on
-  uncategorized ingredients. The effective diet is `effective_diet_mode/2`: a
-  vegan/vegetarian/pescatarian blueprint, else the user's profile `diet_mode`
-  (`Accounts.diet_mode/1`, which resolves only vegan/vegetarian — pescatarian is
-  reachable only via a blueprint today).
+  uncategorized ingredients.
+- **Condition-implicated ingredients** (nutritionist agent): the exact ingredient
+  ids the client's conditions rule out (`ClientMealContext.avoid_ingredient_ids`)
+  are dropped from ingredient search **and** any recipe containing one is dropped
+  (`Food.recipe_ids_containing_ingredients/2`) — composition-aware, unlike the
+  title substring. *(The source, `Health.ingredients_for_condition/2`, currently
+  returns `[]` since the species↔compound graph was dropped, so this layer is
+  wired but inert until that read is restored.)*
+
+**Where each agent's guards come from** (`MealPlanCore.guards/1`):
+
+| Guard | `UserMealPlanAgent` | `NutritionistMealPlanAgent` |
+|---|---|---|
+| Diet | The blueprint's pattern, else the user's profile diet (vegan / vegetarian / **pescatarian**) | The client's diet from `ClientMealContext` |
+| Avoid terms (substring) | Blueprint `avoid_foods` ∪ the user's personal avoid list (`UserProfile.avoid_foods`) | The client's profile avoid list ∪ condition-implicated food names |
+| Free-text avoid terms (word-start) | — | The intake's allergies / intolerances / aversions (`ClientMealContext.avoid_free_text`) |
+| Required hashtags | Blueprint `required_hashtags` | — |
+| Avoided ingredient ids | — | `ClientMealContext.avoid_ingredient_ids` |
+
+**Free text is enforced more carefully than curated lists.** Intake fields are
+typed prose split on commas, so `MealPlanCore.free_text_terms/1` drops
+non-answers ("no", "none", "n/a", "-", "όχι"…) and fragments under three
+characters, and `reject_avoided_words/3` matches the rest only at the **start of
+a word** — "oil" drops "Olive oil", not "Boiled eggs"; "ham" drops "Ham
+sandwich", not "Graham crackers". Curated lists keep substring matching. The
+enforced terms are shown to the nutritionist with every result, and with a
+failure caused by an exhausted catalog ("Foods excluded for this client: …").
+
+The nutritionist agent resolves `ClientMealContext` **once per run**: the same
+map is what `get_client_record` shows the model and what the guards are built
+from, so the brief and the filters cannot disagree.
 
 On acceptance the entries are normalized (`normalize_entry/2`): calendar dates →
 relative `day_index`, slot label → canonical `meal_type`, and the ingredient's
@@ -151,16 +269,17 @@ The robust path for whole-category exclusion is the taxonomy filter
 
 Generation and persistence are deliberately separate:
 
-- **`generate_entries/5`** — delegates to `MealPlanAgent.run/5`; on agent error,
-  falls back to a legacy single-shot, recipe-only pipeline (3 slots/day). Returns
-  normalized entries.
-- **`persist_entries_to_calendar/3`** — materializes entries onto calendar dates
-  (`day_index` → `start_date + n`), creating `UserMeal`s. Recipe entries become
+- **`generate_entries/4`** — a person's own plan: delegates to
+  `UserMealPlanAgent.run/4` and returns normalized entries or the agent's error.
+- **`persist_entries_to_calendar/5`** — materializes entries (from **either**
+  agent) onto calendar dates (`day_index` → `start_date + n`), creating
+  `UserMeal`s in the chosen mode (`:fill_gaps` / `:replace_week`), optionally
+  leaving days before `:from` untouched. Recipe entries become
   `recipe_user_meals` (with `consume_portions: 1` so the calendar's
   `consume_portions / servings` scaling shows real numbers); ingredient entries
   become `ingredient_user_meals` with resolved unit FKs.
-- **`run/5`** — the calendar convenience: `generate_entries` then
-  `persist_entries_to_calendar`, returning `{:ok, created, skipped}`.
+- **`existing_meal_count/3`** — what a page checks to decide whether to ask for a mode.
+- **`run/5`** — `generate_entries` then `persist_entries_to_calendar`.
 
 ## Blueprints as briefs
 
@@ -192,12 +311,19 @@ preferred/avoid nutrients + compounds + foods — and fed to the agent as
 
 | Module | Role |
 |---|---|
-| `apps/mehungry/lib/mehungry/ai/agents/meal_plan_agent.ex` | The tool-use loop, validation, normalization |
-| `apps/mehungry/lib/mehungry/ai/meal_plan_generator.ex` | generate / persist / legacy fallback |
+| `apps/mehungry/lib/mehungry/ai/agents/meal_plan_core.ex` | Shared guards, guarded search tools, provenance + validation, normalization, error messages |
+| `apps/mehungry/lib/mehungry/ai/agents/user_meal_plan_agent.ex` | Own-plan agent: prompt + `get_recent_meals` |
+| `apps/mehungry/lib/mehungry/ai/agents/nutritionist_meal_plan_agent.ex` | Client-draft agent: prompt + client-context tools |
+| `apps/mehungry/lib/mehungry/ai/meal_plan_generator.ex` | generate / persist with existing-meals modes |
+| `apps/mehungry/lib/mehungry/meal_plan_jobs.ex` | Own-plan tracking rows (`api_meal_plan_jobs`) |
+| `apps/mehungry_web/lib/mehungry_web/api/meal_plan_worker.ex` | Own-plan Oban worker (web calendar, blueprint plans, mobile) |
+| `apps/mehungry/lib/mehungry/oban_workers/nutritionist_agent_worker.ex` | Client-draft Oban worker + `start/1` front door |
+| `apps/mehungry/lib/mehungry/professionals/client_meal_context.ex` | The resolved client brief + guard inputs |
 | `apps/mehungry/lib/mehungry/meal_blueprints.ex` | `blueprint_preferences/1`, `store_plan_meals/2` |
+| `apps/mehungry_web/lib/mehungry_web/components/meal_plan_mode_prompt.ex` | The shared fill-gaps / replace-week prompt |
 | `apps/mehungry_web/.../calendar_live/index.ex` | Calendar trigger + personal avoid-list flagging |
 | `apps/mehungry_web/.../meal_blueprint_live/index.ex` | Blueprint-plan trigger |
-| `apps/mehungry_web/lib/mehungry_web/api/meal_plan_worker.ex` | Mobile REST async generation |
+| `apps/mehungry_web/.../nutritionist_live/{client_detail,client_calendar}.ex` | The two nutritionist triggers |
 
 ---
 
@@ -229,7 +355,7 @@ Layer 1 is the backbone: reproducible, free, regression-safe. Layers 2–3 build
 
 Whether a given **diet pattern** (`MealBlueprints.DietPatterns`, 21 of them) is
 honored is decided by *deterministic* mechanisms — the avoid-foods filter
-(`MealPlanAgent.reject_avoided/3`) and the brief (`blueprint_preferences/1`) — not
+(`MealPlanCore.reject_avoided/3`) and the brief (`blueprint_preferences/1`) — not
 by the LLM. So we **do not** run the agent 21× to re-check a filter:
 
 - **Mechanism tests** (`diet_patterns_mechanism_test.exs`) — all 21 diets, **$0**,
@@ -268,8 +394,8 @@ All live under `test/` (compiled only in `:test`), so none of this ships in the 
 
 ## The scorer (`MealPlanScorer.score/2`)
 
-Takes the normalized entries `MealPlanAgent.run/5` returns
-(`MealPlanAgent.normalize_entry/2`) plus a `context` map, and returns a scorecard:
+Takes the normalized entries `UserMealPlanAgent.run/4` returns
+(`MealPlanCore.normalize_entry/2`) plus a `context` map, and returns a scorecard:
 
 ```elixir
 %{
@@ -375,7 +501,7 @@ recipes/ingredients used out of what was seeded).
 
 ## Token cost
 
-`MealPlanAgent` runs the tool loop on **Haiku 4.5** (`claude-haiku-4-5-20251001`),
+`UserMealPlanAgent` runs the tool loop on **Haiku 4.5** (`claude-haiku-4-5-20251001`),
 priced at **$1.00 / MTok input, $5.00 / MTok output**. The live eval tallies its own
 usage via `TokenMeter` (a telemetry listener on `[:mehungry, :ai, :client, :request,
 :stop]`) and logs a per-scenario report on test exit.
@@ -435,5 +561,5 @@ judge, not yet built).
 
 ## Related
 
-- [`ai_agents.md`](ai_agents.md) — `MealPlanAgent` internals in the broader agent context
+- [`ai_agents.md`](ai_agents.md) — `UserMealPlanAgent` internals in the broader agent context
 - `CLAUDE.md` → Oban queues, subscription quotas, REST↔LiveView parity

@@ -28,6 +28,8 @@ defmodule Mehungry.Search.RecipeVectorSearch do
 
   Options:
     - `:user_id`     — restrict to recipes owned by this user (integer)
+    - `:public_only` — when true, exclude `private` recipes (use for a catalog
+      that spans users, so nobody's private recipes leak into another's plan)
     - `:limit`       — max results (default: 20)
     - `:exclude_ids` — list of recipe IDs to exclude
 
@@ -40,18 +42,19 @@ defmodule Mehungry.Search.RecipeVectorSearch do
     user_id = Keyword.get(opts, :user_id)
     limit = Keyword.get(opts, :limit, @default_limit)
     exclude_ids = Keyword.get(opts, :exclude_ids, [])
+    public_only = Keyword.get(opts, :public_only, false)
 
     case embedding_client().embed(query_text) do
       {:ok, vector} ->
-        vector_search(vector, user_id, limit, exclude_ids)
+        vector_search(vector, user_id, limit, exclude_ids, public_only)
 
       {:error, reason} ->
         Logger.warning("RecipeVectorSearch: embedding failed (#{reason}), falling back to FTS")
-        fts_fallback(query_text, user_id, limit)
+        fts_fallback(query_text, user_id, limit, public_only)
     end
   end
 
-  defp vector_search(vector, user_id, limit, exclude_ids) do
+  defp vector_search(vector, user_id, limit, exclude_ids, public_only) do
     pg_vector = Pgvector.new(vector)
 
     base =
@@ -69,11 +72,12 @@ defmodule Mehungry.Search.RecipeVectorSearch do
 
     base
     |> maybe_filter_user(user_id)
+    |> maybe_public_only(public_only)
     |> maybe_exclude_ids(exclude_ids)
     |> Repo.all()
   end
 
-  defp fts_fallback(query_text, user_id, limit) do
+  defp fts_fallback(query_text, user_id, limit, public_only) do
     base_query =
       if user_id do
         from r in Recipe, where: r.user_id == ^user_id
@@ -82,6 +86,7 @@ defmodule Mehungry.Search.RecipeVectorSearch do
       end
 
     base_query
+    |> maybe_public_only(public_only)
     |> RecipeSearch.run(query_text)
     |> limit(^limit)
     |> select([r], %{
@@ -96,6 +101,9 @@ defmodule Mehungry.Search.RecipeVectorSearch do
 
   defp maybe_filter_user(query, nil), do: query
   defp maybe_filter_user(query, user_id), do: where(query, [r], r.user_id == ^user_id)
+
+  defp maybe_public_only(query, true), do: where(query, [r], coalesce(r.private, false) == false)
+  defp maybe_public_only(query, _), do: query
 
   defp maybe_exclude_ids(query, []), do: query
   defp maybe_exclude_ids(query, ids), do: where(query, [r], r.id not in ^ids)

@@ -483,7 +483,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
         "consultation_note" => %{"appointment_id" => "#{appt.id}"}
       })
 
-    assert html =~ ~r/<option[^>]*selected[^>]*value="online"|<option[^>]*value="online"[^>]*selected/
+    assert html =~
+             ~r/<option[^>]*selected[^>]*value="online"|<option[^>]*value="online"[^>]*selected/
   end
 
   test "a new visit is numbered after the highest existing number, not the count", %{
@@ -1072,7 +1073,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     html =
       view
       |> form("#assign-plan-form")
-      |> render_change(%{"assign" => %{"plan_id" => "#{plan.id}", "start_date" => Date.to_iso8601(Date.utc_today())}})
+      |> render_change(%{
+        "assign" => %{
+          "plan_id" => "#{plan.id}",
+          "start_date" => Date.to_iso8601(Date.utc_today())
+        }
+      })
 
     assert html =~ "This plan lays down"
     assert html =~ "Day 1"
@@ -1197,23 +1203,24 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     # A draft is already in flight (Oban is in :manual test mode, so the job
     # stays queued).
     {:ok, _job} =
-      Mehungry.ObanWorkers.NutritionistAgentWorker.enqueue(
-        nutritionist.id,
-        client_user.id,
-        "Platform Client",
-        "low-carb"
-      )
+      Mehungry.ObanWorkers.NutritionistAgentWorker.start(%{
+        professional_id: nutritionist.id,
+        client_id: client_user.id,
+        client_name: "Platform Client",
+        preferences: "low-carb"
+      })
 
     {:ok, _view, html} = live(conn, "/nutritionist/clients/#{client_user.id}?tab=planning")
 
     assert html =~ "Drafting in progress"
   end
 
-  test "editing the goal after browsing an older assessment writes to the latest, not the browsed row", %{
-    conn: conn,
-    nutritionist: nutritionist,
-    client_user: client_user
-  } do
+  test "editing the goal after browsing an older assessment writes to the latest, not the browsed row",
+       %{
+         conn: conn,
+         nutritionist: nutritionist,
+         client_user: client_user
+       } do
     {:ok, record} =
       Professionals.create_client_record(%{
         professional_id: nutritionist.id,

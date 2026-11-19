@@ -133,7 +133,7 @@ Beyond the grid + add/edit/delete meal form, the self-tracker shipped (see memor
 
 - **Per-day notes** (`DayNote`), **copy-a-meal-to-today** (`duplicate_user_meal`).
 - **Personal avoid-list** — `UserProfile.avoid_foods`; meals whose foods match a term are
-  flagged via `MealPlanAgent.matched_avoid_terms` (distinct from a blueprint's
+  flagged via `MealPlanCore.matched_avoid_terms` (distinct from a blueprint's
   *generation-time* avoid enforcement in [`ai/meal_plan.md`](ai/meal_plan.md)).
 - **Day-summary badges** — sodium / saturated-fat warnings computed from the day's
   summed tree.

@@ -1,76 +1,158 @@
 defmodule Mehungry.AI.MealPlanGenerator do
   @moduledoc """
-  Generates a 7-day meal plan by asking the AI to assign meals (recipes and
-  whole-food ingredients) from the user's library.
+  Generation → persistence seam for AI meal plans.
 
-  Generation and persistence are separated:
-    * `generate_entries/5` returns normalized, calendar-independent plan entries
-      (see `MealPlanAgent.normalize_entry/2`) — used both by the calendar and by
-      independent meal-blueprint plans.
-    * `run/5` is the calendar convenience: generate, then create the `UserMeal`
-      records directly, returning `{:ok, created, skipped}`.
-    * `persist_entries_to_calendar/3` materializes entries onto calendar dates.
+    * `generate_entries/4` — a person's **own** plan, via `UserMealPlanAgent`.
+      Returns normalized, calendar-independent entries. There is no fallback
+      pipeline: when the agent fails, generation fails (an unguarded second
+      attempt could not honour the diet / avoid guarantees).
+    * `persist_entries_to_calendar/5` — writes entries (from **either** meal-plan
+      agent) onto a user's calendar week in the chosen mode.
+    * `run/5` — generate then persist, for the own-calendar case.
+
+  ## Existing-meals modes
+
+  When the target week already holds meals, the person who invoked the planner
+  chooses what happens to them:
+
+    * `:fill_gaps` (default) — every existing meal stays; an entry is written
+      only where that `(date, meal slot)` cell is empty.
+    * `:replace_week` — every meal in the 7-day span is deleted, then the plan
+      is written, **in one transaction**: if any insert fails the whole thing
+      rolls back and the week is left exactly as it was (`{:error,
+      :replace_failed}`). Nothing is deleted when the plan has no entries.
   """
 
-  require Logger
   alias Mehungry.History
   alias Mehungry.History.MealType
+  alias Mehungry.AI.Agents.UserMealPlanAgent
 
-  @model "claude-haiku-4-5-20251001"
-  @max_recipes 80
+  @modes [:fill_gaps, :replace_week]
+
+  @doc "The existing-meals modes, as atoms."
+  def modes, do: @modes
 
   @doc """
-  Calendar pipeline. Generates a plan and creates the `UserMeal` records on the
-  calendar starting at `start_date`. Returns `{:ok, [%UserMeal{}], skipped}` or
+  Parses a mode from user/API input (`"fill_gaps"` / `"replace_week"`, or the
+  atoms). Anything else → the non-destructive default `:fill_gaps`.
+  """
+  def parse_mode(mode) when mode in @modes, do: mode
+  def parse_mode("replace_week"), do: :replace_week
+  def parse_mode(_), do: :fill_gaps
+
+  @doc """
+  Own-calendar pipeline: generates a plan and writes it to `user_id`'s calendar
+  starting at `start_date`. Returns `{:ok, [%UserMeal{}], skipped}` or
   `{:error, reason}`.
   """
-  def run(preferences, recipes, start_date, user_id, blueprint \\ nil) do
-    case generate_entries(preferences, recipes, start_date, user_id, blueprint) do
-      {:ok, entries} -> persist_entries_to_calendar(entries, user_id, start_date)
+  def run(preferences, start_date, user_id, blueprint \\ nil, mode \\ :fill_gaps) do
+    case generate_entries(preferences, start_date, user_id, blueprint, mode: parse_mode(mode)) do
+      {:ok, entries} -> persist_entries_to_calendar(entries, user_id, start_date, mode)
       {:error, reason} -> {:error, reason}
     end
   end
 
   @doc """
-  Produces normalized, calendar-independent plan entries. Delegates to
-  `MealPlanAgent` (history-aware tool-use loop), falling back to the legacy
-  single-shot pipeline if the agent errors. Returns `{:ok, entries}` or
-  `{:error, reason}`.
+  Produces normalized, calendar-independent plan entries for a person's own plan
+  (`UserMealPlanAgent`). Returns `{:ok, entries}` or `{:error, reason}`.
 
-  `blueprint` is an optional `%Mehungry.MealBlueprints.Blueprint{}` (or nil); its
-  targets reach the planner through `preferences`.
+  `blueprint` is an optional `%Mehungry.MealBlueprints.Blueprint{}` (or nil).
+  `opts` are passed to the agent — `:mode` when the plan is headed for a calendar
+  week (a `:replace_week` plan must cover every day's main meals).
   """
-  def generate_entries(preferences, recipes, start_date, user_id, blueprint \\ nil) do
-    case Mehungry.AI.Agents.MealPlanAgent.run(
-           preferences,
-           recipes,
-           start_date,
-           user_id,
-           blueprint
-         ) do
-      {:ok, entries} ->
-        {:ok, entries}
-
-      {:error, reason} ->
-        Logger.warning(
-          "MealPlanAgent failed (#{inspect(reason)}), falling back to legacy pipeline"
-        )
-
-        generate_legacy_entries(preferences, recipes, start_date)
-    end
+  def generate_entries(preferences, start_date, user_id, blueprint \\ nil, opts \\ []) do
+    UserMealPlanAgent.run(preferences, start_date, user_id, blueprint, opts)
   end
 
   @doc """
-  Creates `UserMeal` calendar records from normalized `entries`, laying `day_index`
-  1..7 onto `start_date`..`start_date+6`. Returns `{:ok, created, skipped}`.
+  How many meals `user_id` already has in the plan week (`start_date` + 6 days),
+  counting from `from` — what a caller checks to decide whether to ask for an
+  existing-meals mode.
   """
-  def persist_entries_to_calendar(entries, user_id, start_date) do
-    results = Enum.map(entries, &create_calendar_meal(&1, user_id, start_date))
+  def existing_meal_count(user_id, %Date{} = start_date, from \\ nil) do
+    History.count_user_meals_in_date_range(
+      user_id,
+      first_day(start_date, from),
+      Date.add(start_date, 6)
+    )
+  end
+
+  @doc """
+  Creates `UserMeal` calendar records from normalized `entries`, laying
+  `day_index` 1..7 onto `start_date`..`start_date+6`, honouring `mode` (see the
+  moduledoc). Returns `{:ok, created, skipped}` — `skipped` counts entries whose
+  insert failed (entries dropped because their cell was taken are not failures) —
+  or, for `:replace_week`, `{:error, :replace_failed}` when the swap was rolled
+  back.
+
+  Options:
+    * `:from` — a `%Date{}` inside the week; days before it are left untouched
+      (no entry is written there and `:replace_week` does not delete there). A
+      nutritionist's draft passes today, so a client's past days — what they
+      actually ate — are never rewritten.
+  """
+  def persist_entries_to_calendar(entries, user_id, start_date, mode \\ :fill_gaps, opts \\ []) do
+    from = first_day(start_date, Keyword.get(opts, :from))
+
+    entries =
+      Enum.reject(entries, &(Date.compare(Date.add(start_date, &1.day_index - 1), from) == :lt))
+
+    write_week(entries, user_id, start_date, from, parse_mode(mode))
+  end
+
+  defp write_week([], _user_id, _start_date, _from, _mode), do: {:ok, [], 0}
+
+  # :replace_week — delete + insert as one unit, so a failed insert can never
+  # leave the week emptied.
+  defp write_week(entries, user_id, start_date, from, :replace_week) do
+    Mehungry.Repo.transaction(fn ->
+      History.delete_user_meals_in_date_range(user_id, from, Date.add(start_date, 6))
+
+      Enum.map(entries, fn entry ->
+        case create_calendar_meal(entry, user_id, start_date) do
+          {:ok, meal} -> meal
+          {:error, _} -> Mehungry.Repo.rollback(:replace_failed)
+        end
+      end)
+    end)
+    |> case do
+      {:ok, created} -> {:ok, created, 0}
+      {:error, _} -> {:error, :replace_failed}
+    end
+  end
+
+  defp write_week(entries, user_id, start_date, from, :fill_gaps) do
+    results =
+      entries
+      |> prepare_week(user_id, start_date, from, :fill_gaps)
+      |> Enum.map(&create_calendar_meal(&1, user_id, start_date))
 
     created = for {:ok, meal} <- results, do: meal
     skipped = Enum.count(results, &match?({:error, _}, &1))
 
     {:ok, created, skipped}
+  end
+
+  # The first day a plan may touch: `from` when it falls later than the week start.
+  defp first_day(start_date, %Date{} = from) do
+    if Date.compare(from, start_date) == :gt, do: from, else: start_date
+  end
+
+  defp first_day(start_date, _from), do: start_date
+
+  # :fill_gaps — drop every entry whose (day, meal type) cell already has a meal.
+  # Computed here from the calendar itself, so it holds no matter what the model
+  # was (or was not) told about the week.
+  defp prepare_week(entries, user_id, start_date, _from, :fill_gaps) do
+    occupied =
+      user_id
+      |> History.list_calendar_user_meals(start_date, Date.add(start_date, 6))
+      |> Enum.reject(&is_nil(&1.meal_type))
+      |> MapSet.new(fn meal ->
+        {Date.diff(NaiveDateTime.to_date(meal.start_dt), start_date) + 1, meal.meal_type}
+      end)
+
+    Enum.reject(entries, &MapSet.member?(occupied, {&1.day_index, &1.meal_type}))
   end
 
   defp create_calendar_meal(entry, user_id, start_date) do
@@ -114,129 +196,5 @@ defmodule Mehungry.AI.MealPlanGenerator do
         }
       ]
     }
-  end
-
-  # Legacy single-shot pipeline: returns recipe-only normalized entries.
-  defp generate_legacy_entries(preferences, recipes, start_date) do
-    catalog = build_catalog(recipes)
-
-    if catalog == [] do
-      {:error, "No recipes found. Create some recipes first."}
-    else
-      with {:ok, plan} <- generate_plan(preferences, catalog, start_date) do
-        {:ok, normalize_legacy_entries(plan, start_date)}
-      end
-    end
-  end
-
-  defp normalize_legacy_entries(plan, start_date) do
-    plan
-    |> Enum.filter(fn e ->
-      is_binary(e["date"]) and is_binary(e["slot"]) and is_integer(e["recipe_id"])
-    end)
-    |> Enum.flat_map(fn e ->
-      case Date.from_iso8601(e["date"]) do
-        {:ok, date} ->
-          [
-            %{
-              day_index: Date.diff(date, start_date) + 1,
-              meal_type: MealType.from_slot(e["slot"]),
-              recipe_id: e["recipe_id"],
-              cooking_portions: e["cooking_portions"] || 2,
-              ingredient_id: nil,
-              quantity: nil,
-              measurement_unit_id: nil,
-              ingredient_portion_id: nil
-            }
-          ]
-
-        _ ->
-          []
-      end
-    end)
-  end
-
-  # --- Catalog ---
-
-  defp build_catalog(recipes) do
-    recipes
-    |> Enum.take(@max_recipes)
-    |> Enum.map(fn r ->
-      %{id: r.id, title: r.title, servings: r.servings || 2, difficulty: r.difficulty || 1}
-    end)
-  end
-
-  # --- Phase 1: AI call ---
-
-  defp generate_plan(preferences, catalog, start_date) do
-    system = """
-    You are a meal planner. Generate a 7-day meal plan as valid JSON.
-    Use ONLY recipe_ids from the provided catalog. Return only a valid JSON array, no markdown, no explanation.
-    """
-
-    user = build_prompt(preferences, catalog, start_date)
-
-    case call_api(system, user) do
-      {:ok, text} ->
-        text
-        |> String.trim()
-        |> String.replace(~r/```json\s*/i, "")
-        |> String.replace(~r/```\s*/, "")
-        |> String.trim()
-        |> Jason.decode()
-        |> case do
-          {:ok, entries} when is_list(entries) -> {:ok, entries}
-          _ -> {:error, "Could not parse meal plan from AI response"}
-        end
-
-      error ->
-        error
-    end
-  end
-
-  defp build_prompt(preferences, catalog, start_date) do
-    end_date = Date.add(start_date, 6)
-
-    catalog_text =
-      Enum.map_join(catalog, "\n", fn r ->
-        "  recipe_id:#{r.id} \"#{r.title}\" (servings:#{r.servings}, difficulty:#{r.difficulty})"
-      end)
-
-    """
-    User preferences: "#{preferences}"
-
-    Plan meals from #{Date.to_string(start_date)} to #{Date.to_string(end_date)} (7 days).
-    Meal slots per day: Breakfast, Lunch, Dinner.
-
-    Available recipes (use ONLY these recipe_ids):
-    #{catalog_text}
-
-    Return a JSON array of exactly 21 entries (3 per day × 7 days):
-    [
-      {"date": "YYYY-MM-DD", "slot": "Breakfast", "recipe_id": integer, "cooking_portions": integer},
-      ...
-    ]
-
-    Rules:
-    - Vary recipes across the week — minimize repetition
-    - cooking_portions should be 1–4 based on recipe servings and user preferences
-    - Match recipe types to meal slots (lighter meals for breakfast, heartier for dinner)
-    - Use exact date strings in YYYY-MM-DD format
-    - Only use Breakfast, Lunch, or Dinner as slot values
-    """
-  end
-
-  # --- HTTP ---
-
-  defp call_api(system, user) do
-    case Mehungry.AI.Client.request(%{
-           model: @model,
-           system: system,
-           messages: [%{role: "user", content: user}],
-           max_tokens: 4096
-         }) do
-      {:ok, response} -> {:ok, Mehungry.AI.Client.text_from(response)}
-      error -> error
-    end
   end
 end

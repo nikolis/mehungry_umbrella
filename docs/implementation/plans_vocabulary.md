@@ -20,11 +20,11 @@ MealBlueprints (template)                 History (live calendar)        Publish
         │ import_plan_to_calendar/3                │ publish_week/3                 ▲
         └─────────────────────────────▶  UserMeal  ─────────────────────────────────┘
                                              ▲
-             AI.MealPlanGenerator / MealPlanAgent  ──▶ materialize onto the calendar
+             AI.MealPlanGenerator / UserMealPlanAgent  ──▶ materialize onto the calendar
                                                    └─▶ or store as a standalone BlueprintPlan
 ```
 
-- **`AI.MealPlanGenerator` / `MealPlanAgent`** ([`ai/meal_plan.md`](ai/meal_plan.md)) is the
+- **`AI.MealPlanGenerator` / `UserMealPlanAgent`** ([`ai/meal_plan.md`](ai/meal_plan.md)) is the
   *generator*, not a store: it returns normalized entries that land on the `History`
   calendar **or** are stored as a `MealBlueprints.BlueprintPlan`.
 - `MealBlueprints` → `History` via `import_plan_to_calendar/3` (stamps

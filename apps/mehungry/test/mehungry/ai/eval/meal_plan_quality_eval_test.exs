@@ -1,6 +1,6 @@
 defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
   @moduledoc """
-  Live meal-plan quality eval — runs the REAL `MealPlanAgent` against a seeded
+  Live meal-plan quality eval — runs the REAL `UserMealPlanAgent` against a seeded
   fixture catalog and scores its output with `MealPlanScorer`.
 
   Excluded from the normal suite (`@moduletag :ai_eval`) because it calls the
@@ -22,7 +22,7 @@ defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
 
   require Logger
   alias Mehungry.{History, NutrientUtils}
-  alias Mehungry.AI.Agents.MealPlanAgent
+  alias Mehungry.AI.Agents.{MealPlanCore, UserMealPlanAgent}
   alias Mehungry.AI.MealPlanGenerator
   alias Mehungry.AI.Eval.{MealPlanCatalog, MealPlanScorer, TokenMeter}
   alias Mehungry.MealBlueprints
@@ -77,7 +77,7 @@ defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
 
   defp run_scenario(name, cat, preferences, blueprint, context) do
     Enum.map(1..@runs, fn i ->
-      case MealPlanAgent.run(preferences, [], cat.start_date, cat.user_id, blueprint) do
+      case UserMealPlanAgent.run(preferences, cat.start_date, cat.user_id, blueprint) do
         {:ok, entries} ->
           # Materialize onto the calendar and aggregate per-day macros through the
           # app's own path (parity), so `calorie_fit` scores against real numbers.
@@ -115,7 +115,7 @@ defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
   # Build the scorer context from the catalog + blueprint.
   defp context_overrides(cat, blueprint) do
     %{
-      avoid_terms: MealPlanAgent.avoid_terms(blueprint),
+      avoid_terms: MealPlanCore.avoid_terms(blueprint),
       preferred_terms: downcase_list(blueprint.preferred_foods),
       recipe_names: cat.recipe_names,
       ingredient_names: cat.ingredient_names,
@@ -152,7 +152,9 @@ defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
   # what was seeded — the signal that tells "thin catalog" apart from "bad agent".
   defp coverage_line(entries, context) do
     used_recipes = entries |> Enum.map(&(&1[:recipe_id] || &1["recipe_id"])) |> drop_nil_uniq()
-    used_ings = entries |> Enum.map(&(&1[:ingredient_id] || &1["ingredient_id"])) |> drop_nil_uniq()
+
+    used_ings =
+      entries |> Enum.map(&(&1[:ingredient_id] || &1["ingredient_id"])) |> drop_nil_uniq()
 
     "  coverage: #{length(used_recipes)}/#{map_size(context.recipe_names)} recipes, " <>
       "#{length(used_ings)}/#{map_size(context.ingredient_names)} ingredients used"

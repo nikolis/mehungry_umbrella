@@ -49,7 +49,12 @@
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim text-xs font-medium transition-colors"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 5v.01M12 12v.01M12 19v.01"
+            />
           </svg>
           {gettext("Week options")}
         </button>
@@ -78,8 +83,18 @@
             }
             class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 text-sm text-left transition-colors"
           >
-            <svg class="w-4 h-4 flex-shrink-0 text-basil" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg
+              class="w-4 h-4 flex-shrink-0 text-basil"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
             {gettext("Plan with AI")}
           </button>
@@ -91,8 +106,18 @@
             phx-click={show_modal("avoid_foods_modal")}
             class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 text-sm text-left transition-colors"
           >
-            <svg class="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+            <svg
+              class="w-4 h-4 flex-shrink-0 text-amber-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"
+              />
             </svg>
             {gettext("Foods I avoid")}
             <span
@@ -109,11 +134,23 @@
             id="clear-week"
             @click="open = false"
             phx-click="clear_week_meals"
-            data-confirm={gettext("Delete every meal from the week you're viewing? This can't be undone.")}
+            data-confirm={
+              gettext("Delete every meal from the week you're viewing? This can't be undone.")
+            }
             class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-300 hover:bg-red-500/10 text-sm text-left transition-colors"
           >
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <svg
+              class="w-4 h-4 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
             </svg>
             {gettext("Clear week")}
           </button>
@@ -174,19 +211,24 @@
         </div>
         <button
           type="submit"
-          disabled={@ai_plan_generating}
+          disabled={@ai_plan_generating or not is_nil(@ai_plan_pending)}
           class="px-5 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm self-end transition"
         >
           <%= if @ai_plan_generating do %>
             <span class="flex items-center gap-2">
-              <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" />
-              Planning…
+              <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" /> Planning…
             </span>
           <% else %>
             Generate
           <% end %>
         </button>
       </form>
+      <MehungryWeb.MealPlanModePrompt.mode_prompt
+        :if={@ai_plan_pending}
+        existing={@ai_plan_pending.existing}
+        mode_event="ai_plan_mode"
+        cancel_event="ai_plan_cancel"
+      />
       <%= if @ai_plan_result do %>
         <p class="text-green-400 text-xs mt-3 flex items-center gap-1.5">
           <svg
@@ -392,7 +434,8 @@
       if @ingredient_basis == :per_100g, do: ing.per_100g_tree, else: ing.as_logged_tree %>
     <% macros =
       if @ingredient_basis == :per_100g, do: ing.per_100g_macros, else: ing.as_logged_macros %>
-    <% basis_label = if @ingredient_basis == :per_100g, do: gettext("per 100 g"), else: logged_label %>
+    <% basis_label =
+      if @ingredient_basis == :per_100g, do: gettext("per 100 g"), else: logged_label %>
     <div class="w-full max-w-xl mx-auto p-4 sm:p-2" style="min-height: 40vh;">
       <%!-- Header: emoji hero (no photo for ingredients), name, species, as-logged badge.
            On mobile, indent clear of the absolutely-positioned back button (top-5 left-5,
@@ -405,7 +448,9 @@
           {ing.icon}
         </div>
         <div class="min-w-0">
-          <h2 class="font-display font-medium text-2xl text-parchment leading-tight">{ing.name}</h2>
+          <h2 class="font-display font-medium text-2xl text-parchment leading-tight">
+            {ing.name}
+          </h2>
           <div :if={ing.species} class="flex flex-wrap gap-1.5 mt-2">
             <span
               :if={ing.species.scientific_name && ing.species.scientific_name != ""}
@@ -570,12 +615,22 @@
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              />
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
             <p class="text-parchment-dim text-sm">{gettext("Creating your card…")}</p>
           </div>
-
         <% @share_graphic && !@share_regenerate -> %>
           <p class="text-parchment-dim/70 text-xs mb-3">
             {gettext("Your saved card for this week.")}
@@ -636,7 +691,6 @@
               {gettext("Re-generate from the latest plan")}
             </button>
           </div>
-
         <% true -> %>
           <form phx-submit="generate_week_card" class="space-y-4">
             <div>
