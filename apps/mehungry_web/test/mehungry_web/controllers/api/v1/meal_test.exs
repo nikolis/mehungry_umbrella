@@ -1,5 +1,8 @@
 defmodule MehungryWeb.Api.V1.MealTest do
   use MehungryWeb.ConnCase, async: true
+  use Oban.Testing, repo: Mehungry.Repo
+
+  import Ecto.Query
 
   alias Mehungry.FoodFixtures
 
@@ -390,6 +393,28 @@ defmodule MehungryWeb.Api.V1.MealTest do
 
       polled = conn |> get(~p"/api/v1/meals/plan-with-ai/#{job_id}") |> json_response(200)
       assert %{"data" => %{"job_id" => ^job_id, "status" => "queued"}} = polled
+
+      # A client is waiting on this, so it runs on its own queue — never behind
+      # batch work on :ai_agents.
+      assert_enqueued(
+        worker: MehungryWeb.Api.MealPlanWorker,
+        queue: :ai_interactive,
+        args: %{"job_id" => job_id}
+      )
+    end
+
+    test "polling a job orphaned in generating resolves to error", %{conn: conn, user: user} do
+      {:ok, job} = Mehungry.MealPlanJobs.create_job(%{user_id: user.id, status: "generating"})
+
+      stale = NaiveDateTime.add(NaiveDateTime.utc_now(), -3600) |> NaiveDateTime.truncate(:second)
+
+      Mehungry.Repo.update_all(
+        from(j in Mehungry.MealPlanJobs.MealPlanJob, where: j.id == ^job.id),
+        set: [updated_at: stale]
+      )
+
+      polled = conn |> get(~p"/api/v1/meals/plan-with-ai/#{job.id}") |> json_response(200)
+      assert %{"data" => %{"status" => "error", "error" => "generation timed out"}} = polled
     end
 
     test "polling another user's job 404s", %{conn: conn} do

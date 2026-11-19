@@ -712,6 +712,17 @@ exhaustion return `403` with an upgrade hint. Because generation is slow, this
 returns `202 Accepted` with a job id and the client subscribes to the
 `meal_plan:<user_id>` channel (§13) for progress + result, OR polls
 `GET /api/v1/meals/plan-with-ai/:job_id`.
+
+The job runs on its own Oban queue (`:ai_interactive`), so it starts
+immediately instead of waiting behind batch AI work. The tracking row and the
+Oban job are created in one transaction: a `202` always has a job behind it,
+and an enqueue failure returns a retryable `502` (standard error envelope).
+
+Job `status` is `queued` → `generating` → `done` | `error`. **`done` and
+`error` are terminal — stop polling on either.** `error` covers a failed
+generation, a worker crash, and a job orphaned in `generating` for more than
+10 minutes (reported with `error: "generation timed out"` on the next poll).
+The poll response is `{ job_id, status, result, error }`.
 ```json
 // request
 { "start": "2026-08-11", "days": 5, "meals_per_day": ["breakfast","lunch","dinner"], "notes": "high protein" }
@@ -1636,6 +1647,10 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
 - **Push → client**: `"progress"` `{ job_id, status: "generating"|"done"|"error", pct }`,
   `"result"` `{ job_id, meals: [ … ] }` (same shape as §9 day meals). Client
   refreshes the calendar on `result`. Mirrors the "Plan with AI" async flow.
+  A crashed generation also pushes `"progress"` with `status: "error"`; a
+  hard-killed one pushes nothing, so clients on the channel should still fall
+  back to polling `GET /meals/plan-with-ai/:job_id` (which resolves it to
+  `error`) rather than wait indefinitely.
 
 ### `nutritionist_thread:<user_id>` 🔒 (optional, phase 2) — live client↔nutritionist messages
 - The "My nutritionist" hub (§18) chat thread is REST today (`GET/POST

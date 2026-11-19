@@ -5,6 +5,8 @@ defmodule MehungryWeb.Api.V1.MealController do
   """
   use MehungryWeb, :controller
 
+  require Logger
+
   import MehungryWeb.Api.V1.JSON.Helpers
 
   alias Mehungry.History
@@ -81,18 +83,26 @@ defmodule MehungryWeb.Api.V1.MealController do
 
     case Subscriptions.check_quota(user_id, "meal_plan") do
       :ok ->
-        {:ok, job} =
-          MealPlanJobs.create_job(%{
-            user_id: user_id,
-            status: "queued",
-            start_date: parse_optional_date(params["start"]),
-            days: params["days"],
-            notes: params["notes"]
-          })
+        attrs = %{
+          user_id: user_id,
+          status: "queued",
+          start_date: parse_optional_date(params["start"]),
+          days: params["days"],
+          notes: params["notes"]
+        }
 
-        %{"job_id" => job.id} |> MealPlanWorker.new() |> Oban.insert()
+        # Row + Oban job commit together, so a 202 always has a job behind it.
+        case MealPlanJobs.create_and_enqueue(attrs, &MealPlanWorker.new(%{"job_id" => &1.id})) do
+          {:ok, job} ->
+            conn |> put_status(:accepted) |> json(data(%{job_id: job.id, status: "queued"}))
 
-        conn |> put_status(:accepted) |> json(data(%{job_id: job.id, status: "queued"}))
+          {:error, %Ecto.Changeset{} = changeset} ->
+            {:error, changeset}
+
+          {:error, reason} ->
+            Logger.error("plan-with-ai enqueue failed: #{inspect(reason)}")
+            {:error, :upstream_error}
+        end
 
       {:error, :quota_exceeded} ->
         {:error, :quota_exceeded}
@@ -102,8 +112,14 @@ defmodule MehungryWeb.Api.V1.MealController do
   @doc "GET /api/v1/meals/plan-with-ai/:job_id — poll async generation status."
   def plan_status(conn, %{"job_id" => id}) do
     case MealPlanJobs.get_job(parse_int(id), uid(conn)) do
-      nil -> {:error, :not_found}
-      job -> json(conn, data(%{job_id: job.id, status: job.status, result: job.result, error: job.error}))
+      nil ->
+        {:error, :not_found}
+
+      job ->
+        # An orphaned `generating` row (worker hard-killed) resolves to `error`
+        # here, so the client never polls forever.
+        job = MealPlanJobs.fail_if_stale(job)
+        json(conn, data(%{job_id: job.id, status: job.status, result: job.result, error: job.error}))
     end
   end
 

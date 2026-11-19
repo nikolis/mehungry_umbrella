@@ -240,13 +240,19 @@ config :mehungry, Oban,
      ]}
   ],
   queues: [
-    # Total concurrency is capped at 15 job slots so it fits within the DB pool
+    # Total concurrency is capped at 16 job slots so it fits within the DB pool
     # (POOL_SIZE 18) with headroom for web/LiveView/Presence checkouts. Sized to
     # close the connection-pool starvation confirmed in prod (queue_time spiking
     # to ~10s) — see oban_production_diagnostics.md.
     default: 5,
     mailers: 3,
     ai_agents: 1,
+    # User-facing AI generation a client is actively waiting on (the mobile "Plan
+    # with AI" job, MehungryWeb.Api.MealPlanWorker). Its own slot so it never queues
+    # behind batch work (translations, taxonomy, images, daily generation) on the
+    # single-slot `:ai_agents` queue. Mostly waits on the Anthropic HTTP call, with
+    # brief DB checkouts.
+    ai_interactive: 1,
     imports: 1,
     # Admin-triggered "Mine all species"/"Mine all conditions" sweeps (one job per
     # entity, calling the external biomed-fact-miner). Starts PAUSED on every node;

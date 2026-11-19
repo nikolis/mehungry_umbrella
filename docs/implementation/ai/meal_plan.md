@@ -38,7 +38,16 @@ Three surfaces, all funnelling through the same core (`Mehungry.AI.MealPlanGener
 |---|---|---|
 | **Calendar** | `CalendarLive.Index` → `MealPlanGenerator.run/5` | Materialized onto the week's calendar dates as `UserMeal`s |
 | **Meal Blueprints** | `MealBlueprintLive.Index` → `MealPlanGenerator.generate_entries/5` → `MealBlueprints.store_plan_meals/2` | Stored as independent `BlueprintPlanMeal` rows (not the calendar) |
-| **Mobile REST API** | `MehungryWeb.Api.MealPlanWorker` (async Oban job) → `MealPlanGenerator.run/5` | Same calendar materialization, driven from the React Native client |
+| **Mobile REST API** | `MehungryWeb.Api.MealPlanWorker` (async Oban job on the dedicated `:ai_interactive` queue) → `MealPlanGenerator.run/5` | Same calendar materialization, driven from the React Native client |
+
+The mobile job is tracked by an `api_meal_plan_jobs` row (`Mehungry.MealPlanJobs`).
+It has its own single-slot queue so a waiting user never queues behind batch
+work on `:ai_agents` (the web calendar runs the same generator in an immediate
+`Task`). The row can't be left non-terminal: it is inserted in the same
+transaction as the Oban job (`MealPlanJobs.create_and_enqueue/2`), a crash in
+the worker marks it `error`, the worker is killed after 8 minutes
+(`timeout/1`), and a row still `generating` after 10 minutes is failed on the
+next status poll (`MealPlanJobs.fail_if_stale/1`).
 
 Generation is **quota-gated** by subscription tier (`Subscriptions.check_quota/2`
 before, `record_usage/2` after success): free `0`, `m3hungry_plus` `4`/mo,

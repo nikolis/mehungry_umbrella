@@ -775,6 +775,12 @@ localhost only because the local queue drains instantly.
   bulk translation off `ai_agents` onto its own queue so it can't starve recipe
   generation.
 
+The same backlog used to make the mobile **"Plan with AI"** look hung, because
+`MehungryWeb.Api.MealPlanWorker` shared `ai_agents`. It now runs on its own
+single-slot **`ai_interactive`** queue (total slots 15 → 16), so a waiting user
+is no longer behind batch work. To check: in `/oban`, a `MealPlanWorker` job's
+`scheduled_at → attempted_at` gap should be about a second.
+
 ---
 
 ## 12. Notifier stall — the single Postgres LISTEN connection took the whole Oban tree down (2026-08-19)

@@ -5,8 +5,13 @@ defmodule MehungryWeb.Api.MealPlanWorker do
   quota usage, updates the `MealPlanJob` tracking row, and broadcasts progress to
   the `meal_plan:<user_id>` channel. Lives in the web app so it can broadcast
   through `MehungryWeb.Endpoint`.
+
+  Runs on its own `:ai_interactive` queue — a client is waiting on it, so it must
+  not queue behind batch work on `:ai_agents`. A crash marks the tracking row
+  `error` (never left `generating`); a hard kill is caught by
+  `MealPlanJobs.fail_if_stale/1` on the next poll.
   """
-  use Oban.Worker, queue: :ai_agents, max_attempts: 1
+  use Oban.Worker, queue: :ai_interactive, max_attempts: 1
 
   require Logger
 
@@ -19,8 +24,37 @@ defmodule MehungryWeb.Api.MealPlanWorker do
   def perform(%Oban.Job{args: %{"job_id" => job_id}}) do
     case MealPlanJobs.get_job(job_id) do
       nil -> :ok
-      job -> run(job)
+      job -> run_safely(job)
     end
+  end
+
+  # A hung generation is killed here rather than holding the queue's only slot
+  # until Lifeline rescues it at 30 minutes.
+  @impl Oban.Worker
+  def timeout(_job), do: :timer.minutes(8)
+
+  # Anything raised or thrown below must still land the tracking row in `error`:
+  # with `max_attempts: 1` there is no retry to fix it up later.
+  defp run_safely(job) do
+    run(job)
+  rescue
+    exception ->
+      Logger.error(
+        "MealPlanWorker crashed: " <> Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      fail(job, Exception.message(exception))
+      {:error, exception}
+  catch
+    kind, reason ->
+      Logger.error("MealPlanWorker crashed: " <> Exception.format(kind, reason, __STACKTRACE__))
+      fail(job, inspect(reason))
+      {:error, {kind, reason}}
+  end
+
+  defp fail(job, message) do
+    MealPlanJobs.update_job(job, %{status: "error", error: String.slice(message, 0, 500)})
+    broadcast(job.user_id, "progress", %{job_id: job.id, status: "error"})
   end
 
   defp run(job) do

@@ -70,8 +70,9 @@ directly. When adding a public function to a sub-module, add a matching
 
 ## Oban
 
-Queues (total concurrency capped at **13** to fit the Supabase pool — see
-`CLAUDE.md` → *Oban Queues*): `default: 5`, `ai_agents: 1`, `mailers: 3`,
+Queues (total concurrency capped at **16** to fit the Supabase pool — the full,
+current list is in `CLAUDE.md` → *Oban Queues*): `default: 5`, `ai_agents: 1`,
+`ai_interactive: 1` (mobile "Plan with AI"), `mailers: 3`,
 `imports: 1` (condition-seeded crawl + research ingestion), `seed_imports: 1`
 (USDA S3 seed files), `hashtag_reconcile: 1`, `portion_generation: 1`.
 
