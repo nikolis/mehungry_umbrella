@@ -29,6 +29,9 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
      |> assign(:query, "")
      |> assign(:catalog, FactMining.conditions_for_search())
      |> assign(:results, [])
+     # Tracked, already-mined conditions the current All-research term resolves to
+     # — surfaced as a "Browse condition" shortcut above the paper cards.
+     |> assign(:condition_matches, [])
      # When a typo'd query returns nothing, we auto-retry a trigram-corrected
      # spelling and show `{original, corrected}` here as a "showing results for…".
      |> assign(:corrected, nil)}
@@ -47,12 +50,18 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
     {:noreply, assign(socket, :query, q) |> run_query(q)}
   end
 
-  # Run the active mode's query. Conditions filters the catalog by name; papers
-  # runs the global cross-condition search (blank → no cards).
-  defp run_query(%{assigns: %{mode: :conditions}} = socket, q),
-    do: assign(socket, catalog: FactMining.conditions_for_search(q), corrected: nil)
+  # Run the active mode's query. Conditions filters the catalog (tolerant: accents,
+  # word order, synonyms, typo correction); papers runs the global cross-condition
+  # search (blank → no cards) and also surfaces any tracked, mined condition the
+  # term resolves to as a shortcut.
+  defp run_query(%{assigns: %{mode: :conditions}} = socket, q) do
+    %{entries: entries, corrected: corrected} = FactMining.search_conditions(q)
+    assign(socket, catalog: entries, corrected: corrected, condition_matches: [])
+  end
 
   defp run_query(%{assigns: %{mode: :papers}} = socket, q) do
+    socket = assign(socket, :condition_matches, condition_matches(q))
+
     case FactMining.search_all_research(q) do
       [] ->
         # Nothing matched — try a trigram-corrected spelling (e.g. a missing
@@ -70,6 +79,18 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
 
       results ->
         assign(socket, results: results, corrected: nil)
+    end
+  end
+
+  # Tracked conditions with at least one mined study that the All-research term
+  # resolves to (tolerant match) — the bridge back to the curated Conditions page.
+  defp condition_matches(q) do
+    if String.trim(q || "") == "" do
+      []
+    else
+      FactMining.search_conditions(q).entries
+      |> Enum.filter(&(&1.study_count > 0))
+      |> Enum.take(3)
     end
   end
 
@@ -170,9 +191,32 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
 
       <%!-- ── Conditions mode ──────────────────────────────────────────────── --%>
       <div :if={@mode == :conditions}>
-        <p :if={@catalog == []} class="text-sm text-parchment-dim py-8 text-center">
-          <span :if={@query == ""}>{gettext("No conditions available yet.")}</span>
-          <span :if={@query != ""}>{gettext("No conditions match “%{query}”.", query: @query)}</span>
+        <%!-- Auto-corrected a typo'd condition name — mirror the All-research banner. --%>
+        <p :if={@corrected} class="text-xs text-parchment-dim mb-3">
+          {gettext("Showing results for")}
+          <span class="text-parchment font-medium">“{elem(@corrected, 1)}”</span>
+          — {gettext("searched for")} <span class="italic">“{elem(@corrected, 0)}”</span>
+        </p>
+
+        <div :if={@catalog == [] and @query != ""} class="py-8 text-center">
+          <p class="text-sm text-parchment-dim">
+            {gettext("No conditions match “%{query}”.", query: @query)}
+          </p>
+          <%!-- The term isn't a condition name — offer it to the global search
+               (e.g. a substance like “curcumin”). set_mode re-runs this query. --%>
+          <button
+            type="button"
+            phx-click="set_mode"
+            phx-value-mode="papers"
+            class="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg text-sm bg-basil/15 text-basil font-medium hover:bg-basil/25 transition"
+          >
+            {gettext("Search all research for “%{query}”", query: @query)}
+            <.icon name="hero-arrow-right" class="w-4 h-4" />
+          </button>
+        </div>
+
+        <p :if={@catalog == [] and @query == ""} class="text-sm text-parchment-dim py-8 text-center">
+          {gettext("No conditions available yet.")}
         </p>
 
         <ul class="space-y-2">
@@ -192,6 +236,30 @@ defmodule MehungryWeb.NutritionistLive.ResearchSearch do
 
       <%!-- ── All-research mode (global, one card per PMID) ─────────────────── --%>
       <div :if={@mode == :papers} aria-live="polite">
+        <%!-- Cross-link back to the curated Conditions page: the global search can
+             miss a tracked condition's rich page (the index only matches papers
+             literally containing the term), so lead with a direct shortcut. --%>
+        <div :if={@condition_matches != []} class="mb-4 space-y-2">
+          <.link
+            :for={m <- @condition_matches}
+            navigate={~p"/nutritionist/research/#{m.condition.id}"}
+            class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-basil/10 border border-basil/30 hover:bg-basil/20 transition"
+          >
+            <span class="min-w-0">
+              <span class="block text-[11px] uppercase tracking-wide text-basil/80">
+                {gettext("Tracked condition")}
+              </span>
+              <span class="text-parchment font-medium">
+                {gettext("Browse %{name}", name: m.condition.name)}
+              </span>
+            </span>
+            <span class="flex items-center gap-1.5 text-xs text-parchment-dim shrink-0">
+              {ngettext("%{count} study", "%{count} studies", m.study_count)}
+              <.icon name="hero-arrow-right" class="w-4 h-4 text-basil" />
+            </span>
+          </.link>
+        </div>
+
         <p :if={@query == ""} class="text-sm text-parchment-dim py-8 text-center">
           {gettext("Type a term to search findings and abstracts across every condition.")}
         </p>

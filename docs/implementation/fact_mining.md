@@ -309,6 +309,16 @@ never fails the mine). Migration: `…_create_research_search.exs` (GIN index on
 on `fact_row_id` for CONCURRENTLY). Within-condition search stays query-time (no MV). See
 `docs/features/professionals/research_search.md`.
 
+**Tolerant Conditions search (2026-11-19).** `conditions_for_search/1` (`filter_conditions/2`) is
+accent-insensitive (`unaccent`), word-order-independent (per-token AND over `name` **and** `synonyms`),
+not a bare name `ILIKE`. `search_conditions/1` wraps it with a **trigram typo retry** —
+`condition_spelling_suggestion/1` corrects each token against the **condition names + synonyms** corpus
+(not the facts corpus — ~150 conditions have no mined facts) via the shared `closest_word/2` (also used
+by the global `spelling_suggestion/1`/`closest_corpus_word/1`) — returning `%{entries, corrected}` so the
+landing shows a "Showing results for …" banner. The `/nutritionist/research` landing uses this for both
+the Conditions tab and the **All research → Conditions** shortcut (tracked mined conditions a global term
+resolves to). See `docs/features/professionals/research_search.md`.
+
 ## Module map
 
 | Module | File | Role |

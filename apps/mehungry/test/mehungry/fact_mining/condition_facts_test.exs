@@ -154,6 +154,61 @@ defmodule Mehungry.FactMining.ConditionFactsTest do
     assert entry.study_count == 2
   end
 
+  describe "search_conditions/1 (tolerant condition search)" do
+    setup %{condition: condition} do
+      {:ok, ibs} =
+        Health.create_condition(%{
+          name: "Irritable Bowel Syndrome",
+          synonyms: ["IBS"]
+        })
+
+      %{uc: condition, ibs: ibs}
+    end
+
+    defp names(entries), do: Enum.map(entries, & &1.condition.name)
+
+    test "blank query returns the full catalog, uncorrected" do
+      assert %{entries: entries, corrected: nil} = FactMining.search_conditions("")
+      # Every condition appears (both the seeded UC and IBS, plus any others).
+      assert "Ulcerative Colitis" in names(entries)
+      assert "Irritable Bowel Syndrome" in names(entries)
+    end
+
+    test "exact name match", %{uc: uc} do
+      assert %{entries: entries, corrected: nil} = FactMining.search_conditions("Ulcerative Colitis")
+      assert uc.id in Enum.map(entries, & &1.condition.id)
+    end
+
+    test "word order is irrelevant (per-token AND)", %{uc: uc} do
+      assert %{entries: entries, corrected: nil} = FactMining.search_conditions("colitis ulcerative")
+      assert uc.id in Enum.map(entries, & &1.condition.id)
+    end
+
+    test "matches a synonym, not just the canonical name", %{ibs: ibs} do
+      assert %{entries: entries} = FactMining.search_conditions("IBS")
+      assert ibs.id in Enum.map(entries, & &1.condition.id)
+    end
+
+    test "accent-insensitive" do
+      {:ok, cond} = Health.create_condition(%{name: "Ménière Disease"})
+      assert %{entries: entries} = FactMining.search_conditions("meniere")
+      assert cond.id in Enum.map(entries, & &1.condition.id)
+    end
+
+    test "typo auto-corrects and reports what it searched", %{uc: uc} do
+      assert %{entries: entries, corrected: {original, suggestion}} =
+               FactMining.search_conditions("ulclerative colitis")
+
+      assert original == "ulclerative colitis"
+      assert suggestion =~ "ulcerative"
+      assert uc.id in Enum.map(entries, & &1.condition.id)
+    end
+
+    test "a non-condition term returns nothing, uncorrected" do
+      assert %{entries: [], corrected: nil} = FactMining.search_conditions("curcumin")
+    end
+  end
+
   test "mine_condition surfaces a miner error so Oban can retry", %{condition: condition} do
     put_sheet({:error, {:network, :econnrefused}})
     assert {:error, {:network, :econnrefused}} = FactMining.mine_condition(condition)

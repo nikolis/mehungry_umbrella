@@ -901,18 +901,26 @@ defmodule Mehungry.FactMining do
   # "ulclerative" wouldn't match the stem). Only called when a search already
   # returned nothing, so the full-text scan is off the hot path.
   defp closest_corpus_word(token) do
+    closest_word(token, """
+    SELECT DISTINCT lower(w) AS word
+    FROM condition_mined_facts f
+    LEFT JOIN scientific_studies s ON s.pmid::text = f.pmid
+    CROSS JOIN LATERAL regexp_split_to_table(
+      coalesce(f.text, '') || ' ' || coalesce(s.title, '') || ' ' || coalesce(s.abstract, ''),
+      '[^[:alpha:]]+'
+    ) AS w
+    WHERE length(w) >= 4
+    """)
+  end
+
+  # The **surface word** in `vocab_sql` (a `SELECT … AS word` fragment) most
+  # trigram-similar to `token` (≥ 0.4), else the token unchanged. Shared by the
+  # global-corpus and condition-name spelling corrections — they differ only in
+  # which vocabulary they scan.
+  defp closest_word(token, vocab_sql) do
     sql = """
     SELECT word
-    FROM (
-      SELECT DISTINCT lower(w) AS word
-      FROM condition_mined_facts f
-      LEFT JOIN scientific_studies s ON s.pmid::text = f.pmid
-      CROSS JOIN LATERAL regexp_split_to_table(
-        coalesce(f.text, '') || ' ' || coalesce(s.title, '') || ' ' || coalesce(s.abstract, ''),
-        '[^[:alpha:]]+'
-      ) AS w
-      WHERE length(w) >= 4
-    ) vocab
+    FROM (#{vocab_sql}) vocab
     WHERE similarity(word, $1) > 0.4
     ORDER BY similarity(word, $1) DESC
     LIMIT 1
@@ -946,8 +954,11 @@ defmodule Mehungry.FactMining do
   @doc """
   The nutritionist research-search **landing list**: every `Health.Condition` with
   its distinct-publication `study_count` from mined facts (0 when none mined yet),
-  research-first then by name. `search` applies a simple name `ILIKE` filter.
-  Mirrors the `%{condition, study_count}` shape of `Literature.conditions_for_search/1`.
+  research-first then by name. `search` is **tolerant** (parity with the global
+  search): accent-insensitive, word-order-independent per-token matching over the
+  condition's `name` **and** its `synonyms`. Mirrors the `%{condition, study_count}`
+  shape of `Literature.conditions_for_search/1`. For typo auto-correction + a
+  "showing results for…" banner, call `search_conditions/1` instead.
   """
   def conditions_for_search(search \\ nil) do
     Condition
@@ -959,6 +970,32 @@ defmodule Mehungry.FactMining do
     |> Repo.all()
   end
 
+  @doc """
+  The nutritionist research-search **landing search** — `conditions_for_search/1`
+  with the same typo-correction retry the global search uses. Returns
+  `%{entries, corrected}` where `corrected` is `{original, suggestion}` when a
+  blank-result query was auto-retried with a trigram-corrected spelling (else
+  `nil`). A blank query returns the full catalog, uncorrected.
+  """
+  def search_conditions(search) do
+    trimmed = String.trim(search || "")
+    entries = conditions_for_search(trimmed)
+
+    cond do
+      trimmed == "" ->
+        %{entries: entries, corrected: nil}
+
+      entries != [] ->
+        %{entries: entries, corrected: nil}
+
+      true ->
+        case condition_spelling_suggestion(trimmed) do
+          nil -> %{entries: [], corrected: nil}
+          sugg -> %{entries: conditions_for_search(sugg), corrected: {trimmed, sugg}}
+        end
+    end
+  end
+
   @doc "How many distinct conditions have at least one mined fact."
   def count_conditions_with_mined_facts do
     ConditionMinedFact
@@ -967,14 +1004,69 @@ defmodule Mehungry.FactMining do
     |> Kernel.||(0)
   end
 
+  # Tolerant condition filter: each whitespace token must match (AND — order
+  # independent) either the unaccented `name` or any unaccented `synonym` as a
+  # substring. Blank → identity (full catalog).
   defp filter_conditions(query, search) when is_binary(search) do
-    case String.trim(search) do
-      "" -> query
-      term -> where(query, [c], ilike(c.name, ^"%#{term}%"))
-    end
+    search
+    |> String.split(~r/\s+/u, trim: true)
+    |> Enum.reduce(query, fn tok, q ->
+      like = "%#{tok}%"
+
+      where(
+        q,
+        [c],
+        fragment("unaccent(?) ILIKE unaccent(?)", c.name, ^like) or
+          fragment(
+            "EXISTS (SELECT 1 FROM unnest(?) s WHERE unaccent(s) ILIKE unaccent(?))",
+            c.synonyms,
+            ^like
+          )
+      )
+    end)
   end
 
   defp filter_conditions(query, _search), do: query
+
+  @doc """
+  Trigram spelling correction for the condition search. Same per-token shape as
+  `spelling_suggestion/1`, but the vocabulary is the condition **names + synonyms**
+  (not the facts corpus) — the ~150 conditions with no mined facts never appear in
+  the facts corpus, so only the labels themselves can correct a typo'd name.
+  """
+  def condition_spelling_suggestion(query) do
+    tokens =
+      (query || "")
+      |> String.trim()
+      |> String.split(~r/\s+/u, trim: true)
+
+    case tokens do
+      [] ->
+        nil
+
+      _ ->
+        corrected = Enum.map(tokens, &closest_condition_word/1)
+
+        if Enum.map(corrected, &String.downcase/1) != Enum.map(tokens, &String.downcase/1) do
+          Enum.join(corrected, " ")
+        end
+    end
+  end
+
+  # The condition-label surface word most trigram-similar to `token` (≥ 0.4),
+  # else the token unchanged — vocabulary is every word in `conditions.name` +
+  # `conditions.synonyms`.
+  defp closest_condition_word(token) do
+    closest_word(token, """
+    SELECT DISTINCT lower(w) AS word
+    FROM conditions c
+    CROSS JOIN LATERAL regexp_split_to_table(
+      c.name || ' ' || coalesce(array_to_string(c.synonyms, ' '), ''),
+      '[^[:alpha:]]+'
+    ) AS w
+    WHERE length(w) >= 4
+    """)
+  end
 
   defp studies_by_pmid(facts) do
     pmids =

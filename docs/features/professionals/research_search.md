@@ -75,7 +75,8 @@
 
 > **Global cross-condition search — Phase 2 (shipped 2026-11-18).** The landing `/nutritionist/research`
 > (`ResearchSearch`) is now **dual-mode** via a segmented toggle: **Conditions** (the fast path —
-> `conditions_for_search/1`, unchanged) and **All research** (global). All-research searches mined
+> `conditions_for_search/1`; since 2026-11-19 accent/word-order/synonym tolerant with typo correction —
+> see the complementarity note below) and **All research** (global). All-research searches mined
 > findings + paper titles/abstracts across **every** condition (`FactMining.search_all_research/2`) and
 > renders **one card per PMID** — PMID dedupe is an exact `GROUP BY`, never entity resolution. Each card
 > carries the paper (title/journal/year/PubMed link) + a card cue (**"Matched in a finding"** vs
@@ -90,6 +91,28 @@
 > completes** (`FactMining.refresh_research_search/0` from `ConditionFactMiningWorker` — post-commit,
 > outside the mine transaction, since `REFRESH … CONCURRENTLY` can't run in a txn). Capped at 50 cards.
 > True full paper body remains out of scope. See `docs/implementation/fact_mining.md`.
+
+> **Tolerant Conditions search + two-way complementarity (shipped 2026-11-19).** The two tabs now
+> work as a pair, and the **Conditions** search is no longer a brittle name `ILIKE`.
+> - **Tolerant condition search** — `FactMining.conditions_for_search/1` (via `filter_conditions/2`)
+>   now matches **accent-insensitively** (`unaccent`), **word-order-independently** (each whitespace
+>   token must match — logical AND — so *"colitis ulcerative"* finds *Ulcerative Colitis*), and over the
+>   condition's **`synonyms`** as well as its `name` (so *"IBS"* finds *Irritable Bowel Syndrome*). The
+>   LiveView calls the new wrapper `FactMining.search_conditions/1`, which — on a **blank** result for a
+>   non-blank query — auto-retries a **trigram spelling correction** (`condition_spelling_suggestion/1`,
+>   corpus = condition names + synonyms, **not** the facts corpus, since ~150 conditions have no mined
+>   facts) and surfaces the same **"Showing results for …"** banner the All-research path uses. Returns
+>   `%{entries, corrected}`. The trigram scan is factored into a shared `closest_word/2` reused by both
+>   the global-corpus (`closest_corpus_word/1`) and condition (`closest_condition_word/1`) corrections.
+> - **All research → Conditions** — a global search whose term resolves to a tracked, **already-mined**
+>   condition (study_count > 0, via the same tolerant matcher) now **leads with a "Browse {condition} ·
+>   N studies →" shortcut** (`:condition_matches`, ≤3) above the paper cards, deep-linking to the curated
+>   condition page. This closes the gap where the MV only matches papers literally containing the phrase,
+>   so a condition's rich curated page would otherwise be missed from the global tab.
+> - **Conditions → All research** — when a Conditions query matches **no** condition name/synonym (e.g. a
+>   substance like *"curcumin"*), the empty state offers a **"Search all research for '…' →"** button
+>   (`phx-click="set_mode" phx-value-mode="papers"` — the existing handler re-runs the current query under
+>   the other tab, no new event). See `docs/implementation/fact_mining.md`.
 
 > **Search pending indicator (shipped 2026-11-18).** `run_query/2` is synchronous (the LiveView
 > only re-renders once results are in), so the in-flight cue is driven purely by LiveView's automatic

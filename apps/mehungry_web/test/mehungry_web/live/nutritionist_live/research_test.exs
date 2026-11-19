@@ -115,6 +115,36 @@ defmodule MehungryWeb.NutritionistLive.ResearchTest do
     refute has_element?(view, link)
   end
 
+  test "conditions search tolerates word order and auto-corrects typos", %{
+    conn: conn,
+    condition: condition
+  } do
+    {:ok, view, _html} = live(conn, ~p"/nutritionist/research")
+
+    link = ~s(a[href="/nutritionist/research/#{condition.id}"])
+    search = fn q -> view |> element("#research-search-form") |> render_change(%{"q" => q}) end
+
+    # Reversed word order still resolves (per-token AND over the name).
+    search.("colitis ulcerative")
+    assert has_element?(view, link)
+
+    # A typo auto-corrects and the banner names what we searched.
+    html = search.("ulclerative colitis")
+    assert has_element?(view, link)
+    assert html =~ "Showing results for"
+  end
+
+  test "a non-condition term offers to run the global search", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/nutritionist/research")
+
+    html =
+      view |> element("#research-search-form") |> render_change(%{"q" => "curcumin"})
+
+    assert html =~ "Search all research"
+    # The button flips the mode to the global search without a new event type.
+    assert has_element?(view, ~s(button[phx-click="set_mode"][phx-value-mode="papers"]))
+  end
+
   test "results page shows presentable publications grouped by research type, with quotes", %{
     conn: conn,
     condition: condition
@@ -351,6 +381,21 @@ defmodule MehungryWeb.NutritionistLive.ResearchTest do
 
       assert html =~ "Ulcerative Colitis"
       assert html =~ "studies"
+    end
+
+    test "a term that is a tracked mined condition leads with a Browse shortcut", %{
+      conn: conn,
+      condition: condition
+    } do
+      {:ok, view, _html} = live(conn, ~p"/nutritionist/research")
+
+      view |> element(~s(button[phx-value-mode="papers"])) |> render_click()
+      html = view |> element("#research-search-form") |> render_change(%{"q" => "ulcerative colitis"})
+
+      assert html =~ "Tracked condition"
+      assert html =~ "Browse Ulcerative Colitis"
+      # Deep-links to the curated condition page, above the paper cards.
+      assert has_element?(view, ~s(a[href="/nutritionist/research/#{condition.id}"]))
     end
   end
 
