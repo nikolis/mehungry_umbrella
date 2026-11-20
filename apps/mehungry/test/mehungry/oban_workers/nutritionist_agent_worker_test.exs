@@ -158,7 +158,11 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorkerTest do
       planned = log_meal(ctx.client.id, ctx.today, "lunch")
       # A replacing plan must cover the main meals of every day still in play
       # (today + the 4 days left in this week).
-      cells = for day <- 0..4, slot <- ["Breakfast", "Lunch", "Dinner"], do: {Date.add(ctx.today, day), slot}
+      cells =
+        for day <- 0..4,
+            slot <- ["Breakfast", "Lunch", "Dinner"],
+            do: {Date.add(ctx.today, day), slot}
+
       script_plan(recipe, cells)
 
       assert :ok =
@@ -176,8 +180,9 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorkerTest do
     test "replace mode: a thin plan is refused and the client's week is left untouched", ctx do
       recipe = searchable_recipe(ctx.professional, "worker thin bowl")
       planned = log_meal(ctx.client.id, ctx.today, "lunch")
-      # One meal for a whole week, and the model gives up after being sent back.
-      script_plan(recipe, [{ctx.today, "Dinner"}])
+      # One meal for a whole week, and the model gives up after being sent back —
+      # on the first pass and again on the one firmer retry.
+      script_plan(recipe, [{ctx.today, "Dinner"}], [ScriptedClient.end_turn("Still nothing.")])
 
       assert {:error, :no_plan_submitted} =
                perform(ctx, %{
@@ -214,8 +219,15 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorkerTest do
       assert_receive {:nutritionist_agent, ^client_id, {:done, summary}}
       assert summary =~ "Foods excluded for this client: oil, ham."
 
-      ScriptedClient.script([ScriptedClient.end_turn("Nothing fits.")])
-      assert {:error, :no_plan_submitted} = perform(ctx, %{"start_date" => Date.to_iso8601(ctx.today)})
+      # Two prose-only passes: the original and the one firmer retry.
+      ScriptedClient.script([
+        ScriptedClient.end_turn("Nothing fits."),
+        ScriptedClient.end_turn("Still nothing fits.")
+      ])
+
+      assert {:error, :no_plan_submitted} =
+               perform(ctx, %{"start_date" => Date.to_iso8601(ctx.today)})
+
       assert_receive {:nutritionist_agent, ^client_id, {:error, message}}
       assert message =~ "Foods excluded for this client: oil, ham."
     end
@@ -235,7 +247,12 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorkerTest do
     end
 
     test "a run that ends without a submitted plan is an error, not a silent 'done'", ctx do
-      ScriptedClient.script([ScriptedClient.end_turn("Nothing suitable found.")])
+      # Two prose-only passes: the original and the one firmer retry.
+      ScriptedClient.script([
+        ScriptedClient.end_turn("Nothing suitable found."),
+        ScriptedClient.end_turn("Still nothing.")
+      ])
+
       subscribe(ctx)
 
       assert {:error, :no_plan_submitted} =
@@ -287,7 +304,8 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorkerTest do
   end
 
   # The model searches (so the recipe is "offered"), submits `cells`, then ends.
-  defp script_plan(recipe, cells) do
+  # `after_steps` are replayed after that (e.g. the retry pass of a refused plan).
+  defp script_plan(recipe, cells, after_steps \\ []) do
     entries =
       Enum.map(cells, fn {date, slot} ->
         %{
@@ -298,11 +316,13 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorkerTest do
         }
       end)
 
-    ScriptedClient.script([
-      ScriptedClient.tool_use("search_recipes", %{"query" => recipe.title}),
-      ScriptedClient.tool_use("submit_plan", %{"entries" => entries, "rationale" => "A note."}),
-      ScriptedClient.end_turn("Done.")
-    ])
+    ScriptedClient.script(
+      [
+        ScriptedClient.tool_use("search_recipes", %{"query" => recipe.title}),
+        ScriptedClient.tool_use("submit_plan", %{"entries" => entries, "rationale" => "A note."}),
+        ScriptedClient.end_turn("Done.")
+      ] ++ after_steps
+    )
   end
 
   defp searchable_recipe(owner, title) do
