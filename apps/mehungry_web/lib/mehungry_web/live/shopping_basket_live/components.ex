@@ -161,7 +161,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
           <% {done, total} = progress(@shopping_basket) %>
           <!-- Active list header -->
           <div class="p-5 border-b border-ink-panel2">
-            <div class="flex justify-between items-start gap-3">
+            <div class="flex flex-wrap justify-between items-start gap-3">
               <div class="min-w-0">
                 <h2 class="text-xl font-display font-medium text-parchment truncate">
                   {@shopping_basket.title}
@@ -176,7 +176,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                   {ngettext("item", "items", total)}
                 </p>
               </div>
-              <div class="flex gap-2 flex-shrink-0">
+              <div class="flex gap-2 flex-shrink-0 ml-auto">
                 <button
                   phx-click="open_share"
                   id="share-basket-button"
@@ -191,7 +191,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                       d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-8 0 4 4 0 008 0zm6 0a3 3 0 10-6 0"
                     />
                   </svg>
-                  <span class="hidden sm:inline">
+                  <span class="hidden lg:inline">
                     <%= if shared?(@shopping_basket) do %>
                       {gettext("Shared")}
                       <span class="[font-variant-numeric:tabular-nums]">
