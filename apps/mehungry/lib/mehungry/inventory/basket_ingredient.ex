@@ -17,6 +17,10 @@ defmodule Mehungry.Inventory.BasketIngredient do
     belongs_to :measurement_unit, MeasurementUnit
     belongs_to :ingredient, Ingredient
     belongs_to :shopping_basket, ShoppingBasket
+    # Attribution on shared lists. Set by `Mehungry.Inventory`, never cast from
+    # client params.
+    belongs_to :added_by, Mehungry.Accounts.User
+    belongs_to :acquired_by, Mehungry.Accounts.User
 
     timestamps()
   end

@@ -8891,3 +8891,256 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "The corroborated findings for this food are preclinical or lab studies rather than human dietary research."
 msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:648
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:40
+#, elixir-autogen, elixir-format
+msgid "%{name} invited you to share “%{title}”"
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:40
+#, elixir-autogen, elixir-format
+msgid "A Mehungry user"
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:52
+#, elixir-autogen, elixir-format
+msgid "Confirm your email address before inviting people."
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:67
+#, elixir-autogen, elixir-format
+msgid "Could not complete that. Please try again."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:702
+#, elixir-autogen, elixir-format
+msgid "Delete “%{title}”? %{count} other person will lose it too."
+msgid_plural "Delete “%{title}”? %{count} other people will lose it too."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:519
+#, elixir-autogen, elixir-format
+msgid "Email (optional)"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:511
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:46
+#, elixir-autogen, elixir-format
+msgid "Everyone on the list sees the same items and can add to it and tick things off."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:76
+#, elixir-autogen, elixir-format
+msgid "Go to my shopping lists"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:573
+#, elixir-autogen, elixir-format
+msgid "Invitation link"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:112
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:112
+#, elixir-autogen, elixir-format
+msgid "Invitation link created"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:537
+#, elixir-autogen, elixir-format
+msgid "Invitation link — it works once and expires in 7 days. Copy it now; it is not shown again."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:113
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:113
+#, elixir-autogen, elixir-format
+msgid "Invitation sent"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:70
+#, elixir-autogen, elixir-format
+msgid "It may have been used already, revoked, or expired. Ask for a new one."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:659
+#, elixir-autogen, elixir-format
+msgid "Join"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:56
+#, elixir-autogen, elixir-format
+msgid "Join the list"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:134
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:629
+#, elixir-autogen, elixir-format
+msgid "Leave"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:531
+#, elixir-autogen, elixir-format
+msgid "Leave the email empty to just get a link you can send yourself."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:130
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:623
+#, elixir-autogen, elixir-format
+msgid "Leave “%{title}”? You will lose access to it."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:744
+#, elixir-autogen, elixir-format
+msgid "Mehungry user"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:62
+#, elixir-autogen, elixir-format
+msgid "Not now"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:605
+#, elixir-autogen, elixir-format
+msgid "Owner"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:589
+#, elixir-autogen, elixir-format
+msgid "People on this list"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:613
+#, elixir-autogen, elixir-format
+msgid "Remove this person from the list?"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:37
+#, elixir-autogen, elixir-format
+msgid "Share a shopping list"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:184
+#, elixir-autogen, elixir-format
+msgid "Share this list"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:508
+#, elixir-autogen, elixir-format
+msgid "Share “%{title}”"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:196
+#, elixir-autogen, elixir-format
+msgid "Shared"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:692
+#, elixir-autogen, elixir-format
+msgid "Shared by %{name}"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:687
+#, elixir-autogen, elixir-format
+msgid "Shared with %{count} person"
+msgid_plural "Shared with %{count} people"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:693
+#, elixir-autogen, elixir-format
+msgid "Shared with you"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:24
+#, elixir-autogen, elixir-format
+msgid "Shopping list invitation"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:649
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:41
+#, elixir-autogen, elixir-format
+msgid "Someone"
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:63
+#, elixir-autogen, elixir-format
+msgid "That doesn't look like an email address."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:498
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:498
+#, elixir-autogen, elixir-format
+msgid "That list is no longer available"
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:65
+#, elixir-autogen, elixir-format
+msgid "That person is already on this list."
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:66
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:67
+#, elixir-autogen, elixir-format
+msgid "This invitation is no longer valid."
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:58
+#, elixir-autogen, elixir-format
+msgid "This list already has the maximum number of people."
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:61
+#, elixir-autogen, elixir-format
+msgid "Too many unanswered invitations. Revoke one before sending more."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:564
+#, elixir-autogen, elixir-format
+msgid "Waiting for an answer"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:741
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:112
+#, elixir-autogen, elixir-format
+msgid "You"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:170
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:170
+#: lib/mehungry_web/live/shopping_basket_live/invitation.ex:91
+#, elixir-autogen, elixir-format
+msgid "You joined “%{title}”"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:155
+#: lib/mehungry_web/live/shopping_basket_live/index.ex:155
+#, elixir-autogen, elixir-format
+msgid "You left the list"
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:64
+#, elixir-autogen, elixir-format
+msgid "You're already on this list."
+msgstr ""
+
+#: lib/mehungry_web/basket_sharing.ex:55
+#, elixir-autogen, elixir-format
+msgid "You've sent a lot of invitations. Please try again later."
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:727
+#, elixir-autogen, elixir-format
+msgid "added by %{name}"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:728
+#, elixir-autogen, elixir-format
+msgid "bought by %{name}"
+msgstr ""
+
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:737
+#: lib/mehungry_web/live/shopping_basket_live/components.ex:741
+#, elixir-autogen, elixir-format
+msgid "you"
+msgstr ""

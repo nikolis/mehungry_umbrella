@@ -2,6 +2,11 @@ defmodule MehungryWeb.Api.V1.BasketController do
   @moduledoc """
   Shopping basket (spec §10): the user's active basket, item CRUD, and importing
   a recipe's or planned meal's ingredients. Backed by `Mehungry.Inventory`.
+
+  Every action works on the caller's own active basket by default. Passing
+  `basket_id` (or `GET /baskets/:id`) targets any basket the caller **owns or is
+  a member of** — that is how a shared list is read and edited. Sharing itself
+  (invitations, members) is `BasketSharingController`.
   """
   use MehungryWeb, :controller
 
@@ -14,15 +19,26 @@ defmodule MehungryWeb.Api.V1.BasketController do
 
   action_fallback MehungryWeb.Api.V1.FallbackController
 
-  def show(conn, _params) do
-    basket = Inventory.get_or_create_basket_for_user(uid(conn))
-    json(conn, render_basket(basket))
+  def index(conn, _params) do
+    baskets = Inventory.list_shopping_baskets_for_user(uid(conn))
+    json(conn, data(Enum.map(baskets, &BasketJSON.summary(&1, uid(conn)))))
+  end
+
+  def show(conn, params) do
+    with {:ok, basket} <- fetch_basket(conn, params["id"] || params["basket_id"]) do
+      json(conn, render_basket(conn, basket))
+    end
   end
 
   def add_item(conn, params) do
-    basket = Inventory.get_or_create_basket_for_user(uid(conn))
+    with {:ok, basket} <- fetch_basket(conn, params["basket_id"]) do
+      do_add_item(conn, basket, params)
+    end
+  end
 
+  defp do_add_item(conn, basket, params) do
     item_params = %{
+      added_by_id: uid(conn),
       name: params["name"],
       quantity: to_float(params["quantity"]),
       measurement_unit_id: params["measurement_unit_id"],
@@ -37,7 +53,7 @@ defmodule MehungryWeb.Api.V1.BasketController do
 
   def update_item(conn, %{"id" => id} = params) do
     with {:ok, item} <- fetch_owned_item(conn, id),
-         {:ok, item} <- Inventory.update_basket_item(item, item_attrs(params)) do
+         {:ok, item} <- Inventory.update_basket_item(item, item_attrs(params), uid(conn)) do
       json(conn, data(BasketJSON.item(item, aisle_of(item))))
     end
   end
@@ -50,31 +66,55 @@ defmodule MehungryWeb.Api.V1.BasketController do
   end
 
   def import_recipe(conn, %{"recipe_id" => recipe_id} = params) do
-    basket = Inventory.get_or_create_basket_for_user(uid(conn))
     servings = params["servings"] || 1
 
-    with {:ok, recipe} <- fetch_recipe(recipe_id),
-         {:ok, _count} <- Inventory.add_items_from_recipe(basket.id, recipe, servings) do
-      json(conn, render_basket(Inventory.get_shopping_basket!(basket.id)))
+    with {:ok, basket} <- fetch_basket(conn, params["basket_id"]),
+         {:ok, recipe} <- fetch_recipe(recipe_id),
+         {:ok, _count} <-
+           Inventory.add_items_from_recipe(basket.id, recipe, servings, uid(conn)) do
+      json(conn, render_basket(conn, Inventory.get_shopping_basket!(basket.id)))
     end
   end
 
-  def import_meal(conn, %{"meal_id" => meal_id}) do
-    basket = Inventory.get_or_create_basket_for_user(uid(conn))
-
-    with {:ok, meal} <- fetch_meal(conn, meal_id),
-         {:ok, _count} <- Inventory.add_items_from_meal(basket.id, meal) do
-      json(conn, render_basket(Inventory.get_shopping_basket!(basket.id)))
+  def import_meal(conn, %{"meal_id" => meal_id} = params) do
+    with {:ok, basket} <- fetch_basket(conn, params["basket_id"]),
+         {:ok, meal} <- fetch_meal(conn, meal_id),
+         {:ok, _count} <- Inventory.add_items_from_meal(basket.id, meal, uid(conn)) do
+      json(conn, render_basket(conn, Inventory.get_shopping_basket!(basket.id)))
     end
   end
 
   # ── helpers ────────────────────────────────────────────────────────────
 
   # Serializes a basket with a resolved grocery aisle per item (spec §10).
-  defp render_basket(basket) do
+  defp render_basket(conn, basket) do
     aisles = Inventory.aisle_for_items(loaded_items(basket))
-    BasketJSON.basket(basket, aisles)
+    BasketJSON.basket(basket, aisles, uid(conn))
   end
+
+  # No id → the caller's own active basket (created on first use). With an id →
+  # that basket, when the caller owns it or is a member; otherwise 404.
+  defp fetch_basket(conn, nil), do: {:ok, Inventory.get_or_create_basket_for_user(uid(conn))}
+
+  defp fetch_basket(conn, id) do
+    with {:ok, int_id} <- parse_id(id),
+         %{} = basket <- Inventory.get_accessible_basket(uid(conn), int_id) do
+      {:ok, basket}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  defp parse_id(id) when is_integer(id), do: {:ok, id}
+
+  defp parse_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int_id, ""} -> {:ok, int_id}
+      _ -> :error
+    end
+  end
+
+  defp parse_id(_), do: :error
 
   defp aisle_of(item) do
     [item] |> Inventory.aisle_for_items() |> Map.get(item.id, "other")
@@ -87,12 +127,13 @@ defmodule MehungryWeb.Api.V1.BasketController do
     Map.take(params, ["quantity", "in_storage", "name", "measurement_unit_id"])
   end
 
-  # Ensures the item belongs to one of the caller's baskets.
+  # Ensures the item belongs to a basket the caller owns or is a member of.
   defp fetch_owned_item(conn, id) do
     item = Inventory.get_basket_item!(to_int(id))
-    basket = Inventory.get_shopping_basket!(item.shopping_basket_id)
 
-    if basket.user_id == uid(conn), do: {:ok, item}, else: {:error, :not_found}
+    if Inventory.can_access_basket?(uid(conn), item.shopping_basket_id),
+      do: {:ok, item},
+      else: {:error, :not_found}
   rescue
     Ecto.NoResultsError -> {:error, :not_found}
   end

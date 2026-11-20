@@ -15,6 +15,8 @@ whole calendar week). Backed by `Mehungry.Inventory` and
 | `BasketItem` (`basket_items`) | one line: name, quantity, unit, `in_storage` toggle, optional `recipe_id` / `usda_fdc_id` / nutrition payload |
 | `BasketIngredient` (`basket_ingredients`) | the structured ingredient variant of a line |
 | `BasketParams` (embedded) | form params for the add/edit flow |
+| `BasketMember` (`shopping_basket_members`) | a person the list is shared with (the owner stays on `shopping_baskets.user_id` and has no row) |
+| `BasketInvitation` (`shopping_basket_invitations`) | a single-use, expiring invitation; stores only the SHA-256 of its link token |
 
 A line can be a free-text/USDA-searched item (`BasketItem`, with an optional
 free-text `description` unit label when it has no `MeasurementUnit` row) **or** a
@@ -22,18 +24,26 @@ recipe-derived app ingredient (`BasketIngredient`, carries `ingredient` →
 `category` + `ingredient_translation`). The `in_storage` boolean is the
 "already have it / acquired" toggle on **both** schemas (there is no separate
 `checked` column). USDA nutrition captured at add time is persisted in
-`BasketItem.nutrition_data` (the changeset casts it).
+`BasketItem.nutrition_data` (the changeset casts it). Both line schemas also
+carry `added_by_id` / `acquired_by_id` (who added the line, who ticked it off) —
+set by the context from the acting user, never cast from client params.
 
 ## Context API
 
-- **Baskets:** `list_shopping_baskets_for_user/_`, `get_shopping_basket!/_`,
-  `get_user_shopping_basket/2` (**owner-scoped** lookup — returns `nil` for another
-  user's id; use this for any id taken from a route param or LiveView event),
+- **Baskets:** `list_shopping_baskets_for_user/_` (owned **and shared-with-me**),
+  `get_shopping_basket!/_` (unscoped — internal use only),
+  `get_accessible_basket/2` (**owner-or-member** lookup — the one to use for
+  reading a list or changing its items from a route param / event id),
+  `get_user_shopping_basket/2` (**owner-only** lookup — for list-level changes:
+  rename, delete, rebuild from the calendar, sharing), `basket_role/2`
+  (`:owner | :member | nil`), `can_access_basket?/2`,
   `get_or_create_basket_for_user/_`, `create_/update_/delete_shopping_basket/_`,
   `delete_all_baskets_for_user/_`.
 - **Items/ingredients:** `add_item/_`, `get_basket_item!/_`, `update_/delete_basket_item/_`;
-  `create_/update_/delete_basket_ingredient/_`, `toggle_basket_ingredient/_`,
-  `list_basket_ingredients/_`.
+  `create_/update_/delete_basket_ingredient/_`, `set_acquired/3`,
+  `toggle_basket_ingredient/_`, `list_basket_ingredients/_`. The mutating ones take
+  the acting user id (for attribution) and are written to be safe when two people
+  edit at once — see § Sharing.
 - **Imports (the value flows):**
   - `add_items_from_recipe/_` — add all of a recipe's ingredients (the recipe detail
     "add to shopping list").
@@ -50,6 +60,50 @@ basket covering a date range by aggregating that week's meals. It is **non-dupli
 the calendar lands the user on `/basket?basket_id=…` with a localized title. Driven from
 [`history_calendar.md`](history_calendar.md); see memory *Calendar Self-Tracker Roadmap*.
 
+## Sharing (`Mehungry.Inventory.Sharing`)
+
+Product rules: [`../features/shared_basket.md`](../features/shared_basket.md). All of
+them are enforced in `Inventory.Sharing` (delegated from the `Inventory` facade), so
+the LiveView, the REST API and the channel cannot diverge.
+
+- **Access model.** Owner = `shopping_baskets.user_id`; members =
+  `shopping_basket_members`. `get_accessible_basket/2` is the single read/item-write
+  chokepoint; `get_user_shopping_basket/2` stays owner-only for list-level changes.
+  Every basket loader uses one preload shape (`@basket_preloads`: items, ingredients,
+  `user`, `members: :user`), so a basket struct is the same whichever loader produced it.
+- **Invitations.** `invite/3` (owner + confirmed email + `RateLimit` 20/h + size
+  limits) inserts a `BasketInvitation` and returns `{:ok, invitation, token}` — the raw
+  token exists only in that return value (the row holds its hash), so the caller builds
+  the link immediately. `MehungryWeb.BasketSharing.invite/4` is that caller for **both**
+  web and REST: it builds `/basket/invitations/:token` and, when an email was given,
+  sends `UserNotifier.deliver_basket_invitation/5` (EN/EL). If the email belongs to an
+  account, `invitee_user_id` is set and a `basket_invitation` notification is emitted.
+- **Answering.** `accept_by_token/2` (the link) and `accept/2` (in-app, only for the
+  addressed user) share one transaction that locks the invitation **and** the basket
+  row, so a link admits exactly one person and concurrent accepts cannot overshoot the
+  6-person limit. `decline/2` is silent. `preview_invitation/1` exposes only the
+  inviter's name and the list title.
+- **Membership.** `remove_member/3` — the owner removes anyone, a member removes only
+  themselves. `people/1` returns owner-first `%{id, name, avatar_url, role}`; `name` is
+  the profile alias or account name, never an email.
+- **Blocks.** `Moderation.block_user/2` calls `Sharing.handle_block/2`: each leaves the
+  other's lists and pending invitations between them are revoked. An invitation to a
+  blocked pair is stored but neither addressed, notified nor emailed, and `accept`
+  refuses it.
+- **Account deletion.** `Accounts.Admin.delete_user/1` calls
+  `Sharing.transfer_shared_baskets/1` first: a list the user owns and shares goes to its
+  longest-standing member; unshared lists are deleted as before.
+- **Live updates.** Every mutation calls `Inventory.broadcast_change/2`, which
+  broadcasts `{:basket_changed, id}` (or `{:basket_deleted, id}`) on the PubSub topic
+  `basket:<id>` to everyone **except the calling process** (the view that made the
+  change re-reads the list itself). `ShoppingBasketLive.Index` subscribes to every
+  list the user can see; `MehungryWeb.BasketChannel` joins the same topic for mobile
+  and re-checks access on each message.
+- **Concurrent edits.** `set_acquired/3` writes an explicit state with a single
+  `UPDATE` instead of flipping a possibly stale struct. Deletes use `allow_stale`
+  (deleting an already-deleted line succeeds); updates use `stale_error_field` (an
+  update to a deleted line returns `{:error, changeset}` instead of raising).
+
 ## Web UI (`ShoppingBasketLive`)
 
 `/basket` is a sidebar of the user's lists + a main checklist panel + an add-item
@@ -61,8 +115,17 @@ via CSS variables (`apps/mehungry_web/assets/css/basket.css`, which is now *only
 that retheme — layout + the mobile Lists drawer are Tailwind utilities).
 
 - **Lists:** create / **rename** (inline `BasicFormComponent`, `:new`/`:edit`) /
-  delete (with a `data-confirm`) / switch. All reads are owner-scoped via
-  `get_user_shopping_basket/2`; deleting the active list falls back to another.
+  delete (with a `data-confirm`) / switch. Reads go through
+  `get_accessible_basket/2` (owned or shared); rename / delete / calendar rebuild
+  through the owner-only `get_user_shopping_basket/2`. Deleting the active list
+  falls back to another. A list someone else owns shows "Shared by …" and a
+  **Leave** button in place of the owner controls.
+- **Sharing:** the header **Share** button opens a `core_components` modal
+  (`share_panel/1`): invite form (email optional), the freshly created link with a
+  `Copy` hook, pending invitations (revoke) and the people on the list (remove /
+  leave). Invitations addressed to the signed-in user appear above the list
+  (`my_invitations/1`, Join / Decline). The link itself lands on
+  `ShoppingBasketLive.Invitation` (`/basket/invitations/:token`, authenticated).
 - **Items, grouped by grocery aisle:** entries are grouped with
   `Mehungry.PublishedPlans.GroceryAisle` (`classify/1`·`ordered/0`·`label/1` — the
   same aisle map the published-plan grocery list uses), in canonical shop order,
@@ -86,7 +149,8 @@ that retheme — layout + the mobile Lists drawer are Tailwind utilities).
 - **Web:** `/basket` (`ShoppingBasketLive`) — see above.
 - **Mobile API:** `/api/v1/basket*` — full mirror incl. `POST /basket/import/recipe/:id`
   and `/basket/import/meal/:id`, specified in
-  [`new_dec_specs/mobile_api_spec.md`](new_dec_specs/mobile_api_spec.md) §10. The
+  [`new_dec_specs/mobile_api_spec.md`](new_dec_specs/mobile_api_spec.md) §10; sharing
+  (`/baskets`, invitations, members, the `basket:<id>` channel) is §10.1 / §13. The
   ingredient search that feeds it (`?source=local`) reuses `Food.IngredientSearch`.
   Each serialized item also carries an `aisle` key so the mobile client can group
   by grocery aisle exactly like this LiveView. Because `BasketItem` has no category
@@ -97,5 +161,6 @@ that retheme — layout + the mobile Lists drawer are Tailwind utilities).
 
 ## Related
 
+- [`../features/shared_basket.md`](../features/shared_basket.md) — the product rules for sharing a list.
 - [`history_calendar.md`](history_calendar.md) — the calendar that drives the week flow and shares `aggregate_meal_ingredients/1`.
 - [`food/ingredient_search.md`](food/ingredient_search.md) — the ingredient picker/search behind add-item.

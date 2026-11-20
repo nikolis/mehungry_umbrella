@@ -6,6 +6,7 @@ defmodule Mehungry.Inventory.ShoppingBasket do
 
   alias Mehungry.Inventory.BasketIngredient
   alias Mehungry.Inventory.BasketItem
+  alias Mehungry.Inventory.BasketMember
 
   alias Mehungry.Accounts.User
 
@@ -18,6 +19,8 @@ defmodule Mehungry.Inventory.ShoppingBasket do
 
     has_many :basket_ingredients, BasketIngredient, defaults: [], on_replace: :delete
     has_many :basket_items, BasketItem, defaults: [], on_replace: :delete
+    # People the list is shared with (the owner is `user`, not a member row).
+    has_many :members, BasketMember
 
     timestamps()
   end

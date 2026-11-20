@@ -8,6 +8,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   alias Mehungry.Inventory
   alias Mehungry.Inventory.{ShoppingBasket, BasketItem, BasketIngredient}
   alias Mehungry.FoodData.Usda.SearchClient
+  alias MehungryWeb.BasketSharing
   import MehungryWeb.ShoppingBasketLive.Components
 
   @impl true
@@ -19,8 +20,9 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
     shopping_baskets = load_baskets(user.id)
     # Deep-link support (?basket_id=): open the requested basket if the user owns
-    # it (e.g. arriving from the calendar's "Shopping list" button); otherwise
-    # fall back to the most-recently-updated one.
+    # it or it is shared with them (e.g. arriving from the calendar's "Shopping
+    # list" button, or from accepting an invitation); otherwise fall back to the
+    # most-recently-updated one.
     shopping_basket =
       shopping_baskets
       |> select_initial_basket(params["basket_id"])
@@ -42,7 +44,13 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      |> assign(:custom_results, [])
      |> assign(:searching, false)
      |> assign(:selected_usda_item, nil)
-     |> assign(:id, "add-item-modal")}
+     |> assign(:id, "add-item-modal")
+     # Sharing: the open Share modal (nil | %{link:, pending:}) and the
+     # invitations other people addressed to this user.
+     |> assign(:share, nil)
+     |> assign(:my_invitations, Inventory.list_basket_invitations_for_user(user.id))
+     |> assign(:subscribed, MapSet.new())
+     |> sync_subscriptions()}
   end
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -66,10 +74,118 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   end
 
   def handle_event("select_shopping_basket", %{"id" => id}, socket) do
-    case owned_basket(socket, id) do
+    case accessible_basket(socket, id) do
       nil -> {:noreply, socket}
       basket -> {:noreply, assign(socket, shopping_basket: basket, editing_item: nil)}
     end
+  end
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Sharing (invite / revoke / remove / leave / answer an invitation)
+  # ──────────────────────────────────────────────────────────────────────────
+
+  def handle_event("open_share", _params, socket) do
+    case socket.assigns.shopping_basket do
+      %ShoppingBasket{id: id} when not is_nil(id) ->
+        {:noreply, assign(socket, :share, %{link: nil, pending: pending_invitations(socket)})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_share", _params, socket) do
+    {:noreply, assign(socket, :share, nil)}
+  end
+
+  # One form for both paths: with an email the invitation is also emailed (and,
+  # for an existing account, shown in-app); blank creates a link to pass on.
+  def handle_event("send_invite", params, socket) do
+    email = params |> Map.get("email", "") |> String.trim()
+    basket = socket.assigns.shopping_basket
+    locale = Gettext.get_locale(MehungryWeb.Gettext)
+
+    case BasketSharing.invite(socket.assigns.current_user, basket.id, email, locale) do
+      {:ok, _invitation, url} ->
+        message =
+          if email == "",
+            do: gettext("Invitation link created"),
+            else: gettext("Invitation sent")
+
+        {:noreply,
+         socket
+         |> assign(:share, %{link: url, pending: pending_invitations(socket)})
+         |> put_flash(:info, message)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, BasketSharing.error_message(reason))}
+    end
+  end
+
+  def handle_event("revoke_invitation", %{"id" => id}, socket) do
+    with {int_id, _} <- Integer.parse(id) do
+      Inventory.revoke_basket_invitation(
+        socket.assigns.current_user,
+        socket.assigns.shopping_basket.id,
+        int_id
+      )
+    end
+
+    {:noreply, refresh_share(socket)}
+  end
+
+  def handle_event("remove_member", %{"user-id" => user_id}, socket) do
+    with {int_id, _} <- Integer.parse(user_id),
+         %ShoppingBasket{} = basket <- owned_basket(socket, socket.assigns.shopping_basket.id) do
+      Inventory.remove_basket_member(socket.assigns.current_user, basket.id, int_id)
+    end
+
+    {:noreply, socket |> refresh_active_basket() |> refresh_share()}
+  end
+
+  def handle_event("leave_basket", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+
+    with {int_id, _} <- Integer.parse(id),
+         :ok <- Inventory.remove_basket_member(user, int_id, user.id) do
+      {:noreply,
+       socket
+       |> assign(share: nil, editing_item: nil)
+       |> refresh_active_basket()
+       |> put_flash(:info, gettext("You left the list"))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("accept_invitation", %{"id" => id}, socket) do
+    with {int_id, _} <- Integer.parse(id),
+         {:ok, basket} <-
+           Inventory.accept_basket_invitation(socket.assigns.current_user, int_id) do
+      {:noreply,
+       socket
+       |> assign(:shopping_basket, %ShoppingBasket{id: basket.id})
+       |> refresh_active_basket()
+       |> refresh_my_invitations()
+       |> put_flash(:info, gettext("You joined “%{title}”", title: basket.title))}
+    else
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> refresh_my_invitations()
+         |> put_flash(:error, BasketSharing.error_message(reason))}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("decline_invitation", %{"id" => id}, socket) do
+    with {int_id, _} <- Integer.parse(id) do
+      Inventory.decline_basket_invitation(socket.assigns.current_user, int_id)
+    end
+
+    {:noreply, refresh_my_invitations(socket)}
   end
 
   def handle_event("delete_basket", %{"id" => id}, socket) do
@@ -137,8 +253,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
   def handle_event("select_usda_item", %{"fdc_id" => fdc_id}, socket) do
     case SearchClient.get_food_details(fdc_id) do
-      {:ok, food} -> {:noreply, assign(socket, selected_usda_item: food)}
-      {:error, _error} -> {:noreply, put_flash(socket, :error, gettext("Could not load that item"))}
+      {:ok, food} ->
+        {:noreply, assign(socket, selected_usda_item: food)}
+
+      {:error, _error} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not load that item"))}
     end
   end
 
@@ -163,7 +282,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         fat: get_nutrition_value(selected, "Total Fat"),
         carbs: get_nutrition_value(selected, "Carbohydrates")
       },
-      usda_fdc_id: selected["fdcId"]
+      usda_fdc_id: selected["fdcId"],
+      added_by_id: socket.assigns.current_user.id
     }
 
     case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
@@ -193,7 +313,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       quantity: parse_quantity(quantity) || 1.0,
       measurement_unit_id: measurement_unit_id,
       nutrition: nil,
-      usda_fdc_id: nil
+      usda_fdc_id: nil,
+      added_by_id: socket.assigns.current_user.id
     }
 
     case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
@@ -219,7 +340,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         {:noreply, socket}
 
       entry ->
-        {:ok, _} = Inventory.toggle_basket_ingredient(entry)
+        # Set the state the person asked for (the opposite of what they were
+        # looking at) rather than flipping the stored value, so two people
+        # ticking the same line agree. A line someone just deleted is a no-op.
+        Inventory.set_acquired(entry, not entry.in_storage, socket.assigns.current_user.id)
         {:noreply, refresh_active_basket(socket)}
     end
   end
@@ -241,7 +365,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     result =
       case find_entry(socket, type, id) do
         %BasketItem{} = item ->
-          Inventory.update_basket_item(item, prune(%{quantity: quantity, name: params["name"]}))
+          Inventory.update_basket_item(
+            item,
+            prune(%{quantity: quantity, name: params["name"]}),
+            socket.assigns.current_user.id
+          )
 
         %BasketIngredient{} = ingredient ->
           Inventory.update_basket_ingredient(ingredient, prune(%{quantity: quantity}))
@@ -258,7 +386,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         {:noreply, assign(socket, :editing_item, nil)}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, gettext("Could not update the item"))}
+        {:noreply,
+         socket
+         |> assign(:editing_item, nil)
+         |> refresh_active_basket()
+         |> put_flash(:error, gettext("Could not update the item"))}
     end
   end
 
@@ -325,7 +457,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      socket
      |> assign(:shopping_baskets, shopping_baskets)
      |> assign(:shopping_basket, active)
-     |> assign(:basket_form, nil)}
+     |> assign(:basket_form, nil)
+     |> sync_subscriptions()}
   end
 
   # Both basket form components emit `{:update, basket}` when a date-range import
@@ -351,6 +484,23 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      |> assign(:processing_basket, %ShoppingBasket{})}
   end
 
+  # A shared list changed (or was deleted) from another session — someone else's
+  # browser or phone, or this user's own second tab. Re-read it; if this user no
+  # longer has access to the list on screen, fall back to another and say so.
+  def handle_info({event, basket_id}, socket) when event in [:basket_changed, :basket_deleted] do
+    active_id = socket.assigns.shopping_basket.id
+    socket = socket |> refresh_active_basket() |> refresh_share()
+
+    if active_id == basket_id and socket.assigns.shopping_basket.id != basket_id do
+      {:noreply,
+       socket
+       |> assign(share: nil, editing_item: nil)
+       |> put_flash(:info, gettext("That list is no longer available"))}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_info({:perform_search, query}, socket) do
     # The user's own private ingredients, surfaced alongside USDA results. Only
     # rows owned by this user are kept (global local-DB rows stay out of the
@@ -372,6 +522,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
          assign(socket, search_results: [], custom_results: custom_results, searching: false)}
     end
   end
+
+  # Anything else delivered to this process (it holds PubSub subscriptions, and
+  # in tests the mail adapter echoes sent emails to the caller) is ignored
+  # rather than crashing the view.
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   # ──────────────────────────────────────────────────────────────────────────
   # Private helpers
@@ -397,32 +552,87 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   # A brand-new user with no baskets gets an empty, unsaved basket so the panel
   # renders its first-run state.
   defp blank_basket_fallback(nil, user) do
-    %ShoppingBasket{user_id: user.id, basket_ingredients: [], basket_items: []}
+    %ShoppingBasket{user_id: user.id, basket_ingredients: [], basket_items: [], members: []}
   end
 
   defp blank_basket_fallback(%ShoppingBasket{} = basket, _user), do: basket
 
   # Re-reads the active basket + the list from the DB after a mutation, so counts,
-  # progress and acquired-sink ordering all reflect the new state.
+  # progress and acquired-sink ordering all reflect the new state. When the
+  # active basket is gone (deleted, or this user was removed from it) it falls
+  # back to another list rather than keeping a stale copy on screen.
   defp refresh_active_basket(socket) do
     baskets = load_baskets(socket.assigns.current_user.id)
+    current = socket.assigns.shopping_basket
 
     active =
-      reload_basket(socket, socket.assigns.shopping_basket.id) ||
-        socket.assigns.shopping_basket
+      case current.id && reload_basket(socket, current.id) do
+        %ShoppingBasket{} = reloaded -> reloaded
+        _ -> blank_basket_fallback(List.first(baskets), socket.assigns.current_user)
+      end
 
     socket
     |> assign(:shopping_baskets, baskets)
     |> assign(:shopping_basket, active)
+    |> sync_subscriptions()
   end
 
   defp reload_basket(_socket, nil), do: nil
 
   defp reload_basket(socket, id) do
-    Inventory.get_user_shopping_basket(socket.assigns.current_user.id, id)
+    Inventory.get_accessible_basket(socket.assigns.current_user.id, id)
   end
 
-  # User-scoped basket lookup for an event/param id (nil when not owned).
+  # Subscribes (once each) to the change topic of every list this user can see,
+  # so the sidebar's counts and the open list both follow other people's edits.
+  defp sync_subscriptions(socket) do
+    if connected?(socket) do
+      ids = MapSet.new(socket.assigns.shopping_baskets, & &1.id)
+      Enum.each(MapSet.difference(ids, socket.assigns.subscribed), &Inventory.subscribe/1)
+      assign(socket, :subscribed, MapSet.union(socket.assigns.subscribed, ids))
+    else
+      socket
+    end
+  end
+
+  # Keeps an open Share modal's pending-invitation list current.
+  defp refresh_share(%{assigns: %{share: nil}} = socket), do: socket
+
+  defp refresh_share(socket) do
+    assign(socket, :share, %{socket.assigns.share | pending: pending_invitations(socket)})
+  end
+
+  # Pending invitations are the owner's business only.
+  defp pending_invitations(socket) do
+    basket = socket.assigns.shopping_basket
+
+    if basket.id && basket.user_id == socket.assigns.current_user.id,
+      do: Inventory.list_pending_basket_invitations(basket.id),
+      else: []
+  end
+
+  defp refresh_my_invitations(socket) do
+    assign(
+      socket,
+      :my_invitations,
+      Inventory.list_basket_invitations_for_user(socket.assigns.current_user.id)
+    )
+  end
+
+  # Basket lookup for reading / item-level changes: owned or shared with the user.
+  defp accessible_basket(socket, id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int_id, _} -> accessible_basket(socket, int_id)
+      :error -> nil
+    end
+  end
+
+  defp accessible_basket(socket, id) when is_integer(id) do
+    Inventory.get_accessible_basket(socket.assigns.current_user.id, id)
+  end
+
+  # Owner-scoped basket lookup for list-level changes (rename, delete, rebuild
+  # from the calendar, sharing): nil unless this user owns it.
   defp owned_basket(socket, id) when is_binary(id) do
     case Integer.parse(id) do
       {int_id, _} -> owned_basket(socket, int_id)

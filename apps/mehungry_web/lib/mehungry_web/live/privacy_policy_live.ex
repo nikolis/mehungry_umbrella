@@ -85,6 +85,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
             {"Account data", "Email, password (hashed), display name, and — if you sign in with Facebook, Google or Instagram — the basic profile fields that provider returns."},
             {"Profile & preferences", "Dietary preferences, diet type, survey answers, daily calorie target, and any health-condition badges you choose to opt into."},
             {"Content you create", "Recipes, comments, votes, posts, meal plans, shopping baskets, images and media you upload."},
+            {"Shared shopping lists", "If you share a shopping list, the people you invite who accept can see and change its items, and see your display name and profile picture next to what you add or tick off (never your email). If you invite someone by email, we use that address to send the invitation and keep it with the invitation so you can see and revoke it."},
             {"Nutritionist client records", "If you are (or are a client of) a nutritionist: intake data such as height, weight, BMI/BMR/TDEE, goals, free-text notes and consultation notes."},
             {"Moderation records", "If you report a recipe, comment or user: what you reported, the reason you chose, any note you add, and a copy of the reported text as it was at that moment. If you block a user: the fact that you blocked them. The person you report or block is never told it was you."},
             {"Payment data", "Subscription tier and billing status. Card details are handled directly by Stripe — we do not store full card numbers."},

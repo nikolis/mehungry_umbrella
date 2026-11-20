@@ -87,11 +87,24 @@ defmodule Mehungry.ObanWorkers.PushNotificationWorker do
       "invitation" ->
         {"New invitation", "#{actor} sent you an invitation"}
 
+      "basket_invitation" ->
+        {"Shopping list invitation", basket_body(actor, "invited you to share", notification)}
+
+      "basket_joined" ->
+        {"Shopping list shared", basket_body(actor, "joined", notification)}
+
       "content_removed" ->
         {"Content removed", "Something you posted was removed for breaking our content rules"}
 
       _ ->
         {"M3Hungry", "You have a new notification"}
+    end
+  end
+
+  defp basket_body(actor, verb, notification) do
+    case notification |> Map.get("data", %{}) |> Map.get("basket_title") do
+      title when is_binary(title) and title != "" -> "#{actor} #{verb} “#{title}”"
+      _ -> "#{actor} #{verb} a shopping list"
     end
   end
 

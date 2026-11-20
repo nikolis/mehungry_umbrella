@@ -32,7 +32,7 @@ Table `notifications` (migration `20261021090000_create_notifications.exs`):
 |---|---|---|
 | `recipient_id` | FK users (delete_all) | who sees it |
 | `actor_id` | FK users (nilify), null | who caused it (null = system/ai) |
-| `type` | string | `follow` \| `comment` \| `comment_answer` \| `ai_ready` \| `invitation` |
+| `type` | string | `follow` \| `comment` \| `comment_answer` \| `ai_ready` \| `invitation` \| `content_removed` \| `basket_invitation` \| `basket_joined` |
 | `subject_type` / `subject_id` | string / bigint, null | deep-link target |
 | `data` | map (jsonb) | denormalized render bits (`recipe_title`, `preview`) |
 | `read_at` | utc, null | nil until inbox opened |
@@ -66,6 +66,12 @@ The dispatcher is a config seam (`:notification_dispatcher`, like `:instagram_cl
 Trigger sites (context):
 - **Comment on your recipe** — `Mehungry.Posts.create_comment/1` → `emit(recipe.user_id,
   "comment", actor_id: comment.user_id, subject: recipe, data: %{recipe_title, preview})`.
+- **Shared shopping list** — `Inventory.Sharing.invite/3` → `emit(invitee.id,
+  "basket_invitation", actor_id: inviter.id, subject: basket_invitation/<id>,
+  data: %{basket_title, invitation_id})` when the invited email belongs to an
+  account (and the pair is not blocked); accepting → `emit(owner.id, "basket_joined",
+  actor_id: member.id, subject: basket/<id>, data: %{basket_title})`. See
+  `docs/features/shared_basket.md`.
 - **Reply to your comment** — `Posts.create_comment_answer/1` → `emit(comment.user_id,
   "comment_answer", actor_id: answer.user_id, subject: the recipe, data: %{preview})`.
 - **New follower** — `Accounts.UserContent.save_user_follow/2` → `emit(target, "follow",

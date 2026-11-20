@@ -198,6 +198,10 @@ defmodule Mehungry.Accounts.Admin do
     # UserMeals (recipe_user_meals and ingredient_user_meals cascade via :delete_all)
     Repo.delete_all(from u_m in Mehungry.History.UserMeal, where: u_m.user_id == ^uid)
 
+    # A list this user owns and shares is handed to its longest-standing member
+    # instead of being deleted from under them; the rest are deleted below.
+    Mehungry.Inventory.Sharing.transfer_shared_baskets(uid)
+
     # ShoppingBaskets and their items
     basket_ids =
       Repo.all(

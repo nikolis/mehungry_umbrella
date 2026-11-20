@@ -14,7 +14,112 @@ defmodule Mehungry.Inventory do
     BasketParams.changeset(basket_params, attrs)
   end
 
+  alias Mehungry.Inventory.BasketMember
   alias Mehungry.Inventory.ShoppingBasket
+
+  # One preload shape for every basket loader, so a basket read through any of
+  # them is the same struct (items, structured ingredients, and the people it
+  # is shared with).
+  @basket_preloads [
+    basket_items: [:measurement_unit],
+    basket_ingredients: [
+      :measurement_unit,
+      ingredient: [:category, :ingredient_translation]
+    ],
+    user: :user_profile,
+    members: [user: :user_profile]
+  ]
+
+  # ── Sharing (invitations, members) lives in Inventory.Sharing ────────────
+  alias Mehungry.Inventory.Sharing
+
+  defdelegate invite_to_basket(inviter, basket_id, opts \\ %{}), to: Sharing, as: :invite
+  defdelegate preview_invitation(token), to: Sharing
+  defdelegate accept_invitation_by_token(user, token), to: Sharing, as: :accept_by_token
+  defdelegate accept_basket_invitation(user, invitation_id), to: Sharing, as: :accept
+  defdelegate decline_basket_invitation(user, invitation_id), to: Sharing, as: :decline
+  defdelegate revoke_basket_invitation(owner, basket_id, invitation_id), to: Sharing, as: :revoke
+  defdelegate list_pending_basket_invitations(basket_id), to: Sharing, as: :list_pending
+  defdelegate list_basket_invitations_for_user(user_id), to: Sharing, as: :list_for_user
+  defdelegate remove_basket_member(actor, basket_id, user_id), to: Sharing, as: :remove_member
+  defdelegate basket_people(basket), to: Sharing, as: :people
+
+  # ── Live updates ─────────────────────────────────────────────────────────
+
+  @doc """
+  Subscribes the caller to a basket's change topic. Every mutation of the
+  basket, its items or its members broadcasts `{:basket_changed, basket_id}`
+  there (and a deleted basket `{:basket_deleted, basket_id}`), whichever client
+  made it, so every open view of a shared list stays in step. The process that
+  made the change is not sent its own broadcast.
+  """
+  def subscribe(basket_id) when not is_nil(basket_id),
+    do: Phoenix.PubSub.subscribe(Mehungry.PubSub, topic(basket_id))
+
+  @doc "The PubSub (and mobile channel) topic for a basket."
+  def topic(basket_id), do: "basket:#{basket_id}"
+
+  @doc false
+  def broadcast_change(basket_id, event \\ :basket_changed)
+  def broadcast_change(nil, _event), do: :ok
+
+  # Sent to every subscriber **except the calling process**: the view that made
+  # the change already re-reads the list itself, so echoing it back would only
+  # make it load everything twice.
+  def broadcast_change(basket_id, event) do
+    Phoenix.PubSub.broadcast_from(Mehungry.PubSub, self(), topic(basket_id), {event, basket_id})
+  end
+
+  # ── Access ───────────────────────────────────────────────────────────────
+
+  @doc """
+  The role `user_id` has on a basket: `:owner`, `:member` or `nil` (no access).
+  Takes a loaded basket (members preloaded) or a basket id.
+  """
+  def basket_role(%ShoppingBasket{user_id: user_id}, user_id) when not is_nil(user_id), do: :owner
+
+  def basket_role(%ShoppingBasket{members: members}, user_id) when is_list(members) do
+    if Enum.any?(members, &(&1.user_id == user_id)), do: :member
+  end
+
+  def basket_role(%ShoppingBasket{id: id}, user_id), do: basket_role(id, user_id)
+  def basket_role(nil, _user_id), do: nil
+  def basket_role(_basket_id, nil), do: nil
+
+  def basket_role(basket_id, user_id) do
+    owner? = from(s in ShoppingBasket, where: s.id == ^basket_id and s.user_id == ^user_id)
+
+    member? =
+      from(m in BasketMember, where: m.shopping_basket_id == ^basket_id and m.user_id == ^user_id)
+
+    cond do
+      Repo.exists?(owner?) -> :owner
+      Repo.exists?(member?) -> :member
+      true -> nil
+    end
+  end
+
+  @doc "Whether `user_id` owns or is a member of the basket."
+  def can_access_basket?(user_id, basket_id), do: basket_role(basket_id, user_id) != nil
+
+  @doc """
+  Gets a basket by id for someone who **owns it or is a member of it**, or `nil`.
+  This is the lookup for reading a list and for item-level changes; list-level
+  changes (rename, delete, sharing) stay owner-only via
+  `get_user_shopping_basket/2`.
+  """
+  def get_accessible_basket(user_id, id) do
+    from(s in ShoppingBasket,
+      left_join: m in BasketMember,
+      on: m.shopping_basket_id == s.id and m.user_id == ^user_id,
+      where: s.id == ^id and (s.user_id == ^user_id or not is_nil(m.id))
+    )
+    |> Repo.one()
+    |> case do
+      nil -> nil
+      basket -> Repo.preload(basket, @basket_preloads)
+    end
+  end
 
   @doc """
   Returns the list of shopping_baskets.
@@ -29,23 +134,16 @@ defmodule Mehungry.Inventory do
     Repo.all(ShoppingBasket)
   end
 
+  @doc "Every basket the user owns **or is a member of**, fully preloaded."
   def list_shopping_baskets_for_user(user_id) do
     from(s in ShoppingBasket,
-      where: s.user_id == ^user_id
+      left_join: m in BasketMember,
+      on: m.shopping_basket_id == s.id and m.user_id == ^user_id,
+      where: s.user_id == ^user_id or not is_nil(m.id),
+      order_by: [asc: s.id]
     )
     |> Repo.all()
-    |> Repo.preload(
-      basket_items: [
-        :measurement_unit
-      ],
-      basket_ingredients: [
-        :measurement_unit,
-        ingredient: [
-          :category,
-          :ingredient_translation
-        ]
-      ]
-    )
+    |> Repo.preload(@basket_preloads)
   end
 
   @doc """
@@ -64,18 +162,7 @@ defmodule Mehungry.Inventory do
   """
   def get_shopping_basket!(id) do
     Repo.get!(ShoppingBasket, id)
-    |> Repo.preload(
-      basket_items: [
-        :measurement_unit
-      ],
-      basket_ingredients: [
-        :measurement_unit,
-        ingredient: [
-          :category,
-          :ingredient_translation
-        ]
-      ]
-    )
+    |> Repo.preload(@basket_preloads)
   end
 
   @doc """
@@ -87,22 +174,8 @@ defmodule Mehungry.Inventory do
     from(s in ShoppingBasket, where: s.id == ^id and s.user_id == ^user_id)
     |> Repo.one()
     |> case do
-      nil ->
-        nil
-
-      basket ->
-        Repo.preload(basket,
-          basket_items: [
-            :measurement_unit
-          ],
-          basket_ingredients: [
-            :measurement_unit,
-            ingredient: [
-              :category,
-              :ingredient_translation
-            ]
-          ]
-        )
+      nil -> nil
+      basket -> Repo.preload(basket, @basket_preloads)
     end
   end
 
@@ -138,6 +211,7 @@ defmodule Mehungry.Inventory do
             ]
           )
 
+        broadcast_change(basket.id)
         {:ok, basket}
 
       _ ->
@@ -151,7 +225,8 @@ defmodule Mehungry.Inventory do
   free-text unit label, used by the USDA/manual paths that have no
   `MeasurementUnit` row), `:nutrition` (stored into `nutrition_data`) and
   `:usda_fdc_id`. Missing keys are tolerated — e.g. USDA items pass a free-text
-  unit via `:description` and no `:measurement_unit_id`.
+  unit via `:description` and no `:measurement_unit_id`. `:added_by_id` records
+  who added the line (shown on shared lists).
   """
   def add_item(nil, _item_params), do: {:error, :nil_basket_id}
 
@@ -168,11 +243,16 @@ defmodule Mehungry.Inventory do
         usda_fdc_id: Map.get(item_params, :usda_fdc_id),
         in_storage: false
       })
+      |> Ecto.Changeset.put_change(:added_by_id, Map.get(item_params, :added_by_id))
       |> Repo.insert()
 
     case result do
-      {:ok, item} -> {:ok, Repo.preload(item, :measurement_unit)}
-      {:error, problem} -> {:error, problem}
+      {:ok, item} ->
+        broadcast_change(basket_id)
+        {:ok, Repo.preload(item, :measurement_unit)}
+
+      {:error, problem} ->
+        {:error, problem}
     end
   end
 
@@ -222,9 +302,10 @@ defmodule Mehungry.Inventory do
   @doc """
   Adds all of a recipe's ingredients to a basket as `basket_items`, scaling
   quantities by `servings_scale`. Reads the recipe's `recipe_ingredients`
-  (the current schema). Returns `{:ok, count}`.
+  (the current schema). `actor_id` is recorded as who added them. Returns
+  `{:ok, count}`.
   """
-  def add_items_from_recipe(basket_id, recipe, servings_scale \\ 1) do
+  def add_items_from_recipe(basket_id, recipe, servings_scale \\ 1, actor_id \\ nil) do
     basket = get_shopping_basket!(basket_id)
     recipe = Repo.preload(recipe, recipe_ingredients: [:ingredient, :measurement_unit])
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
@@ -237,6 +318,7 @@ defmodule Mehungry.Inventory do
           measurement_unit_id: ri.measurement_unit_id,
           shopping_basket_id: basket.id,
           recipe_id: recipe.id,
+          added_by_id: actor_id,
           in_storage: false,
           inserted_at: now,
           updated_at: now
@@ -244,6 +326,7 @@ defmodule Mehungry.Inventory do
       end)
 
     {count, _} = Repo.insert_all(BasketItem, items)
+    broadcast_change(basket.id)
     {:ok, count}
   end
 
@@ -275,26 +358,51 @@ defmodule Mehungry.Inventory do
   @doc "Gets a basket item (with its measurement unit)."
   def get_basket_item!(id), do: Repo.get!(BasketItem, id) |> Repo.preload(:measurement_unit)
 
-  @doc "Updates a basket item (quantity / in_storage / name …)."
-  def update_basket_item(%BasketItem{} = item, attrs) do
+  @doc """
+  Updates a basket item (quantity / in_storage / name …). When the update ticks
+  the item off, `actor_id` is recorded as who acquired it; un-ticking clears it.
+  A row someone else deleted in the meantime returns `{:error, changeset}`
+  rather than raising.
+  """
+  def update_basket_item(%BasketItem{} = item, attrs, actor_id \\ nil) do
     item
     |> BasketItem.changeset(attrs)
-    |> Repo.update()
+    |> stamp_acquired_by(actor_id)
+    |> Repo.update(stale_error_field: :id)
     |> case do
-      {:ok, item} -> {:ok, Repo.preload(item, :measurement_unit)}
-      other -> other
+      {:ok, item} ->
+        broadcast_change(item.shopping_basket_id)
+        {:ok, Repo.preload(item, :measurement_unit)}
+
+      other ->
+        other
     end
   end
 
-  @doc "Deletes a basket item."
-  def delete_basket_item(%BasketItem{} = item), do: Repo.delete(item)
+  defp stamp_acquired_by(changeset, actor_id) do
+    case Ecto.Changeset.fetch_change(changeset, :in_storage) do
+      {:ok, true} -> Ecto.Changeset.put_change(changeset, :acquired_by_id, actor_id)
+      {:ok, _} -> Ecto.Changeset.put_change(changeset, :acquired_by_id, nil)
+      :error -> changeset
+    end
+  end
+
+  @doc """
+  Deletes a basket item. Deleting a row another member already deleted is a
+  success, not an error.
+  """
+  def delete_basket_item(%BasketItem{} = item) do
+    result = Repo.delete(item, allow_stale: true)
+    broadcast_change(item.shopping_basket_id)
+    result
+  end
 
   @doc """
   Adds a planned meal's items to a basket: every recipe in the meal contributes
   its ingredients (scaled by consume portions), plus the meal's direct
-  ingredients. Returns `{:ok, count}`.
+  ingredients. `actor_id` is recorded as who added them. Returns `{:ok, count}`.
   """
-  def add_items_from_meal(basket_id, %Mehungry.History.UserMeal{} = meal) do
+  def add_items_from_meal(basket_id, %Mehungry.History.UserMeal{} = meal, actor_id \\ nil) do
     meal =
       Mehungry.Repo.preload(meal,
         recipe_user_meals: [recipe: [recipe_ingredients: [:ingredient, :measurement_unit]]],
@@ -304,7 +412,9 @@ defmodule Mehungry.Inventory do
     recipe_added =
       meal.recipe_user_meals
       |> Enum.map(fn rum ->
-        {:ok, n} = add_items_from_recipe(basket_id, rum.recipe, rum.consume_portions || 1)
+        {:ok, n} =
+          add_items_from_recipe(basket_id, rum.recipe, rum.consume_portions || 1, actor_id)
+
         n
       end)
       |> Enum.sum()
@@ -319,6 +429,7 @@ defmodule Mehungry.Inventory do
           quantity: ium.quantity || 1,
           measurement_unit_id: ium.measurement_unit_id,
           shopping_basket_id: basket.id,
+          added_by_id: actor_id,
           in_storage: false,
           inserted_at: now,
           updated_at: now
@@ -326,6 +437,7 @@ defmodule Mehungry.Inventory do
       end)
 
     {ing_count, _} = Repo.insert_all(BasketItem, ingredient_items)
+    broadcast_change(basket.id)
     {:ok, recipe_added + ing_count}
   end
 
@@ -476,7 +588,9 @@ defmodule Mehungry.Inventory do
 
   """
   def delete_shopping_basket(%ShoppingBasket{} = shopping_basket) do
-    Repo.delete(shopping_basket)
+    result = Repo.delete(shopping_basket)
+    broadcast_change(shopping_basket.id, :basket_deleted)
+    result
   end
 
   def delete_all_baskets_for_user(user_id) do
@@ -546,7 +660,15 @@ defmodule Mehungry.Inventory do
     %BasketIngredient{}
     |> BasketIngredient.changeset(attrs)
     |> Repo.insert()
+    |> broadcast_entry()
   end
+
+  defp broadcast_entry({:ok, %{shopping_basket_id: basket_id}} = result) do
+    broadcast_change(basket_id)
+    result
+  end
+
+  defp broadcast_entry(result), do: result
 
   @doc """
   Updates a basket_ingredient.
@@ -563,20 +685,46 @@ defmodule Mehungry.Inventory do
   def update_basket_ingredient(%BasketIngredient{} = basket_ingredient, attrs) do
     basket_ingredient
     |> BasketIngredient.changeset(attrs)
-    |> Repo.update()
+    |> Repo.update(stale_error_field: :id)
+    |> broadcast_entry()
   end
 
-  def toggle_basket_ingredient(%BasketItem{} = basket_item) do
-    basket_item
-    |> BasketItem.changeset(%{in_storage: not basket_item.in_storage})
-    |> Repo.update()
+  @doc """
+  Sets an entry's acquired ("already have it") state to an explicit value,
+  recording `actor_id` as who ticked it off. This is the write to use on a
+  shared list: it states the outcome the person asked for instead of flipping
+  whatever is stored, so two people ticking the same line at once both end up
+  with it ticked. Written as a single `UPDATE` so it is safe against a stale
+  struct; an entry that no longer exists returns `{:error, :not_found}`.
+  """
+  def set_acquired(
+        %module{id: id, shopping_basket_id: basket_id} = entry,
+        acquired?,
+        actor_id \\ nil
+      )
+      when module in [BasketItem, BasketIngredient] and is_boolean(acquired?) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    acquired_by_id = if acquired?, do: actor_id
+
+    {count, _} =
+      from(e in module, where: e.id == ^id)
+      |> Repo.update_all(
+        set: [in_storage: acquired?, acquired_by_id: acquired_by_id, updated_at: now]
+      )
+
+    case count do
+      0 ->
+        {:error, :not_found}
+
+      _ ->
+        broadcast_change(basket_id)
+        {:ok, %{entry | in_storage: acquired?, acquired_by_id: acquired_by_id, updated_at: now}}
+    end
   end
 
-  def toggle_basket_ingredient(%BasketIngredient{} = basket_ingredient) do
-    basket_ingredient
-    |> BasketIngredient.changeset(%{in_storage: not basket_ingredient.in_storage})
-    |> Repo.update()
-  end
+  @doc "Flips an entry's acquired state as last read. Prefer `set_acquired/3`."
+  def toggle_basket_ingredient(entry, actor_id \\ nil),
+    do: set_acquired(entry, not entry.in_storage, actor_id)
 
   @doc """
   Deletes a basket_ingredient.
@@ -591,7 +739,9 @@ defmodule Mehungry.Inventory do
 
   """
   def delete_basket_ingredient(%BasketIngredient{} = basket_ingredient) do
-    Repo.delete(basket_ingredient)
+    result = Repo.delete(basket_ingredient, allow_stale: true)
+    broadcast_change(basket_ingredient.shopping_basket_id)
+    result
   end
 
   @doc """

@@ -207,6 +207,19 @@ defmodule MehungryWeb.Router do
     post("/basket/import/recipe/:recipe_id", BasketController, :import_recipe)
     post("/basket/import/meal/:meal_id", BasketController, :import_meal)
 
+    # Shared shopping lists (spec §10.1). The `/basket*` routes above also take
+    # an optional `basket_id` to target a shared list.
+    get("/baskets", BasketController, :index)
+    get("/baskets/:id", BasketController, :show)
+    get("/baskets/:id/invitations", BasketSharingController, :invitations)
+    post("/baskets/:id/invitations", BasketSharingController, :invite)
+    delete("/baskets/:id/invitations/:invitation_id", BasketSharingController, :revoke)
+    delete("/baskets/:id/members/:user_id", BasketSharingController, :remove_member)
+    get("/me/basket-invitations", BasketSharingController, :incoming)
+    post("/me/basket-invitations/accept", BasketSharingController, :accept_token)
+    post("/me/basket-invitations/:id/accept", BasketSharingController, :accept)
+    post("/me/basket-invitations/:id/decline", BasketSharingController, :decline)
+
     post("/uploads/presign", UploadController, :presign)
     post("/uploads", UploadController, :create)
 
@@ -482,6 +495,9 @@ defmodule MehungryWeb.Router do
       localized_live("/appointments", MyNutritionistLive.Index, :index)
       localized_live("/basket", ShoppingBasketLive.Index, :index)
       localized_live("/basket/import_items/:id", ShoppingBasketLive.Index, :import_items)
+      # Shared-list invitation link (single-use token). Authenticated, so a
+      # visitor without an account logs in / signs up first and is returned here.
+      localized_live("/basket/invitations/:token", ShoppingBasketLive.Invitation, :show)
 
       localized_live("/calendar", CalendarLive.Index, :index)
       localized_live("/calendar/ondate/:date", CalendarLive.Index, :particular)

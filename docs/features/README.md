@@ -9,6 +9,7 @@ how it's surfaced lives in [`../growth/`](../growth/).
 - [`normal_user.md`](normal_user.md) — consumer persona and journey.
 - [`nutritionist.md`](nutritionist.md) — professional-nutritionist persona, the product's lead audience.
 - [`meal_blueprints.md`](meal_blueprints.md) · [`meal_blueprints_diet_pattern_accuracy.md`](meal_blueprints_diet_pattern_accuracy.md) — meal-plan drafting feature.
+- [`shared_basket.md`](shared_basket.md) — sharing a shopping list with other people (invitations, roles, live updates).
 - [`subscriptions_billing.md`](subscriptions_billing.md) — tiers and pricing (customer-facing; Stripe mechanics are detailed in `../implementation/professionals/payments/`).
 
 ## professionals/

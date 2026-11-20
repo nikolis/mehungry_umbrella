@@ -777,7 +777,11 @@ with one generation left cannot start two at once (`403` on the second).
 ## 10. Shopping basket
 
 One active basket per user with items (from recipes or manual). Backed by
-`Inventory`.
+`Inventory`. The active basket is always one the user **owns**; lists shared with
+them are reached by id (§10.1). Every `/basket*` endpoint below also accepts an
+optional **`basket_id`** (query or body) to act on any basket the caller owns or is
+a member of — omitted, it acts on the active basket; an id the caller has no access
+to → `404`.
 
 ### `GET /api/v1/basket` 🔒
 ```json
@@ -785,9 +789,18 @@ One active basket per user with items (from recipes or manual). Backed by
   "id": 4, "title": "Groceries", "updated_at": "2026-08-10T…",
   "items": [ { "id": 55, "name": "Eggplant", "quantity": 2.0, "in_storage": false,
     "measurement_unit": {"id":5,"name":"piece"}, "recipe_id": 149,
-    "usda_fdc_id": 169228, "nutrition_data": {"energy":50}, "aisle": "produce" } ],
-  "items_count": 1 } }
+    "usda_fdc_id": 169228, "nutrition_data": {"energy":50}, "aisle": "produce",
+    "added_by_id": 7, "acquired_by_id": null } ],
+  "items_count": 1,
+  "role": "owner", "shared": false,
+  "people": [ { "id": 7, "alias": "Nikos", "avatar_url": null, "role": "owner" } ] } }
 ```
+`role` is the caller's role on the basket (`owner` | `member`); `shared` is true
+when anyone besides the owner is on it; `people` is everyone on the list, owner
+first (alias + avatar only — never an email). An item's `added_by_id` /
+`acquired_by_id` are user ids resolvable against `people` (null when unknown or
+when that person has left); `acquired_by_id` is set when the item is ticked
+(`in_storage: true`) and cleared when un-ticked.
 Each item carries an `aisle` key for grouping (same set + order as the web
 `GroceryAisle`): `produce`, `meat_seafood`, `dairy_eggs`, `bakery_grains`,
 `pantry`, `spices`, `beverages`, `other`. It is resolved server-side at read
@@ -800,6 +813,47 @@ with `GroceryAisle.classify/1`; unmatched manual/free-text items fall into
 ### `POST /api/v1/basket/import/recipe/:recipe_id` 🔒 — add all a recipe's
    ingredients (mirrors `/basket/import_items/:id`). Body: `{ "servings": 4 }`.
 ### `POST /api/v1/basket/import/meal/:meal_id` 🔒 — add a planned meal's items.
+
+### 10.1 Shared lists
+
+A basket's owner invites people; an accepted invitation makes them a **member**.
+Members read the list and add / edit / tick / delete its items; only the owner
+invites, revokes, removes, renames or deletes. Rules and limits (6 people, 10
+pending invitations, single-use 7-day links, blocks): `docs/features/shared_basket.md`.
+Backed by `Inventory.Sharing`; mirrors the web `/basket` Share panel.
+
+#### `GET /api/v1/baskets` 🔒 — every basket the caller owns or is a member of
+`{ "data": [ { "id":4, "title":"Groceries", "updated_at":"…", "items_count":3,
+"role":"member", "shared":true, "people":[…] } ] }` (no `items`).
+#### `GET /api/v1/baskets/:id` 🔒 — one basket, same shape as `GET /basket`. `404` without access.
+
+#### `POST /api/v1/baskets/:id/invitations` 🔒 (owner) `{ "email": "partner@example.com" }`
+`email` is optional. → `201`
+`{ "data": { "id": 9, "email": "partner@example.com", "status": "pending",
+"expires_at": "…", "url": "https://www.m3hungry.com/basket/invitations/<token>" } }`.
+`url` is returned **only here** (the token is not stored) — show/share it now. With
+an email the link is also emailed; if the email is a registered account that user
+gets a `basket_invitation` notification. The response is identical whether or not
+the email is registered. Errors → `422 { "errors": { "detail": "…", "code": … } }`
+with `code` ∈ `email_not_confirmed` | `basket_full` | `too_many_pending` |
+`invalid_email` | `cannot_invite_yourself` | `already_member`; `429` when
+rate-limited; `404` when the caller is not the owner.
+#### `GET /api/v1/baskets/:id/invitations` 🔒 (owner) — pending invitations (`url` is null).
+#### `DELETE /api/v1/baskets/:id/invitations/:invitation_id` 🔒 (owner) → `204`.
+#### `DELETE /api/v1/baskets/:id/members/:user_id` 🔒 → `204`
+The owner removes any member; a member may pass only their own id (**leave**).
+`403` when a member targets someone else, `404` without access.
+
+#### `GET /api/v1/me/basket-invitations` 🔒 — pending invitations addressed to the caller
+`{ "data": [ { "id": 9, "basket_title": "Groceries",
+"inviter": { "id": 7, "alias": "Nikos", "avatar_url": null }, "expires_at": "…" } ] }`
+— the list's title only, never its contents.
+#### `POST /api/v1/me/basket-invitations/:id/accept` 🔒 → the joined basket (`GET /basket` shape).
+#### `POST /api/v1/me/basket-invitations/:id/decline` 🔒 → `204` (the inviter is not told).
+#### `POST /api/v1/me/basket-invitations/accept` 🔒 `{ "token": "<token>" }`
+Accept from an invitation link opened in the app → the joined basket. An unknown,
+used, revoked or expired invitation (either accept path) → `404`; a full list →
+`422` with `code: "basket_full"`.
 ### `GET /api/v1/ingredients/search?q=onion` 🔒 — ingredient search, two modes.
    - **default** (`q` only) — USDA-backed search for *creating* a new ingredient /
      basket item (`FoodData.Usda.SearchClient` via `FDC_API_KEY`):
@@ -1748,7 +1802,7 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
   ```jsonc
   {
     "id": 12345,
-    "type": "follow",            // follow | comment | comment_answer | ai_ready | invitation
+    "type": "follow",            // follow | comment | comment_answer | ai_ready | invitation | content_removed | basket_invitation | basket_joined
     "actor": { "id": 42, "alias": "Maria", "avatar_url": "https://…" }, // null for system
     "subject": { "type": "user", "id": 42 },  // deep-link target (recipe|user|meal|comment); null if none
     "data": { "recipe_title": "Fasolada", "preview": "Looks delicious!" },
@@ -1759,7 +1813,10 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
   Launch types: **new follower** (`follow`, subject = follower's `user`),
   **comment on your recipe** (`comment`, subject = `recipe`),
   **reply to your comment** (`comment_answer`, subject = the `recipe`),
-  plus `ai_ready` and nutritionist `invitation`. Deep-link: `recipe` → recipe
+  plus `ai_ready` and nutritionist `invitation`. Shared lists (§10.1):
+  `basket_invitation` (subject = `basket_invitation`, `data.basket_title`,
+  `data.invitation_id` → the invitations screen) and `basket_joined` (subject =
+  `basket` → that list). Deep-link: `recipe` → recipe
   detail, `user` → that profile. Self-notifications and duplicate unread follows
   are suppressed server-side. Backed by `MehungryWeb.Api.Broadcaster.dispatch/5`
   → `Mehungry.Notifications`.
@@ -1767,6 +1824,14 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
   registered devices (see device registration in §5.1) — but **only when no `user:<id>`
   socket is connected** (a connected client already got this event, so no duplicate
   push). The push `data` carries this same object so a tap deep-links identically.
+
+### `basket:<basket_id>` 🔒 — live updates for one shopping list
+- Authorization: the caller must own the basket or be a member of it.
+- **Push → client**: `"basket_changed"` `{ "basket_id": 4 }` whenever the list, its
+  items or its people change, from any client (the socket's own REST writes
+  included). It is a *poke*: refetch `GET /baskets/:id`.
+- **Push → client**: `"basket_closed"` `{ "basket_id": 4 }` when the caller has lost
+  access (removed, or the list was deleted); the server then closes the topic.
 
 ### `meal_plan:<user_id>` 🔒 — AI meal-plan generation progress
 - **Push → client**: `"progress"` `{ job_id, blueprint_plan_id, status: "generating"|"error", error? }`
@@ -1881,6 +1946,12 @@ GET    /api/v1/basket
 POST/PUT/DELETE /api/v1/basket/items[/:id]
 POST   /api/v1/basket/import/recipe/:recipe_id
 POST   /api/v1/basket/import/meal/:meal_id
+GET    /api/v1/baskets                 GET /api/v1/baskets/:id
+GET/POST /api/v1/baskets/:id/invitations
+DELETE /api/v1/baskets/:id/invitations/:invitation_id
+DELETE /api/v1/baskets/:id/members/:user_id
+GET    /api/v1/me/basket-invitations   POST /api/v1/me/basket-invitations/accept
+POST   /api/v1/me/basket-invitations/:id/accept|decline
 POST   /api/v1/uploads/presign         POST /api/v1/uploads
 GET    /api/v1/subscription
 POST   /api/v1/subscription/checkout   POST /api/v1/subscription/portal
@@ -1922,5 +1993,5 @@ GET    /api/v1/nutritionist/invitations             POST /api/v1/nutritionist/in
 
 CHANNELS (wss://host/socket, params: {token})
   feed:lobby        recipe:<id>        user:<user_id>
-  meal_plan:<user_id>
+  meal_plan:<user_id>          basket:<basket_id>
 ```

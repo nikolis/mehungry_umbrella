@@ -60,6 +60,7 @@
           <.render_basket_titles
             shopping_baskets={@shopping_baskets}
             shopping_basket={@shopping_basket}
+            current_user_id={@current_user.id}
           />
 
           <%= if @shopping_baskets == [] do %>
@@ -70,14 +71,25 @@
 
       <!-- Main panel -->
       <div class="w-full">
+        <.my_invitations invitations={@my_invitations} />
         <.render_basket_items
           shopping_basket={@shopping_basket}
           current_language={@current_language}
           editing_item={@editing_item}
+          current_user_id={@current_user.id}
         />
       </div>
     </div>
   </div>
+
+  <!-- Share modal -->
+  <.modal :if={@share} id="share-modal" show on_cancel={JS.push("close_share")}>
+    <.share_panel
+      shopping_basket={@shopping_basket}
+      current_user_id={@current_user.id}
+      share={@share}
+    />
+  </.modal>
 
   <!-- Add-item modal -->
   <.modal

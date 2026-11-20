@@ -379,7 +379,8 @@ defmodule Mehungry.Moderation do
 
   @doc """
   `blocker` blocks user `blocked_id`: they stop seeing that user's recipes and
-  comments, and any follow between the two (either direction) is removed.
+  comments, any follow between the two (either direction) is removed, and
+  neither stays on a shopping list the other owns.
   Idempotent. `{:error, :cannot_block_yourself}` / `{:error, :not_found}`.
   """
   def block_user(%User{id: id}, id), do: {:error, :cannot_block_yourself}
@@ -396,6 +397,9 @@ defmodule Mehungry.Moderation do
             (f.user_id == ^blocker_id and f.follow_id == ^blocked_id) or
               (f.user_id == ^blocked_id and f.follow_id == ^blocker_id)
       )
+
+      # Neither stays on a shopping list the other owns.
+      Mehungry.Inventory.Sharing.handle_block(blocker_id, blocked_id)
 
       :ok
     else

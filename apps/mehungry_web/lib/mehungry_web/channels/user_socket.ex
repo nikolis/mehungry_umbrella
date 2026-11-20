@@ -8,6 +8,7 @@ defmodule MehungryWeb.UserSocket do
   channel("recipe:*", MehungryWeb.RecipeChannel)
   channel("user:*", MehungryWeb.UserChannel)
   channel("meal_plan:*", MehungryWeb.MealPlanChannel)
+  channel("basket:*", MehungryWeb.BasketChannel)
 
   # The mobile client connects with `params: {token: "<bearer>"}` (the same
   # base64 session token used for REST). A valid token assigns `:user_id`;

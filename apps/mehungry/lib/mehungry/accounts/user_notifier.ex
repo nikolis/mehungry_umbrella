@@ -467,6 +467,70 @@ defmodule Mehungry.Accounts.UserNotifier do
     deliver(recipient, "#{professional_name} invited you to join Mehungry", text, html)
   end
 
+  @doc """
+  Invite someone to share a shopping list. `inviter_name` and `basket_title`
+  personalise the copy; `url` is the single-use `/basket/invitations/:token`
+  link (it asks the recipient to sign in or create an account first). `locale`
+  ("en"/"el") selects the language. See `docs/features/shared_basket.md`.
+  """
+  def deliver_basket_invitation(recipient, inviter_name, basket_title, url, locale \\ "en")
+
+  def deliver_basket_invitation(recipient, inviter_name, basket_title, url, "el") do
+    text = """
+    Γεια σας,
+
+    Ο/Η #{inviter_name} σας προσκάλεσε να μοιραστείτε τη λίστα αγορών «#{basket_title}» στο Mehungry. Όσοι τη μοιράζονται βλέπουν τα ίδια προϊόντα και τα σημειώνουν ζωντανά.
+
+    Ανοίξτε την πρόσκληση εδώ (ισχύει για μία χρήση, για 7 ημέρες):
+
+    #{url}
+    """
+
+    html =
+      html_layout(
+        "Πρόσκληση σε λίστα αγορών",
+        "#{html_escape(inviter_name)} θέλει να μοιραστεί μια λίστα μαζί σας",
+        "Γεια σας,",
+        "Ο/Η <strong style=\"color:#F4EEDD;\">#{html_escape(inviter_name)}</strong> σας προσκάλεσε " <>
+          "να μοιραστείτε τη λίστα αγορών <strong style=\"color:#F4EEDD;\">" <>
+          "#{html_escape(basket_title)}</strong>. Όσοι τη μοιράζονται βλέπουν τα ίδια προϊόντα " <>
+          "και τα σημειώνουν ζωντανά.",
+        "Άνοιγμα πρόσκλησης",
+        url,
+        "Ο σύνδεσμος ισχύει για μία χρήση και λήγει σε 7 ημέρες. Αν δεν περιμένατε αυτή την πρόσκληση, αγνοήστε το μήνυμα.",
+        "el"
+      )
+
+    deliver(recipient, "#{inviter_name}: πρόσκληση σε λίστα αγορών", text, html)
+  end
+
+  def deliver_basket_invitation(recipient, inviter_name, basket_title, url, _locale) do
+    text = """
+    Hi there,
+
+    #{inviter_name} invited you to share the shopping list "#{basket_title}" on Mehungry. Everyone on a shared list sees the same items and ticks them off live.
+
+    Open the invitation here (it works once, for 7 days):
+
+    #{url}
+    """
+
+    html =
+      html_layout(
+        "Shopping list invitation",
+        "#{html_escape(inviter_name)} wants to share a list with you",
+        "Hi there,",
+        "<strong style=\"color:#F4EEDD;\">#{html_escape(inviter_name)}</strong> invited you to share " <>
+          "the shopping list <strong style=\"color:#F4EEDD;\">#{html_escape(basket_title)}</strong>. " <>
+          "Everyone on a shared list sees the same items and ticks them off live.",
+        "Open invitation",
+        url,
+        "This link works once and expires in 7 days. If you weren't expecting this invitation, you can ignore this email."
+      )
+
+    deliver(recipient, "#{inviter_name} invited you to share a shopping list", text, html)
+  end
+
   # ── Appointment notifications ────────────────────────────────────────────────
 
   @doc """

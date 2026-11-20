@@ -21,7 +21,13 @@ defmodule Mehungry.Notifications.Notification do
   # (`Mehungry.Moderation.remove_content/2`). No actor and no subject: the
   # content is gone and the reporter is never revealed. `data` carries
   # `target_type`, `reason` and a short `preview`.
-  @types ~w(follow comment comment_answer ai_ready invitation content_removed)
+  #
+  # `basket_invitation` — someone invited the recipient to share a shopping list
+  # (subject `basket_invitation`/<invitation id>; `data.basket_title`).
+  # `basket_joined` — someone accepted the recipient's invitation (subject
+  # `basket`/<basket id>). See `docs/features/shared_basket.md`.
+  @types ~w(follow comment comment_answer ai_ready invitation content_removed
+            basket_invitation basket_joined)
 
   schema "notifications" do
     field :type, :string
