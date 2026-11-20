@@ -62,23 +62,24 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       {result, acc}
     end
 
+    # One pass, retried once with a firmer instruction if the model answers in
+    # prose instead of calling submit_plan (MealPlanCore.run_until_submitted/2).
     result =
-      Agent.run(
-        system_prompt(preferences, acc),
-        "Draft a 7-day meal plan for this client. Preferences: #{preferences}",
-        tool_defs(),
-        handler,
-        acc,
-        telemetry_metadata: %{agent: "nutritionist_meal_plan"},
-        model: MealPlanCore.model(),
-        max_tokens: 4096,
-        max_iterations: 16
-      )
+      MealPlanCore.run_until_submitted("nutritionist_meal_plan", fn extra ->
+        Agent.run(
+          system_prompt(preferences, acc),
+          "Draft a 7-day meal plan for this client. Preferences: #{preferences}" <> extra,
+          tool_defs(),
+          handler,
+          acc,
+          telemetry_metadata: %{agent: "nutritionist_meal_plan"},
+          model: MealPlanCore.model(),
+          max_tokens: 4096,
+          max_iterations: 16
+        )
+      end)
 
     case result do
-      {:ok, _summary, %{submitted: nil}} ->
-        {:error, :no_plan_submitted}
-
       {:ok, summary, %{submitted: %{entries: entries, rationale: rationale}, guards: guards}} ->
         {:ok,
          %{
@@ -98,7 +99,10 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
   with the result (or the failure), so a filtered-down catalog is never a mystery.
   """
   def enforced_avoid_terms(professional_id, client_id) do
-    professional_id |> new_acc(client_id) |> Map.fetch!(:guards) |> MealPlanCore.enforced_avoid_terms()
+    professional_id
+    |> new_acc(client_id)
+    |> Map.fetch!(:guards)
+    |> MealPlanCore.enforced_avoid_terms()
   end
 
   @doc "Monday of the current week — the default plan anchor."

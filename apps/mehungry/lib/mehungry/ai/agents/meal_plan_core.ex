@@ -67,7 +67,8 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       catalog: Keyword.fetch!(opts, :catalog),
       ingredient_owner_id: Keyword.get(opts, :ingredient_owner_id),
       avoid_terms: avoid_terms,
-      avoid_word_terms: (opts |> Keyword.get(:avoid_word_terms, []) |> free_text_terms()) -- avoid_terms,
+      avoid_word_terms:
+        (opts |> Keyword.get(:avoid_word_terms, []) |> free_text_terms()) -- avoid_terms,
       avoid_ingredient_ids: opts |> Keyword.get(:avoid_ingredient_ids, []) |> MapSet.new(),
       diet_mode: Keyword.get(opts, :diet_mode),
       required_tags: opts |> Keyword.get(:required_tags, []) |> normalize_terms()
@@ -845,6 +846,55 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       unit_selection
     else
       gram_units() |> List.first() |> then(&(&1 && &1.unit_selection))
+    end
+  end
+
+  # ── submit retry ──────────────────────────────────────────────────────────────
+
+  @firm_submit_instruction "\n\nIMPORTANT: Do not reply with prose, questions, or a summary. " <>
+                             "Use the search tools to find real recipes and ingredients, then " <>
+                             "finish by calling submit_plan with the plan — calling submit_plan " <>
+                             "is the ONLY way to complete this task. If the preferences are " <>
+                             "vague, make reasonable choices instead of asking."
+
+  @doc """
+  Runs a meal-plan agent pass and, if it ends without a plan in `acc.submitted`
+  (the model answered in prose — a clarifying question, a description, a
+  refusal), logs what it said and retries **once** with a firmer instruction
+  appended to the user message — the same safety net `RecipeAgent` uses.
+
+  `run_fun` receives the extra instruction (`""` on the first pass) and returns
+  the `AI.Agent.run/6` result. Returns that result, or
+  `{:error, :no_plan_submitted}` when neither pass submitted. Emits
+  `[:mehungry, :ai, :agent, :no_submit_retry]` (tagged `agent`) on a retry.
+  """
+  def run_until_submitted(agent, run_fun) when is_function(run_fun, 1) do
+    case run_fun.("") do
+      {:ok, text, %{submitted: nil}} ->
+        Logger.warning(
+          "MealPlanCore[#{agent}]: run ended without submit_plan; retrying once. " <>
+            "Model said: " <> Mehungry.AI.Agent.excerpt(text)
+        )
+
+        :telemetry.execute([:mehungry, :ai, :agent, :no_submit_retry], %{count: 1}, %{
+          agent: agent
+        })
+
+        case run_fun.(@firm_submit_instruction) do
+          {:ok, text, %{submitted: nil}} ->
+            Logger.warning(
+              "MealPlanCore[#{agent}]: retry also ended without submit_plan. " <>
+                "Model said: " <> Mehungry.AI.Agent.excerpt(text)
+            )
+
+            {:error, :no_plan_submitted}
+
+          other ->
+            other
+        end
+
+      other ->
+        other
     end
   end
 

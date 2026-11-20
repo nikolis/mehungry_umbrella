@@ -58,21 +58,24 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
       submitted: nil
     }
 
+    # One pass, retried once with a firmer instruction if the model answers in
+    # prose instead of calling submit_plan (MealPlanCore.run_until_submitted/2).
     result =
-      Agent.run(
-        system_prompt(preferences, start_date, guards),
-        initial_message(preferences, start_date),
-        tool_defs(),
-        &handle_tool/3,
-        acc,
-        telemetry_metadata: %{agent: "user_meal_plan"},
-        model: MealPlanCore.model(),
-        max_tokens: 4096,
-        max_iterations: 14
-      )
+      MealPlanCore.run_until_submitted("user_meal_plan", fn extra ->
+        Agent.run(
+          system_prompt(preferences, start_date, guards),
+          initial_message(preferences, start_date) <> extra,
+          tool_defs(),
+          &handle_tool/3,
+          acc,
+          telemetry_metadata: %{agent: "user_meal_plan"},
+          model: MealPlanCore.model(),
+          max_tokens: 4096,
+          max_iterations: 14
+        )
+      end)
 
     case result do
-      {:ok, _text, %{submitted: nil}} -> {:error, :no_plan_submitted}
       {:ok, _text, %{submitted: %{entries: entries}}} -> {:ok, entries}
       {:error, reason} -> {:error, reason}
     end

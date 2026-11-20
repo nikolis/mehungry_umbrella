@@ -136,6 +136,16 @@ pure accumulator (no process state). `UserMealPlanAgent.run/4` returns
 failure. Config: `max_tokens: 4096`, `max_iterations` 14 / 16, telemetry-tagged
 `agent: "user_meal_plan"` / `"nutritionist_meal_plan"`.
 
+**One submit retry.** A run that ends without calling `submit_plan` — the model
+answered in prose (a clarifying question, a description, a refusal) — is logged
+with an excerpt of what the model said and **retried once** with a firmer
+instruction appended to the user message (`MealPlanCore.run_until_submitted/2`,
+the same safety net `RecipeAgent` uses; emits `no_submit_retry` tagged with the
+agent). Only if the retry also ends without a plan does the run fail with
+`:no_plan_submitted`. Agent errors (`max_iterations`, API failures) are not
+retried. *(Added 2026-11-20 after a mobile run ended in 2.7s with one prose
+turn and no tool calls.)*
+
 **There is no fallback pipeline.** The earlier single-shot "legacy" generator was
 removed: it ignored the blueprint, the diet and the avoid list, and drew from
 every user's recipes. A failed run now fails, with a readable message

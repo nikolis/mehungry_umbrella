@@ -94,6 +94,36 @@ defmodule Mehungry.AI.AgentTest do
     assert_receive {^stop_ref, %{iterations: 3}, %{outcome: "max_iterations"}}
   end
 
+  test "a refusal is reported as its own outcome, not a clean end_turn" do
+    stop_ref = attach([:mehungry, :ai, :agent, :run, :stop])
+
+    script([
+      %{stop_reason: "refusal", content: [%{"type" => "text", "text" => "I can't help"}]}
+    ])
+
+    assert {:ok, "I can't help", %{}} =
+             Agent.run("sys", "go", [], fn _n, _i, acc -> {%{}, acc} end, %{},
+               telemetry_metadata: %{agent: "user_meal_plan"}
+             )
+
+    assert_receive {^stop_ref, %{iterations: 0}, %{agent: "user_meal_plan", outcome: "refusal"}}
+  end
+
+  test "an unknown stop_reason gets a bounded outcome label" do
+    stop_ref = attach([:mehungry, :ai, :agent, :run, :stop])
+    script([%{stop_reason: "something_new", content: []}])
+
+    assert {:ok, _, _} = Agent.run("sys", "go", [], fn _n, _i, acc -> {%{}, acc} end, %{})
+    assert_receive {^stop_ref, _m, %{outcome: "other_stop"}}
+  end
+
+  test "excerpt/2 collapses whitespace and caps length" do
+    assert Agent.excerpt("  a\n\n b  ") == "a b"
+    assert Agent.excerpt(nil) == "(no text)"
+    assert Agent.excerpt("") == "(no text)"
+    assert Agent.excerpt(String.duplicate("x", 20), 5) == "xxxxx…"
+  end
+
   # Forwards a telemetry event to the test process; returns the correlation ref.
   defp attach(event) do
     ref = make_ref()

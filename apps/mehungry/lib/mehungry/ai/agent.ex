@@ -79,7 +79,9 @@ defmodule Mehungry.AI.Agent do
 
   Emits `[:mehungry, :ai, :agent, :run, :start | :stop]` (measurements
   `duration`, `iterations`; metadata `agent`, `model`, `outcome` — one of
-  `end_turn` / `max_iterations` / `max_tokens` / `error`) and, per tool call,
+  `end_turn` / `max_iterations` / `max_tokens` / `error`, or the API's own
+  `stop_reason` (e.g. `refusal`) when a turn ends any other way, so a refusal is
+  never counted as a clean finish) and, per tool call,
   `[:mehungry, :ai, :agent, :tool, :start | :stop]` (metadata `tool`, `agent`,
   `status`). See `MehungryWeb.PromEx.AiPlugin`.
   """
@@ -108,29 +110,32 @@ defmodule Mehungry.AI.Agent do
       meta
     )
 
-    {result, iterations} = loop(messages, handler, context, request_base, 0, max_iter, meta)
+    {result, iterations, stop_reason} =
+      loop(messages, handler, context, request_base, 0, max_iter, meta)
 
     :telemetry.execute(
       [:mehungry, :ai, :agent, :run, :stop],
       %{duration: System.monotonic_time() - start, iterations: iterations},
-      Map.put(meta, :outcome, outcome(result))
+      Map.put(meta, :outcome, outcome(result, stop_reason))
     )
 
     result
   end
 
-  defp outcome({:ok, _text, _acc}), do: "end_turn"
-  defp outcome({:error, :max_iterations_reached}), do: "max_iterations"
-  defp outcome({:error, :max_tokens_reached}), do: "max_tokens"
-  defp outcome({:error, _}), do: "error"
+  # A successful return carries the API's stop_reason ("end_turn", or e.g.
+  # "refusal" / "stop_sequence"), so an unusual ending stays visible per outcome.
+  defp outcome({:ok, _text, _acc}, stop_reason), do: stop_reason
+  defp outcome({:error, :max_iterations_reached}, _), do: "max_iterations"
+  defp outcome({:error, :max_tokens_reached}, _), do: "max_tokens"
+  defp outcome({:error, _}, _), do: "error"
 
   # ── loop ─────────────────────────────────────────────────────────────────────
 
-  # Returns `{result, iterations}` so run/6 can report loop depth as a telemetry
-  # measurement (are we brushing the max_iterations ceiling?).
+  # Returns `{result, iterations, stop_reason}` so run/6 can report loop depth
+  # (are we brushing the max_iterations ceiling?) and how the run ended.
   defp loop(_messages, _handler, _acc, _req, max, max, _meta) do
     Logger.warning("AI.Agent: reached max_iterations (#{max}), stopping")
-    {{:error, :max_iterations_reached}, max}
+    {{:error, :max_iterations_reached}, max, nil}
   end
 
   defp loop(messages, handler, acc, req_base, iteration, max_iter, meta) do
@@ -138,7 +143,7 @@ defmodule Mehungry.AI.Agent do
 
     case client().request(request) do
       {:ok, %{stop_reason: "end_turn", content: content}} ->
-        {{:ok, Mehungry.AI.Client.text_from(%{content: content}), acc}, iteration}
+        {{:ok, Mehungry.AI.Client.text_from(%{content: content}), acc}, iteration, "end_turn"}
 
       {:ok, %{stop_reason: "tool_use", content: content}} ->
         Logger.debug("AI.Agent: iteration #{iteration} — executing tool calls")
@@ -156,14 +161,20 @@ defmodule Mehungry.AI.Agent do
           "AI.Agent: stop_reason max_tokens — increase max_tokens or reduce prompt size"
         )
 
-        {{:error, :max_tokens_reached}, iteration}
+        {{:error, :max_tokens_reached}, iteration, nil}
 
       {:ok, %{stop_reason: stop, content: content}} ->
-        Logger.warning("AI.Agent: unexpected stop_reason #{inspect(stop)}")
-        {{:ok, Mehungry.AI.Client.text_from(%{content: content}), acc}, iteration}
+        text = Mehungry.AI.Client.text_from(%{content: content})
+
+        Logger.warning(
+          "AI.Agent[#{meta.agent}]: unexpected stop_reason #{inspect(stop)} — " <>
+            excerpt(text)
+        )
+
+        {{:ok, text, acc}, iteration, stop_outcome(stop)}
 
       {:error, reason} ->
-        {{:error, reason}, iteration}
+        {{:error, reason}, iteration, nil}
     end
   end
 
@@ -203,6 +214,27 @@ defmodule Mehungry.AI.Agent do
   # network with canned tool_use/end_turn responses (`:ai_client` key); defaults
   # to the real Mehungry.AI.Client.
   defp client, do: Application.get_env(:mehungry, :ai_client, Mehungry.AI.Client)
+
+  # Bounded telemetry label for an unexpected stop_reason (the API's set is small,
+  # but never let an arbitrary value become a Prometheus label).
+  defp stop_outcome(stop) when stop in ["refusal", "stop_sequence", "pause_turn"], do: stop
+  defp stop_outcome(_), do: "other_stop"
+
+  @doc """
+  A log-safe excerpt of model text: whitespace collapsed, capped at `max` chars.
+  """
+  def excerpt(text, max \\ 500)
+  def excerpt(nil, _max), do: "(no text)"
+
+  def excerpt(text, max) when is_binary(text) do
+    text = text |> String.replace(~r/\s+/, " ") |> String.trim()
+
+    cond do
+      text == "" -> "(no text)"
+      String.length(text) > max -> String.slice(text, 0, max) <> "…"
+      true -> text
+    end
+  end
 
   defp put_if_present(map, _key, nil), do: map
   defp put_if_present(map, key, value), do: Map.put(map, key, value)

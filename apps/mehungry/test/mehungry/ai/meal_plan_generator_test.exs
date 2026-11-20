@@ -170,12 +170,19 @@ defmodule Mehungry.AI.MealPlanGeneratorTest do
       assert {:error, "script exhausted"} = ScriptedClient.request(%{})
     end
 
-    test "a run that never submits a plan is an error", %{user: user} do
-      ScriptedClient.script([ScriptedClient.end_turn("I could not find anything.")])
+    test "a run that never submits a plan is retried once, then is an error", %{user: user} do
+      ScriptedClient.script([
+        ScriptedClient.end_turn("I could not find anything."),
+        ScriptedClient.end_turn("Still nothing.")
+      ])
+
       on_exit(&ScriptedClient.reset/0)
 
       assert {:error, :no_plan_submitted} =
                MealPlanGenerator.generate_entries("anything", @monday, user.id, nil)
+
+      # Exactly two passes: the original and one firmer retry.
+      assert {:error, "script exhausted"} = ScriptedClient.request(%{})
     end
   end
 
