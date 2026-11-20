@@ -1,0 +1,51 @@
+# Mehungry monitoring stack — Grafana + Prometheus on the LAN box (192.168.1.53).
+# Secrets come from ./.env (never committed; see .env.example). See README.md.
+name: mehungry-monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    restart: unless-stopped
+    # Prometheus can't expand env vars in its config, so render the config and
+    # the credential files into a tmpfs at start, then exec the real binary.
+    entrypoint: ["/bin/sh", "/etc/prometheus/entrypoint.sh"]
+    environment:
+      METRICS_API_TOKEN: ${METRICS_API_TOKEN:-}
+      SUPABASE_PROJECT_REF: ${SUPABASE_PROJECT_REF:-unset}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+    tmpfs:
+      - /secrets:uid=65534,gid=65534,mode=0700
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090" # debugging only; reach it over an SSH tunnel
+
+  grafana:
+    image: grafana/grafana:13.3.1
+    restart: unless-stopped
+    depends_on: [prometheus]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_SERVER_ROOT_URL: http://192.168.1.53:3000
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_SYNC: grafana-sentry-datasource
+      # Expanded inside provisioning/datasources/datasources.yml
+      FLY_ORG_SLUG: ${FLY_ORG_SLUG:-personal}
+      FLY_PROM_TOKEN: ${FLY_PROM_TOKEN:-}
+      SENTRY_URL: ${SENTRY_URL:-https://de.sentry.io}
+      SENTRY_ORG_SLUG: ${SENTRY_ORG_SLUG:-}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+
+volumes:
+  prometheus-data:
+  grafana-data:

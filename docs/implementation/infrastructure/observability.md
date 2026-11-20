@@ -69,11 +69,15 @@ Raw events:
 
 - `[:mehungry, :ai, :agent, :run, :start | :stop]` — `duration` + `iterations`
   measurements; `:stop` metadata `outcome` ∈ `end_turn` / `max_iterations` /
-  `max_tokens` / `error` (the reliability signal).
+  `max_tokens` / `error`, or — when a turn ends with any other API `stop_reason`
+  — `refusal` / `stop_sequence` / `pause_turn` / `other_stop` (bounded), so a
+  refusal is never counted as a clean `end_turn` (the reliability signal).
 - `[:mehungry, :ai, :agent, :tool, :start | :stop]` — per tool call, metadata
   `tool`, `agent`, `status` (`ok` / `error` when a handler raises).
-- `[:mehungry, :ai, :agent, :no_submit_retry]` — RecipeAgent runs re-prompted
-  because the model finished without calling `submit_recipe`.
+- `[:mehungry, :ai, :agent, :no_submit_retry]` — runs re-prompted because the
+  model finished without calling its submit tool: `RecipeAgent` (`submit_recipe`)
+  and both meal-plan agents (`submit_plan`, via
+  `MealPlanCore.run_until_submitted/2`), tagged `agent`.
 - `[:mehungry, :ai, :client, :request, :stop]` — Anthropic API `duration` +
   `input_tokens` / `output_tokens`, metadata `model`, `status` (cost/latency).
 
@@ -91,10 +95,20 @@ call/latency by tool, and token/latency by model. Token cost is attributed by
 `model` only — the client layer doesn't know which agent called it; per-agent
 token attribution would need the loop to thread `usage` back (future work).
 
+### Grafana + Prometheus stack (LAN box)
+
+Metric history and dashboards live in a self-hosted Grafana + Prometheus stack on
+`192.168.1.53`, defined in `ops/monitoring/` (see its `README.md`). It scrapes
+`GET /metrics` per Fly machine, reads Fly platform metrics from Fly's hosted
+Prometheus, scrapes the Supabase project metrics endpoint, and shows mobile-app
+(Android + iOS) errors through the Sentry datasource. The dashboards there —
+including `ai_agents_dashboard.json` and the rendered PromEx set — are
+file-provisioned, so no manual import is needed.
+
 ### 3. What is deliberately absent
 
-- No persistent metric history (LiveDashboard is live-only; scrape into an external
-  Prometheus/Grafana if you need retention).
+- No in-app metric history (LiveDashboard is live-only; retention is the external
+  Prometheus above, 90 days).
 - No in-app error tracking (no Sentry either — errors surface in logs).
 - No alerting.
 

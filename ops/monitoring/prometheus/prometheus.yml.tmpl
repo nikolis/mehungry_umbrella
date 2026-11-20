@@ -1,0 +1,63 @@
+# Rendered by entrypoint.sh (only __SUPABASE_PROJECT_REF__ is substituted).
+global:
+  scrape_interval: 30s
+  scrape_timeout: 20s
+
+scrape_configs:
+  # --- Mehungry backend (PromEx, token-guarded GET /metrics) -----------------
+  # The public hostname load-balances across the Fly machines, so there is one
+  # job per machine, pinned with Fly's `fly-force-instance-id` request header.
+  # All of them are relabelled to job="m3hungry"; `instance` is the machine name.
+  # UPDATE THIS LIST when a machine is created/destroyed (`fly machines list`).
+  - job_name: m3hungry-proud-sea-9629
+    scheme: https
+    metrics_path: /metrics
+    # MetricsController sends "text/plain; charset=version=0.0.4", which
+    # Prometheus 3 can't parse; tell it what the body is.
+    fallback_scrape_protocol: PrometheusText0.0.4
+    authorization:
+      credentials_file: /secrets/metrics_token
+    http_headers:
+      fly-force-instance-id:
+        values: ["6839324b24d358"]
+    static_configs:
+      - targets: ["m3hungry.fly.dev"]
+        labels: { instance: proud-sea-9629, machine_id: 6839324b24d358 }
+    relabel_configs:
+      - target_label: job
+        replacement: m3hungry
+
+  - job_name: m3hungry-dark-hill-9208
+    scheme: https
+    metrics_path: /metrics
+    # MetricsController sends "text/plain; charset=version=0.0.4", which
+    # Prometheus 3 can't parse; tell it what the body is.
+    fallback_scrape_protocol: PrometheusText0.0.4
+    authorization:
+      credentials_file: /secrets/metrics_token
+    http_headers:
+      fly-force-instance-id:
+        values: ["8ed9e14f395548"]
+    static_configs:
+      - targets: ["m3hungry.fly.dev"]
+        labels: { instance: dark-hill-9208, machine_id: 8ed9e14f395548 }
+    relabel_configs:
+      - target_label: job
+        replacement: m3hungry
+
+  # --- Supabase project metrics (Postgres, pooler, host) ---------------------
+  - job_name: supabase
+    scrape_interval: 60s
+    scheme: https
+    metrics_path: /customer/v1/privileged/metrics
+    params:
+      supabase_grafana: ["true"]
+    basic_auth:
+      username: service_role
+      password_file: /secrets/supabase_key
+    static_configs:
+      - targets: ["__SUPABASE_PROJECT_REF__.supabase.co"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

@@ -1,0 +1,386 @@
+{
+ "uid": "mehungry-sentry-mobile",
+ "title": "Mehungry \u2014 Mobile app errors (Sentry)",
+ "tags": [
+  "mehungry",
+  "sentry",
+  "mobile"
+ ],
+ "schemaVersion": 39,
+ "version": 1,
+ "time": {
+  "from": "now-7d",
+  "to": "now"
+ },
+ "refresh": "5m",
+ "timezone": "browser",
+ "templating": {
+  "list": []
+ },
+ "annotations": {
+  "list": []
+ },
+ "panels": [
+  {
+   "type": "timeseries",
+   "title": "Error events by platform",
+   "datasource": {
+    "type": "grafana-sentry-datasource",
+    "uid": "sentry"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "fillOpacity": 10,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "grafana-sentry-datasource",
+      "uid": "sentry"
+     },
+     "refId": "A",
+     "queryType": "eventsStats",
+     "projectIds": [],
+     "environments": [],
+     "eventsStatsQuery": "event.type:error",
+     "eventsStatsYAxis": [
+      "count()"
+     ],
+     "eventsStatsGroups": [
+      "os.name"
+     ],
+     "eventsStatsSort": "-count()",
+     "eventsStatsLimit": 10
+    }
+   ],
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 8
+   },
+   "id": 1
+  },
+  {
+   "type": "timeseries",
+   "title": "Error events by app release",
+   "datasource": {
+    "type": "grafana-sentry-datasource",
+    "uid": "sentry"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "fillOpacity": 10,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "grafana-sentry-datasource",
+      "uid": "sentry"
+     },
+     "refId": "A",
+     "queryType": "eventsStats",
+     "projectIds": [],
+     "environments": [],
+     "eventsStatsQuery": "event.type:error",
+     "eventsStatsYAxis": [
+      "count()"
+     ],
+     "eventsStatsGroups": [
+      "release"
+     ],
+     "eventsStatsSort": "-count()",
+     "eventsStatsLimit": 10
+    }
+   ],
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 12,
+    "h": 8
+   },
+   "id": 2
+  },
+  {
+   "type": "timeseries",
+   "title": "Android \u2014 errors by level",
+   "datasource": {
+    "type": "grafana-sentry-datasource",
+    "uid": "sentry"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "fillOpacity": 10,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "grafana-sentry-datasource",
+      "uid": "sentry"
+     },
+     "refId": "A",
+     "queryType": "eventsStats",
+     "projectIds": [],
+     "environments": [],
+     "eventsStatsQuery": "event.type:error os.name:Android",
+     "eventsStatsYAxis": [
+      "count()"
+     ],
+     "eventsStatsGroups": [
+      "level"
+     ],
+     "eventsStatsSort": "-count()",
+     "eventsStatsLimit": 10
+    }
+   ],
+   "gridPos": {
+    "x": 0,
+    "y": 8,
+    "w": 12,
+    "h": 8
+   },
+   "id": 3
+  },
+  {
+   "type": "timeseries",
+   "title": "iOS \u2014 errors by level",
+   "datasource": {
+    "type": "grafana-sentry-datasource",
+    "uid": "sentry"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "fillOpacity": 10,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "grafana-sentry-datasource",
+      "uid": "sentry"
+     },
+     "refId": "A",
+     "queryType": "eventsStats",
+     "projectIds": [],
+     "environments": [],
+     "eventsStatsQuery": "event.type:error os.name:iOS",
+     "eventsStatsYAxis": [
+      "count()"
+     ],
+     "eventsStatsGroups": [
+      "level"
+     ],
+     "eventsStatsSort": "-count()",
+     "eventsStatsLimit": 10
+    }
+   ],
+   "gridPos": {
+    "x": 12,
+    "y": 8,
+    "w": 12,
+    "h": 8
+   },
+   "id": 4
+  },
+  {
+   "type": "table",
+   "title": "Android \u2014 unresolved issues (most frequent)",
+   "datasource": {
+    "type": "grafana-sentry-datasource",
+    "uid": "sentry"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "grafana-sentry-datasource",
+      "uid": "sentry"
+     },
+     "refId": "A",
+     "queryType": "issues",
+     "projectIds": [],
+     "environments": [],
+     "issuesQuery": "is:unresolved os.name:Android",
+     "issuesSort": "freq",
+     "issuesLimit": 25
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 19,
+    "w": 12,
+    "h": 11
+   },
+   "id": 5
+  },
+  {
+   "type": "table",
+   "title": "iOS \u2014 unresolved issues (most frequent)",
+   "datasource": {
+    "type": "grafana-sentry-datasource",
+    "uid": "sentry"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "grafana-sentry-datasource",
+      "uid": "sentry"
+     },
+     "refId": "A",
+     "queryType": "issues",
+     "projectIds": [],
+     "environments": [],
+     "issuesQuery": "is:unresolved os.name:iOS",
+     "issuesSort": "freq",
+     "issuesLimit": 25
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 19,
+    "w": 12,
+    "h": 11
+   },
+   "id": 6
+  },
+  {
+   "type": "timeseries",
+   "title": "Accepted vs dropped events (quota)",
+   "datasource": {
+    "type": "grafana-sentry-datasource",
+    "uid": "sentry"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "fillOpacity": 10,
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "grafana-sentry-datasource",
+      "uid": "sentry"
+     },
+     "refId": "A",
+     "queryType": "statsV2",
+     "projectIds": [],
+     "statsCategory": [
+      "error"
+     ],
+     "statsFields": [
+      "sum(quantity)"
+     ],
+     "statsGroupBy": [
+      "outcome"
+     ],
+     "statsInterval": "1h",
+     "statsOutcome": [],
+     "statsReason": []
+    }
+   ],
+   "gridPos": {
+    "x": 0,
+    "y": 27,
+    "w": 24,
+    "h": 8
+   },
+   "id": 7
+  }
+ ]
+}

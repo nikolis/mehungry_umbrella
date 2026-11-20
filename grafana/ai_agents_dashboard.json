@@ -27,8 +27,9 @@
         "name": "agent",
         "type": "query",
         "datasource": "${DS_PROMETHEUS}",
-        "query": "label_values(mehungry_web_prom_ex_ai_agent_run_total, agent)",
+        "query": "label_values({__name__=~\"mehungry_web_prom_ex_ai_agent_(run|tool)_total\"}, agent)",
         "includeAll": true,
+        "allValue": ".*",
         "multi": true,
         "refresh": 2
       }
@@ -84,13 +85,13 @@
     },
     {
       "type": "timeseries",
-      "title": "RecipeAgent no-submit retries (per min)",
+      "title": "No-submit retries by agent (per min)",
       "datasource": "${DS_PROMETHEUS}",
       "gridPos": { "h": 8, "w": 6, "x": 18, "y": 1 },
       "targets": [
         {
-          "expr": "sum(rate(mehungry_web_prom_ex_ai_agent_no_submit_retry_total[5m]) * 60)",
-          "legendFormat": "no_submit retries"
+          "expr": "sum by (agent) (rate(mehungry_web_prom_ex_ai_agent_no_submit_retry_total{agent=~\"$agent\"}[5m]) * 60)",
+          "legendFormat": "{{agent}}"
         }
       ]
     },

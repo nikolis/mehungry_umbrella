@@ -1,0 +1,40 @@
+apiVersion: 1
+
+datasources:
+  # Local Prometheus: backend PromEx metrics + Supabase project metrics.
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 30s
+      httpMethod: POST
+
+  # Fly.io hosted Prometheus: platform metrics (CPU, memory, edge HTTP).
+  - name: Fly
+    uid: fly
+    type: prometheus
+    access: proxy
+    url: https://api.fly.io/prometheus/${FLY_ORG_SLUG}
+    editable: false
+    jsonData:
+      timeInterval: 15s
+      httpMethod: GET
+      httpHeaderName1: Authorization
+    secureJsonData:
+      httpHeaderValue1: ${FLY_PROM_TOKEN}
+
+  # Sentry: mobile app (Android + iOS) issues and event stats.
+  - name: Sentry
+    uid: sentry
+    type: grafana-sentry-datasource
+    access: proxy
+    editable: false
+    jsonData:
+      url: ${SENTRY_URL}
+      orgSlug: ${SENTRY_ORG_SLUG}
+    secureJsonData:
+      authToken: ${SENTRY_AUTH_TOKEN}
