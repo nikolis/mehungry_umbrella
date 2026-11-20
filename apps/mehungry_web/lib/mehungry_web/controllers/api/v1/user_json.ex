@@ -33,7 +33,11 @@ defmodule MehungryWeb.Api.V1.UserJSON do
 
   @doc "Minimal public profile (spec §6 `GET /users/:id`)."
   def public(%{user: user, profile: profile, counts: counts} = args) do
-    data(Map.put(public_map(user, profile, counts), :following, Map.get(args, :following, false)))
+    data(
+      public_map(user, profile, counts)
+      |> Map.put(:following, Map.get(args, :following, false))
+      |> Map.put(:blocked_by_me, Map.get(args, :blocked_by_me, false))
+    )
   end
 
   @doc "Author sub-object embedded in recipe cards/detail."

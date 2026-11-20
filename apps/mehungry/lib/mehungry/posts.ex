@@ -151,8 +151,14 @@ defmodule Mehungry.Posts do
     penalty = ai_content_penalty()
     user_pref_table = Users.calculate_user_pref_table(user)
     follow_ids = Users.list_user_follows(user) |> Enum.map(& &1.follow_id)
+    blocked_ids = Mehungry.Moderation.blocked_ids(user)
 
-    from(p in Post, order_by: [desc: p.inserted_at, desc: p.id], limit: @feed_candidate_window)
+    from(p in Post,
+      # Posts by users this viewer blocked never enter the candidate window.
+      where: p.user_id not in ^blocked_ids,
+      order_by: [desc: p.inserted_at, desc: p.id],
+      limit: @feed_candidate_window
+    )
     |> Repo.all()
     |> Repo.preload([
       :user,

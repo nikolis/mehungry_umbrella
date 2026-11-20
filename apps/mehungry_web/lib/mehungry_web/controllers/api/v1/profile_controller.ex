@@ -24,8 +24,10 @@ defmodule MehungryWeb.Api.V1.ProfileController do
 
       # This route is 🔓 but personalizes when a bearer token is present, so the
       # viewer may be anonymous (nil) — then they follow no one.
+      viewer = conn.assigns[:current_user]
+
       following =
-        case conn.assigns[:current_user] do
+        case viewer do
           %{id: viewer_id} -> UserContent.following?(viewer_id, user.id)
           _ -> false
         end
@@ -36,7 +38,8 @@ defmodule MehungryWeb.Api.V1.ProfileController do
           user: user,
           profile: profile,
           counts: counts_for(user),
-          following: following
+          following: following,
+          blocked_by_me: Mehungry.Moderation.blocked?(viewer, user.id)
         })
       )
     end
@@ -108,7 +111,12 @@ defmodule MehungryWeb.Api.V1.ProfileController do
   @doc "GET /api/v1/users/:id/recipes?type=created|saved — public grid."
   def user_recipes(conn, %{"id" => id} = params) do
     with {:ok, user} <- fetch_user(id) do
-      json(conn, %{data: recipe_cards(user, params["type"] || "created")})
+      # A viewer who blocked this user gets an empty grid (spec §20).
+      if Mehungry.Moderation.blocked?(conn.assigns[:current_user], user.id) do
+        json(conn, %{data: []})
+      else
+        json(conn, %{data: recipe_cards(user, params["type"] || "created")})
+      end
     end
   end
 

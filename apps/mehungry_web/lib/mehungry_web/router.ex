@@ -182,6 +182,12 @@ defmodule MehungryWeb.Router do
     post("/users/:id/follow", FollowController, :follow)
     delete("/users/:id/follow", FollowController, :unfollow)
 
+    # Moderation — report content, block users (spec §20).
+    post("/reports", ModerationController, :report)
+    post("/users/:id/block", ModerationController, :block)
+    delete("/users/:id/block", ModerationController, :unblock)
+    get("/me/blocks", ModerationController, :blocks)
+
     get("/ingredients/search", SearchController, :ingredients)
 
     get("/meals", MealController, :index)
@@ -362,6 +368,7 @@ defmodule MehungryWeb.Router do
       live("/maintenance", ProfessionalLive.MaintenanceLive, :index)
 
       live("/feedback", ProfessionalLive.FeedbackLive, :index)
+      live("/moderation", ProfessionalLive.ModerationLive, :index)
 
       live("/android-beta", ProfessionalLive.AndroidBetaLive, :index)
 

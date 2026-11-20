@@ -87,6 +87,9 @@ defmodule Mehungry.ObanWorkers.PushNotificationWorker do
       "invitation" ->
         {"New invitation", "#{actor} sent you an invitation"}
 
+      "content_removed" ->
+        {"Content removed", "Something you posted was removed for breaking our content rules"}
+
       _ ->
         {"M3Hungry", "You have a new notification"}
     end

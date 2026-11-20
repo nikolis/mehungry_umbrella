@@ -21,7 +21,11 @@ defmodule MehungryWeb.Api.V1.SearchController do
     query = params["q"] || ""
     lang = language(conn)
     {_q, result} = Food.search_recipe(query, lang)
-    recipes = recipes_from(result)
+    # Recipes by users the (optional) viewer blocked are left out (spec §20).
+    recipes =
+      result
+      |> recipes_from()
+      |> Mehungry.Moderation.reject_blocked(conn.assigns[:current_user], & &1.user_id)
 
     blueprint = BlueprintMatch.blueprint(conn, params)
     reports = BlueprintMatch.recipe_reports(blueprint, recipes)

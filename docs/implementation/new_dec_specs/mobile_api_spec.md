@@ -77,6 +77,7 @@ drives the client. A later cursor upgrade (`?before=<id>`) is noted per-endpoint
 | My nutritionist — client appointments (§18) | `Api.V1.AppointmentController` | `Professionals` |
 | My nutritionist — onboarding questionnaire (§18) | `Api.V1.ClientOnboardingController` | `Onboarding`, `Professionals` |
 | Self-tracking progress journal (§19) | `Api.V1.ProgressController` | `Mehungry.Progress` |
+| Moderation — report content, block users (§20) | `Api.V1.ModerationController` | `Mehungry.Moderation` |
 | Nutritionist portal — pro persona (§14) | `Api.V1.NutritionistController` | `Professionals`, `History` |
 
 Add a new pipeline + scope in `router.ex`:
@@ -470,7 +471,10 @@ skipped). Backed by `Mehungry.Notifications` + `PushNotificationWorker` → Expo
 ### `GET /api/v1/users/:id` 🔓 — public profile (avatar, alias, intro, counts, `following`).
 When a bearer token is sent, `following` reflects whether the viewer follows this
 user (always `false` for anonymous requests or when viewing yourself-unfollowed).
+`blocked_by_me` is `true` when the viewer has blocked this user (§20) — always
+`false` for anonymous requests.
 ### `GET /api/v1/users/:id/recipes` 🔓 `?type=created|saved` — grid for a profile.
+Returns `[]` for a viewer who has blocked this user (§20).
 ### `GET /api/v1/me/recipes` 🔒 `?tab=saved|created`
    — powers the Profile tab's sub-tabs seen in the web app.
 ### `PUT /api/v1/me/profile` 🔒 — edit profile
@@ -1619,6 +1623,91 @@ get("/shared/photos/:token", SharedPhotoController, :show)  # 302 → signed URL
 
 ---
 
+## 20. Moderation — report content, block users
+
+Required for user-generated content by App Store Guideline 1.2. Backed by
+`Mehungry.Moderation`; the admin reviews reports and blocks at
+`/professional/moderation`. All four routes are 🔒.
+
+Rules the server keeps:
+
+- The reported user is **never** told who reported them — no payload on any
+  user-facing route carries a reporter.
+- A block is **one-way and silent**: the blocker stops seeing the blocked
+  user's content; the blocked user is not told and still sees the blocker's.
+- Resolved reports are purged 12 months after resolution.
+- Deleting an account deletes its blocks (both directions), keeps the reports it
+  filed without a reporter, and closes the open reports against it.
+
+### `POST /api/v1/reports` 🔒
+
+```json
+{ "target_type": "comment", "target_id": 812, "reason": "harassment", "note": "optional, ≤ 1000 chars" }
+```
+
+- `target_type` — `recipe` | `comment` | `user`.
+- `reason` — `spam` | `harassment` | `sexual` | `dangerous_advice` | `other`.
+- `note` — optional free text, max 1000 characters.
+
+Response `201`:
+
+```json
+{ "data": { "id": 57, "status": "open" } }
+```
+
+- Reporting a target you already have an **open** report on returns that report
+  with `200` — no duplicate is stored, so the client can treat both as success.
+- `422` with `errors.fields` for an unknown `target_type` / `reason` or an
+  over-long `note`; `422` (`"cannot report yourself"`) for your own recipe,
+  comment or profile.
+- `404` when the target does not exist.
+
+The server stores the content's author and a text snapshot of the reported
+content (recipe title + description, comment text, or alias + bio) so a later
+edit or deletion does not erase what was reported.
+
+### `POST /api/v1/users/:id/block` 🔒 → `{ "data": { "blocked": true } }`
+
+Idempotent. Also removes any follow between the two users, in both directions.
+`422` (`"cannot block yourself"`) for your own id; `404` for an unknown user.
+
+### `DELETE /api/v1/users/:id/block` 🔒 → `{ "data": { "blocked": false } }`
+
+Idempotent.
+
+### `GET /api/v1/me/blocks` 🔒
+
+The users the caller has blocked, newest first:
+
+```json
+{ "data": [
+  { "id": 44, "alias": "Some cook", "avatar_url": null, "blocked_at": "2026-11-20T10:15:00Z" }
+] }
+```
+
+### What a block hides
+
+For a signed-in viewer, content authored by a user they blocked is left out of:
+
+| Surface | Route |
+| --- | --- |
+| Home feed | `GET /feed` |
+| Recipe comments | `GET /recipes/:recipe_id/comments` |
+| Recipe search | `GET /search` |
+| A profile's recipe grid | `GET /users/:id/recipes` → `[]` |
+
+`GET /users/:id` still answers for a blocked user, with `blocked_by_me: true`,
+so the client can show a "You blocked this user" state with an Unblock action.
+`GET /recipes/:id` is not filtered — a direct link still opens.
+
+**Realtime:** `comment_created` is broadcast to everyone on the recipe topic and
+is **not** filtered server-side. Clients must drop events whose `user.id` is in
+their `GET /me/blocks` list.
+
+Anonymous requests are never filtered.
+
+---
+
 ## 13. Phoenix Channels (real-time)
 
 Reuse the existing `MehungryWeb.UserSocket` (currently a no-op scaffold). Add
@@ -1810,6 +1899,11 @@ POST   /api/v1/me/invitations/:id/accept           POST /api/v1/me/invitations/:
 GET    /api/v1/me/appointments                      GET /api/v1/me/appointments/:id
 POST   /api/v1/me/appointments                      DELETE /api/v1/me/appointments/:id
 GET/PUT /api/v1/nutritionists/:professional_id/onboarding
+
+# Moderation (§20)
+POST   /api/v1/reports
+POST   /api/v1/users/:id/block                     DELETE /api/v1/users/:id/block
+GET    /api/v1/me/blocks
 
 # Self-tracking progress journal (§19)
 GET    /api/v1/me/progress/periods                  POST /api/v1/me/progress/periods

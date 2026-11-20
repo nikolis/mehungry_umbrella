@@ -17,7 +17,11 @@ defmodule Mehungry.Notifications.Notification do
 
   alias Mehungry.Accounts.User
 
-  @types ~w(follow comment comment_answer ai_ready invitation)
+  # `content_removed` — a moderator removed the recipient's recipe or comment
+  # (`Mehungry.Moderation.remove_content/2`). No actor and no subject: the
+  # content is gone and the reporter is never revealed. `data` carries
+  # `target_type`, `reason` and a short `preview`.
+  @types ~w(follow comment comment_answer ai_ready invitation content_removed)
 
   schema "notifications" do
     field :type, :string

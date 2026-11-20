@@ -236,7 +236,9 @@ config :mehungry, Oban,
        # hourly — release consultation card-holds before Stripe voids them (~7d)
        {"0 * * * *", Mehungry.ObanWorkers.AppointmentHoldExpiryWorker},
        # every 20 min — import connected nutritionists' Google Calendar busy times
-       {"*/20 * * * *", Mehungry.ObanWorkers.GoogleCalendarBusyImportWorker}
+       {"*/20 * * * *", Mehungry.ObanWorkers.GoogleCalendarBusyImportWorker},
+       # 3:15am UTC daily — delete moderation reports resolved over 12 months ago
+       {"15 3 * * *", Mehungry.ObanWorkers.ModerationPurgeWorker}
      ]}
   ],
   queues: [

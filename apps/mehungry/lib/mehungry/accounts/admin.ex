@@ -137,6 +137,11 @@ defmodule Mehungry.Accounts.Admin do
   def delete_user(%User{} = user) do
     uid = user.id
 
+    # Open moderation reports against this user have nothing left to review once
+    # the account (and its content) is gone; their `target_user_id` is nilified
+    # by the FK below, so close them while it still points here.
+    Mehungry.Moderation.close_reports_against(uid)
+
     # Collect all recipe IDs owned by the user
     recipe_ids =
       Repo.all(from r in Mehungry.Food.Recipe, where: r.user_id == ^uid, select: r.id)

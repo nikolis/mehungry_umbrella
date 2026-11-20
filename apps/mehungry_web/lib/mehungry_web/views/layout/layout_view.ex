@@ -245,6 +245,12 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-chat-bubble-left-ellipsis"
           label="Feedback"
         />
+        <.admin_link
+          href="/professional/moderation"
+          icon="hero-flag"
+          label="Moderation"
+          badge={Mehungry.Moderation.open_report_count()}
+        />
         <.admin_link href="/professional/ai-bot" icon="hero-cpu-chip" label="AI Bot" />
         <.admin_link
           href="/professional/android-beta"
@@ -489,6 +495,7 @@ defmodule MehungryWeb.LayoutView do
   attr :href, :string, required: true
   attr :icon, :string, required: true
   attr :label, :string, required: true
+  attr :badge, :integer, default: 0
 
   defp admin_link(assigns) do
     ~H"""
@@ -501,6 +508,12 @@ defmodule MehungryWeb.LayoutView do
         class="w-5 h-5 text-parchment-dim group-hover:text-paprika-soft transition flex-shrink-0"
       />
       {@label}
+      <span
+        :if={@badge > 0}
+        class="ml-auto text-xs font-semibold bg-paprika text-white px-2 py-0.5 rounded-full"
+      >
+        {@badge}
+      </span>
     </a>
     """
   end

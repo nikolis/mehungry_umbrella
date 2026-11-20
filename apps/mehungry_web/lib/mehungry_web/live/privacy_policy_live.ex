@@ -7,7 +7,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
   # upon in production, and the substantive risks (health claims, Art. 9 basis,
   # erasure cascade) in docs/implementation/legal/legal_review_2026-10.md remain open.
 
-  @last_updated "18 November 2026"
+  @last_updated "20 November 2026"
 
   @impl true
   def mount(_params, _session, socket) do
@@ -86,6 +86,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
             {"Profile & preferences", "Dietary preferences, diet type, survey answers, daily calorie target, and any health-condition badges you choose to opt into."},
             {"Content you create", "Recipes, comments, votes, posts, meal plans, shopping baskets, images and media you upload."},
             {"Nutritionist client records", "If you are (or are a client of) a nutritionist: intake data such as height, weight, BMI/BMR/TDEE, goals, free-text notes and consultation notes."},
+            {"Moderation records", "If you report a recipe, comment or user: what you reported, the reason you chose, any note you add, and a copy of the reported text as it was at that moment. If you block a user: the fact that you blocked them. The person you report or block is never told it was you."},
             {"Payment data", "Subscription tier and billing status. Card details are handled directly by Stripe — we do not store full card numbers."},
             {"Usage & device data", "If you accept analytics cookies, Google Analytics processes usage data (pages visited, referrer, approximate location, device/browser type). We ourselves keep only an anonymous daily session counter that stores no IP, cookie or identifier."},
             {"Crash & error diagnostics (mobile app)", "When the mobile app crashes or hits an unexpected error, we send a diagnostic report to our error-monitoring provider (Sentry): the app version, your device model and operating system, and a technical stack trace. Sentry derives an approximate, city-level location from your network connection. We configure Sentry so that it does not store your IP address and does not attach your name, email or account identity to the report."}
@@ -97,6 +98,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
           <.data_table rows={[
             {"Provide the service", "Performance of our contract with you (Art. 6(1)(b)) — accounts, recipes, meal plans, baskets, subscriptions."},
             {"Keep the service secure", "Legitimate interests (Art. 6(1)(f)) — fraud/abuse prevention, request-forgery protection, rate limiting."},
+            {"Moderate user content", "Legitimate interests (Art. 6(1)(f)) and our obligations as a hosting service — reviewing reports of objectionable content, removing it, and removing accounts that post it. Reports and blocks are visible only to our administrator. We look at who has been blocked only to identify accounts that many people have blocked."},
             {"Analytics & improvement", "Your consent (Art. 6(1)(a)) — collected via the cookie banner; you can withdraw it at any time."},
             {"Health-condition features & nutritionist records", "Your explicit consent (Art. 9(2)(a)) and/or provision of health care (Art. 9(2)(h)) — see section 4."},
             {"Marketing / beta invitations", "Your consent (Art. 6(1)(a)) — e.g. the trial/beta signup; you can unsubscribe from every email."},
@@ -169,6 +171,12 @@ defmodule MehungryWeb.PrivacyPolicyLive do
             <li>Account and content data: for as long as your account is active.</li>
             <li>Analytics: handled by Google Analytics under its own retention; we keep only an anonymous, non-identifying daily session counter.</li>
             <li>Billing and tax records: as required by applicable accounting/tax law.</li>
+            <li>
+              Moderation records: a report is deleted 12 months after we resolve it. A block lasts
+              until you remove it or either account is deleted. If you delete your account, reports
+              you filed are kept without your identity until they are resolved and then expire as
+              above.
+            </li>
             <li>
               When you delete your account, we delete or anonymise the personal data associated with
               it, except where we must retain certain records by law.

@@ -49,7 +49,13 @@ defmodule MehungryWeb.Api.V1.EngagementController do
   # ── comments ───────────────────────────────────────────────────────────────
 
   def comments(conn, %{"recipe_id" => recipe_id}) do
-    comments = Mehungry.Food.get_recipe_comments(to_int(recipe_id))
+    # 🔓 route: the viewer may be anonymous. A signed-in viewer does not see
+    # comments written by users they blocked (spec §20).
+    comments =
+      to_int(recipe_id)
+      |> Mehungry.Food.get_recipe_comments()
+      |> Mehungry.Moderation.reject_blocked(conn.assigns[:current_user], & &1.user_id)
+
     json(conn, data(Enum.map(comments, &comment_json/1)))
   end
 
