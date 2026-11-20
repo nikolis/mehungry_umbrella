@@ -19,6 +19,7 @@ defmodule MehungryWeb.Router do
     plug(:fetch_current_user)
     plug(MehungryWeb.Plugs.SetLocale)
     plug(MehungryWeb.Plugs.RedirectProProfile)
+    plug(MehungryWeb.Plugs.CanonicalFoodSlug)
   end
 
   pipeline :admin_browser do

@@ -43,6 +43,13 @@ name — e.g. the dead `/foods/Bear-black-` (comma dropped, trailing dash) that 
 old `name |> replace(" ", "-")` encoder produced and could never reverse — still
 resolves instead of 404ing. Private species stay unresolvable through both paths.
 
+Non-canonical slugs do not answer 200, though: `MehungryWeb.Plugs.CanonicalFoodSlug`
+(browser pipeline) **301s** any `/foods/:slug` or `/:locale/foods/:slug` whose slug
+`Food.species_slug/1` would rewrite (e.g. the pre-2026-11-17 indexed
+`/en/foods/Duck-(domesticated)` → `/en/foods/Duck-domesticated`) onto the clean
+slug, query string preserved. It is a pure string check with no DB lookup, so the
+tolerant lookup above now mostly serves the redirect's destination and the API.
+
 ## Relationships
 
 - `has_many :foundemental_foods` — the species ↔ ingredient curation (below)

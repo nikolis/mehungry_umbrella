@@ -606,6 +606,12 @@ items fixed in code (verified against a running server):
   cert and served full duplicate content; this makes consolidation a directive, not just a
   `rel=canonical` hint. (The `/` → `/welcome` hop stays a 302 — it is session/auth-dependent, so a
   301 would be incorrectly hard-cached.)
+- **Old food slugs → clean slug (2026-11-20):** `MehungryWeb.Plugs.CanonicalFoodSlug` (browser
+  pipeline) **301s** punctuated legacy `/foods/:slug` URLs (`/en/foods/Duck-(domesticated)`,
+  `/en/foods/Dates,-medjool`, `/en/foods/Cabbage--`) to the clean slug the shared
+  `Food.species_slug/1` encoder has emitted as canonical since 2026-11-17. Those 41 indexed URLs
+  carried ~9% of `/foods` impressions and were answering 200 + a `rel=canonical` hint to a
+  different URL; the 301 makes the move a directive so ranking signals transfer.
 - **Performance:** removed four **dead render-blocking CDN includes** loaded on every page —
   `toastui-calendar` (~222KB; its only consumer `Hooks.HiddenCalendar` is attached to zero
   templates), Font Awesome (~19KB; no `fa-` usage anywhere), `multi-select-tag`, and `select2`
