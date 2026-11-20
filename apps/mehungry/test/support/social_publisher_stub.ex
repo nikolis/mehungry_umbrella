@@ -1,6 +1,6 @@
 defmodule Mehungry.Social.PublisherStub do
   @moduledoc """
-  Test stand-in for `MehungryWeb.SocialMediaPublisher` (wired up via the
+  Test stand-in for `Mehungry.Social.Publisher` (wired up via the
   `:social_media_publisher` config key in `config/test.exs`).
 
   Tests control the result and observe calls through app config:
