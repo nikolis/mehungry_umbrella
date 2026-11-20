@@ -262,6 +262,11 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-rectangle-stack"
           label="Taxonomy"
         />
+        <.admin_link
+          href="/professional/recipe-meal-roles"
+          icon="hero-tag"
+          label="Meal roles"
+        />
         <.admin_link href="/professional/health" icon="hero-heart" label="Health" />
         <.admin_link
           href="/professional/ingredients/reconciliation"

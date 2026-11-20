@@ -15,6 +15,10 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       catalog search with the guards applied and per-serving calories attached.
     * **Provenance + validation** (`submit_plan_tool/2`, `validate_plan/7`) — a
       plan may only use ids the search tools returned this run.
+    * **Meal roles** (`Mehungry.Food.MealRoles`) — recipe search can be scoped to
+      a slot (`slot` input → only recipes whose roles fit it), every result shows
+      its roles, and `submit_plan` rejects a recipe whose roles don't fit its
+      slot (a meze as Dinner). Unclassified recipes always pass.
     * **Normalization** (`normalize_entries/2`) — the model's dated entries become
       calendar-independent entries (`day_index`, `meal_type`, resolved unit FKs).
 
@@ -26,7 +30,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   require Logger
 
   alias Mehungry.{Food, Repo, Search.RecipeVectorSearch}
-  alias Mehungry.Food.{Categories, IngredientPortion, Recipe}
+  alias Mehungry.Food.{Categories, IngredientPortion, MealRoleAssignments, MealRoles, Recipe}
   alias Mehungry.History.MealType
 
   import Ecto.Query, only: [from: 2]
@@ -305,7 +309,10 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       description:
         "Semantically search the available recipe catalog by natural language query. " <>
           "Returns matching recipes with their recipe_id, title, difficulty (1–3), servings, " <>
-          "and per-serving calories (use these to keep each day near the calorie target). " <>
+          "per-serving calories (use these to keep each day near the calorie target), and " <>
+          "meal roles (e.g. main, soup, side, meze, salad, breakfast, snack, dessert). " <>
+          "Pass `slot` to get only recipes that can fill that slot on their own — e.g. " <>
+          "slot 'Dinner' returns mains and meal soups, never a meze or side. " <>
           "Use descriptive phrases like 'light high-protein breakfast', " <>
           "'quick vegetarian lunch', or 'hearty Mediterranean dinner'. " <>
           "Call with different queries to find recipes for each meal slot type.",
@@ -316,6 +323,12 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
             type: "string",
             description:
               "Natural language query, e.g. 'light high-protein breakfast', 'quick vegetarian lunch', 'hearty Mediterranean dinner'"
+          },
+          slot: %{
+            type: "string",
+            enum: @slots,
+            description:
+              "The meal slot you are searching for. Only recipes whose meal roles fit that slot are returned."
           }
         },
         required: ["query"]
@@ -399,13 +412,19 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   Recipe search with the guards applied. Every returned id joins the `offered`
   provenance set; a filtered-out id never does.
   """
-  def search_recipes_tool(query, %{guards: guards, offered: offered} = acc) do
-    recipes = search_recipes(query, guards)
-    acc = %{acc | offered: Enum.reduce(recipes, offered, &MapSet.put(&2, &1.recipe_id))}
+  def search_recipes_tool(query, %{guards: guards, offered: offered} = acc, slot \\ nil) do
+    recipes = search_recipes(query, guards, slot)
+
+    acc = %{
+      acc
+      | offered: Enum.reduce(recipes, offered, &MapSet.put(&2, &1.recipe_id))
+    }
+
+    acc = remember_recipe_meta(acc, recipes)
 
     result =
       if recipes == [] do
-        %{found: false, message: "No recipes found for '#{query}'. Try a different query."}
+        %{found: false, message: no_recipes_message(query, slot)}
       else
         %{found: true, count: length(recipes), recipes: recipes}
       end
@@ -413,24 +432,49 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     {result, acc}
   end
 
+  defp no_recipes_message(query, slot) when slot in @slots do
+    "No recipes found for '#{query}' that can fill #{slot}. Try a different query " <>
+      "(searching with the slot only returns dishes that fit it)."
+  end
+
+  defp no_recipes_message(query, _slot),
+    do: "No recipes found for '#{query}'. Try a different query."
+
+  # Title + roles of every offered recipe, so submit_plan can check slot fit
+  # without another query.
+  defp remember_recipe_meta(acc, recipes) do
+    meta = Map.new(recipes, &{&1.recipe_id, %{title: &1.title, roles: &1.roles}})
+    Map.update(acc, :recipe_meta, meta, &Map.merge(&1, meta))
+  end
+
   @doc false
-  def search_recipes(query, guards) do
-    query
-    |> RecipeVectorSearch.search(catalog_opts(guards.catalog) ++ [limit: 20])
-    |> Enum.map(fn r ->
-      %{
-        recipe_id: r.id,
-        title: r.title,
-        difficulty: r.difficulty || 1,
-        servings: r.servings || 2,
-        calories: per_serving_calories(r)
-      }
-    end)
-    |> reject_avoided(guards.avoid_terms, & &1.title)
-    |> reject_avoided_words(guards.avoid_word_terms, & &1.title)
-    |> reject_off_diet_recipes(guards.diet_mode)
-    |> reject_without_required_tags(guards.required_tags)
-    |> reject_recipes_containing(guards.avoid_ingredient_ids)
+  def search_recipes(query, guards, slot \\ nil) do
+    roles = MealRoles.slot_roles(slot)
+
+    recipes =
+      query
+      |> RecipeVectorSearch.search(catalog_opts(guards.catalog) ++ [limit: 20, meal_roles: roles])
+      |> Enum.map(fn r ->
+        %{
+          recipe_id: r.id,
+          title: r.title,
+          difficulty: r.difficulty || 1,
+          servings: r.servings || 2,
+          calories: per_serving_calories(r)
+        }
+      end)
+      |> reject_avoided(guards.avoid_terms, & &1.title)
+      |> reject_avoided_words(guards.avoid_word_terms, & &1.title)
+      |> reject_off_diet_recipes(guards.diet_mode)
+      |> reject_without_required_tags(guards.required_tags)
+      |> reject_recipes_containing(guards.avoid_ingredient_ids)
+
+    roles_by_id = MealRoleAssignments.roles_for(Enum.map(recipes, & &1.recipe_id))
+
+    recipes
+    |> Enum.map(&Map.put(&1, :roles, Map.get(roles_by_id, &1.recipe_id, [])))
+    # `component` (sauces, doughs, stocks) is never a meal on its own.
+    |> Enum.reject(&(&1.roles == ["component"]))
   end
 
   defp catalog_opts({:user, user_id}), do: [user_id: user_id]
@@ -493,6 +537,9 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         Date.add(start_date, 6)
       )
 
+    # A recipe must be able to fill its slot on its own (no meze as Dinner).
+    errors = errors ++ slot_role_errors(entries, Map.get(acc, :recipe_meta, %{}))
+
     # Replacing a week deletes what is there, so the plan must be able to stand
     # in for it: all three main meals on every day in range.
     errors =
@@ -515,6 +562,36 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         {%{success: true, count: length(normalized), message: "Plan accepted."},
          %{acc | submitted: %{entries: normalized, rationale: rationale}}}
     end
+  end
+
+  @doc false
+  # One error per recipe entry whose known meal roles don't fit its slot.
+  # Unclassified recipes (no roles) and ingredient entries always pass.
+  def slot_role_errors(entries, recipe_meta) do
+    Enum.flat_map(entries, fn entry ->
+      with id when is_integer(id) <- entry["recipe_id"],
+           slot when slot in @slots <- entry["slot"],
+           %{roles: roles, title: title} <- Map.get(recipe_meta, id),
+           false <- MealRoles.fits_slot?(roles, slot) do
+        [slot_role_error(entry["date"], slot, id, title, roles)]
+      else
+        _ -> []
+      end
+    end)
+  end
+
+  defp slot_role_error(date, slot, id, title, roles) do
+    is_a = Enum.map_join(roles, "/", &MealRoles.label/1) |> String.downcase()
+
+    needs =
+      case slot do
+        "Breakfast" -> "a breakfast dish"
+        s when s in ["Lunch", "Dinner"] -> "a main or a meal soup — a complete #{s}"
+        _ -> "a snack, dessert or drink — or better, a whole-food ingredient"
+      end
+
+    "#{date} #{slot}: \"#{title}\" (recipe_id #{id}) is a #{is_a}, not #{needs}. " <>
+      "Replace it — call the search tool with slot: \"#{slot}\" to get dishes that fit."
   end
 
   @main_slots ["Breakfast", "Lunch", "Dinner"]

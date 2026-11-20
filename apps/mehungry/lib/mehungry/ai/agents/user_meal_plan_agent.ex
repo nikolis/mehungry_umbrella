@@ -124,13 +124,15 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     #{MealPlanCore.guard_blocks(guards)}
     WORKFLOW:
     1. Call get_recent_meals to see what the user has eaten lately — avoid heavy repetition
-    2. Call search_catalog to find recipes suitable for each main slot:
-       - Breakfast: light, quick meals
-       - Lunch: moderate meals
-       - Dinner: hearty, more complex meals
-       You may call search_catalog multiple times with different queries. Each
-       result carries per-serving calories — use them to honour any calorie
-       target in the preferences
+    2. Call search_catalog with `slot` set to find recipes for each main slot.
+       Every recipe has meal roles; a slot needs a dish that is a whole meal on its own:
+       - Breakfast: a breakfast dish (role "breakfast") — quick and light
+       - Lunch / Dinner: a complete meal — role "main" or "soup". A meze, dip,
+         side or plain salad is NOT a lunch or dinner, however good it sounds
+       Searching with slot: "Lunch" / "Dinner" / "Breakfast" returns only dishes
+       that fit. You may call search_catalog multiple times with different
+       queries. Each result carries per-serving calories — use them to honour any
+       calorie target in the preferences
     3. For the two snack slots (and light sides), prefer a single whole-food
        INGREDIENT — fruit, nuts, cheese, yogurt, etc. Call search_ingredients to
        find them. Snacks do not need to be recipes.
@@ -144,6 +146,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     - Use ONLY recipe_ids returned by search_catalog and ingredient_ids returned
       by search_ingredients — never invent IDs
     - Snacks should almost always be a single ingredient
+    - Never put a recipe in a slot its meal roles don't fit (submit_plan rejects it)
     - Vary choices across the week — no recipe should appear more than twice
     - cooking_portions: 1–4 based on recipe servings
     - For ingredients, pick a unit_selection from the options search_ingredients
@@ -191,8 +194,8 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     {result, acc}
   end
 
-  def handle_tool("search_catalog", %{"query" => query}, acc),
-    do: MealPlanCore.search_recipes_tool(query, acc)
+  def handle_tool("search_catalog", %{"query" => query} = input, acc),
+    do: MealPlanCore.search_recipes_tool(query, acc, input["slot"])
 
   def handle_tool("search_ingredients", %{"query" => query}, acc),
     do: MealPlanCore.search_ingredients_tool(query, acc)

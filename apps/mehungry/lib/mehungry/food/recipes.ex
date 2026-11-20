@@ -784,6 +784,10 @@ defmodule Mehungry.Food.Recipes do
         |> Mehungry.RecipePutNutrientsWorker.new()
         |> Oban.insert()
 
+        # Classify the new recipe's meal roles (main / side / meze …) for the
+        # meal planner — see Food.MealRoleAssignments.
+        Mehungry.Food.MealRoleAssignments.maybe_classify_on_save(recipe.id)
+
         # Accept either key form: form/AI callers pass string keys, the
         # Spoonacular importer builds atom-keyed attrs. A string-only lookup
         # missed an imported image_url and queued a needless AI cover image.
@@ -854,6 +858,8 @@ defmodule Mehungry.Food.Recipes do
         |> Oban.insert()
 
         Mehungry.ObanWorkers.RecipeEmbeddingWorker.enqueue(recipe.id)
+        # Re-classify meal roles unless an admin already reviewed them.
+        Mehungry.Food.MealRoleAssignments.maybe_classify_on_save(recipe.id)
         # Drop the cache entry rather than caching the just-updated struct: the
         # reconcile above may have attached new hashtag rows not on `recipe`, so
         # let the next read reload the full, current recipe.

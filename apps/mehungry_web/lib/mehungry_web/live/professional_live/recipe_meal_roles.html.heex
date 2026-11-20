@@ -1,0 +1,331 @@
+<div class="max-w-6xl mx-auto p-4 space-y-6">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h1 class="text-2xl font-semibold text-parchment">Recipe meal roles</h1>
+    <p class="text-sm text-parchment-dim">
+      What part each recipe plays in a meal. The meal planner only puts a
+      <span class="text-parchment">main</span>
+      or <span class="text-parchment">soup</span>
+      at lunch/dinner and a <span class="text-parchment">breakfast</span>
+      dish at breakfast.
+    </p>
+  </div>
+
+  <%!-- ── Coverage + runs ─────────────────────────────────────────────── --%>
+  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        phx-click="classify"
+        phx-value-mode="unclassified"
+        disabled={running?(@run)}
+        data-confirm="Classify every recipe that has never been classified? This uses AI quota (~$0.01 per 20 recipes)."
+        class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Classify unclassified
+      </button>
+      <button
+        type="button"
+        phx-click="classify"
+        phx-value-mode="unreviewed"
+        disabled={running?(@run)}
+        data-confirm="Re-classify every recipe whose roles nobody has reviewed yet? Reviewed recipes are never touched."
+        class="px-3 py-1.5 rounded border border-basil text-basil text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Reclassify unreviewed
+      </button>
+      <span class={"text-xs font-medium #{run_class(@run)}"}>{run_label(@run)}</span>
+      <button
+        type="button"
+        phx-click="refresh"
+        class="ml-auto px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+      >
+        Refresh
+      </button>
+    </div>
+
+    <div :if={running?(@run) and @run.total > 0}>
+      <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
+        <div
+          class="h-full bg-basil rounded transition-all"
+          style={"width: #{percent(@run.processed, @run.total)}%"}
+        >
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+      <div class="rounded bg-ink-panel2/60 px-3 py-2">
+        <div class="text-parchment-dim text-xs">Recipes</div>
+        <div class="text-parchment font-semibold">{@coverage.total}</div>
+      </div>
+      <div class="rounded bg-ink-panel2/60 px-3 py-2">
+        <div class="text-parchment-dim text-xs">Classified</div>
+        <div class="text-parchment font-semibold">
+          {@coverage.classified}
+          <span class="text-parchment-dim font-normal text-xs">
+            ({percent(@coverage.classified, @coverage.total)}%)
+          </span>
+        </div>
+      </div>
+      <div class="rounded bg-ink-panel2/60 px-3 py-2">
+        <div class="text-parchment-dim text-xs">Needs review</div>
+        <div class="text-amber-300 font-semibold">{@coverage.needs_review}</div>
+      </div>
+      <div class="rounded bg-ink-panel2/60 px-3 py-2">
+        <div class="text-parchment-dim text-xs">Reviewed</div>
+        <div class="text-basil font-semibold">{@coverage.reviewed}</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs text-parchment-dim mb-1">
+        Recipes per role — click to filter (a recipe counts once per role it holds)
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          :for={role <- @roles}
+          type="button"
+          phx-click="filter_role"
+          phx-value-role={role}
+          class={[
+            "px-2.5 py-1 rounded-full text-xs border",
+            if(@filters.role == role,
+              do: "border-basil bg-basil text-ink",
+              else: "border-ink-panel2 text-parchment hover:border-basil"
+            )
+          ]}
+          title={MealRoles.description(role)}
+        >
+          {MealRoles.label(role)} <span class="opacity-70">{@coverage.per_role[role]}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <%!-- ── Filters ─────────────────────────────────────────────────────── --%>
+  <section class="space-y-3">
+    <div class="flex flex-wrap gap-1 border-b border-ink-panel2">
+      <button
+        :for={{status, label} <- @statuses}
+        type="button"
+        phx-click="set_status"
+        phx-value-status={status}
+        class={[
+          "px-3 py-2 text-sm -mb-px border-b-2",
+          if(@filters.status == status,
+            do: "border-basil text-parchment font-medium",
+            else: "border-transparent text-parchment-dim hover:text-parchment"
+          )
+        ]}
+      >
+        {label}
+        <span :if={status == "needs_review"} class="text-xs opacity-70">
+          ({@coverage.needs_review})
+        </span>
+        <span :if={status == "unclassified"} class="text-xs opacity-70">
+          ({@coverage.unclassified})
+        </span>
+      </button>
+    </div>
+
+    <form id="meal-role-filters" phx-change="filter" class="flex flex-wrap items-center gap-2">
+      <input
+        type="text"
+        name="search"
+        value={@filters.search}
+        placeholder="Search title…"
+        phx-debounce="300"
+        class="text-sm rounded bg-ink-panel border border-ink-panel2 text-parchment px-2 py-1 w-56"
+      />
+      <select
+        name="role"
+        class="text-sm rounded bg-ink-panel border border-ink-panel2 text-parchment px-2 py-1"
+      >
+        <option value="">Any role</option>
+        <option :for={role <- @roles} value={role} selected={@filters.role == role}>
+          {MealRoles.label(role)}
+        </option>
+      </select>
+      <select
+        name="source"
+        class="text-sm rounded bg-ink-panel border border-ink-panel2 text-parchment px-2 py-1"
+      >
+        <option
+          :for={{value, label} <- @sources}
+          value={value}
+          selected={@filters.source == value}
+        >
+          {label}
+        </option>
+      </select>
+      <label class="flex items-center gap-1 text-sm text-parchment-dim">
+        <input type="hidden" name="include_private" value="false" />
+        <input
+          type="checkbox"
+          name="include_private"
+          value="true"
+          checked={@filters.include_private}
+        /> Include private
+      </label>
+    </form>
+
+    <div
+      :if={@recipes != []}
+      class="flex flex-wrap items-center gap-2 text-sm text-parchment-dim"
+    >
+      <button type="button" phx-click="select_all" class="underline hover:text-parchment">
+        Select all shown
+      </button>
+      <button
+        :if={MapSet.size(@selected) > 0}
+        type="button"
+        phx-click="clear_selection"
+        class="underline hover:text-parchment"
+      >
+        Clear
+      </button>
+      <button
+        :if={MapSet.size(@selected) > 0}
+        type="button"
+        phx-click="confirm_selected"
+        class="px-3 py-1 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+      >
+        Confirm selected ({MapSet.size(@selected)})
+      </button>
+      <span class="ml-auto text-xs">
+        Click a chip to add/remove a role. ✓ = reviewed · number = AI confidence ·
+        <span class="text-amber-300">amber</span>
+        = low confidence
+      </span>
+    </div>
+  </section>
+
+  <%!-- ── Recipe list ─────────────────────────────────────────────────── --%>
+  <section id="meal-role-recipes" class="divide-y divide-ink-panel2">
+    <div
+      :for={recipe <- @recipes}
+      id={"recipe-#{recipe.id}"}
+      class={[
+        "py-3 flex gap-3 items-start",
+        MapSet.member?(@reclassifying, recipe.id) && "opacity-60"
+      ]}
+    >
+      <input
+        type="checkbox"
+        phx-click="toggle_select"
+        phx-value-id={recipe.id}
+        checked={MapSet.member?(@selected, recipe.id)}
+        disabled={recipe.meal_roles == []}
+        class="mt-1"
+        aria-label={"Select #{recipe.title}"}
+      />
+
+      <div class="w-14 h-14 shrink-0 rounded bg-ink-panel2 overflow-hidden">
+        <img :if={thumb(recipe)} src={thumb(recipe)} alt="" class="w-full h-full object-cover" />
+      </div>
+
+      <div class="min-w-0 flex-1 space-y-1.5">
+        <div class="flex flex-wrap items-baseline gap-x-2">
+          <a
+            href={"/en/browse/#{recipe.id}"}
+            target="_blank"
+            class="text-parchment font-medium hover:underline"
+          >
+            {recipe.title}
+          </a>
+          <span class="text-xs text-parchment-dim">
+            id {recipe.id} · {recipe.cousine || "no cuisine"} · {macros_label(recipe)} · {recipe.source ||
+              "in-app"} · {owner_label(recipe)}
+            <span :if={recipe.private} class="text-amber-300">· private</span>
+          </span>
+        </div>
+
+        <div class="flex flex-wrap gap-1">
+          <button
+            :for={role <- @roles}
+            type="button"
+            phx-click="toggle_role"
+            phx-value-id={recipe.id}
+            phx-value-role={role}
+            disabled={MapSet.member?(@reclassifying, recipe.id)}
+            class={chip_class(recipe, role, @drafts)}
+            title={MealRoles.description(role)}
+          >
+            {MealRoles.label(role)}{chip_suffix(recipe, role, @drafts)}
+          </button>
+        </div>
+
+        <p
+          :if={recipe.meal_roles == [] and not dirty?(@drafts, recipe)}
+          class="text-xs text-parchment-dim"
+        >
+          {if recipe.meal_roles_classified_at,
+            do: "The classifier returned no roles — pick them by hand or reclassify.",
+            else: "Not classified yet."}
+        </p>
+      </div>
+
+      <div class="flex flex-col items-end gap-1.5 shrink-0">
+        <%= cond do %>
+          <% MapSet.member?(@reclassifying, recipe.id) -> %>
+            <span class="text-xs text-basil">Reclassifying…</span>
+          <% dirty?(@drafts, recipe) -> %>
+            <button
+              type="button"
+              phx-click="save"
+              phx-value-id={recipe.id}
+              class="px-3 py-1 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              phx-click="discard"
+              phx-value-id={recipe.id}
+              class="text-xs text-parchment-dim underline hover:text-parchment"
+            >
+              Discard
+            </button>
+          <% needs_review?(recipe) -> %>
+            <button
+              type="button"
+              phx-click="confirm"
+              phx-value-id={recipe.id}
+              class="px-3 py-1 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+            >
+              Confirm
+            </button>
+          <% true -> %>
+            <span :if={recipe.meal_roles != []} class="text-xs text-basil">Reviewed</span>
+        <% end %>
+        <button
+          :if={not MapSet.member?(@reclassifying, recipe.id)}
+          type="button"
+          phx-click="reclassify"
+          phx-value-id={recipe.id}
+          data-confirm={
+            if recipe.meal_roles != [],
+              do: "Discard this recipe's roles (including reviewed ones) and ask the AI again?"
+          }
+          class="text-xs text-parchment-dim underline hover:text-parchment"
+        >
+          Reclassify
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <p :if={@recipes == []} class="text-parchment-dim text-sm">
+    Nothing here for these filters.
+  </p>
+
+  <div :if={@has_more} class="text-center">
+    <button
+      type="button"
+      phx-click="load_more"
+      class="px-4 py-1.5 rounded border border-ink-panel2 text-parchment text-sm hover:opacity-90"
+    >
+      Load more
+    </button>
+  </div>
+</div>

@@ -136,10 +136,11 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     3. Call get_client_summary to understand the client's recent activity
     4. Call get_recent_meals to see what the client has eaten lately (avoid repetition)
     5. Call get_ratings to understand which types of meals the client rated well or poorly
-    6. Call search_recipes one or more times to find suitable recipes for the three
-       main slots. Each result carries difficulty (1 = quick/light, 3 = demanding)
-       and per-serving calories — use them to place recipes and to keep each day
-       near the client's calorie target
+    6. Call search_recipes one or more times, with `slot` set, to find suitable
+       recipes for the three main slots. Each result carries meal roles (main,
+       soup, side, meze, salad, breakfast…), difficulty (1 = quick/light,
+       3 = demanding) and per-serving calories — use them to place recipes and to
+       keep each day near the client's calorie target
     7. Call search_ingredients to find whole-food snack items for the two snack slots —
        snacks should be a single whole food (e.g. a banana, 20 g of almonds, Greek
        yogurt), NOT a recipe
@@ -173,8 +174,11 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       the day. The day's single demanding/heavy recipe (difficulty 3, e.g. ribs,
       fasolada, a slow-cooked stew) belongs at Lunch — at most one such dish per day.
       Be pragmatic about what a client can realistically cook.
-    - DINNER IS LIGHTER: dinner must be lighter than lunch — a salad, soup, or
-      simple plate. Never make dinner heavier than lunch, and never put two heavy
+    - MEAL ROLES: Lunch and Dinner must each be a complete meal — a recipe with
+      role "main" or "soup". A meze, dip, side or plain salad is never a whole
+      lunch or dinner (submit_plan rejects it). Breakfast needs a "breakfast" dish.
+    - DINNER IS LIGHTER: dinner must be lighter than lunch — a soup or a light
+      main (e.g. a hearty salad bowl that has role "main"). Never make dinner heavier than lunch, and never put two heavy
       main meals on the same day. If lunch is a light legume/vegetable dish (e.g.
       beans), dinner may be similar.
     - Vary recipes to minimise repetition, especially for recipes seen in recent history
@@ -370,8 +374,8 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
      }, acc}
   end
 
-  def handle_tool("search_recipes", %{"query" => query}, acc),
-    do: MealPlanCore.search_recipes_tool(query, acc)
+  def handle_tool("search_recipes", %{"query" => query} = input, acc),
+    do: MealPlanCore.search_recipes_tool(query, acc, input["slot"])
 
   def handle_tool("search_ingredients", %{"query" => query}, acc),
     do: MealPlanCore.search_ingredients_tool(query, acc)

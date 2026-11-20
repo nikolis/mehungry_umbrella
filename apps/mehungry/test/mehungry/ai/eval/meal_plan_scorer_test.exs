@@ -85,7 +85,12 @@ defmodule Mehungry.AI.Eval.MealPlanScorerTest do
         perfect_plan()
         |> Enum.map(fn e ->
           if e.meal_type == "morning_snack",
-            do: %{day_index: e.day_index, meal_type: e.meal_type, recipe_id: 55, cooking_portions: 1},
+            do: %{
+              day_index: e.day_index,
+              meal_type: e.meal_type,
+              recipe_id: 55,
+              cooking_portions: 1
+            },
             else: e
         end)
 
@@ -116,6 +121,43 @@ defmodule Mehungry.AI.Eval.MealPlanScorerTest do
       a = check(card, :avoid_foods)
       assert a.status == :fail
       assert a.detail =~ "garlic"
+      refute card.passed?
+    end
+  end
+
+  describe "slot-roles check (hard rule)" do
+    test "skips without recipe roles" do
+      assert check(MealPlanScorer.score(perfect_plan()), :slot_roles).status == :skip
+    end
+
+    test "passes when every recipe fits its slot; unclassified recipes pass" do
+      plan = perfect_plan()
+
+      roles =
+        plan
+        |> Enum.filter(&is_integer(&1.recipe_id))
+        |> Map.new(fn e ->
+          {e.recipe_id, if(e.meal_type == "breakfast", do: ["breakfast"], else: ["main"])}
+        end)
+        |> Map.delete(12)
+
+      assert check(MealPlanScorer.score(plan, %{recipe_roles: roles}), :slot_roles).status ==
+               :pass
+    end
+
+    test "fails when a meze is placed as dinner" do
+      plan = perfect_plan()
+      dinner = Enum.find(plan, &(&1.meal_type == "dinner"))
+
+      card =
+        MealPlanScorer.score(plan, %{
+          recipe_roles: %{dinner.recipe_id => ["meze", "side"]},
+          recipe_names: %{dinner.recipe_id => "Patlıcan Salatası"}
+        })
+
+      c = check(card, :slot_roles)
+      assert c.status == :fail
+      assert c.detail =~ "patlıcan salatası"
       refute card.passed?
     end
   end

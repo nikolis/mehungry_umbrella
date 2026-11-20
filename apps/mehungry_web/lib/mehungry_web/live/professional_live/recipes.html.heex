@@ -58,6 +58,12 @@
         {if @hashtag_running, do: "Reconciling…", else: "Reconcile hashtags"}
       </button>
       <.link
+        navigate={~p"/professional/recipe-meal-roles"}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors"
+      >
+        <.icon name="hero-tag" class="w-4 h-4" /> Review meal roles
+      </.link>
+      <.link
         navigate={~p"/professional/myplate-review"}
         class="flex items-center gap-2 px-4 py-2 rounded-full bg-teal-700 hover:bg-teal-600 text-white font-semibold text-sm transition-colors"
       >

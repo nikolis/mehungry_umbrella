@@ -32,6 +32,9 @@ defmodule Mehungry.Search.RecipeVectorSearch do
       that spans users, so nobody's private recipes leak into another's plan)
     - `:limit`       — max results (default: 20)
     - `:exclude_ids` — list of recipe IDs to exclude
+    - `:meal_roles`  — list of meal roles (`Mehungry.Food.MealRoles`); keep only
+      recipes holding at least one of them, **or** with no roles at all
+      (unclassified recipes stay eligible). Applied in SQL, before `:limit`.
 
   Returns a list of maps: `%{id, title, difficulty, servings, nutrients}`
   (the stored per-recipe `nutrients` jsonb, so callers can derive calories
@@ -43,18 +46,19 @@ defmodule Mehungry.Search.RecipeVectorSearch do
     limit = Keyword.get(opts, :limit, @default_limit)
     exclude_ids = Keyword.get(opts, :exclude_ids, [])
     public_only = Keyword.get(opts, :public_only, false)
+    meal_roles = Keyword.get(opts, :meal_roles, [])
 
     case embedding_client().embed(query_text) do
       {:ok, vector} ->
-        vector_search(vector, user_id, limit, exclude_ids, public_only)
+        vector_search(vector, user_id, limit, exclude_ids, public_only, meal_roles)
 
       {:error, reason} ->
         Logger.warning("RecipeVectorSearch: embedding failed (#{reason}), falling back to FTS")
-        fts_fallback(query_text, user_id, limit, public_only)
+        fts_fallback(query_text, user_id, limit, public_only, meal_roles)
     end
   end
 
-  defp vector_search(vector, user_id, limit, exclude_ids, public_only) do
+  defp vector_search(vector, user_id, limit, exclude_ids, public_only, meal_roles) do
     pg_vector = Pgvector.new(vector)
 
     base =
@@ -74,10 +78,11 @@ defmodule Mehungry.Search.RecipeVectorSearch do
     |> maybe_filter_user(user_id)
     |> maybe_public_only(public_only)
     |> maybe_exclude_ids(exclude_ids)
+    |> maybe_meal_roles(meal_roles)
     |> Repo.all()
   end
 
-  defp fts_fallback(query_text, user_id, limit, public_only) do
+  defp fts_fallback(query_text, user_id, limit, public_only, meal_roles) do
     base_query =
       if user_id do
         from r in Recipe, where: r.user_id == ^user_id
@@ -87,6 +92,7 @@ defmodule Mehungry.Search.RecipeVectorSearch do
 
     base_query
     |> maybe_public_only(public_only)
+    |> maybe_meal_roles(meal_roles)
     |> RecipeSearch.run(query_text)
     |> limit(^limit)
     |> select([r], %{
@@ -104,6 +110,21 @@ defmodule Mehungry.Search.RecipeVectorSearch do
 
   defp maybe_public_only(query, true), do: where(query, [r], coalesce(r.private, false) == false)
   defp maybe_public_only(query, _), do: query
+
+  defp maybe_meal_roles(query, roles) when roles in [nil, []], do: query
+
+  defp maybe_meal_roles(query, roles) do
+    where(
+      query,
+      [r],
+      fragment(
+        "(NOT EXISTS (SELECT 1 FROM recipe_meal_roles m WHERE m.recipe_id = ?) OR EXISTS (SELECT 1 FROM recipe_meal_roles m WHERE m.recipe_id = ? AND m.role = ANY(?)))",
+        r.id,
+        r.id,
+        type(^roles, {:array, :string})
+      )
+    )
+  end
 
   defp maybe_exclude_ids(query, []), do: query
   defp maybe_exclude_ids(query, ids), do: where(query, [r], r.id not in ^ids)

@@ -164,7 +164,7 @@ every user's recipes. A failed run now fails, with a readable message
 | Tool | Purpose |
 |---|---|
 | `get_recent_meals` | Last 21 days of the person's meal history, so the plan avoids repeating what they just ate |
-| `search_catalog` (user) / `search_recipes` (nutritionist) | Guarded semantic search of the catalog (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings and **per-serving calories** (`MealPlanCore.per_serving_calories/1`, the same `NutrientUtils.macro_summary/1` the calendar uses) |
+| `search_catalog` (user) / `search_recipes` (nutritionist) | Guarded semantic search of the catalog (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings, **per-serving calories** (`MealPlanCore.per_serving_calories/1`, the same `NutrientUtils.macro_summary/1` the calendar uses) and the recipe's **meal roles**. An optional **`slot`** input scopes the search, in SQL, to recipes whose roles fit that slot (plus unclassified ones) — see [`../food/meal_roles.md`](../food/meal_roles.md) |
 | `search_ingredients` | Whole-food ingredient search (fruit, nuts, cheese, yogurt…) for snacks/sides, with unit options |
 | `submit_plan` | Validate + accept the plan; the **only** way to finish. An empty plan is rejected |
 
@@ -181,6 +181,13 @@ model retry when:
   this run (the dominant hallucination mode) — steers the model back to search.
 - **Shape:** an entry with both a recipe *and* an ingredient, or neither; a bad
   date/slot; a duplicate (day, slot); a non-positive ingredient quantity.
+- **Meal roles** (`slot_role_errors/2`): a recipe whose known roles
+  (`Mehungry.Food.MealRoles`) don't fit its slot. Lunch and Dinner need a `main`
+  or `soup`, Breakfast a `breakfast` dish, and snacks a `snack`/`dessert`/`drink`
+  (or, preferably, a whole-food ingredient). So a meze like "Patlıcan Salatası" is
+  never a whole dinner. Unclassified recipes and ingredient entries pass;
+  `component`-only recipes are never offered. Roles are AI-classified and
+  admin-reviewed: [`../food/meal_roles.md`](../food/meal_roles.md).
 - **Avoid-foods** (e.g. Low-FODMAP): the avoid terms (see the guards table below) are
   filtered out of search results *before* the model sees them (so a filtered id
   never enters the provenance set) **and** forbidden in the prompt. Belt and
@@ -427,6 +434,7 @@ Takes the normalized entries `UserMealPlanAgent.run/4` returns
 | `avoid_foods` | **hard rule** — no entry's resolved food name contains an avoid term | `:fail` (fails the whole card) |
 | `preferred_foods` | every preferred food appears somewhere | `:warn` |
 | `calorie_fit` | each day's energy within **±20%** of the target | `:warn`; `:skip` only if no target/data |
+| `slot_roles` | **hard rule** — every recipe's meal roles fit its slot (no meze/side as a whole lunch or dinner); needs `:recipe_roles` | `:fail` (fails the whole card) |
 
 `avoid_foods` is end-to-end (resolves recipe/ingredient *names*), so it catches
 leaks the filter-level unit test can't — e.g. a compound dish name like "Slow
@@ -436,6 +444,7 @@ Roasted **Garlic** Chicken".
 
 - `:avoid_terms` / `:preferred_terms` — downcased substrings
 - `:recipe_names` / `:ingredient_names` — `%{id => name}` for name checks
+- `:recipe_roles` — `%{recipe_id => [meal_role]}`; enables the `slot_roles` check
 - `:daily_calorie_target` — number; enables calorie-fit
 - `:day_macros` — `%{day_index => %{energy_kcal: n, …}}`, produced by the caller
   via the app's own `NutrientUtils.summarize_meals_nutrients/1` → `macro_summary/1`
@@ -447,7 +456,9 @@ Roasted **Garlic** Chicken".
 
 ## The fixture catalog (`MealPlanCatalog.seed/1`)
 
-Seeds one owner user, 16 slot/cuisine-tagged recipes (incl. a deliberate "Garlic"
+Seeds one owner user, 17 slot/cuisine-tagged recipes, each with **meal roles**
+(including a meze bait, "Smoky Eggplant Meze Dip Dinner", that must never land
+as a dinner; the context carries `recipe_roles` for the scorer), and a deliberate "Garlic"
 dish as avoid-foods bait), 10 whole-food snack ingredients, and two blueprints:
 
 - `blueprint_plain` — "Balanced Week", no avoid list

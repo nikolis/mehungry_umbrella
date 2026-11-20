@@ -21,6 +21,7 @@ and a computed nutrition map.
 | `list_image_url`, `image_url`, `detail_image_url`, `recipe_image_remote`, `original_url` | string | |
 | `primary_nutrients_size` | integer | |
 | `nutrients` | map | **computed & stored** — see [`../food/nutrition_calculation.md`](../food/nutrition_calculation.md) |
+| `meal_roles_classified_at` | utc_datetime | **derived**; set when the meal-role classifier has attempted the recipe (even with no result) — see [`../food/meal_roles.md`](../food/meal_roles.md) |
 | `condition_flags` | array\<map\> | **virtual**; filled at display by `MehungryWeb.RecipeFlags` for opted-in users: `%{condition, compound, recommendation, severity}` |
 
 ## Relationships
@@ -28,6 +29,18 @@ and a computed nutrition map.
 - `belongs_to :user` → [User](user.md)
 - `belongs_to :language` → [Language](language.md) (**FK by `name`**, field `language_name`)
 - `has_one :post` · `has_many :comments`, `:annotations`, `:user_recipes`
+- `has_many :meal_roles` → `Mehungry.Food.RecipeMealRole` (table `recipe_meal_roles`)
+
+### Meal roles
+
+`has_many :meal_roles` — `Mehungry.Food.RecipeMealRole` (`food/schemas/recipe_meal_role.ex`),
+one row per role the recipe can play in a meal (multi-label; vocabulary fixed in
+`Mehungry.Food.MealRoles`: breakfast, main, soup, salad, side, meze, snack, dessert,
+drink, component). Fields: `role`, `source` (`ai`|`manual`), `confidence`,
+`reviewed`, `reviewed_by_id` → [User](user.md), `reviewed_at`. Unique
+`(recipe_id, role)`; `on_delete: :delete_all` from the recipe. Read by the AI meal
+planner; reviewed at `/professional/recipe-meal-roles`. Full behaviour in
+[`../food/meal_roles.md`](../food/meal_roles.md).
 
 ### Steps
 
@@ -73,4 +86,4 @@ hashtags to existing `hashtag_id`s (`get_hashtags/1`) so duplicates reuse a tag.
 
 ## Referenced by
 
-[`../food/recipes.md`](../food/recipes.md) · [`../food/nutrition_calculation.md`](../food/nutrition_calculation.md) · [`../ai/ai.md`](../ai/ai.md)
+[`../food/recipes.md`](../food/recipes.md) · [`../food/nutrition_calculation.md`](../food/nutrition_calculation.md) · [`../food/meal_roles.md`](../food/meal_roles.md) · [`../ai/ai.md`](../ai/ai.md)

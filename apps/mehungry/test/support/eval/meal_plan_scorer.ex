@@ -16,6 +16,8 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
     * `:preferred_terms`      — downcased substrings the plan should feature
     * `:recipe_names`         — `%{recipe_id => name}` for name-based checks
     * `:ingredient_names`     — `%{ingredient_id => name}`
+    * `:recipe_roles`         — `%{recipe_id => [meal_role]}`; enables the
+      slot-roles check (hard rule: no meze/side as a whole lunch or dinner)
     * `:daily_calorie_target` — number; enables the calorie-fit check
     * `:day_macros`           — `%{day_index => %{energy_kcal: n, ...}}`, produced
       by the caller via the app's own `NutrientUtils.summarize_meals_nutrients/1`
@@ -31,6 +33,7 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
       }
   """
 
+  alias Mehungry.Food.MealRoles
   alias Mehungry.History.MealType
 
   @days 7
@@ -49,6 +52,7 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
       check_variety(entries),
       check_snacks_are_ingredients(entries),
       check_avoid_foods(entries, context),
+      check_slot_roles(entries, context),
       check_preferred_foods(entries, context),
       check_calorie_fit(context)
     ]
@@ -168,6 +172,49 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
         ingredient_snacks / total,
         "#{ingredient_snacks}/#{total} snack slots are whole-food ingredients"
       )
+    end
+  end
+
+  # Hard rule: every recipe must be able to fill its slot on its own, by its
+  # meal roles (`MealRoles.fits_slot?/2`) — a meze or a side is never a whole
+  # lunch or dinner. Unclassified recipes and ingredient entries pass.
+  defp check_slot_roles(entries, context) do
+    roles = context[:recipe_roles]
+
+    if roles in [nil, %{}] do
+      check(:slot_roles, :skip, 0.0, "no recipe meal roles configured")
+    else
+      recipe_entries = Enum.filter(entries, &is_integer(recipe_id(&1)))
+
+      misfits =
+        Enum.reject(recipe_entries, fn e ->
+          MealRoles.fits_slot?(Map.get(roles, recipe_id(e)), meal_type(e))
+        end)
+
+      case {recipe_entries, misfits} do
+        {[], _} ->
+          check(:slot_roles, :skip, 0.0, "no recipe entries")
+
+        {_, []} ->
+          check(:slot_roles, :pass, 1.0, "every recipe fits its slot")
+
+        {all, bad} ->
+          shown =
+            bad
+            |> Enum.take(5)
+            |> Enum.map_join(", ", fn e ->
+              "day #{e[:day_index] || e["day_index"]} #{meal_type(e)}: " <>
+                "#{name_from(context[:recipe_names], recipe_id(e))} " <>
+                "(#{Enum.join(Map.get(roles, recipe_id(e), []), "/")})"
+            end)
+
+          check(
+            :slot_roles,
+            :fail,
+            1 - length(bad) / length(all),
+            "#{length(bad)} recipe(s) in a slot their roles don't fit — #{shown}"
+          )
+      end
     end
   end
 

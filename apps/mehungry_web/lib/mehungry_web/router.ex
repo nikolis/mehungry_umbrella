@@ -340,6 +340,10 @@ defmodule MehungryWeb.Router do
 
       live("/taxonomy/review", ProfessionalLive.TaxonomyReview, :index)
 
+      # Recipe meal roles (main / side / meze …) — AI-classified, admin-reviewed;
+      # read by the meal planner. See docs/implementation/food/meal_roles.md.
+      live("/recipe-meal-roles", ProfessionalLive.RecipeMealRoles, :index)
+
       # Science-pipeline *generation* UIs (species crawl, PubTator annotation,
       # compound/recommendation candidate derivation + review) were decommissioned
       # in the research-search reshape (Phase 1 — see

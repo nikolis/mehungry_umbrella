@@ -13,6 +13,8 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Measurements` — measurement units and portions
     * `Mehungry.Food.Categories` — categories and food restriction types
     * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
+    * `Mehungry.Food.MealRoleAssignments` — multi-label recipe meal roles
+      (main / side / meze …, vocabulary in `Mehungry.Food.MealRoles`)
     * `Mehungry.Food.Enrichment` — scientific enrichment sidecar
     * `Mehungry.Food.Compounds` — bioactive compound knowledge (scientific facts)
     * `Mehungry.Food.CompoundMeasurements` — quantitative compound measurements (immutable)
@@ -33,6 +35,7 @@ defmodule Mehungry.Food do
     IngredientQueries,
     Ingredients,
     Localization,
+    MealRoleAssignments,
     Measurements,
     NutrientClaims,
     Nutrients,
@@ -325,6 +328,37 @@ defmodule Mehungry.Food do
   defdelegate latest_classification_run(taxonomy_id),
     to: TaxonomyClassificationRuns,
     as: :latest_run
+
+  # ── Meal roles (recipe main / side / meze …) ──────────────────────────
+
+  defdelegate meal_roles_for(recipe_ids), to: MealRoleAssignments, as: :roles_for
+  defdelegate list_recipe_meal_roles(recipe_id), to: MealRoleAssignments, as: :list_recipe_roles
+
+  defdelegate set_recipe_meal_roles(recipe_id, roles, reviewer_id),
+    to: MealRoleAssignments,
+    as: :set_recipe_roles
+
+  defdelegate confirm_recipe_meal_roles(recipe_id, reviewer_id),
+    to: MealRoleAssignments,
+    as: :confirm_recipe
+
+  defdelegate confirm_many_recipe_meal_roles(recipe_ids, reviewer_id),
+    to: MealRoleAssignments,
+    as: :confirm_many
+
+  defdelegate list_recipes_for_meal_role_review(filters \\ %{}, opts \\ []),
+    to: MealRoleAssignments,
+    as: :list_for_review
+
+  defdelegate meal_role_coverage(), to: MealRoleAssignments, as: :coverage
+
+  defdelegate enqueue_meal_role_classification(mode),
+    to: MealRoleAssignments,
+    as: :enqueue_classification
+
+  defdelegate reclassify_recipe_meal_roles(recipe_id),
+    to: MealRoleAssignments,
+    as: :reset_and_classify
 
   # ── Enrichment (scientific sidecar) ────────────────────────────────────
 

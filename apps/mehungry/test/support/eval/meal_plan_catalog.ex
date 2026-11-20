@@ -22,11 +22,15 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
       agent's natural-language queries (`plainto_tsquery` ANDs every term, and
       `vegetarian`→`no-meat` normalization drops matches) — which is why recipes
       never surfaced before.
+    * Every recipe carries **meal roles** (`Mehungry.Food.MealRoles`), as the
+      classifier would assign them, and one meze ("Smoky Eggplant Meze Dip
+      Dinner") is deliberate bait: it ranks well for dinner queries but is a
+      meze/side — the planner must not serve it as a whole dinner.
   """
 
   import Ecto.Query
   alias Mehungry.{Food, Repo}
-  alias Mehungry.Food.{IngredientNutrient, MeasurementUnit, Nutrient, Recipe}
+  alias Mehungry.Food.{IngredientNutrient, MealRoleAssignments, MeasurementUnit, Nutrient, Recipe}
   alias Mehungry.MealBlueprints.Blueprint
   alias Mehungry.AI.EmbeddingClientStub
   import Mehungry.FoodFixtures, only: [recipe_fixture: 2, ingredient_fixture: 1]
@@ -53,8 +57,30 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
     "Eggplant Parmesan Dinner",
     "Shrimp and Vegetable Stir Fry Dinner",
     "Moroccan Chickpea Tagine Dinner",
-    "Mushroom Risotto Dinner"
+    "Mushroom Risotto Dinner",
+    "Smoky Eggplant Meze Dip Dinner"
   ]
+
+  # Meal roles per recipe (multi-label), as the classifier would assign them.
+  @roles %{
+    "Greek Yogurt Breakfast Bowl with Honey" => ~w(breakfast snack),
+    "Light Oatmeal Breakfast with Berries" => ~w(breakfast),
+    "Spinach and Feta Breakfast Omelette" => ~w(breakfast),
+    "Quick Avocado Toast Breakfast" => ~w(breakfast snack),
+    "Mediterranean Quinoa Lunch Salad" => ~w(main salad),
+    "Grilled Chicken Caesar Lunch Wrap" => ~w(main),
+    "Lentil Soup Light Lunch" => ~w(soup main),
+    "Vegetarian Buddha Bowl Lunch" => ~w(main),
+    "Tuna and White Bean Lunch Salad" => ~w(main salad),
+    "Hearty Mediterranean Baked Salmon Dinner" => ~w(main),
+    "Slow Roasted Garlic Chicken Dinner" => ~w(main),
+    "Beef and Vegetable Stew Dinner" => ~w(main),
+    "Eggplant Parmesan Dinner" => ~w(main),
+    "Shrimp and Vegetable Stir Fry Dinner" => ~w(main),
+    "Moroccan Chickpea Tagine Dinner" => ~w(main),
+    "Mushroom Risotto Dinner" => ~w(main),
+    "Smoky Eggplant Meze Dip Dinner" => ~w(meze side)
+  }
 
   @ingredients ~w(Apple Banana Almonds Walnuts)a ++
                  ["Greek Yogurt", "Feta Cheese", "Carrot", "Orange", "Blueberries", "Cucumber"]
@@ -70,8 +96,8 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
 
   @doc """
   Seeds the catalog and returns a context map (user_id, start_date, recipes,
-  ingredients, recipe_names, ingredient_names, daily_calorie_target, and the two
-  blueprints). Options: `:start_date` (defaults to next Monday).
+  ingredients, recipe_names, recipe_roles, ingredient_names,
+  daily_calorie_target, and the two blueprints). Options: `:start_date` (defaults to next Monday).
   """
   def seed(opts \\ []) do
     user = user_fixture(%{})
@@ -94,7 +120,13 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
 
         seed_embedding(r.id, title)
         put_recipe_nutrients(r.id)
-        %{id: r.id, title: title}
+
+        MealRoleAssignments.apply_ai_roles(
+          r.id,
+          Enum.map(Map.fetch!(@roles, title), &%{role: &1, confidence: 0.95})
+        )
+
+        %{id: r.id, title: title, roles: Map.fetch!(@roles, title)}
       end)
 
     ingredients =
@@ -112,6 +144,7 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
       recipes: recipes,
       ingredients: ingredients,
       recipe_names: Map.new(recipes, &{&1.id, &1.title}),
+      recipe_roles: Map.new(recipes, &{&1.id, &1.roles}),
       ingredient_names: Map.new(ingredients, &{&1.id, &1.name}),
       blueprint_plain: %Blueprint{
         name: "Balanced Week",
@@ -176,6 +209,7 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
 
   defp profile_for(title) do
     cond do
+      String.contains?(title, "Meze") -> @snack
       String.contains?(title, "Breakfast") -> @breakfast
       String.contains?(title, "Lunch") -> @lunch
       true -> @dinner

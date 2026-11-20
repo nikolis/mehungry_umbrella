@@ -55,6 +55,9 @@ defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
     for card <- cards do
       assert check(card, :completeness).status in [:pass, :warn]
       assert check(card, :avoid_foods).status != :fail
+      # Meal roles are enforced by submit_plan — the meze bait never lands as a meal.
+      assert check(card, :slot_roles).status != :fail,
+             "slot-roles misfit: #{check(card, :slot_roles).detail}"
     end
 
     assert_pass_rate(cards, 0.6)
@@ -118,6 +121,7 @@ defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
       avoid_terms: MealPlanCore.avoid_terms(blueprint),
       preferred_terms: downcase_list(blueprint.preferred_foods),
       recipe_names: cat.recipe_names,
+      recipe_roles: cat.recipe_roles,
       ingredient_names: cat.ingredient_names,
       daily_calorie_target: cat.daily_calorie_target
       # :day_macros is added per-run in run_scenario, after the plan is generated.

@@ -45,6 +45,10 @@ defmodule Mehungry.Food.Recipe do
     field :embedding, Pgvector.Ecto.Vector
     # Populated by Recipes.search_recipes_for_admin/2 for the admin recipes tab.
     field :ingredient_count, :integer, virtual: true
+    # Set when the meal-role classifier has attempted this recipe (even with no
+    # result). Derived-only — never cast from user params. See
+    # Food.MealRoleAssignments and docs/implementation/food/meal_roles.md.
+    field :meal_roles_classified_at, :utc_datetime
 
     has_many :user_recipes, Mehungry.Accounts.UserRecipe
     has_one :post, Mehungry.Posts.Post
@@ -60,6 +64,7 @@ defmodule Mehungry.Food.Recipe do
     has_many :recipe_hashtags, Mehungry.Food.RecipeHashtag, on_replace: :nilify
     has_many :annotations, Mehungry.Food.Annotation
     has_many :comments, Mehungry.Posts.Comment
+    has_many :meal_roles, Mehungry.Food.RecipeMealRole
 
     embeds_many :steps, Mehungry.Food.Step, on_replace: :delete
 
