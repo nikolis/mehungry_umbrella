@@ -183,7 +183,7 @@ model retry when:
   date/slot; a duplicate (day, slot); a non-positive ingredient quantity.
 - **Meal roles** (`slot_role_errors/2`): a recipe whose known roles
   (`Mehungry.Food.MealRoles`) don't fit its slot. Lunch and Dinner need a `main`
-  or `soup`, Breakfast a `breakfast` dish, and snacks a `snack`/`dessert`/`drink`
+  or `soup` (Dinner also accepts the evening-only `dinner` role), Breakfast a `breakfast` dish, and snacks a `snack`/`dessert`/`drink`
   (or, preferably, a whole-food ingredient). So a meze like "Patlıcan Salatası" is
   never a whole dinner. Unclassified recipes and ingredient entries pass;
   `component`-only recipes are never offered. Roles are AI-classified and

@@ -127,8 +127,9 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     2. Call search_catalog with `slot` set to find recipes for each main slot.
        Every recipe has meal roles; a slot needs a dish that is a whole meal on its own:
        - Breakfast: a breakfast dish (role "breakfast") — quick and light
-       - Lunch / Dinner: a complete meal — role "main" or "soup". A meze, dip,
-         side or plain salad is NOT a lunch or dinner, however good it sounds
+       - Lunch / Dinner: a complete meal — role "main" or "soup" (Dinner also
+         takes role "dinner", an evening-only dish). A meze, dip, side or plain
+         salad is NOT a lunch or dinner, however good it sounds
        Searching with slot: "Lunch" / "Dinner" / "Breakfast" returns only dishes
        that fit. You may call search_catalog multiple times with different
        queries. Each result carries per-serving calories — use them to honour any

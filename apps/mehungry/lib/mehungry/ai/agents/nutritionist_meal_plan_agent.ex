@@ -138,7 +138,7 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     5. Call get_ratings to understand which types of meals the client rated well or poorly
     6. Call search_recipes one or more times, with `slot` set, to find suitable
        recipes for the three main slots. Each result carries meal roles (main,
-       soup, side, meze, salad, breakfast…), difficulty (1 = quick/light,
+       dinner, soup, side, meze, salad, breakfast, pre_workout, post_workout…), difficulty (1 = quick/light,
        3 = demanding) and per-serving calories — use them to place recipes and to
        keep each day near the client's calorie target
     7. Call search_ingredients to find whole-food snack items for the two snack slots —
@@ -175,7 +175,8 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       fasolada, a slow-cooked stew) belongs at Lunch — at most one such dish per day.
       Be pragmatic about what a client can realistically cook.
     - MEAL ROLES: Lunch and Dinner must each be a complete meal — a recipe with
-      role "main" or "soup". A meze, dip, side or plain salad is never a whole
+      role "main" or "soup" (Dinner also takes role "dinner", an evening-only
+      dish). A meze, dip, side or plain salad is never a whole
       lunch or dinner (submit_plan rejects it). Breakfast needs a "breakfast" dish.
     - DINNER IS LIGHTER: dinner must be lighter than lunch — a soup or a light
       main (e.g. a hearty salad bowl that has role "main"). Never make dinner heavier than lunch, and never put two heavy

@@ -106,7 +106,7 @@ defmodule Mehungry.AI.Agents.MealPlanSlotRolesTest do
       MealPlanCore.submit_plan_tool(%{"entries" => [entry.(ctx.meze.id)]}, acc)
 
     assert error =~ "Patlıcan Salatası"
-    assert error =~ "not a main or a meal soup"
+    assert error =~ "not a main, a dinner dish or a meal soup"
     assert error =~ ~s(slot: "Dinner")
 
     assert {%{success: true}, _} =

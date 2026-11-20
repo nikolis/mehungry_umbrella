@@ -310,9 +310,10 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         "Semantically search the available recipe catalog by natural language query. " <>
           "Returns matching recipes with their recipe_id, title, difficulty (1–3), servings, " <>
           "per-serving calories (use these to keep each day near the calorie target), and " <>
-          "meal roles (e.g. main, soup, side, meze, salad, breakfast, snack, dessert). " <>
+          "meal roles (e.g. main, dinner, soup, side, meze, salad, breakfast, snack, dessert, " <>
+          "pre_workout, post_workout). " <>
           "Pass `slot` to get only recipes that can fill that slot on their own — e.g. " <>
-          "slot 'Dinner' returns mains and meal soups, never a meze or side. " <>
+          "slot 'Dinner' returns mains, dinner dishes and meal soups, never a meze or side. " <>
           "Use descriptive phrases like 'light high-protein breakfast', " <>
           "'quick vegetarian lunch', or 'hearty Mediterranean dinner'. " <>
           "Call with different queries to find recipes for each meal slot type.",
@@ -586,7 +587,8 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     needs =
       case slot do
         "Breakfast" -> "a breakfast dish"
-        s when s in ["Lunch", "Dinner"] -> "a main or a meal soup — a complete #{s}"
+        "Lunch" -> "a main or a meal soup — a complete Lunch"
+        "Dinner" -> "a main, a dinner dish or a meal soup — a complete Dinner"
         _ -> "a snack, dessert or drink — or better, a whole-food ingredient"
       end
 

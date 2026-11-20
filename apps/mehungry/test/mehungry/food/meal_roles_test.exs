@@ -5,16 +5,17 @@ defmodule Mehungry.Food.MealRolesTest do
 
   test "the vocabulary is fixed and labelled" do
     assert MealRoles.all() ==
-             ~w(breakfast main soup salad side meze snack dessert drink component)
+             ~w(breakfast main dinner soup salad side meze snack dessert drink pre_workout post_workout component)
 
     assert Enum.all?(MealRoles.all(), &(MealRoles.description(&1) != ""))
     assert MealRoles.label("meze") == "Meze"
+    assert MealRoles.label("pre_workout") == "Pre-workout"
     assert MealRoles.valid?("main")
     refute MealRoles.valid?("appetizer")
   end
 
   test "slot_roles maps both planner labels and canonical meal types" do
-    assert MealRoles.slot_roles("Dinner") == ~w(main soup)
+    assert MealRoles.slot_roles("Dinner") == ~w(main dinner soup)
     assert MealRoles.slot_roles("lunch") == ~w(main soup)
     assert MealRoles.slot_roles("Breakfast") == ~w(breakfast)
     assert MealRoles.slot_roles("Afternoon Snack") == ~w(snack dessert drink)
@@ -30,6 +31,16 @@ defmodule Mehungry.Food.MealRolesTest do
     test "any meal-capable role fits lunch and dinner" do
       assert MealRoles.fits_slot?(["side", "main"], "Dinner")
       assert MealRoles.fits_slot?(["soup"], "Lunch")
+    end
+
+    test "a dinner dish fits Dinner but not Lunch" do
+      assert MealRoles.fits_slot?(["dinner"], "Dinner")
+      refute MealRoles.fits_slot?(["dinner"], "Lunch")
+    end
+
+    test "workout roles alone fill no planner slot" do
+      refute MealRoles.fits_slot?(["pre_workout", "post_workout"], "Dinner")
+      refute MealRoles.fits_slot?(["pre_workout"], "Morning Snack")
     end
 
     test "unclassified recipes always fit (rollout safety)" do

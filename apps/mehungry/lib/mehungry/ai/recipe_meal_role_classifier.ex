@@ -72,6 +72,15 @@ defmodule Mehungry.AI.RecipeMealRoleClassifier do
     - Low protein and low kcal per serving (e.g. under ~250 kcal) usually means it
       is not a main.
     - Only give "breakfast" to dishes people commonly eat for breakfast.
+    - "dinner" is for a complete meal that suits the evening but is too light to
+      be a midday main (an omelette, a light fish plate, a hearty salad bowl). A
+      dish that works at both lunch and dinner is just "main" — do not add
+      "dinner" to every main. A meze, dip or side is not a "dinner".
+    - "pre_workout" and "post_workout" are extra tags, given on top of the dish's
+      normal roles (snack, breakfast, main, drink…). "pre_workout": easy to digest,
+      carbohydrate-led, low fat and fibre. "post_workout": clearly protein-rich
+      (roughly 20 g+ protein per serving) with some carbohydrate. Most recipes get
+      neither.
     - "component" is for things never eaten on their own (sauces, dressings,
       doughs, stocks, spice mixes). Do not combine it with eating roles unless
       the item is genuinely both.
@@ -86,6 +95,9 @@ defmodule Mehungry.AI.RecipeMealRoleClassifier do
     - Greek yogurt with honey and walnuts → breakfast 0.85, snack 0.85, dessert 0.7
     - Tzatziki → meze 0.95, side 0.6, component 0.4
     - Béchamel sauce → component 0.97
+    - Vegetable omelette with a green salad → dinner 0.85, breakfast 0.6
+    - Banana oat energy bites → snack 0.9, pre_workout 0.85
+    - Chicken and rice bowl → main 0.95, post_workout 0.85
 
     Confidence is 0.0–1.0: how sure you are the role applies.
 
@@ -135,7 +147,7 @@ defmodule Mehungry.AI.RecipeMealRoleClassifier do
   defp to_entry(_, _), do: []
 
   defp to_assignment(%{"role" => role} = a) when is_binary(role) do
-    role = role |> String.trim() |> String.downcase()
+    role = role |> String.trim() |> String.downcase() |> String.replace(~r/[\s-]+/, "_")
     if MealRoles.valid?(role), do: [%{role: role, confidence: confidence(a)}], else: []
   end
 

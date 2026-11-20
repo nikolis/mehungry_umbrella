@@ -9,7 +9,7 @@ defmodule Mehungry.Food.MealRoles do
   A recipe may carry **several** roles (spanakopita is a `main`, a `side`, a
   `meze` and a `snack`). The list is deliberately fixed in code — not admin
   editable — because the planner's logic keys on specific roles (`main`,
-  `soup`); see `docs/implementation/food/meal_roles.md`.
+  `soup`, `dinner`); see `docs/implementation/food/meal_roles.md`.
   """
 
   @roles [
@@ -17,6 +17,8 @@ defmodule Mehungry.Food.MealRoles do
      "A breakfast dish (eggs, porridge, pancakes, yogurt bowls, toast)."},
     {"main", "Main",
      "A main course that is a complete lunch or dinner on its own — has substance and usually a protein source."},
+    {"dinner", "Dinner",
+     "An evening meal: a complete dinner on its own that suits the evening rather than midday — lighter than a heavy lunch main (an omelette, a light fish or vegetable plate, a hearty salad bowl)."},
     {"soup", "Soup",
      "A soup or stew-like soup that can be the whole meal (fasolada, avgolemono, lentil soup)."},
     {"salad", "Salad", "A salad, eaten alongside a meal (or a light meal only if very hearty)."},
@@ -27,6 +29,10 @@ defmodule Mehungry.Food.MealRoles do
     {"snack", "Snack", "A small between-meal snack."},
     {"dessert", "Dessert", "A dessert or sweet (cakes, cookies, sweet pastries, puddings)."},
     {"drink", "Drink", "A drink or smoothie."},
+    {"pre_workout", "Pre-workout",
+     "Good fuel shortly before training: easy to digest, carbohydrate-led, low in fat and fibre (banana oat bites, toast with honey, a light smoothie)."},
+    {"post_workout", "Post-workout",
+     "Good recovery food after training: protein-rich with carbohydrates (protein smoothie, chicken and rice bowl, eggs on toast, yogurt with fruit)."},
     {"component", "Component",
      "A building block, not eaten on its own: sauce, dressing, dough, stock, spice mix, marinade."}
   ]
@@ -37,6 +43,8 @@ defmodule Mehungry.Food.MealRoles do
   # planner emits (`MealPlanCore.slots/0`) and the canonical MealType values.
   @breakfast ~w(breakfast)
   @meal ~w(main soup)
+  # Dinner also takes the dinner-only role; Lunch does not.
+  @dinner ~w(main dinner soup)
   @snack ~w(snack dessert drink)
 
   @slot_roles %{
@@ -44,8 +52,8 @@ defmodule Mehungry.Food.MealRoles do
     "breakfast" => @breakfast,
     "Lunch" => @meal,
     "lunch" => @meal,
-    "Dinner" => @meal,
-    "dinner" => @meal,
+    "Dinner" => @dinner,
+    "dinner" => @dinner,
     "Morning Snack" => @snack,
     "morning_snack" => @snack,
     "Afternoon Snack" => @snack,
@@ -74,7 +82,7 @@ defmodule Mehungry.Food.MealRoles do
     end
   end
 
-  @doc "Roles that make a complete lunch or dinner on their own."
+  @doc "Roles that make a complete lunch *or* dinner on their own (`dinner` fits Dinner only)."
   def meal_capable, do: @meal
 
   @doc """

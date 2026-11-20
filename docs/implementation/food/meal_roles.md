@@ -13,13 +13,14 @@ dinner. See [`../ai/meal_plan.md`](../ai/meal_plan.md).
 ## Vocabulary — `Mehungry.Food.MealRoles`
 
 A **fixed list in code** (`food/meal_roles.ex`), not admin-editable. The planner's
-logic depends on specific roles (`main`, `soup`), so the names have to stay stable.
+logic depends on specific roles (`main`, `soup`, `dinner`), so the names have to stay stable.
 Adding a role is a code change.
 
 | role | meaning | fills |
 |---|---|---|
 | `breakfast` | a breakfast dish | Breakfast |
 | `main` | a complete lunch/dinner on its own | Lunch, Dinner |
+| `dinner` | an evening-only complete meal, too light for a midday main (omelette, light fish plate) | Dinner |
 | `soup` | a soup that can be the meal (fasolada, avgolemono) | Lunch, Dinner |
 | `salad` | a salad (accompaniment) | — |
 | `side` | a side dish | — |
@@ -27,7 +28,15 @@ Adding a role is a code change.
 | `snack` | a between-meal snack | Morning/Afternoon Snack |
 | `dessert` | a dessert or sweet | Morning/Afternoon Snack |
 | `drink` | a drink or smoothie | Morning/Afternoon Snack |
+| `pre_workout` | fuel before training: easy to digest, carb-led, low fat/fibre | — (tag) |
+| `post_workout` | recovery after training: protein-rich with carbs | — (tag) |
 | `component` | a building block: sauce, dressing, dough, stock | never planned |
+
+`pre_workout` / `post_workout` are **tags on top of a dish's normal roles** — the
+planner has no workout slot, so on their own they fill nothing; a pre-workout
+snack is `snack` + `pre_workout`. Adding a role needs **no migration** (`role` is
+a plain string validated against `MealRoles.all/0`); recipes classified before
+the role existed only pick it up via **Reclassify unreviewed** (or by hand).
 
 - `slot_roles/1` maps a planner slot label ("Dinner") or a canonical meal type
   ("dinner") to the roles that may fill it.
@@ -127,7 +136,7 @@ admin sidebar ("Meal roles") and `/professional/recipes`.
 - **Each row:**
   - Thumbnail, title (opens the recipe), cuisine, kcal + protein per serving,
     source and owner.
-  - **All 10 role chips.** Click to add or remove; any number can be on.
+  - **All role chips** (one per vocabulary role). Click to add or remove; any number can be on.
     Chips show the AI confidence, a ✓ when reviewed, amber when confidence is
     below 0.6, dashed for an unsaved addition, struck through for an unsaved
     removal.
@@ -150,7 +159,7 @@ admin sidebar ("Meal roles") and `/professional/recipes`.
    (`slot_role_errors/2`), with a message telling the model to search with that
    slot. Ingredient entries and unclassified recipes pass.
 4. Both agents' prompts define each slot in terms of roles: lunch/dinner must be
-   a main or a meal soup, and breakfast must be a breakfast dish.
+   a main or a meal soup (dinner may also be a `dinner` dish), and breakfast must be a breakfast dish.
 
 The API is unchanged: no `/api/v1` shape changed.
 

@@ -35,8 +35,8 @@ and a computed nutrition map.
 
 `has_many :meal_roles` — `Mehungry.Food.RecipeMealRole` (`food/schemas/recipe_meal_role.ex`),
 one row per role the recipe can play in a meal (multi-label; vocabulary fixed in
-`Mehungry.Food.MealRoles`: breakfast, main, soup, salad, side, meze, snack, dessert,
-drink, component). Fields: `role`, `source` (`ai`|`manual`), `confidence`,
+`Mehungry.Food.MealRoles`: breakfast, main, dinner, soup, salad, side, meze, snack, dessert,
+drink, pre_workout, post_workout, component). Fields: `role`, `source` (`ai`|`manual`), `confidence`,
 `reviewed`, `reviewed_by_id` → [User](user.md), `reviewed_at`. Unique
 `(recipe_id, role)`; `on_delete: :delete_all` from the recipe. Read by the AI meal
 planner; reviewed at `/professional/recipe-meal-roles`. Full behaviour in
