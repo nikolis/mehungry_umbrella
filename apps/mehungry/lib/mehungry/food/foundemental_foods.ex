@@ -16,7 +16,8 @@ defmodule Mehungry.Food.FoundementalFoods do
     FoundementalFoodSpecies,
     FoundementalFoodSpeciesTranslation,
     Ingredient,
-    SpeciesIcons
+    SpeciesIcons,
+    SpeciesSearch
   }
 
   # ── Species ────────────────────────────────────────────────────────────────
@@ -27,7 +28,8 @@ defmodule Mehungry.Food.FoundementalFoods do
   end
 
   @doc """
-  Public scope — only species not marked `private`. The mobile API's species list
+  Public scope — only species not marked `private`, `:translations` preloaded
+  (the mobile API localizes each row's name). The mobile API's species list
   reads this (the admin USDA Schema view reads `list_species/0`, which includes
   private rows so they stay curatable).
   """
@@ -35,7 +37,8 @@ defmodule Mehungry.Food.FoundementalFoods do
     Repo.all(
       from s in FoundementalFoodSpecies,
         where: s.private == false,
-        order_by: [asc: s.name, asc: s.variety]
+        order_by: [asc: s.name, asc: s.variety],
+        preload: :translations
     )
   end
 
@@ -81,7 +84,34 @@ defmodule Mehungry.Food.FoundementalFoods do
   def search_public_species(term, _limit) when term in [nil, ""], do: []
 
   def search_public_species(term, limit) do
-    Repo.all(public_only(search_species_query(term, limit)))
+    public_only(search_species_query(term, limit))
+    |> Repo.all()
+    |> Repo.preload(:translations)
+  end
+
+  @doc """
+  `search_public_species/1` for a reader in `language`: species whose **translated**
+  name matches come first (the same `SpeciesSearch.search_in_language/2` match the
+  web `/foods` search uses, so "μελιτζάνα" finds Eggplant), followed by the
+  English-name / scientific-name matches. De-duplicated, `:translations` preloaded.
+  English (or no language) is plain `search_public_species/1`.
+  """
+  def search_public_species_in_language(term, language) when language in [nil, "en"],
+    do: search_public_species(term)
+
+  def search_public_species_in_language(term, _language) when term in [nil, ""], do: []
+
+  def search_public_species_in_language(term, language) do
+    ids = term |> SpeciesSearch.search_in_language(language) |> Enum.map(& &1.id)
+    by_id = species_by_ids(ids)
+
+    translated =
+      ids
+      |> Enum.uniq()
+      |> Enum.flat_map(&List.wrap(Map.get(by_id, &1)))
+      |> Repo.preload(:translations)
+
+    Enum.uniq_by(translated ++ search_public_species(term), & &1.id)
   end
 
   defp search_species_query(term, limit) do

@@ -222,6 +222,60 @@ defmodule MehungryWeb.Api.V1.FoodHealthTest do
     end
   end
 
+  describe "species name localization" do
+    defp translate(species, greek_name) do
+      Mehungry.Languages.ensure_language("el")
+
+      %Mehungry.Food.FoundementalFoodSpeciesTranslation{}
+      |> Mehungry.Food.FoundementalFoodSpeciesTranslation.changeset(%{
+        foundemental_species_id: species.id,
+        language_name: "el",
+        name: greek_name
+      })
+      |> Mehungry.Repo.insert!()
+    end
+
+    test "list, search and detail serve the Greek name for el; slug stays English",
+         %{conn: conn} do
+      uniq = System.unique_integer([:positive])
+      sp = species_fixture("Eggplantq#{uniq}")
+      plain = species_fixture("Untranslatedq#{uniq}")
+      greek = "Μελιτζάναq#{uniq}"
+      translate(sp, greek)
+      slug = String.downcase(sp.name)
+      el = put_req_header(conn, "accept-language", "el")
+
+      expected = %{"name" => greek, "canonical_name" => sp.name, "slug" => slug}
+
+      # Detail.
+      assert %{"data" => detail} = el |> get(~p"/api/v1/species/#{slug}") |> json_response(200)
+      assert Map.take(detail, Map.keys(expected)) == expected
+
+      # List: the translated row is Greek, an untranslated one falls back to English.
+      assert %{"data" => rows} =
+               el |> get(~p"/api/v1/species?page_size=100") |> json_response(200)
+
+      by_id = Map.new(rows, &{&1["id"], &1})
+
+      assert Map.take(by_id[sp.id], Map.keys(expected)) == expected
+      assert by_id[plain.id]["name"] == plain.name
+
+      # Search: by the Greek name (accent-insensitive) and by the English one.
+      for q <- ["μελιτζαναq#{uniq}", "eggplantq#{uniq}"] do
+        assert %{"data" => [hit]} =
+                 el |> get(~p"/api/v1/species?#{[q: q]}") |> json_response(200)
+
+        assert Map.take(hit, Map.keys(expected)) == expected
+      end
+
+      # English (default) is untouched.
+      assert %{"data" => %{"name" => name, "canonical_name" => name}} =
+               conn |> get(~p"/api/v1/species/#{slug}") |> json_response(200)
+
+      assert name == sp.name
+    end
+  end
+
   describe "species sub-routes resolve slugs like the detail route" do
     test "nutrition 404s for an unknown species", %{conn: conn} do
       assert conn

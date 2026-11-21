@@ -4,11 +4,17 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
   alias Mehungry.Food.SpeciesNutritionSummary
   alias MehungryWeb.NutrientLabels
 
-  @doc "A species list row."
-  def species_summary(species) do
+  @doc """
+  A species list row. `name` is localized to `locale` when the species has a
+  translation for it (needs `:translations` preloaded; falls back to the English
+  name otherwise). `canonical_name` is always the English name and `slug` is always
+  derived from it, so both are stable across locales.
+  """
+  def species_summary(species, locale \\ "en") do
     %{
       id: species.id,
-      name: species.name,
+      name: localized_name(species, locale),
+      canonical_name: species.name,
       slug: slug(species.name),
       icon: Mehungry.Food.species_icon(species),
       image: species_image(species),
@@ -34,6 +40,18 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
 
   defp species_image(_), do: nil
 
+  # The species' translated name for `locale` (first translation, as the web page
+  # picks), else its English name.
+  defp localized_name(%{translations: translations} = species, locale)
+       when is_list(translations) and locale not in [nil, "en"] do
+    case Enum.find(translations, &(&1.language_name == locale)) do
+      %{name: name} when is_binary(name) and name != "" -> name
+      _ -> species.name
+    end
+  end
+
+  defp localized_name(species, _locale), do: species.name
+
   @doc """
   Full species detail. `research` is the curated research block —
   `%{counts:, relevant:, mechanistic:, mechanistic_count:}` (the map from
@@ -42,7 +60,7 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
   name-sorted list; `facts` is the `fact_key => SpeciesFact` map from
   `Food.promoted_species_facts_for_species/2` (promoted enrichment facts).
 
-  `opts`: `:default_ingredient` (the ingredient flagged `default: true`),
+  `opts`: `:locale` (localizes `name`), `:default_ingredient` (the ingredient flagged `default: true`),
   `:recipes` (sample recipes using the species' ingredients) and `:recipes_count`
   (the true distinct count).
   """
@@ -55,7 +73,7 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
 
     %{
       data:
-        species_summary(species)
+        species_summary(species, opts[:locale] || "en")
         |> Map.merge(%{
           research: research_block(research),
           ingredients:

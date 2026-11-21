@@ -520,6 +520,7 @@ defmodule Mehungry.Food do
   # ── Foundemental foods ─────────────────────────────────────────────────────
 
   defdelegate list_foundemental_species(), to: FoundementalFoods, as: :list_species
+  defdelegate search_public_species_in_language(term, language), to: FoundementalFoods
   defdelegate list_public_foundemental_species(), to: FoundementalFoods, as: :list_public_species
 
   defdelegate search_species(term, limit \\ 20), to: FoundementalFoods

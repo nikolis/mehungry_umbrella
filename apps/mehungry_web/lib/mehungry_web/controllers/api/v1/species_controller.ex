@@ -23,15 +23,17 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
   def index(conn, params) do
     # Public scope only — species an admin marked private are hidden from the app
     # (the admin curation view uses the non-public variants).
+    locale = Locale.resolve(conn, params)
+
     species =
       case params["q"] do
-        q when is_binary(q) and q != "" -> Food.search_public_species(q)
+        q when is_binary(q) and q != "" -> Food.search_public_species_in_language(q, locale)
         _ -> Food.list_public_foundemental_species()
       end
 
     {page, meta} = Pagination.paginate_list(species, Pagination.params(params))
     meta = Map.put(meta, :total, length(species))
-    json(conn, data(Enum.map(page, &FoodJSON.species_summary/1), meta))
+    json(conn, data(Enum.map(page, &FoodJSON.species_summary(&1, locale)), meta))
   end
 
   def show(conn, %{"slug" => slug} = params) do
@@ -58,6 +60,7 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
         json(
           conn,
           FoodJSON.species_detail(species, research, ingredients, facts,
+            locale: locale,
             default_ingredient: SpeciesNutritionSummary.default_ingredient(ingredients),
             recipes: Food.list_sample_recipes_for_ingredients(ingredient_ids),
             recipes_count: Food.count_recipes_for_ingredients(ingredient_ids)

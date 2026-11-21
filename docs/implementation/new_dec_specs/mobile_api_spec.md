@@ -547,7 +547,7 @@ are **omitted** from both the list and search, and their `:slug` detail 404s —
 they exist only in the admin curation view, never in the app. See
 `docs/implementation/entities/foundemental_food_species.md`.
 ```json
-{ "data": [ {"id":1,"name":"Acerola","slug":"acerola","icon":"🍒","image":null,"variety":"west indian cherry","family":null,"scientific_name":"Malpighia emarginata"},
+{ "data": [ {"id":1,"name":"Acerola","canonical_name":"Acerola","slug":"acerola","icon":"🍒","image":null,"variety":"west indian cherry","family":null,"scientific_name":"Malpighia emarginata"},
              {"id":2,"name":"Agave","slug":"agave","icon":"🥗",
               "image":{"url":"https://…/species_images/2.jpg","license":"CC BY-SA 3.0",
                        "license_url":"https://creativecommons.org/licenses/by-sa/3.0",
@@ -556,6 +556,17 @@ they exist only in the admin curation view, never in the app. See
               "family":"Asparagaceae"} ],
   "meta": { "total": 7 } }
 ```
+**Localization.** `name` is the species' translated name when the resolved locale
+(§Language) has one — `Accept-Language: el` → `"name":"Μελιτζάνα"` for Eggplant — and
+the English name otherwise. `canonical_name` is **always** the English name and `slug` is
+always derived from it, so both are stable across locales (use `slug` for the detail /
+nutrition / research calls, `canonical_name` for anything keyed on the English name).
+Untranslated species stay in the list with their English name. With `?q=` in a non-English
+locale, species whose translated name matches (accent-insensitive — the web `/foods`
+search) come first, then English-name / scientific-name matches. The same `name` /
+`canonical_name` pair is on the detail payload. List order is by English name in every
+locale.
+
 `icon` is a single emoji (always present, never null): a curator's per-species
 override if set, else derived from the species name/family by `Food.species_icon/1`
 (`Food.SpeciesIcons`). Present on both the list rows and the detail payload.
@@ -574,7 +585,7 @@ Species detail — the mobile counterpart of the web `/foods/:slug` page: identi
 using it. (Per-100g nutrition is a separate call — see `…/nutrition` below.)
 ```json
 { "data": {
-  "id": 12, "name": "Spinach", "slug": "spinach", "icon": "🥬",
+  "id": 12, "name": "Spinach", "canonical_name": "Spinach", "slug": "spinach", "icon": "🥬",
   "image": {"url": "https://…/species_images/12.jpg", "license": "CC BY-SA 3.0",
             "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
             "attribution": "Alvesgaspar",
