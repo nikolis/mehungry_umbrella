@@ -98,6 +98,8 @@ scope "/api/v1", MehungryWeb.Api.V1 do
   get  "/search", SearchController, :index
   get  "/species", SpeciesController, :index
   get  "/species/:slug", SpeciesController, :show
+  get  "/species/:slug/research", SpeciesController, :research
+  get  "/species/:slug/nutrition", SpeciesController, :nutrition
 end
 
 scope "/api/v1", MehungryWeb.Api.V1 do
@@ -567,7 +569,9 @@ photo you **must** render its credit — `attribution` (author, may be `null`), 
 even where the licence doesn't strictly require it. See
 `docs/implementation/science/species_enrichment.md`.
 ### `GET /api/v1/species/:slug` 🔓
-Species detail: description, nutrition facts, **mined research findings**, ingredients.
+Species detail — the mobile counterpart of the web `/foods/:slug` page: identity + photo,
+**curated research findings**, the species' USDA foods, enrichment facts and the recipes
+using it. (Per-100g nutrition is a separate call — see `…/nutrition` below.)
 ```json
 { "data": {
   "id": 12, "name": "Spinach", "slug": "spinach", "icon": "🥬",
@@ -577,12 +581,22 @@ Species detail: description, nutrition facts, **mined research findings**, ingre
             "source_url": "https://commons.wikimedia.org/wiki/File:Spinach.jpg"},
   "scientific_name": "Spinacia oleracea",
   "family": "Amaranthaceae", "variety": null,
-  "research": [ { "text": "Spinach is a rich source of dietary nitrate.",
-    "label": "verified", "certainty": "high", "claim_type": "other",
-    "study_design": "systematic_review", "source": "pmc_oa_fulltext",
-    "pmid": "12345678", "license": "commercial_ok", "quote": "verbatim span (nil unless commercial_ok)",
-    "lay": { "tier": "lead", "clarity": 0.8, "flags": [] } } ],
-  "ingredients": [ {"id":412,"name":"Spinach, raw"} ],
+  "research": {
+    "counts": { "total": 1297, "verified": 328, "contradicted": 373, "unverified": 596 },
+    "relevant": [ { "text": "Spinach is a rich source of dietary nitrate.",
+      "label": "verified", "reason": "Corroborated by two independent trials.",
+      "certainty": "high", "claim_type": "other",
+      "study_design": "systematic_review", "source": "pmc_oa_fulltext",
+      "pmid": "12345678", "license": "commercial_ok", "quote": "verbatim span (nil unless commercial_ok)",
+      "lay": { "tier": "lead", "clarity": 0.8, "flags": [] } } ],
+    "mechanistic": [ { "…": "same fact shape" } ],
+    "mechanistic_count": 179
+  },
+  "ingredients": [ {"id":412,"name":"Spinach, raw","default":true},
+                   {"id":413,"name":"Spinach, cooked, boiled","default":false} ],
+  "recipes_count": 5,
+  "recipes": [ {"id":119,"title":"Spanakopita","image_url":"https://…","list_image_url":"https://…",
+                "cook_time_min":45} ],
   "facts": {
     "origin_region": "Central Asia",
     "description": "species of flowering plant",
@@ -592,19 +606,44 @@ Species detail: description, nutrition facts, **mined research findings**, ingre
   }
 } }
 ```
-`research` is the species' **mined biomedical facts** (`Mehungry.FactMining` → the
-biomed-fact-miner; see `docs/implementation/fact_mining.md`), distilled PMID-cited claims
-carrying the honest verification `label` (`verified` / `contradicted` / `unverified_*`) +
-`certainty`. `quote` is the verbatim source span and is **`null` unless `license ==
-"commercial_ok"`** (non-commercial quotes are withheld) — render from `text` + `pmid` +
-`label`. `lay` is the miner's **presentation hint, orthogonal to `label`**:
-`{tier: "lead"|"show"|"hide", clarity: float[0,1], flags: [...]}` — `hide` = off-subject
-(comparator/background), `lead`/`show` = on-subject by readability; apply the same lead/show/hide
-policy the web page does (lead the list with on-subject verified facts; treat `hide` as
-search-only). `tier`/`clarity` are `null` for facts mined before the miner exposed `lay` (pre-
-2026-11-14, until a re-mine); `flags` defaults to `[]`. The array is empty until the admin "Mine
-all species" sweep has run for the species. *(Replaced the former `compounds[]` block when the
-species↔compound graph was retired.)*
+`research` is the **curated** view of the species' mined biomedical facts
+(`Mehungry.FactMining` → the biomed-fact-miner; see `docs/implementation/fact_mining.md`) —
+the same set the web page renders, *not* the full fact list (a well-studied species carries
+thousands of facts; the rest is reached through `…/research?q=`):
+
+- `counts` — the honest verdict tally over **all** of the species' facts
+  (`FactMining.research_counts_for_species/1`): `verified` ("corroborated"), `contradicted`,
+  `unverified` (every `unverified_*` label), `total`.
+- `relevant` — up to 10 **verified**, on-subject (`lay.tier != "hide"`) findings, human /
+  clinical evidence first (`FactMining.curated_facts_for_species/2`). Lead the section
+  with these.
+- `mechanistic` — up to 10 verified lab / mechanism findings (molecular docking, in-vitro,
+  animal), demoted behind a collapsed "Lab & mechanism studies (`mechanistic_count`)"
+  disclosure. `mechanistic_count` is the size of that pile before the cap of 10.
+- When `relevant` is empty but `mechanistic` is not, the corroborated evidence is
+  preclinical only — show `mechanistic` with a note saying so.
+
+Each fact: distilled `text`, PMID (`https://pubmed.ncbi.nlm.nih.gov/<pmid>`), the
+verification `label` (`verified` / `contradicted` / `unverified_quality` /
+`unverified_fulltext` / `unverified_insufficient` / `unverified_verification`) + `certainty`,
+and `reason` — the verifier's explanation of the verdict (the web "Why?" disclosure),
+`null` when absent. `quote` is the verbatim source span and is **`null` unless
+`license == "commercial_ok"`** (non-commercial quotes are withheld) — render from `text` +
+`pmid` + `label`. `lay` is the miner's **presentation hint, orthogonal to `label`**:
+`{tier: "lead"|"show"|"hide", clarity: float[0,1], flags: [...]}`; `tier`/`clarity` are `null`
+for facts mined before the miner exposed `lay` (pre-2026-11-14, until a re-mine); `flags`
+defaults to `[]`. Fact text is English regardless of locale. All lists are empty and all
+counts `0` until the admin "Mine all species" sweep has run for the species.
+*(`research` was the full fact array before 2026-11-19; it replaced the former `compounds[]`
+block when the species↔compound graph was retired.)*
+
+`ingredients` are the USDA foods curated onto the species, name-sorted; exactly one carries
+`default: true` (a Foundation-class food when there is one, else the first) — the one
+`…/nutrition` serves when no `ingredient_id` is given. Empty when none are curated.
+
+`recipes_count` is the true number of distinct recipes using any of those ingredients;
+`recipes` is a sample of up to 6 (`cook_time_min` may be `null`). Open one with
+`GET /api/v1/recipes/:id`.
 
 `facts` are **promoted species enrichment facts** (the web page's "Origins & cultivation"
 section) — Wikidata (CC0) + FAOSTAT (CC BY 4.0). Every key is nullable (absent/unpromoted
@@ -613,6 +652,47 @@ section) — Wikidata (CC0) + FAOSTAT (CC BY 4.0). Every key is nullable (absent
 `top_producers` exposes **ranked country names only** (no tonnage) + the source year, and
 its `source` string is the **required FAOSTAT attribution** — render it wherever the
 producers are shown. See `docs/implementation/science/species_enrichment.md`.
+
+### `GET /api/v1/species/:slug/research` 🔓 `?q=histamine`
+Search over **all** of the species' mined facts — every label and tier, including the
+contradicted / unverified / off-subject ones the curated detail omits. Case-insensitive
+substring match on the fact `text`, verified first, **capped at 30**
+(`FactMining.search_facts_for_species/2`). A blank or missing `q` returns an empty list.
+404 for an unknown species.
+```json
+{ "data": [ { "text": "…", "label": "contradicted", "reason": "…", "pmid": "19172488",
+              "study_design": "cohort", "…": "same fact shape as above" } ],
+  "meta": { "total": 2 } }
+```
+`meta.total` is the number of facts returned (≤ 30), not the number matching.
+
+### `GET /api/v1/species/:slug/nutrition` 🔓 `?ingredient_id=412`
+Per-**100 g** nutrition of one of the species' `ingredients` — the default one when
+`ingredient_id` is omitted. **404** when the species is unknown, has no curated
+ingredients, or `ingredient_id` is not one of them.
+```json
+{ "data": {
+  "ingredient": { "id": 412, "name": "Spinach, raw" },
+  "top": [ {"key":"calories","label":"Calories","amount":23.0,"unit":"kcal"},
+           {"key":"protein","label":"Protein","amount":2.9,"unit":"g"},
+           {"key":"fat","label":"Fat","amount":0.4,"unit":"g"},
+           {"key":"carbs","label":"Carbs","amount":3.6,"unit":"g"},
+           {"key":"fiber","label":"Fiber","amount":2.2,"unit":"g"} ],
+  "nutrients": { "Energy": {"name":"Energy","amount":23.0,"measurement_unit":"kilocalorie","children":[]},
+                 "Total Fat": {"name":"Total Fat","amount":0.4,"measurement_unit":"gram",
+                               "children":[ {"name":"Saturated Fat","…":"…"} ]} },
+  "summary": [ "Per 100 g, Spinach, raw contains 0.4 g of total sugars.",
+               "Per 100 g, Spinach also provides 2.7 mg iron, 99.0 mg calcium and 558.0 mg potassium." ]
+} }
+```
+- `top` — the headline macro cards, in display order; an entry is **absent** when the
+  ingredient has no such nutrient (so `[]` for an ingredient without nutrient data). `key`
+  is stable (`calories | protein | fat | carbs | fiber`), `label` is localized, `amount` is
+  unrounded.
+- `nutrients` — the full hierarchical tree, the **same shape and localization as recipe
+  `nutrients`** (§4), so the same breakdown component renders it. `{}` when there is no data.
+- `summary` — 0–2 deterministic sentences (sugar/fat makeup; notable micronutrients), the
+  ones the web page shows above its breakdown. **English only** for now, in every locale.
 
 ---
 
@@ -1937,6 +2017,7 @@ GET/PUT /api/v1/me/preferences
 GET    /api/v1/search
 GET    /api/v1/ingredients/search
 GET    /api/v1/species                 GET /api/v1/species/:slug
+GET    /api/v1/species/:slug/research  GET /api/v1/species/:slug/nutrition
 GET    /api/v1/meals                   GET /api/v1/meals/day/:date
 POST   /api/v1/meals                   PUT/DELETE /api/v1/meals/:id
 POST   /api/v1/meals/:id/consume

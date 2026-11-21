@@ -452,6 +452,32 @@ defmodule Mehungry.FactMining do
     )
   end
 
+  @doc """
+  A crude singular stem of a species' English common name's first token
+  ("Cranberries (Alaska Native)" → "cranberr", "Tomatoes" → "tomato") — the
+  `:name_term` for `curated_facts_for_species/2`, boosting facts that name the food
+  when `lay` relevance is absent (pre-re-mine data). English name on purpose: mined
+  fact text is English regardless of UI locale. `nil` when there is no usable name.
+  """
+  def species_name_term(%{name: name}) when is_binary(name) do
+    core =
+      name
+      |> String.split(["(", ",", "/"], parts: 2)
+      |> List.first()
+      |> String.trim()
+      |> String.downcase()
+
+    cond do
+      core == "" -> nil
+      String.ends_with?(core, "ies") -> String.replace_suffix(core, "ies", "")
+      String.ends_with?(core, "es") -> String.replace_suffix(core, "es", "")
+      String.ends_with?(core, "s") -> String.replace_suffix(core, "s", "")
+      true -> core
+    end
+  end
+
+  def species_name_term(_), do: nil
+
   defp normalize_term(term) when is_binary(term) do
     case String.trim(term) do
       "" -> nil

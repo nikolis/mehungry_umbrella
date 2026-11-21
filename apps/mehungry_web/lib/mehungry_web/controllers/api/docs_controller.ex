@@ -136,6 +136,10 @@ defmodule MehungryWeb.Api.DocsController do
       "/api/v1/ingredients/search" => op("get", "mobile", "USDA ingredient search", secured),
       "/api/v1/species" => op("get", "mobile", "List food species", public),
       "/api/v1/species/{slug}" => op("get", "mobile", "Species detail", public),
+      "/api/v1/species/{slug}/nutrition" =>
+        op("get", "mobile", "Species per-100g nutrition", public),
+      "/api/v1/species/{slug}/research" =>
+        op("get", "mobile", "Search species research facts", public),
       "/api/v1/conditions" => op("get", "mobile", "List health conditions", public),
       "/api/v1/conditions/{id}" => op("get", "mobile", "Condition detail", public),
       "/api/v1/meals" => op("get", "mobile", "Weekly meal plan (start/end)", secured),

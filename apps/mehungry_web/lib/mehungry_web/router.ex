@@ -128,6 +128,8 @@ defmodule MehungryWeb.Router do
     get("/search", SearchController, :index)
     get("/species", SpeciesController, :index)
     get("/species/:slug", SpeciesController, :show)
+    get("/species/:slug/research", SpeciesController, :research)
+    get("/species/:slug/nutrition", SpeciesController, :nutrition)
 
     get("/blueprints", BlueprintController, :index)
     get("/blueprints/:slug", BlueprintController, :show)

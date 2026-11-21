@@ -4,26 +4,11 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
   alias Mehungry.FactMining
   alias Mehungry.Food
+  alias Mehungry.Food.SpeciesNutritionSummary
   alias Mehungry.Literature.ResearchType
   alias Phoenix.LiveView.AsyncResult
 
   @base_url "https://www.m3hungry.com"
-
-  @top_nutrient_names [
-    "Energy",
-    "Protein",
-    "Total lipid (fat)",
-    "Carbohydrate, by difference",
-    "Fiber, total dietary"
-  ]
-
-  @display_labels %{
-    "Energy" => "Calories",
-    "Protein" => "Protein",
-    "Total lipid (fat)" => "Fat",
-    "Carbohydrate, by difference" => "Carbs",
-    "Fiber, total dietary" => "Fiber"
-  }
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Update (mount / events)
@@ -64,8 +49,8 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
         cur_slug = if language == "el", do: el_slug, else: en_slug
         hreflang_paths = %{"en" => "/foods/" <> en_slug, "el" => "/foods/" <> el_slug}
 
-        ingredients = species_ingredients(species)
-        selected = default_ingredient(ingredients)
+        ingredients = SpeciesNutritionSummary.species_ingredients(species)
+        selected = SpeciesNutritionSummary.default_ingredient(ingredients)
 
         socket =
           socket
@@ -152,7 +137,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     # and the first paint; the rest is reached via the search box (search_research).
     # The verdict tally reads a cheap grouped count, so it still reports the true
     # totals. Search state starts empty.
-    name_term = name_term(species)
+    name_term = FactMining.species_name_term(species)
 
     socket =
       socket
@@ -181,29 +166,6 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
       )
     end
   end
-
-  # A crude singular stem of the species' English common name's first token
-  # ("Cranberries (Alaska Native)" → "cranberr", "Tomatoes" → "tomato") used to
-  # boost facts that name the food when `lay` relevance is absent (pre-re-mine data).
-  # English name on purpose — mined fact text is English regardless of UI locale.
-  defp name_term(%{name: name}) when is_binary(name) do
-    core =
-      name
-      |> String.split(["(", ",", "/"], parts: 2)
-      |> List.first()
-      |> String.trim()
-      |> String.downcase()
-
-    cond do
-      core == "" -> nil
-      String.ends_with?(core, "ies") -> String.replace_suffix(core, "ies", "")
-      String.ends_with?(core, "es") -> String.replace_suffix(core, "es", "")
-      String.ends_with?(core, "s") -> String.replace_suffix(core, "s", "")
-      true -> core
-    end
-  end
-
-  defp name_term(_), do: nil
 
   # ── Enrichment facts (Origins & cultivation section) ─────────────────────────
   # `@facts` is a fact_key => SpeciesFact map from `promoted_species_facts_for_species/2`.
@@ -279,24 +241,19 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
     socket
     |> assign(:selected_ingredient, ingredient)
-    |> assign(:top_nutrients, build_top_nutrients(ingredient.ingredient_nutrients))
+    |> assign(
+      :top_nutrients,
+      SpeciesNutritionSummary.top_nutrients(ingredient.ingredient_nutrients)
+    )
+    |> assign(
+      :composition_summary,
+      SpeciesNutritionSummary.composition_summary(ingredient.name, nutrient_tree)
+    )
     |> assign(:nutrient_tree, nutrient_tree)
-    |> assign(:composition_summary, build_composition_summary(ingredient.name, nutrient_tree))
-    |> assign(:micronutrient_summary, build_micronutrient_summary(micro_name, nutrient_tree))
-  end
-
-  defp species_ingredients(species) do
-    species.foundemental_foods
-    |> Enum.map(& &1.ingredient)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.sort_by(& &1.name)
-  end
-
-  # Prefer a Foundation-class ingredient (most complete nutrient data), else the first.
-  defp default_ingredient([]), do: nil
-
-  defp default_ingredient(ingredients) do
-    Enum.find(ingredients, &(&1.food_class == "Foundation")) || hd(ingredients)
+    |> assign(
+      :micronutrient_summary,
+      SpeciesNutritionSummary.micronutrient_summary(micro_name, nutrient_tree)
+    )
   end
 
   defp parse_id(id) when is_integer(id), do: id
@@ -305,195 +262,6 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   # ═══════════════════════════════════════════════════════════════════════════
   # View helpers
   # ═══════════════════════════════════════════════════════════════════════════
-
-  defp build_top_nutrients(ingredient_nutrients) do
-    # USDA ships up to four "Energy*" rows per ingredient (kcal, kJ, Atwater
-    # General, Atwater Specific). A naive Map.new keyed on nutrient name lets the
-    # last one win — often the kJ row — so the "Calories" card, meta description,
-    # and JSON-LD description reported the kJ value mislabeled as kcal (≈4.17×
-    # too high). Collapse the energy rows to the single kcal entry the nutrient
-    # tree already uses, then fold its (possibly Atwater-suffixed) name back to
-    # the bare "Energy" key so @top_nutrient_names resolves it.
-    by_name =
-      ingredient_nutrients
-      |> Mehungry.Food.NutrientCalculation.filter_energy_duplicates()
-      |> Map.new(&{top_nutrient_key(&1.nutrient.name), &1})
-
-    @top_nutrient_names
-    |> Enum.flat_map(fn name ->
-      case Map.get(by_name, name) do
-        nil ->
-          []
-
-        in_ ->
-          unit =
-            if in_.nutrient.measurement_unit, do: in_.nutrient.measurement_unit.name, else: ""
-
-          [%{label: Map.get(@display_labels, name, name), amount: in_.amount, unit: unit}]
-      end
-    end)
-  end
-
-  # filter_energy_duplicates/1 may hand back the kcal energy row under an
-  # Atwater-factor name ("Energy (Atwater Specific Factors)"); normalize any
-  # "Energy*" name to the bare "Energy" key the display map/lookup expects.
-  defp top_nutrient_key("Energy" <> _), do: "Energy"
-  defp top_nutrient_key(name), do: name
-
-  # ── Composition summary ──────────────────────────────────────────────────
-  # One short paragraph of deterministic, indexable prose for the selected
-  # ingredient. Server-rendered (crawlable); the long-tail nutrient terms
-  # (sugar/fat names) are the SEO payload, kept to a sentence or two so the page
-  # stays uncluttered.
-  defp build_composition_summary(_name, tree) when map_size(tree) == 0, do: nil
-
-  defp build_composition_summary(name, tree) do
-    carbs = top_amount(tree, "Carbohydrates")
-    fat = top_amount(tree, "Total Fat")
-
-    # The energy/protein/carb/fat macros already headline the stat cards (and the
-    # JSON-LD + meta description), so the prose deliberately skips the numeric
-    # recap and carries only what the cards can't: the sugar makeup and fat
-    # quality — the long-tail terms that are this paragraph's real SEO payload.
-    [sugar_sentence(name, tree, carbs), fat_sentence(tree, fat)]
-    |> Enum.reject(&(&1 in [nil, ""]))
-    |> case do
-      [] -> nil
-      sentences -> Enum.join(sentences, " ")
-    end
-  end
-
-  # ── Micronutrient highlights ───────────────────────────────────────────────
-  # One crawlable sentence naming the food's notable minerals + vitamins with
-  # their real per-100g amounts ("…provides 7.6 mg iron, 508 mg potassium, 15 mg
-  # vitamin C per 100 g"). This is the SEO payload for the "<food> iron/potassium/
-  # vitamin X content per 100g" query family (already showing GSC impressions) —
-  # the full breakdown is in the accordion, but a prose sentence matches how those
-  # queries are phrased. Only real, positive values are listed (never fabricated).
-
-  # Display priority for notable micronutrients; anything else sorts after these.
-  @micronutrient_priority %{
-    "Iron" => 1,
-    "Calcium" => 2,
-    "Potassium" => 3,
-    "Magnesium" => 4,
-    "Zinc" => 5,
-    "Phosphorus" => 6,
-    "Vitamin C" => 7,
-    "Vitamin A" => 8,
-    "Vitamin D" => 9,
-    "Vitamin B-6" => 10,
-    "Vitamin B-12" => 11,
-    "Folate" => 12,
-    "Vitamin E" => 13,
-    "Vitamin K" => 14,
-    "Niacin" => 15,
-    "Thiamin" => 16,
-    "Riboflavin" => 17,
-    "Manganese" => 18,
-    "Copper" => 19,
-    "Selenium" => 20,
-    "Sodium" => 25
-  }
-
-  defp build_micronutrient_summary(name, tree) do
-    micros =
-      [top_node(tree, "Minerals"), top_node(tree, "Vitamins")]
-      |> Enum.flat_map(&(&1["children"] || []))
-      |> Enum.flat_map(fn node ->
-        amount = node["amount"]
-        clean = clean_micronutrient_name(node["name"])
-
-        if is_binary(clean) and is_number(amount) and amount > 0 do
-          [{clean, amount, normalize_unit(node["measurement_unit"]), micronutrient_rank(clean)}]
-        else
-          []
-        end
-      end)
-      |> Enum.sort_by(fn {label, _amt, _unit, rank} -> {rank, label} end)
-      |> Enum.take(6)
-
-    case micros do
-      [] ->
-        nil
-
-      list ->
-        phrases =
-          Enum.map(list, fn {label, amount, unit, _rank} ->
-            unit_suffix = if unit != "", do: " #{unit}", else: ""
-            "#{format_amount(amount)}#{unit_suffix} #{micronutrient_phrase(label)}"
-          end)
-
-        "Per 100 g, #{name} also provides #{join_and(phrases)}."
-    end
-  end
-
-  defp micronutrient_rank(label), do: Map.get(@micronutrient_priority, label, 50)
-
-  # "Iron, Fe" → "Iron"; "Potassium, K" → "Potassium"; "Vitamin C, total ascorbic
-  # acid" → "Vitamin C"; "Folate (Vitamin B9)" → "Folate". Drops the USDA qualifier
-  # tail (comma clause) and any trailing parenthetical.
-  defp clean_micronutrient_name(name) when is_binary(name) do
-    name
-    |> String.split(",", parts: 2)
-    |> List.first()
-    |> String.replace(~r/\s*\(.*\)\s*/, "")
-    |> String.trim()
-  end
-
-  defp clean_micronutrient_name(_), do: nil
-
-  # Minerals read naturally lowercased in prose ("iron"); vitamin designators keep
-  # their conventional casing ("vitamin C", "vitamin B-6", "folate").
-  defp micronutrient_phrase("Vitamin " <> rest), do: "vitamin " <> rest
-  defp micronutrient_phrase(label), do: String.downcase(label)
-
-  defp sugar_sentence(name, tree, carbs) do
-    carbs_node = top_node(tree, "Carbohydrates")
-    sugars = node_amount(find_desc(carbs_node, ["Total Sugars"]))
-
-    cond do
-      not (is_number(sugars) and sugars > 0) ->
-        nil
-
-      is_number(carbs) and carbs > 0 and sugars / carbs >= 0.8 ->
-        "Per 100 g, #{name}'s carbohydrate is almost entirely sugar (#{format_amount(sugars)} g#{leading_sugar_suffix(carbs_node)})."
-
-      true ->
-        "Per 100 g, #{name} contains #{format_amount(sugars)} g of total sugars#{leading_sugar_suffix(carbs_node)}."
-    end
-  end
-
-  @sugar_names ["Fructose", "Glucose", "Galactose", "Sucrose", "Lactose", "Maltose"]
-
-  defp leading_sugar_suffix(carbs_node) do
-    carbs_node
-    |> collect_nodes()
-    |> Enum.filter(fn {n, a} -> n in @sugar_names and a > 0 end)
-    |> Enum.sort_by(fn {_n, a} -> -a end)
-    |> Enum.take(2)
-    |> case do
-      [] -> ""
-      list -> ", led by " <> join_and(Enum.map(list, fn {n, _a} -> String.downcase(n) end))
-    end
-  end
-
-  defp fat_sentence(tree, fat) when is_number(fat) and fat >= 1.0 do
-    node = top_node(tree, "Total Fat")
-    sat = child_amount(node, "Saturated Fat") || 0.0
-
-    unsat =
-      (child_amount(node, "Monounsaturated Fat") || 0.0) +
-        (child_amount(node, "Polyunsaturated Fat") || 0.0)
-
-    cond do
-      unsat > sat and unsat > 0 -> "Its fat is mostly unsaturated."
-      sat > unsat and sat > 0 -> "Its fat is mostly saturated."
-      true -> nil
-    end
-  end
-
-  defp fat_sentence(_tree, _fat), do: nil
 
   # ── JSON-LD structured data (head reads @structured_data) ─────────────────
   # BreadcrumbList (the real rich-result win, mirrors the visible "Foods › name"
@@ -569,52 +337,15 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   @doc "The URL slug for a species — the shared clean, decode-tolerant slug."
   def species_slug(%{name: name}), do: Food.species_slug(name || "")
 
-  # ── String-keyed nutrient-tree accessors ──────────────────────────────────
-  defp top_node(tree, name) when is_map(tree), do: Map.get(tree, name)
-  defp top_node(_tree, _name), do: nil
-
-  defp top_amount(tree, name), do: node_amount(top_node(tree, name))
-
-  defp child_node(node, name) when is_map(node) do
-    Enum.find(node["children"] || [], &(&1["name"] == name))
-  end
-
-  defp child_node(_node, _name), do: nil
-
-  defp child_amount(node, name), do: node_amount(child_node(node, name))
-
-  # First descendant (self included) whose name is in `names`, searching children.
-  defp find_desc(nil, _names), do: nil
-
-  defp find_desc(node, names) when is_map(node) do
-    if node["name"] in names do
-      node
-    else
-      Enum.find_value(node["children"] || [], &find_desc(&1, names))
-    end
-  end
-
-  # {name, amount} for this node and every descendant that has a numeric amount.
-  defp collect_nodes(nil), do: []
-
-  defp collect_nodes(node) when is_map(node) do
-    self_entry =
-      case {node["name"], node["amount"]} do
-        {n, a} when is_binary(n) and is_number(a) -> [{n, a}]
-        _ -> []
-      end
-
-    self_entry ++ Enum.flat_map(node["children"] || [], &collect_nodes/1)
-  end
-
-  defp node_amount(node) when is_map(node) do
-    case node["amount"] do
-      a when is_number(a) -> a
-      _ -> nil
-    end
-  end
-
-  defp node_amount(_), do: nil
+  # String-keyed nutrient-tree accessors + formatting live in the shared
+  # `SpeciesNutritionSummary` (also used by the mobile API).
+  defdelegate top_node(tree, name), to: SpeciesNutritionSummary
+  defdelegate child_node(node, name), to: SpeciesNutritionSummary
+  defdelegate child_amount(node, name), to: SpeciesNutritionSummary
+  defdelegate find_desc(node, names), to: SpeciesNutritionSummary
+  defdelegate normalize_unit(unit), to: SpeciesNutritionSummary
+  defdelegate format_amount(amount), to: SpeciesNutritionSummary
+  defdelegate macro_unit(unit), to: SpeciesNutritionSummary
 
   # "<amount> <unit>" for schema.org, or nil for a missing / non-positive node.
   defp node_grams(node) when is_map(node) do
@@ -628,35 +359,6 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   end
 
   defp node_grams(_), do: nil
-
-  # Standard schema.org nutrition unit abbreviations.
-  defp normalize_unit("kilocalorie"), do: "kcal"
-  defp normalize_unit("kcal"), do: "kcal"
-  defp normalize_unit("gram"), do: "g"
-  defp normalize_unit("milligram"), do: "mg"
-  defp normalize_unit("microgram"), do: "µg"
-  defp normalize_unit(unit) when is_binary(unit), do: unit
-  defp normalize_unit(_), do: ""
-
-  defp join_and([]), do: ""
-  defp join_and([only]), do: only
-
-  defp join_and(list) do
-    {init, [last]} = Enum.split(list, length(list) - 1)
-    Enum.join(init, ", ") <> " and " <> last
-  end
-
-  def format_amount(nil), do: "—"
-
-  def format_amount(amount) when is_float(amount) do
-    if amount >= 1 do
-      amount |> Float.round(1) |> :erlang.float_to_binary(decimals: 1)
-    else
-      amount |> Float.round(3) |> :erlang.float_to_binary(decimals: 3)
-    end
-  end
-
-  def format_amount(amount), do: to_string(amount)
 
   @doc """
   Headline-macro formatting for the stat cards: at most one decimal, with a
@@ -678,13 +380,6 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
   def format_macro(amount) when is_integer(amount), do: Integer.to_string(amount)
   def format_macro(amount), do: to_string(amount)
-
-  @doc "Compact unit label for the headline macro cards (`kilocalorie → \"kcal\"`)."
-  def macro_unit("kilocalorie"), do: "kcal"
-  def macro_unit("gram"), do: "g"
-  def macro_unit("milligram"), do: "mg"
-  def macro_unit("microgram"), do: "µg"
-  def macro_unit(other), do: other
 
   @doc "PubMed permalink for a study's PMID."
   def pubmed_url(%{pmid: pmid}) when not is_nil(pmid),

@@ -1,6 +1,9 @@
 defmodule MehungryWeb.Api.V1.FoodJSON do
   @moduledoc "Serializers for food species (spec §8)."
 
+  alias Mehungry.Food.SpeciesNutritionSummary
+  alias MehungryWeb.NutrientLabels
+
   @doc "A species list row."
   def species_summary(species) do
     %{
@@ -32,24 +35,104 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
   defp species_image(_), do: nil
 
   @doc """
-  Full species detail. `research` is a list of `SpeciesMinedFact` structs (mined
-  biomedical facts from `Mehungry.FactMining`); `ingredients` is the resolved
-  list; `facts` is the `fact_key => SpeciesFact` map from
+  Full species detail. `research` is the curated research block —
+  `%{counts:, relevant:, mechanistic:, mechanistic_count:}` (the map from
+  `FactMining.curated_facts_for_species/2` plus the tally from
+  `FactMining.research_counts_for_species/1`); `ingredients` is the resolved,
+  name-sorted list; `facts` is the `fact_key => SpeciesFact` map from
   `Food.promoted_species_facts_for_species/2` (promoted enrichment facts).
+
+  `opts`: `:default_ingredient` (the ingredient flagged `default: true`),
+  `:recipes` (sample recipes using the species' ingredients) and `:recipes_count`
+  (the true distinct count).
   """
-  def species_detail(species, research, ingredients, facts \\ %{}) do
+  def species_detail(species, research, ingredients, facts \\ %{}, opts \\ []) do
+    default_id =
+      case opts[:default_ingredient] do
+        %{id: id} -> id
+        _ -> nil
+      end
+
     %{
       data:
         species_summary(species)
         |> Map.merge(%{
-          research: Enum.map(research, &research_fact/1),
-          ingredients: Enum.map(ingredients, &%{id: &1.id, name: &1.name}),
-          facts: facts_block(facts)
+          research: research_block(research),
+          ingredients:
+            Enum.map(ingredients, &%{id: &1.id, name: &1.name, default: &1.id == default_id}),
+          facts: facts_block(facts),
+          recipes: Enum.map(opts[:recipes] || [], &species_recipe/1),
+          recipes_count: opts[:recipes_count] || 0
         })
     }
   end
 
+  @doc """
+  Per-100g nutrition of one of a species' ingredients: the headline macro cards,
+  the localized hierarchical nutrient `tree` (same shape as recipe `nutrients`) and
+  the deterministic summary sentences the web page shows above its breakdown.
+  `ingredient` needs `ingredient_nutrients: [nutrient: :measurement_unit]` preloaded.
+  """
+  def species_nutrition(species, ingredient, tree, locale) do
+    summary =
+      [
+        SpeciesNutritionSummary.composition_summary(ingredient.name, tree),
+        SpeciesNutritionSummary.micronutrient_summary(species.name, tree)
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    %{
+      data: %{
+        ingredient: %{id: ingredient.id, name: ingredient.name},
+        top:
+          ingredient.ingredient_nutrients
+          |> SpeciesNutritionSummary.top_nutrients()
+          |> Enum.map(&top_nutrient(&1, locale)),
+        nutrients: MehungryWeb.Api.V1.JSON.Helpers.localize_nutrients(tree, locale),
+        summary: summary
+      }
+    }
+  end
+
   # ── parts ────────────────────────────────────────────────────────────────
+
+  # A headline macro card. `key` is the stable identifier ("calories", "protein",
+  # "fat", "carbs", "fiber"); `label` is its localized display name.
+  defp top_nutrient(%{label: label, amount: amount, unit: unit}, locale) do
+    %{
+      key: String.downcase(label),
+      label: Gettext.with_locale(locale || "en", fn -> NutrientLabels.translate_name(label) end),
+      amount: amount,
+      unit: SpeciesNutritionSummary.macro_unit(unit)
+    }
+  end
+
+  defp research_block(research) do
+    counts = research[:counts] || %{}
+
+    %{
+      counts: %{
+        total: counts[:total] || 0,
+        verified: counts[:verified] || 0,
+        contradicted: counts[:contradicted] || 0,
+        unverified: counts[:unverified] || 0
+      },
+      relevant: Enum.map(research[:relevant] || [], &research_fact/1),
+      mechanistic: Enum.map(research[:mechanistic] || [], &research_fact/1),
+      mechanistic_count: research[:mechanistic_count] || 0
+    }
+  end
+
+  # A recipe using one of the species' ingredients (the "Recipes with <food>" row).
+  defp species_recipe(recipe) do
+    %{
+      id: recipe.id,
+      title: recipe.title,
+      image_url: recipe.image_url,
+      list_image_url: recipe.list_image_url || recipe.image_url,
+      cook_time_min: recipe.cooking_time_lower_limit
+    }
+  end
 
   # Promoted enrichment facts (Wikidata CC0 + FAOSTAT CC BY). Producers carry the
   # required FAOSTAT attribution; only ranked country names + year are exposed (no tonnage).
@@ -88,11 +171,14 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
   # A mined biomedical fact. Only commercial_ok quotes are populated (non-commercial
   # quotes are withheld upstream); render from `text` + `pmid` + `label`. `lay` is the
   # miner's presentation hint (tier lead/show/hide, clarity, flags) — orthogonal to
-  # `label` — so the client can apply the same lead/show/hide policy as the web page.
-  defp research_fact(fact) do
+  # `label`. `reason` is the verifier's explanation of the verdict (the web page's
+  # "Why?" disclosure), nil when absent.
+  @doc "A mined biomedical fact (see `species_detail/5` and the research search)."
+  def research_fact(fact) do
     %{
       text: fact.text,
       label: fact.label,
+      reason: presence(fact.reason),
       certainty: fact.certainty,
       claim_type: fact.claim_type,
       study_design: fact.study_design,
@@ -107,6 +193,9 @@ defmodule MehungryWeb.Api.V1.FoodJSON do
       }
     }
   end
+
+  defp presence(value) when is_binary(value) and value != "", do: value
+  defp presence(_), do: nil
 
   @doc "Derive the URL slug from a name (inverse of get_species_by_slug/1)."
   def slug(nil), do: nil
