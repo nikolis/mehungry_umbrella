@@ -220,6 +220,38 @@ defmodule MehungryWeb.ShoppingBasketSharingTest do
       assert render(owner_view) =~ "Feta"
     end
 
+    test "ticking, editing and deleting a line show up for the other", %{
+      owner_conn: owner_conn,
+      friend_conn: friend_conn,
+      basket: basket
+    } do
+      {:ok, owner_view, _} = live(owner_conn, ~p"/basket?basket_id=#{basket.id}")
+      {:ok, friend_view, _} = live(friend_conn, ~p"/basket?basket_id=#{basket.id}")
+      [item] = Inventory.get_shopping_basket!(basket.id).basket_items
+      params = %{"id" => to_string(item.id), "type" => "item"}
+
+      refute render(owner_view) =~ "line-through"
+
+      # The friend's own view updates from the result, the owner's from the event.
+      assert render_click(friend_view, "toggle_basket", params) =~ "line-through"
+      assert render(owner_view) =~ "line-through"
+
+      render_click(friend_view, "edit_item", params)
+
+      render_submit(friend_view, "update_item", %{
+        "item_id" => to_string(item.id),
+        "item_type" => "item",
+        "name" => "Cherry tomatoes",
+        "quantity" => "6"
+      })
+
+      assert render(friend_view) =~ "Cherry tomatoes"
+      assert render(owner_view) =~ "Cherry tomatoes"
+
+      refute render_click(friend_view, "delete_item", params) =~ "Cherry tomatoes"
+      refute render(owner_view) =~ "Cherry tomatoes"
+    end
+
     test "a removed member is moved off the list", %{
       owner: owner,
       friend_conn: friend_conn,

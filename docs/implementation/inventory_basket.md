@@ -93,12 +93,29 @@ the LiveView, the REST API and the channel cannot diverge.
 - **Account deletion.** `Accounts.Admin.delete_user/1` calls
   `Sharing.transfer_shared_baskets/1` first: a list the user owns and shares goes to its
   longest-standing member; unshared lists are deleted as before.
-- **Live updates.** Every mutation calls `Inventory.broadcast_change/2`, which
-  broadcasts `{:basket_changed, id}` (or `{:basket_deleted, id}`) on the PubSub topic
-  `basket:<id>` to everyone **except the calling process** (the view that made the
-  change re-reads the list itself). `ShoppingBasketLive.Index` subscribes to every
-  list the user can see; `MehungryWeb.BasketChannel` joins the same topic for mobile
-  and re-checks access on each message.
+- **Live updates.** Every mutation broadcasts on the PubSub topic `basket:<id>` to
+  everyone **except the calling process**. There are three messages
+  (`Inventory.subscribe/1` documents them):
+  - `{:basket_entry, id, %{op: :upsert | :delete, entry: entry, actor_id: id}}` — one
+    line was added, changed, ticked or removed (`Inventory.broadcast_entry_change/4`,
+    from `add_item`, `update_/delete_basket_item`, `set_acquired`,
+    `create_/update_/delete_basket_ingredient`). It **carries the line**, so a
+    subscriber patches its copy and runs no query.
+  - `{:basket_changed, id}` — anything else (recipe/meal import, rename, members,
+    invitations): a poke to re-read the list (`Inventory.broadcast_change/2`).
+  - `{:basket_deleted, id}` — the list is gone.
+
+  `ShoppingBasketLive.Index` subscribes to every list the user can see and applies
+  entry events with `apply_entry/4` (it patches the list in the sidebar and the open
+  panel; a line it cannot place from the event falls back to a re-read). The same
+  helper applies the view's **own** item actions from the struct the context
+  returns, so a tick is one `UPDATE` and no reload. `MehungryWeb.BasketChannel`
+  joins the same topic for mobile, re-checks access on each message, and forwards
+  entry events as `item_upserted` / `item_deleted` to clients that joined with
+  `{"v": 2}` (a poke to older clients) — mobile spec §13.
+
+  The message shapes must only change compatibly: nodes are clustered and two
+  releases overlap during a rolling deploy.
 - **Concurrent edits.** `set_acquired/3` writes an explicit state with a single
   `UPDATE` instead of flipping a possibly stale struct. Deletes use `allow_stale`
   (deleting an already-deleted line succeeds); updates use `stale_error_field` (an

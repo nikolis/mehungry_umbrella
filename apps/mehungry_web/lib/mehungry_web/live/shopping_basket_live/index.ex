@@ -286,12 +286,14 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       added_by_id: socket.assigns.current_user.id
     }
 
-    case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
-      {:ok, _} ->
+    basket_id = socket.assigns.shopping_basket.id
+
+    case Inventory.add_item(basket_id, item) do
+      {:ok, added} ->
         {:noreply,
          socket
          |> assign(selected_usda_item: nil, show_add_item_modal: false)
-         |> refresh_active_basket()
+         |> apply_entry(basket_id, :upsert, added)
          |> put_flash(:info, gettext("Item added with nutrition data"))}
 
       {:error, _} ->
@@ -317,12 +319,14 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       added_by_id: socket.assigns.current_user.id
     }
 
-    case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
-      {:ok, _item} ->
+    basket_id = socket.assigns.shopping_basket.id
+
+    case Inventory.add_item(basket_id, item) do
+      {:ok, added} ->
         {:noreply,
          socket
          |> assign(show_add_item_modal: false)
-         |> refresh_active_basket()
+         |> apply_entry(basket_id, :upsert, added)
          |> put_flash(:info, gettext("Item added to your list"))}
 
       {:error, _} ->
@@ -342,9 +346,14 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       entry ->
         # Set the state the person asked for (the opposite of what they were
         # looking at) rather than flipping the stored value, so two people
-        # ticking the same line agree. A line someone just deleted is a no-op.
-        Inventory.set_acquired(entry, not entry.in_storage, socket.assigns.current_user.id)
-        {:noreply, refresh_active_basket(socket)}
+        # ticking the same line agree. The result is patched into the list on
+        # screen — no re-read — and a line someone just deleted drops out.
+        basket_id = entry.shopping_basket_id
+
+        case Inventory.set_acquired(entry, not entry.in_storage, socket.assigns.current_user.id) do
+          {:ok, updated} -> {:noreply, apply_entry(socket, basket_id, :upsert, updated)}
+          {:error, :not_found} -> {:noreply, apply_entry(socket, basket_id, :delete, entry)}
+        end
     end
   end
 
@@ -379,8 +388,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       end
 
     case result do
-      {:ok, _} ->
-        {:noreply, socket |> assign(:editing_item, nil) |> refresh_active_basket()}
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> assign(:editing_item, nil)
+         |> apply_entry(updated.shopping_basket_id, :upsert, updated)}
 
       :not_found ->
         {:noreply, assign(socket, :editing_item, nil)}
@@ -398,11 +410,19 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     case find_entry(socket, type, id) do
       %BasketItem{} = item ->
         Inventory.delete_basket_item(item)
-        {:noreply, socket |> assign(:editing_item, nil) |> refresh_active_basket()}
+
+        {:noreply,
+         socket
+         |> assign(:editing_item, nil)
+         |> apply_entry(item.shopping_basket_id, :delete, item)}
 
       %BasketIngredient{} = ingredient ->
         Inventory.delete_basket_ingredient(ingredient)
-        {:noreply, socket |> assign(:editing_item, nil) |> refresh_active_basket()}
+
+        {:noreply,
+         socket
+         |> assign(:editing_item, nil)
+         |> apply_entry(ingredient.shopping_basket_id, :delete, ingredient)}
 
       nil ->
         {:noreply, socket}
@@ -484,8 +504,20 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      |> assign(:processing_basket, %ShoppingBasket{})}
   end
 
-  # A shared list changed (or was deleted) from another session — someone else's
-  # browser or phone, or this user's own second tab. Re-read it; if this user no
+  # One line of a list changed in another session — someone else's browser or
+  # phone, or this user's own second tab. The event carries the line, so it is
+  # patched into the lists already in memory: no query, the change is on screen
+  # as soon as the message lands.
+  def handle_info({:basket_entry, basket_id, %{op: op, entry: entry}}, socket)
+      when op in [:upsert, :delete] do
+    {:noreply,
+     socket
+     |> apply_entry(basket_id, op, entry)
+     |> close_edit_if_deleted(op, entry)}
+  end
+
+  # Anything else about a shared list changed (a bulk import, a rename, its
+  # people) or it was deleted, from another session. Re-read it; if this user no
   # longer has access to the list on screen, fall back to another and say so.
   def handle_info({event, basket_id}, socket) when event in [:basket_changed, :basket_deleted] do
     active_id = socket.assigns.shopping_basket.id
@@ -557,8 +589,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
   defp blank_basket_fallback(%ShoppingBasket{} = basket, _user), do: basket
 
-  # Re-reads the active basket + the list from the DB after a mutation, so counts,
-  # progress and acquired-sink ordering all reflect the new state. When the
+  # Re-reads the active basket + the list from the DB after a list-level change
+  # (single-line changes go through `apply_entry/4` instead). When the
   # active basket is gone (deleted, or this user was removed from it) it falls
   # back to another list rather than keeping a stale copy on screen.
   defp refresh_active_basket(socket) do
@@ -576,6 +608,90 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     |> assign(:shopping_basket, active)
     |> sync_subscriptions()
   end
+
+  # Applies one line's change (`:upsert` / `:delete`) to the copies of its list
+  # held in assigns — the sidebar's and, when it is the open one, the panel's —
+  # instead of re-reading everything. Used both for this view's own item actions
+  # and for `{:basket_entry, …}` events from other sessions. Falls back to a
+  # re-read when the line cannot be placed from what the event carries.
+  defp apply_entry(socket, basket_id, op, entry) do
+    with %ShoppingBasket{} = basket <-
+           Enum.find(socket.assigns.shopping_baskets, &(&1.id == basket_id)),
+         {:ok, patched} <- patch_basket(basket, op, entry) do
+      baskets =
+        Enum.map(socket.assigns.shopping_baskets, &if(&1.id == basket_id, do: patched, else: &1))
+
+      active =
+        if socket.assigns.shopping_basket.id == basket_id,
+          do: patched,
+          else: socket.assigns.shopping_basket
+
+      assign(socket, shopping_baskets: baskets, shopping_basket: active)
+    else
+      _ -> refresh_active_basket(socket)
+    end
+  end
+
+  defp patch_basket(basket, :delete, %module{id: id}) do
+    key = entries_key(module)
+    {:ok, Map.put(basket, key, Enum.reject(Map.fetch!(basket, key), &(&1.id == id)))}
+  end
+
+  defp patch_basket(basket, :upsert, %module{id: id} = entry) do
+    key = entries_key(module)
+    entries = Map.fetch!(basket, key)
+
+    cond do
+      Enum.any?(entries, &(&1.id == id)) ->
+        {:ok,
+         Map.put(
+           basket,
+           key,
+           Enum.map(entries, &if(&1.id == id, do: merge_entry(&1, entry), else: &1))
+         )}
+
+      insertable?(entry) ->
+        {:ok, Map.put(basket, key, entries ++ [entry])}
+
+      true ->
+        :reload
+    end
+  end
+
+  defp entries_key(BasketItem), do: :basket_items
+  defp entries_key(BasketIngredient), do: :basket_ingredients
+
+  # Takes the incoming line's columns, and its associations only where they are
+  # loaded — so the copy on screen keeps the preloads it was rendered with.
+  defp merge_entry(existing, %module{} = incoming) do
+    loaded_assocs =
+      for assoc <- module.__schema__(:associations),
+          value = Map.fetch!(incoming, assoc),
+          not match?(%Ecto.Association.NotLoaded{}, value),
+          into: %{},
+          do: {assoc, value}
+
+    existing
+    |> Map.merge(Map.take(incoming, module.__schema__(:fields)))
+    |> Map.merge(loaded_assocs)
+  end
+
+  # A line not yet on screen can be shown as-is only when it carries what its
+  # row renders: an item its unit; a recipe ingredient needs deeper preloads.
+  defp insertable?(%BasketItem{measurement_unit: unit}),
+    do: not match?(%Ecto.Association.NotLoaded{}, unit)
+
+  defp insertable?(_entry), do: false
+
+  # Someone deleted the line this user has open for editing.
+  defp close_edit_if_deleted(
+         %{assigns: %{editing_item: %module{id: id}}} = socket,
+         :delete,
+         %module{id: id}
+       ),
+       do: assign(socket, :editing_item, nil)
+
+  defp close_edit_if_deleted(socket, _op, _entry), do: socket
 
   defp reload_basket(_socket, nil), do: nil
 

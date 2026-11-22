@@ -1918,9 +1918,22 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
 
 ### `basket:<basket_id>` 🔒 — live updates for one shopping list
 - Authorization: the caller must own the basket or be a member of it.
-- **Push → client**: `"basket_changed"` `{ "basket_id": 4 }` whenever the list, its
-  items or its people change, from any client (the socket's own REST writes
-  included). It is a *poke*: refetch `GET /baskets/:id`.
+- **Join params**: `{ "v": 2 }` opts in to the item events below. A join without
+  `v` (apps released before them) is sent `"basket_changed"` for every change.
+- **Push → client** (v2): `"item_upserted"`
+  `{ "basket_id": 4, "item": { …§10 item… }, "actor_id": 7 }` when one item is added,
+  edited or ticked/un-ticked, from any client (the socket's own REST writes
+  included). `item` is the full item in the `GET /baskets/:id` shape (with `aisle`);
+  insert it or replace the one with the same `id` — **no refetch**. `actor_id` is the
+  user who made the change (null when unknown).
+- **Push → client** (v2): `"item_deleted"` `{ "basket_id": 4, "id": 31, "actor_id": null }`
+  when one item is removed. Removing an id the client no longer has is a no-op.
+- **Push → client**: `"basket_changed"` `{ "basket_id": 4 }` for every other change
+  (a recipe/meal import, a rename, the people on the list, invitations). It is a
+  *poke*: refetch `GET /baskets/:id`.
+- Item events are best-effort and unordered across authors: refetch
+  `GET /baskets/:id` whenever the channel (re)joins or the app returns to the
+  foreground, which repairs anything missed.
 - **Push → client**: `"basket_closed"` `{ "basket_id": 4 }` when the caller has lost
   access (removed, or the list was deleted); the server then closes the topic.
 

@@ -48,10 +48,20 @@ defmodule Mehungry.Inventory do
 
   @doc """
   Subscribes the caller to a basket's change topic. Every mutation of the
-  basket, its items or its members broadcasts `{:basket_changed, basket_id}`
-  there (and a deleted basket `{:basket_deleted, basket_id}`), whichever client
-  made it, so every open view of a shared list stays in step. The process that
-  made the change is not sent its own broadcast.
+  basket broadcasts there, whichever client made it, so every open view of a
+  shared list stays in step. The process that made the change is not sent its
+  own broadcast. Three messages:
+
+    * `{:basket_entry, basket_id, %{op: :upsert | :delete, entry: entry, actor_id: id}}`
+      — one line (`BasketItem` / `BasketIngredient`) was added, changed or
+      removed. It carries the entry, so a subscriber patches its copy without
+      re-reading the list.
+    * `{:basket_changed, basket_id}` — anything else (a bulk import, a rename,
+      the people on the list): re-read the list.
+    * `{:basket_deleted, basket_id}` — the list is gone.
+
+  The nodes are clustered, and old and new releases overlap during a rolling
+  deploy, so these shapes must only ever change compatibly.
   """
   def subscribe(basket_id) when not is_nil(basket_id),
     do: Phoenix.PubSub.subscribe(Mehungry.PubSub, topic(basket_id))
@@ -68,6 +78,20 @@ defmodule Mehungry.Inventory do
   # make it load everything twice.
   def broadcast_change(basket_id, event) do
     Phoenix.PubSub.broadcast_from(Mehungry.PubSub, self(), topic(basket_id), {event, basket_id})
+  end
+
+  @doc false
+  # One line changed: send the line itself (see `subscribe/1`).
+  def broadcast_entry_change(basket_id, op, entry, actor_id \\ nil)
+  def broadcast_entry_change(nil, _op, _entry, _actor_id), do: :ok
+
+  def broadcast_entry_change(basket_id, op, entry, actor_id) when op in [:upsert, :delete] do
+    Phoenix.PubSub.broadcast_from(
+      Mehungry.PubSub,
+      self(),
+      topic(basket_id),
+      {:basket_entry, basket_id, %{op: op, entry: entry, actor_id: actor_id}}
+    )
   end
 
   # ── Access ───────────────────────────────────────────────────────────────
@@ -248,8 +272,9 @@ defmodule Mehungry.Inventory do
 
     case result do
       {:ok, item} ->
-        broadcast_change(basket_id)
-        {:ok, Repo.preload(item, :measurement_unit)}
+        item = Repo.preload(item, :measurement_unit)
+        broadcast_entry_change(basket_id, :upsert, item, item.added_by_id)
+        {:ok, item}
 
       {:error, problem} ->
         {:error, problem}
@@ -371,8 +396,10 @@ defmodule Mehungry.Inventory do
     |> Repo.update(stale_error_field: :id)
     |> case do
       {:ok, item} ->
-        broadcast_change(item.shopping_basket_id)
-        {:ok, Repo.preload(item, :measurement_unit)}
+        # Forced: the unit may have just changed under an already-loaded one.
+        item = Repo.preload(item, :measurement_unit, force: true)
+        broadcast_entry_change(item.shopping_basket_id, :upsert, item, actor_id)
+        {:ok, item}
 
       other ->
         other
@@ -393,7 +420,7 @@ defmodule Mehungry.Inventory do
   """
   def delete_basket_item(%BasketItem{} = item) do
     result = Repo.delete(item, allow_stale: true)
-    broadcast_change(item.shopping_basket_id)
+    broadcast_entry_change(item.shopping_basket_id, :delete, item)
     result
   end
 
@@ -660,15 +687,15 @@ defmodule Mehungry.Inventory do
     %BasketIngredient{}
     |> BasketIngredient.changeset(attrs)
     |> Repo.insert()
-    |> broadcast_entry()
+    |> broadcast_upsert()
   end
 
-  defp broadcast_entry({:ok, %{shopping_basket_id: basket_id}} = result) do
-    broadcast_change(basket_id)
+  defp broadcast_upsert({:ok, %{shopping_basket_id: basket_id} = entry} = result) do
+    broadcast_entry_change(basket_id, :upsert, entry)
     result
   end
 
-  defp broadcast_entry(result), do: result
+  defp broadcast_upsert(result), do: result
 
   @doc """
   Updates a basket_ingredient.
@@ -686,7 +713,7 @@ defmodule Mehungry.Inventory do
     basket_ingredient
     |> BasketIngredient.changeset(attrs)
     |> Repo.update(stale_error_field: :id)
-    |> broadcast_entry()
+    |> broadcast_upsert()
   end
 
   @doc """
@@ -717,8 +744,9 @@ defmodule Mehungry.Inventory do
         {:error, :not_found}
 
       _ ->
-        broadcast_change(basket_id)
-        {:ok, %{entry | in_storage: acquired?, acquired_by_id: acquired_by_id, updated_at: now}}
+        entry = %{entry | in_storage: acquired?, acquired_by_id: acquired_by_id, updated_at: now}
+        broadcast_entry_change(basket_id, :upsert, entry, actor_id)
+        {:ok, entry}
     end
   end
 
@@ -740,7 +768,7 @@ defmodule Mehungry.Inventory do
   """
   def delete_basket_ingredient(%BasketIngredient{} = basket_ingredient) do
     result = Repo.delete(basket_ingredient, allow_stale: true)
-    broadcast_change(basket_ingredient.shopping_basket_id)
+    broadcast_entry_change(basket_ingredient.shopping_basket_id, :delete, basket_ingredient)
     result
   end
 

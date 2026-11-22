@@ -339,18 +339,49 @@ defmodule Mehungry.Inventory.SharingTest do
       # Another session (its own process) makes the changes.
       elsewhere = fn fun -> fun |> Task.async() |> Task.await() end
 
+      item_id = item.id
+      friend_id = friend.id
+
+      # A single line travels with its event, so subscribers need not re-read.
       elsewhere.(fn -> {:ok, _} = Inventory.set_acquired(item, true, friend.id) end)
-      assert_receive {:basket_changed, ^basket_id}
+
+      assert_receive {:basket_entry, ^basket_id,
+                      %{
+                        op: :upsert,
+                        entry: %{id: ^item_id, in_storage: true},
+                        actor_id: ^friend_id
+                      }}
 
       elsewhere.(fn ->
         {:ok, _} = Inventory.add_item(basket_id, %{name: "Bread", quantity: 1.0})
       end)
 
-      assert_receive {:basket_changed, ^basket_id}
+      assert_receive {:basket_entry, ^basket_id,
+                      %{op: :upsert, entry: %{name: "Bread", measurement_unit: nil}}}
+
+      elsewhere.(fn ->
+        {:ok, _} = Inventory.update_basket_item(item, %{quantity: 9.0}, friend.id)
+      end)
+
+      assert_receive {:basket_entry, ^basket_id,
+                      %{op: :upsert, entry: %{id: ^item_id, quantity: 9.0}}}
+
+      elsewhere.(fn -> {:ok, _} = Inventory.delete_basket_item(item) end)
+      assert_receive {:basket_entry, ^basket_id, %{op: :delete, entry: %{id: ^item_id}}}
 
       # A change this process makes itself is not echoed back to it.
       {:ok, _} = Inventory.add_item(basket_id, %{name: "Jam", quantity: 1.0})
-      refute_receive {:basket_changed, ^basket_id}, 50
+      refute_receive {:basket_entry, ^basket_id, _}, 50
+
+      # List-level changes stay a plain "re-read it" poke.
+      elsewhere.(fn ->
+        {:ok, _} =
+          Inventory.update_shopping_basket(Inventory.get_shopping_basket!(basket_id), %{
+            title: "Renamed"
+          })
+      end)
+
+      assert_receive {:basket_changed, ^basket_id}
 
       elsewhere.(fn ->
         {:ok, _} = Inventory.delete_shopping_basket(Inventory.get_shopping_basket!(basket_id))

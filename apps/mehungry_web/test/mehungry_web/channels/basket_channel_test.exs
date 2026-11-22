@@ -53,6 +53,41 @@ defmodule MehungryWeb.BasketChannelTest do
     assert_push("basket_changed", %{basket_id: ^basket_id})
   end
 
+  test "a v2 subscriber is sent the item itself, not a poke", %{
+    owner: owner,
+    member: member,
+    basket: basket
+  } do
+    basket_id = basket.id
+    owner_id = owner.id
+    {:ok, _, _} = subscribe_and_join(connect_user(member), "basket:#{basket_id}", %{"v" => 2})
+
+    {:ok, item} =
+      Inventory.add_item(basket_id, %{name: "Olives", quantity: 1.0, added_by_id: owner_id})
+
+    item_id = item.id
+
+    assert_push("item_upserted", %{
+      basket_id: ^basket_id,
+      actor_id: ^owner_id,
+      item: %{id: ^item_id, name: "Olives", in_storage: false, aisle: _, added_by_id: ^owner_id}
+    })
+
+    {:ok, _} = Inventory.set_acquired(item, true, owner_id)
+
+    assert_push("item_upserted", %{
+      item: %{id: ^item_id, in_storage: true, acquired_by_id: ^owner_id}
+    })
+
+    {:ok, _} = Inventory.delete_basket_item(item)
+    assert_push("item_deleted", %{basket_id: ^basket_id, id: ^item_id})
+    refute_push("basket_changed", _)
+
+    # A list-level change is still a poke.
+    {:ok, _} = Inventory.update_shopping_basket(basket, %{title: "Renamed"})
+    assert_push("basket_changed", %{basket_id: ^basket_id})
+  end
+
   test "a removed member is closed out instead of updated", %{
     owner: owner,
     member: member,
