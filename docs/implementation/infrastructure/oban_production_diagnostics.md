@@ -840,13 +840,12 @@ backend back to the pool, marginally easing §1.
 - **Leadership is unaffected** — it uses `Oban.Peers.Database` (on the pool), not
   the notifier.
 - **PG's one limitation** is that notifications are **cluster-local**, not
-  cross-node. This deployment is effectively single-node
-  (`swarm static_quorum_size: 1`, one ECS task per §9.5), so it's a non-issue.
-  Even multi-task, the only cost is slight dispatch latency — the 1 s
-  `stage_interval` poll still picks up jobs — not correctness. **If you ever run
-  multiple *clustered* nodes and want cross-node insert signalling, revisit this**
-  (either cluster the BEAM so `:pg` spans nodes, or weigh the Postgres notifier's
-  trade-offs again).
+  cross-node. The two Fly machines **are clustered** (libcluster, see
+  `architecture.md` → *Clustering*), so `:pg` spans both and insert/pause/cancel
+  signals reach every node. If the cluster ever splits, the only cost is slight
+  dispatch latency — the 1 s `stage_interval` poll still picks up jobs — not
+  correctness. (Before clustering was enabled on Fly the nodes were isolated and
+  relied on that poll.)
 
 ### 12.2 Companion fix: batch the hashtag-reconciliation fan-out
 

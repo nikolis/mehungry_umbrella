@@ -8,7 +8,8 @@ Mehungry is a Phoenix **umbrella** application:
 | `apps/mehungry_web` | Web layer: LiveViews, controllers, components, plugs, OAuth strategies |
 
 Deployed on **Fly.io** (Docker image → Phoenix release; app `m3hungry`, region
-`lhr`, 2 `shared-cpu-1x` machines, rolling deploys gated on `GET /health`).
+`lhr`, 2 `shared-cpu-1x` machines **clustered** over Fly's private network —
+see *Clustering* below; rolling deploys gated on `GET /health`).
 PostgreSQL is **Supabase** (session pooler, `POOL_SIZE=10`/machine). Migrations
 run as a one-off machine via the `[deploy] release_command` in `fly.toml`
 (`MehungryWeb.Release.migrate`). See `CLAUDE.md` → *Deployment Notes* for the
@@ -82,6 +83,27 @@ observability layer — see [`observability.md`](observability.md).)
 **Worker module names are load-bearing** — queued jobs in prod reference them
 by name. Move logic out of workers freely, but never rename a worker module
 without a migration plan for queued jobs.
+
+## Clustering
+
+The Fly machines form one **Erlang cluster**: each is named
+`mehungry_umbrella@<FLY_PRIVATE_IP>` (`rel/env.sh.eex`, IPv6 distribution over
+Fly's private network) and `libcluster` (`Cluster.Strategy.DNSPoll` on
+`<app>.internal`, configured in `config/runtime.exs` when `FLY_APP_NAME` is set)
+connects them. They share the `RELEASE_COOKIE` secret. So everything built on
+`Phoenix.PubSub` reaches sockets on **every** machine: LiveView/channel live
+updates (shared shopping lists, notifications, job progress), `Presence`, and
+Oban's `PG` notifier.
+
+- **Message compatibility:** during a rolling deploy the old and new release are
+  in the same cluster, so a PubSub message shape may only change compatibly (add a
+  new message; keep handling the old one) and every subscriber needs a catch-all
+  `handle_info`.
+- **Still per-node:** Cachex caches and `Meta.SessionAggregator`.
+- **Not clustered:** `eval` commands (the `release_command` migration machine) do
+  not start distribution.
+- **Check it:** `fly logs` shows `[libcluster:fly6pn] connected to …` on boot.
+  (`remote`/`rpc` are still broken — `oban_production_diagnostics.md` §11.2.)
 
 ## Supervision notes
 

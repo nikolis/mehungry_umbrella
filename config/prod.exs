@@ -18,19 +18,9 @@ import Config
 #  show_sensitive_data_on_connection_error: true,
 #  pool_size: 10
 
-config :libcluster,
-  topologies: [
-    ecs_dns: [
-      strategy: Cluster.Strategy.DNSPoll,
-      config: [
-        # Check every 5s
-        polling_interval: 1000,
-        query: "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend",
-        node_basename: "mehungry_umbrella",
-        app_name: :mehungry_umbrella
-      ]
-    ]
-  ]
+# No clustering by default; on Fly the topology is set in config/runtime.exs
+# (it needs FLY_APP_NAME).
+config :libcluster, topologies: []
 
 config :mehungry_web, MehungryWeb.Endpoint,
   # Bind on IPv6 any (dual-stack on Linux, so IPv4 still works too). Fly.io's

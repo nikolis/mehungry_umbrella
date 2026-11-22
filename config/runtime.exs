@@ -207,6 +207,26 @@ config :mehungry, :android_beta,
     ),
   current_version: System.get_env("ANDROID_BETA_CURRENT_VERSION", "1.0.0")
 
+# Cluster the Fly machines so PubSub / Presence / Oban signals reach every node
+# (a shared shopping list edited on one machine updates viewers on the other).
+# Each machine is named mehungry_umbrella@<FLY_PRIVATE_IP> (rel/env.sh.eex) and
+# `<app>.internal` resolves to every machine's private IPv6 address.
+if config_env() == :prod do
+  if fly_app = System.get_env("FLY_APP_NAME") do
+    config :libcluster,
+      topologies: [
+        fly6pn: [
+          strategy: Cluster.Strategy.DNSPoll,
+          config: [
+            polling_interval: 5_000,
+            query: "#{fly_app}.internal",
+            node_basename: "mehungry_umbrella"
+          ]
+        ]
+      ]
+  end
+end
+
 if config_env() == :prod do
   config :mehungry, Mehungry.Mailer,
     adapter: Swoosh.Adapters.Mailgun,

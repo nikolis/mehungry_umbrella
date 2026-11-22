@@ -2,15 +2,10 @@
 set -e
 echo "Starting Mehungry release..."
 
-# ECS/Fargate may return multiple IPs — use the first one
-export POD_IP=$(hostname -i | awk '{print $1}')
-echo "Detected container IP: $POD_IP"
+# Node naming / Erlang distribution is decided per platform in rel/env.sh.eex
+# (sourced by the release script), not here.
 
-# Enable distributed Erlang with a unique node name per container
-export RELEASE_DISTRIBUTION=name
-export RELEASE_NODE="mehungry_umbrella@$POD_IP"
-echo "Using RELEASE_NODE=$RELEASE_NODE"
-
+# Clustered nodes must share a cookie.
 if [ -z "$RELEASE_COOKIE" ]; then
   echo "ERROR: RELEASE_COOKIE is missing"
   exit 1

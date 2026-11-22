@@ -7,7 +7,9 @@
 `shared-cpu-1x`/1GB machines, gated on the `GET /health` liveness probe.
 Migrations run in a one-off machine via `[deploy] release_command`
 (`/app/bin/mehungry_umbrella eval MehungryWeb.Release.migrate`) **before** the
-new release goes live. PostgreSQL is **Supabase** (session pooler, see `CLAUDE.md`
+new release goes live. The machines are an Erlang cluster (libcluster; see
+`architecture.md` → *Clustering*), so old and new releases exchange PubSub
+messages mid-deploy — keep message shapes backward compatible. PostgreSQL is **Supabase** (session pooler, see `CLAUDE.md`
 → *Deployment Notes*).
 
 > **History:** previously AWS ECS/ECR + RDS. The leftover `task-definition.json`

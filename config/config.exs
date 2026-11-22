@@ -211,8 +211,9 @@ config :mehungry, Oban,
   # bulk job fan-out can freeze it, and every producer/plugin registered through
   # it then times out its 5s `:listen`/`:leader?` call and crashes together
   # (Oban-subtree restart storm). PG removes that socket entirely; leadership is
-  # unaffected (Oban.Peers.Database, on the pool). Single-node deploy, so PG's
-  # cluster-local scope is a non-issue. See oban_production_diagnostics.md.
+  # unaffected (Oban.Peers.Database, on the pool). PG is cluster-scoped: the Fly
+  # machines are clustered (libcluster, config/runtime.exs), so signals reach
+  # every node. See oban_production_diagnostics.md.
   notifier: Oban.Notifiers.PG,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24},
