@@ -279,6 +279,19 @@ checked the day total. The band closes all three.
   an actionable error ("totals 1,032 kcal; must be between 1,596 and 1,796 — add
   about 564 kcal: raise `servings`…"). A day holding an entry of unknown calories
   is skipped rather than guessed.
+- **The model picks the dishes; the code sets the amounts** (`balance_days/2`).
+  The first live draft with the check on averaged the right number (~2,020 kcal
+  for a 1,995 target) but left 5 of 7 days outside the band — the model cannot
+  reliably add up 35 entries, and whole servings of a 740-kcal dish are a coarse
+  lever. So before judging a day, `submit_plan` rebalances every off-band day
+  deterministically, changing **amounts only, never what is eaten**: recipe
+  servings (1–3 at Lunch/Dinner, 1–2 elsewhere) and snack quantities (grams in
+  5 g steps within 0.5–1.5× of the model's choice; countable units 1–2). It
+  searches every combination for the day (≤ 3³·5²) and takes, in order: closest
+  to the band (inside when possible) → dinner not heavier than lunch → smallest
+  change from the model's amounts (servings counted step by step) → closest to
+  the aim. A day already inside the band is never touched. Only a day no amounts
+  can fix — it needs different dishes — is sent back to the model.
 - **Bounded:** after 2 calorie-only rejections the plan is accepted and the days
   still off come back as `calorie_warnings` (`%{date, total, min, max}`) — a thin
   catalogue degrades to an honest note, never a failed draft. The nutritionist's

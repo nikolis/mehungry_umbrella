@@ -18,11 +18,13 @@ defmodule Mehungry.Professionals.CalorieBand do
 
   @goal_types [{"lose", "Lose weight"}, {"maintain", "Maintain weight"}, {"gain", "Gain weight"}]
 
-  # {min factor, max factor, aim factor} applied to TDEE.
+  # {min factor, max factor, aim factor, basis} applied to TDEE. The basis atoms
+  # are literals here (never built with String.to_existing_atom/1: in a lazily
+  # loading node — `bin/… eval` — nothing else may have created them yet).
   @goal_factors %{
-    "lose" => {0.80, 0.90, 0.85},
-    "maintain" => {0.90, 1.10, 1.0},
-    "gain" => {1.10, 1.20, 1.15}
+    "lose" => {0.80, 0.90, 0.85, :goal_lose},
+    "maintain" => {0.90, 1.10, 1.0, :goal_maintain},
+    "gain" => {1.10, 1.20, 1.15, :goal_gain}
   }
 
   @tolerance 0.10
@@ -75,13 +77,13 @@ defmodule Mehungry.Professionals.CalorieBand do
 
   defp from_goal(tdee, goal_type) do
     goal = if Map.has_key?(@goal_factors, goal_type), do: goal_type, else: "maintain"
-    {lo, hi, aim} = Map.fetch!(@goal_factors, goal)
+    {lo, hi, aim, basis} = Map.fetch!(@goal_factors, goal)
 
     %{
       min: round(tdee * lo),
       max: round(tdee * hi),
       aim: round(tdee * aim),
-      basis: String.to_existing_atom("goal_" <> goal)
+      basis: basis
     }
   end
 

@@ -628,6 +628,12 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     # day must total inside the band. A thin catalogue must not fail the run, so
     # after @max_calorie_rejections calorie-only rejections the plan is accepted
     # and the days still off are handed back as warnings.
+    #
+    # The model picks the dishes; the *amounts* are set here. It cannot reliably
+    # add up 35 entries, so every off-band day is first rebalanced in code
+    # (`balance_days/2`: servings + snack quantities). Only a day no amounts can
+    # fix — it needs different dishes — goes back to the model.
+    entries = if errors == [] and entries != [], do: balance_days(entries, acc), else: entries
     off_days = if errors == [] and entries != [], do: off_band_days(entries, acc), else: []
     rejections = Map.get(acc, :calorie_rejections, 0)
 
@@ -703,27 +709,166 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     end
   end
 
-  defp entry_kcal(%{"recipe_id" => id} = entry, acc) when is_integer(id) do
-    case get_in(acc, [Access.key(:recipe_meta, %{}), id, :calories]) do
-      kcal when is_number(kcal) -> kcal * servings(entry["servings"])
+  defp entry_kcal(entry, acc) do
+    case entry_unit_kcal(entry, acc) do
+      {unit_kcal, _selection} when is_number(unit_kcal) -> unit_kcal * entry_amount(entry)
       _ -> nil
     end
   end
 
-  defp entry_kcal(%{"ingredient_id" => id} = entry, acc) when is_integer(id) do
+  # `{kcal for ONE serving / ONE unit, resolved unit_selection | nil}`; the kcal
+  # is nil when the ledger has no calories for the item.
+  defp entry_unit_kcal(%{"recipe_id" => id}, acc) when is_integer(id) do
+    case get_in(acc, [Access.key(:recipe_meta, %{}), id, :calories]) do
+      kcal when is_number(kcal) -> {kcal, nil}
+      _ -> {nil, nil}
+    end
+  end
+
+  defp entry_unit_kcal(%{"ingredient_id" => id} = entry, acc) when is_integer(id) do
     units = Map.get(Map.get(acc, :ingredient_kcal, %{}), id, %{})
     selection = resolve_unit_selection(id, entry["unit_selection"])
 
     case Map.get(units, selection) do
-      kcal when is_number(kcal) ->
-        kcal * ((is_number(entry["quantity"]) && entry["quantity"]) || 1)
-
-      _ ->
-        nil
+      kcal when is_number(kcal) -> {kcal, selection}
+      _ -> {nil, selection}
     end
   end
 
-  defp entry_kcal(_entry, _acc), do: nil
+  defp entry_unit_kcal(_entry, _acc), do: {nil, nil}
+
+  # The amount an entry carries: servings eaten (recipe) or quantity (ingredient).
+  defp entry_amount(%{"recipe_id" => id} = entry) when is_integer(id),
+    do: servings(entry["servings"])
+
+  defp entry_amount(%{"quantity" => q}) when is_number(q) and q > 0, do: q
+  defp entry_amount(_entry), do: 1
+
+  defp put_amount(%{"recipe_id" => id} = entry, amount) when is_integer(id),
+    do: Map.put(entry, "servings", amount)
+
+  defp put_amount(entry, amount), do: Map.put(entry, "quantity", amount)
+
+  # ── deterministic day balancing ───────────────────────────────────────────────
+
+  @doc false
+  # Brings each off-band day inside `acc.calorie_band` by changing **amounts
+  # only** — never what is eaten: recipe servings (1–3 at Lunch/Dinner, 1–2
+  # elsewhere) and snack quantities (grams within 0.5–1.5× of what the model
+  # chose, pieces 1–2). A day already inside the band, or one holding an item of
+  # unknown calories, is returned untouched. Among the combinations for a day the
+  # winner is, in order: closest to the band (inside it when possible), dinner
+  # not heavier than lunch, smallest change from the model's amounts, closest to
+  # the aim. At most 3³·5² combinations per day — exhaustive search is fine.
+  def balance_days(entries, acc) do
+    case Map.get(acc, :calorie_band) do
+      %{min: _, max: _} = band ->
+        gram_ids = Mehungry.Food.NutrientCalculation.gram_unit_ids()
+        existing = Map.get(acc, :existing_day_kcal, %{})
+        {dated, undated} = Enum.split_with(entries, &is_binary(&1["date"]))
+
+        balanced =
+          dated
+          |> Enum.group_by(& &1["date"])
+          |> Enum.sort_by(&elem(&1, 0))
+          |> Enum.flat_map(fn {date, day} ->
+            balance_day(day, Map.get(existing, date, 0), band, acc, gram_ids)
+          end)
+
+        balanced ++ undated
+
+      _ ->
+        entries
+    end
+  end
+
+  defp balance_day(day, existing_kcal, band, acc, gram_ids) do
+    items =
+      Enum.map(day, fn entry ->
+        {unit_kcal, selection} = entry_unit_kcal(entry, acc)
+        current = entry_amount(entry)
+
+        %{
+          entry: entry,
+          unit_kcal: unit_kcal,
+          current: current,
+          options: amount_options(entry, current, selection, gram_ids)
+        }
+      end)
+
+    cond do
+      Enum.any?(items, &is_nil(&1.unit_kcal)) ->
+        day
+
+      band_distance(existing_kcal + Enum.sum(Enum.map(items, &(&1.unit_kcal * &1.current))), band) ==
+          0 ->
+        day
+
+      true ->
+        items |> best_amounts(existing_kcal, band) |> apply_amounts(items)
+    end
+  end
+
+  # Recipe servings: a main meal may go to 3, anything else to 2.
+  defp amount_options(%{"recipe_id" => id} = entry, current, _selection, _gram_ids)
+       when is_integer(id) do
+    max = if entry["slot"] in ["Lunch", "Dinner"], do: 3, else: 2
+    Enum.uniq([current | Enum.to_list(1..max)])
+  end
+
+  # Ingredient quantity: grams move in 5 g steps within 0.5–1.5× of the model's
+  # choice (a snack stays a snack); a countable unit is 1 or 2 pieces.
+  defp amount_options(_entry, current, selection, gram_ids) do
+    if MapSet.member?(gram_ids, selection) do
+      scaled = for f <- [0.5, 0.75, 1.25, 1.5], do: max(5, round(current * f / 5) * 5)
+      Enum.uniq([current | scaled])
+    else
+      Enum.uniq([current, 1, 2])
+    end
+  end
+
+  defp best_amounts(items, existing_kcal, band) do
+    items
+    |> Enum.reduce([[]], fn item, combos ->
+      for combo <- combos, amount <- item.options, do: [amount | combo]
+    end)
+    |> Enum.map(&Enum.reverse/1)
+    |> Enum.min_by(fn amounts ->
+      kcals = Enum.zip_with(items, amounts, &(&1.unit_kcal * &2))
+      total = existing_kcal + Enum.sum(kcals)
+      changes = Enum.zip_with(items, amounts, &change_size/2)
+
+      {band_distance(total, band), dinner_heavier(items, kcals), Enum.sum(changes),
+       abs(total - band.aim)}
+    end)
+  end
+
+  # How far an amount moved from the model's choice: servings count step by step
+  # (1 → 3 is a bigger intervention than two meals going 1 → 2), a changed snack
+  # quantity counts once.
+  defp change_size(%{current: current}, amount) when current == amount, do: 0
+
+  defp change_size(%{entry: %{"recipe_id" => id}, current: current}, amount) when is_integer(id),
+    do: abs(amount - current)
+
+  defp change_size(_item, _amount), do: 1
+
+  defp band_distance(total, %{min: min}) when total < min, do: min - total
+  defp band_distance(total, %{max: max}) when total > max, do: total - max
+  defp band_distance(_total, _band), do: 0
+
+  # 1 when the day's Dinner carries more calories than its Lunch, else 0.
+  defp dinner_heavier(items, kcals) do
+    by_slot = items |> Enum.map(& &1.entry["slot"]) |> Enum.zip(kcals) |> Map.new()
+
+    case by_slot do
+      %{"Lunch" => lunch, "Dinner" => dinner} when dinner > lunch -> 1
+      _ -> 0
+    end
+  end
+
+  defp apply_amounts(amounts, items),
+    do: Enum.zip_with(items, amounts, &put_amount(&1.entry, &2))
 
   defp calorie_error(%{date: date, total: total, min: min, max: max}, _band) when total < min do
     "#{date} totals #{total} kcal; it must be between #{min} and #{max}. Add about " <>
@@ -753,7 +898,10 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     per-serving calories × `servings` (1–3, how many servings the person eats at
     that meal), ingredient calories are kcal_per_unit × quantity. One serving of
     most recipes is too little for a main meal on its own — use `servings` 2 where
-    needed rather than leaving a day short.
+    needed rather than leaving a day short. submit_plan fine-tunes servings and
+    snack quantities itself when a day is a little off, but it never swaps a
+    dish: your job is to choose dishes whose calories can add up to the range
+    (not three very light meals, not two very heavy ones).
     """
   end
 

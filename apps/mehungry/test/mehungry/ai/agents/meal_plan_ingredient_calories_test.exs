@@ -65,13 +65,17 @@ defmodule Mehungry.AI.Agents.MealPlanIngredientCaloriesTest do
       }
     end
 
-    # 20 g × 6 kcal = 120 → under 170–190.
-    {low, acc} = MealPlanCore.submit_plan_tool(%{"entries" => [entry.(20)]}, acc)
-    refute low.success
-    assert hd(low.errors) =~ "totals 120 kcal"
+    # 20 g × 6 kcal = 120 → under 170–190; the quantity is rebalanced in 5 g
+    # steps (within 0.5–1.5× of the model's choice) to 30 g = 180 kcal.
+    {result, acc} = MealPlanCore.submit_plan_tool(%{"entries" => [entry.(20)]}, acc)
 
-    # 30 g × 6 kcal = 180 → inside.
-    {ok, _acc} = MealPlanCore.submit_plan_tool(%{"entries" => [entry.(30)]}, acc)
-    assert ok.success
+    assert result.success
+    assert [%{ingredient_id: id, quantity: 30.0}] = acc.submitted.entries
+    assert id == ingredient.id
+
+    # 200 g is far over and can only come down to 100 g = 600 kcal → rejected.
+    {high, _acc} = MealPlanCore.submit_plan_tool(%{"entries" => [entry.(200)]}, acc)
+    refute high.success
+    assert hd(high.errors) =~ "totals 600 kcal"
   end
 end

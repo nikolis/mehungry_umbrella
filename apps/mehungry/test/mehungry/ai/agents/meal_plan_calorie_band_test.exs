@@ -47,45 +47,121 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
 
   defp submit(entries, acc), do: MealPlanCore.submit_plan_tool(%{"entries" => entries}, acc)
 
-  test "a day under the band is rejected with the gap spelled out" do
-    {result, acc} = submit(day(), acc())
+  # A day no amounts can rescue: three 100-kcal dishes top out at 2+3+3 servings
+  # = 800 kcal, far under the band — it needs different dishes.
+  defp thin_acc do
+    meta = Map.new(acc().recipe_meta, fn {id, m} -> {id, %{m | calories: 100}} end)
+    acc(%{recipe_meta: meta})
+  end
+
+  defp total(entries, acc) do
+    Enum.sum(for e <- entries, do: acc.recipe_meta[e.recipe_id].calories * e.servings)
+  end
+
+  describe "deterministic balancing (the code sets the amounts)" do
+    test "an under-band day is brought inside the band by raising servings" do
+      # The model submits 1,200 kcal of one-serving meals — the production undershoot.
+      {result, acc} = submit(day(), acc())
+
+      assert result.success
+      assert acc.submitted.calorie_warnings == []
+      assert total(acc.submitted.entries, acc) in 1796..2195
+
+      # Smallest intervention that lands nearest the aim: lunch and dinner at two
+      # servings (2,000 kcal) rather than one meal tripled.
+      assert %{"breakfast" => 1, "lunch" => 2, "dinner" => 2} =
+               Map.new(acc.submitted.entries, &{&1.meal_type, &1.servings})
+    end
+
+    test "an over-band day is brought down, and a day already inside is left alone" do
+      {over, acc_over} = submit(day(%{"Breakfast" => 2, "Lunch" => 3, "Dinner" => 3}), acc())
+      assert over.success
+      assert total(acc_over.submitted.entries, acc_over) in 1796..2195
+
+      # 400 + 2×450 + 2×350 = 2,000: untouched.
+      {inside, acc_in} = submit(day(%{"Lunch" => 2, "Dinner" => 2}), acc())
+      assert inside.success
+
+      assert %{"breakfast" => 1, "lunch" => 2, "dinner" => 2} =
+               Map.new(acc_in.submitted.entries, &{&1.meal_type, &1.servings})
+    end
+
+    test "dinner is never left heavier than lunch when a lighter-dinner option fits" do
+      # Lunch 300, dinner 500: raising only dinner would fit but invert the day.
+      meta =
+        acc().recipe_meta
+        |> put_in([2, :calories], 300)
+        |> put_in([3, :calories], 500)
+
+      {result, acc} = submit(day(), acc(%{recipe_meta: meta}))
+
+      assert result.success
+      by_slot = Map.new(acc.submitted.entries, &{&1.meal_type, &1})
+      assert by_slot["lunch"].servings * 300 >= by_slot["dinner"].servings * 500
+    end
+
+    test "the production week: every day lands in 1,796–2,195 with the same dishes" do
+      # Per-serving kcal and the model's servings, as drafted for the client.
+      days = [
+        {[500, 1, 337, 3, 256, 1], 426},
+        {[500, 1, 743, 2, 256, 1], 201},
+        {[244, 1, 853, 1, 215, 2], 255},
+        {[500, 1, 671, 1, 303, 1], 282},
+        {[244, 1, 373, 2, 256, 1], 348},
+        {[244, 1, 743, 2, 337, 1], 361}
+      ]
+
+      for {[b, bs, l, ls, d, ds], snacks_kcal} <- days do
+        meta = %{
+          1 => %{title: "B", roles: ["breakfast"], calories: b},
+          2 => %{title: "L", roles: ["main"], calories: l},
+          3 => %{title: "D", roles: ["soup"], calories: d}
+        }
+
+        # Snacks ride along as calories already on the day.
+        acc = acc(%{recipe_meta: meta, existing_day_kcal: %{@date => snacks_kcal}})
+
+        {result, acc} =
+          submit(day(%{"Breakfast" => bs, "Lunch" => ls, "Dinner" => ds}), acc)
+
+        assert result.success
+        assert (total(acc.submitted.entries, acc) + snacks_kcal) in 1796..2195
+      end
+    end
+  end
+
+  test "a day no amounts can fix is rejected with the gap spelled out" do
+    {result, acc} = submit(day(), thin_acc())
 
     refute result.success
     assert [error] = result.errors
-    assert error =~ "#{@date} totals 1200 kcal"
+    # Balanced as far as amounts go (2 + 3 + 3 servings of 100 kcal) and still short.
+    assert error =~ "#{@date} totals 800 kcal"
     assert error =~ "between 1796 and 2195"
-    assert error =~ "Add about 596 kcal"
+    assert error =~ "Add about 996 kcal"
     assert acc.submitted == nil
     assert acc.calorie_rejections == 1
   end
 
-  test "raising servings brings the day inside the band and is carried on the entries" do
-    # 400 + 2×450 + 2×350 = 2000
-    {result, acc} = submit(day(%{"Lunch" => 2, "Dinner" => 2}), acc())
+  test "a day that cannot come down far enough is rejected too" do
+    meta = Map.new(acc().recipe_meta, fn {id, m} -> {id, %{m | calories: 1000}} end)
 
-    assert result.success
-    assert acc.submitted.calorie_warnings == []
-
-    assert %{"lunch" => 2, "dinner" => 2, "breakfast" => 1} =
-             Map.new(acc.submitted.entries, &{&1.meal_type, &1.servings})
-  end
-
-  test "a day over the band is rejected too" do
-    {result, _acc} = submit(day(%{"Breakfast" => 3, "Lunch" => 3, "Dinner" => 3}), acc())
+    {result, _acc} = submit(day(), acc(%{recipe_meta: meta}))
 
     refute result.success
     assert hd(result.errors) =~ "Remove about"
   end
 
   test "meals already on the calendar that day count toward the total" do
-    # 1200 planned + 700 staying on the calendar = 1900, inside the band.
-    {result, _acc} = submit(day(), acc(%{existing_day_kcal: %{@date => 700}}))
+    # 1,200 planned + 700 staying on the calendar = 1,900: inside, nothing changes.
+    {result, acc} = submit(day(), acc(%{existing_day_kcal: %{@date => 700}}))
 
     assert result.success
+    assert Enum.all?(acc.submitted.entries, &(&1.servings == 1))
   end
 
   test "after two calorie-only rejections the plan is accepted with warnings" do
-    {r1, acc} = submit(day(), acc())
+    {r1, acc} = submit(day(), thin_acc())
     {r2, acc} = submit(day(), acc)
     {r3, acc} = submit(day(), acc)
 
@@ -93,7 +169,7 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
     refute r2.success
     assert r3.success
 
-    assert acc.submitted.calorie_warnings == [%{date: @date, total: 1200, min: 1796, max: 2195}]
+    assert acc.submitted.calorie_warnings == [%{date: @date, total: 800, min: 1796, max: 2195}]
     assert length(acc.submitted.entries) == 3
   end
 
