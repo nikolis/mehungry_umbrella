@@ -28,9 +28,10 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
         user_meals = load_and_format_user_meals(client_id, Date.utc_today())
         recipes = Food.list_user_recipes_for_selection(nil)
 
-        # The client's own calorie target drives the editor's totals-vs-target
-        # colouring (nil when the client has no profile/target set yet).
-        profile = Accounts.get_user_profile_by_user_id(client_id)
+        # The calorie target driving the editor's totals-vs-target colouring:
+        # the nutritionist's prescribed target, else the intake TDEE, else the
+        # client's own profile target — the same precedence the AI draft plans to.
+        calorie_target = Professionals.client_calorie_target(professional_id, client_id)
 
         socket = assign_device_kind(socket)
 
@@ -55,7 +56,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
          |> assign(:recipes, recipes)
          |> assign(:particular_date, nil)
          |> assign(:calendar_view, "week_view")
-         |> assign(:calorie_target, profile && profile.daily_calorie_target)
+         |> assign(:calorie_target, calorie_target)
          |> assign(:pending_meal_type, nil)
          |> assign(:ai_plan_generating, ai_running?)
          |> assign(:ai_plan_pending, nil)

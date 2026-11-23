@@ -44,7 +44,21 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     main meals on every day, since the plan will replace what is on the week).
   """
   def run(preferences, start_date, user_id, blueprint \\ nil, opts \\ []) do
+    case run_plan(preferences, start_date, user_id, blueprint, opts) do
+      {:ok, %{entries: entries}} -> {:ok, entries}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  `run/5` with its report: `{:ok, %{entries: [...], calorie_warnings: [...],
+  calorie_band: band | nil}}`. `calorie_warnings` lists the days
+  (`%{date, total, min, max}`) the plan could not bring inside the band.
+  """
+  def run_plan(preferences, start_date, user_id, blueprint \\ nil, opts \\ []) do
     guards = guards(user_id, blueprint)
+    mode = Keyword.get(opts, :mode)
+    band = calorie_band(user_id, blueprint, mode)
 
     # `offered`/`offered_ingredients` accumulate every id the search tools handed
     # the model this run; submit_plan rejects any id it never surfaced.
@@ -52,7 +66,9 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
       user_id: user_id,
       start_date: start_date,
       guards: guards,
-      mode: Keyword.get(opts, :mode),
+      mode: mode,
+      calorie_band: band,
+      existing_day_kcal: existing_day_kcal(user_id, start_date, band, mode),
       offered: MapSet.new(),
       offered_ingredients: MapSet.new(),
       submitted: nil
@@ -63,7 +79,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     result =
       MealPlanCore.run_until_submitted("user_meal_plan", fn extra ->
         Agent.run(
-          system_prompt(preferences, start_date, guards),
+          system_prompt(preferences, start_date, guards, band),
           initial_message(preferences, start_date) <> extra,
           tool_defs(),
           &handle_tool/3,
@@ -76,10 +92,51 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
       end)
 
     case result do
-      {:ok, _text, %{submitted: %{entries: entries}}} -> {:ok, entries}
-      {:error, reason} -> {:error, reason}
+      {:ok, _text, %{submitted: %{entries: entries} = submitted}} ->
+        {:ok,
+         %{
+           entries: entries,
+           calorie_warnings: Map.get(submitted, :calorie_warnings, []),
+           calorie_band: band
+         }}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
+
+  @doc """
+  The calorie range a person's own **calendar** plan must land in: ±10% around
+  the target that applies to them — their nutritionist's prescription while they
+  work together, else their own profile target
+  (`Professionals.effective_calorie_target/2`, the number their calendar shows).
+  nil — no calorie check, servings stay at one — when there is no target, when
+  the plan follows a blueprint (its own per-day targets reach the model through
+  the brief), or when the run is not headed for a calendar week (`mode` nil: an
+  independent blueprint plan, which stores no servings).
+  """
+  def calorie_band(_user_id, _blueprint, nil), do: nil
+  def calorie_band(_user_id, blueprint, _mode) when not is_nil(blueprint), do: nil
+
+  def calorie_band(user_id, nil, _mode) do
+    profile = Accounts.get_user_profile_by_user_id(user_id)
+
+    case Mehungry.Professionals.effective_calorie_target(
+           user_id,
+           profile && profile.daily_calorie_target
+         ) do
+      %{kcal: kcal} when is_integer(kcal) and kcal > 0 ->
+        Mehungry.Professionals.CalorieBand.around(kcal)
+
+      _ ->
+        nil
+    end
+  end
+
+  defp existing_day_kcal(user_id, start_date, %{}, :fill_gaps),
+    do: MealPlanCore.existing_day_kcal(user_id, start_date, Date.add(start_date, 6))
+
+  defp existing_day_kcal(_user_id, _start_date, _band, _mode), do: %{}
 
   @doc """
   The guard set for a user's own plan: their recipes, their blueprint's and
@@ -111,7 +168,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
 
   # ── system prompt ─────────────────────────────────────────────────────────────
 
-  defp system_prompt(preferences, start_date, guards) do
+  defp system_prompt(preferences, start_date, guards, band) do
     end_date = Date.add(start_date, 6)
     slots = MealPlanCore.slots()
 
@@ -121,7 +178,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     Plan period: #{Date.to_string(start_date)} to #{Date.to_string(end_date)} (inclusive).
     Meal slots each day: #{Enum.join(slots, ", ")} (35 total entries).
     User preferences: #{preferences}
-    #{MealPlanCore.guard_blocks(guards)}
+    #{MealPlanCore.guard_blocks(guards)}#{MealPlanCore.calorie_block(band)}
     WORKFLOW:
     1. Call get_recent_meals to see what the user has eaten lately — avoid heavy repetition
     2. Call search_catalog with `slot` set to find recipes for each main slot.
@@ -132,17 +189,19 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
          salad is NOT a lunch or dinner, however good it sounds
        Searching with slot: "Lunch" / "Dinner" / "Breakfast" returns only dishes
        that fit. You may call search_catalog multiple times with different
-       queries. Each result carries per-serving calories — use them to honour any
-       calorie target in the preferences
+       queries. Each result carries per-serving calories — use them (with
+       `servings`) to honour any calorie range or target
     3. For the two snack slots (and light sides), prefer a single whole-food
        INGREDIENT — fruit, nuts, cheese, yogurt, etc. Call search_ingredients to
-       find them. Snacks do not need to be recipes.
+       find them. Snacks do not need to be recipes. Each unit option carries
+       kcal_per_unit — count snacks toward the day's total.
     4. Draft the 35-entry plan using ONLY ids returned by the search tools
     5. Call submit_plan with the complete plan
     6. If submit_plan returns errors, fix the reported issues and resubmit
 
     RULES:
-    - Each entry is EITHER a recipe (recipe_id + cooking_portions) OR an
+    - Each entry is EITHER a recipe (recipe_id + cooking_portions + servings, the
+      servings eaten at that meal, 1–3) OR an
       ingredient (ingredient_id + quantity, optional unit_selection) — never both
     - Use ONLY recipe_ids returned by search_catalog and ingredient_ids returned
       by search_ingredients — never invent IDs

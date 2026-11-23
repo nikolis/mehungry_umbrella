@@ -80,12 +80,17 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       end)
 
     case result do
-      {:ok, summary, %{submitted: %{entries: entries, rationale: rationale}, guards: guards}} ->
+      {:ok, summary, %{submitted: %{entries: entries, rationale: rationale} = submitted} = done} ->
+        guards = done.guards
+
         {:ok,
          %{
            entries: entries,
            rationale: rationale,
            summary: summary,
+           # Days the plan could not bring inside the client's calorie band.
+           calorie_warnings: Map.get(submitted, :calorie_warnings, []),
+           calorie_band: done.calorie_band,
            avoided: MealPlanCore.enforced_avoid_terms(guards)
          }}
 
@@ -125,7 +130,7 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     Meal slots each day: #{Enum.join(slots, ", ")}
     (up to #{max_entries} entries).
     Client preferences / notes: #{preferences}
-    #{MealPlanCore.guard_blocks(guards)}
+    #{MealPlanCore.guard_blocks(guards)}#{MealPlanCore.calorie_block(acc.calorie_band)}
     WORKFLOW:
     1. Call get_client_record FIRST — the nutritionist's file for this client:
        diet, foods to avoid (allergies/intolerances + condition-implicated foods),
@@ -139,17 +144,19 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     6. Call search_recipes one or more times, with `slot` set, to find suitable
        recipes for the three main slots. Each result carries meal roles (main,
        dinner, soup, side, meze, salad, breakfast, pre_workout, post_workout…), difficulty (1 = quick/light,
-       3 = demanding) and per-serving calories — use them to place recipes and to
-       keep each day near the client's calorie target
+       3 = demanding) and per-serving calories — use them to place recipes and,
+       with `servings`, to bring each day inside the client's calorie range
     7. Call search_ingredients to find whole-food snack items for the two snack slots —
        snacks should be a single whole food (e.g. a banana, 20 g of almonds, Greek
-       yogurt), NOT a recipe
-    8. Draft the plan
+       yogurt), NOT a recipe. Each unit option carries kcal_per_unit — count snacks
+       toward the day's total
+    8. Draft the plan, adding up each day's calories
     9. Call submit_plan with the entries and a 2–3 sentence professional rationale
     10. If submit_plan returns errors, fix them and resubmit
 
     RULES:
-    - Each entry is EITHER a recipe (recipe_id + cooking_portions) OR an ingredient
+    - Each entry is EITHER a recipe (recipe_id + cooking_portions + servings, the
+      servings the client eats at that meal) OR an ingredient
       (ingredient_id + quantity, optional unit_selection) — never both
     - Only use recipe_ids returned by search_recipes and ingredient_ids returned by
       search_ingredients — never invent IDs
@@ -159,9 +166,12 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       contents) matches a food on the client's `avoid` list from get_client_record
       (allergies, intolerances, personal avoid, condition-implicated foods). If in
       doubt, choose something else.
-    - CALORIE TARGET: when get_client_record returns a calorie_target, aim each day's
-      total calories within about ±10% of it using the per-serving calories from
-      search_recipes; do not materially exceed it.
+    - CALORIES: when a CALORIE RANGE is given above, every planned day must land
+      inside it (get_client_record's calorie_band is the same range; goal_type says
+      whether the client is losing, maintaining or gaining). Scale meals with
+      `servings` — lunch may take 2 servings while dinner stays at 1 — rather than
+      leaving a day short. In fill-gaps mode get_assigned_plan's
+      existing_kcal_by_day already counts toward that day's total.
     - SNACKS: the two snack slots (Morning Snack, Afternoon Snack) must favour a
       single whole-food ingredient (fruit, nuts, yogurt, cheese) over a recipe —
       e.g. 1 banana, 20 g of almonds, a cup of Greek yogurt. A person should be able
@@ -272,6 +282,10 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       first_day: first_day(start_date),
       mode: Keyword.get(opts, :mode) || :fill_gaps,
       context: context,
+      # The range each planned day must total inside (nil ⇒ no calorie check),
+      # plus what is already on the calendar on days a fill-gaps draft adds to.
+      calorie_band: context.calorie_band,
+      existing_day_kcal: existing_day_kcal(client_id, start_date, context, opts),
       guards: guards(professional_id, context),
       offered: MapSet.new(),
       offered_ingredients: MapSet.new(),
@@ -286,6 +300,17 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
   def first_day(%Date{} = start_date, today \\ Date.utc_today()) do
     if Date.compare(today, start_date) == :gt, do: today, else: start_date
   end
+
+  # Only a fill-gaps draft keeps existing meals, and only a banded one counts them.
+  defp existing_day_kcal(client_id, start_date, %{calorie_band: %{}}, opts) do
+    if (Keyword.get(opts, :mode) || :fill_gaps) == :fill_gaps do
+      MealPlanCore.existing_day_kcal(client_id, first_day(start_date), Date.add(start_date, 6))
+    else
+      %{}
+    end
+  end
+
+  defp existing_day_kcal(_client_id, _start_date, _context, _opts), do: %{}
 
   defp guards(professional_id, context) do
     MealPlanCore.guards(
@@ -371,6 +396,8 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     {%{
        assigned_count: length(entries),
        assigned_entries: entries,
+       # kcal already on each day that will stay — count it toward the day's range.
+       existing_kcal_by_day: if(mode == :replace_week, do: %{}, else: acc.existing_day_kcal),
        message: assigned_plan_message(entries, mode)
      }, acc}
   end

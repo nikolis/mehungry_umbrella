@@ -641,6 +641,92 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     assert updated.weight_kg == 90.0
   end
 
+  test "the calorie target is set inline, leads the Energy card, and clears back to TDEE", %{
+    conn: conn,
+    nutritionist: nutritionist,
+    client_user: client_user
+  } do
+    {:ok, record} =
+      Professionals.create_client_record(%{
+        professional_id: nutritionist.id,
+        user_id: client_user.id,
+        full_name: "Platform Client"
+      })
+
+    {:ok, intake} =
+      Professionals.create_intake(%{
+        "professional_client_id" => record.id,
+        "tdee_kcal" => 2100
+      })
+
+    {:ok, view, html} = live(conn, ~p"/nutritionist/clients/#{client_user.id}")
+    assert html =~ "kcal TDEE"
+
+    render_click(view, "edit_target", %{})
+
+    html =
+      view
+      |> form("form[phx-submit='save_target']", %{target_kcal: "1600"})
+      |> render_submit()
+
+    assert html =~ "kcal target"
+    assert html =~ "−500 kcal"
+
+    updated = Professionals.get_latest_intake(record.id)
+    assert updated.id == intake.id
+    assert updated.target_kcal == 1600
+    # The estimate itself is untouched — the target is a separate prescription.
+    assert updated.tdee_kcal == 2100
+
+    assert Mehungry.Professionals.ClientMealContext.calorie_target(
+             nutritionist.id,
+             client_user.id
+           ) == 1600
+
+    # Saving it empty clears the prescription; planning falls back to TDEE.
+    render_click(view, "edit_target", %{})
+
+    html =
+      view
+      |> form("form[phx-submit='save_target']", %{target_kcal: ""})
+      |> render_submit()
+
+    assert html =~ "kcal TDEE"
+    assert Professionals.get_latest_intake(record.id).target_kcal == nil
+  end
+
+  test "the goal type sets the plan range shown on the Energy card", %{
+    conn: conn,
+    nutritionist: nutritionist,
+    client_user: client_user
+  } do
+    {:ok, record} =
+      Professionals.create_client_record(%{
+        professional_id: nutritionist.id,
+        user_id: client_user.id,
+        full_name: "Platform Client"
+      })
+
+    {:ok, intake} =
+      Professionals.create_intake(%{
+        "professional_client_id" => record.id,
+        "tdee_kcal" => 2000
+      })
+
+    {:ok, _view, html} = live(conn, ~p"/nutritionist/clients/#{client_user.id}")
+    # Unset goal type plans to maintain: within 10% of TDEE.
+    assert html =~ "Plan range 1800–2200 kcal"
+
+    {:ok, _} = Professionals.update_intake(intake, %{"goal_type" => "lose"})
+
+    {:ok, _view, html} = live(conn, ~p"/nutritionist/clients/#{client_user.id}")
+    assert html =~ "Plan range 1600–1800 kcal"
+    assert html =~ "Lose weight"
+
+    assert {:error, changeset} = Professionals.update_intake(intake, %{"goal_type" => "bulk"})
+    assert Keyword.has_key?(changeset.errors, :goal_type)
+  end
+
   test "a saved plan can be assigned straight to this client's calendar", %{
     conn: conn,
     nutritionist: nutritionist,

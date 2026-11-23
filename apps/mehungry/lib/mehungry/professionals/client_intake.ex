@@ -34,10 +34,16 @@ defmodule Mehungry.Professionals.ClientIntake do
     field :adjusted_weight_kg, :float
     field :bmr_kcal, :integer
     field :tdee_kcal, :integer
+    # Prescribed daily energy target — set only when the nutritionist chooses to
+    # differ from the estimated TDEE; nil means "plan to TDEE". Never auto-filled.
+    field :target_kcal, :integer
     field :sex, :string
     field :age, :integer
     field :activity_level, :string
     field :goal, :string
+    # Direction of the goal (lose | maintain | gain) — picks the calorie band a plan
+    # must land in when no explicit target_kcal is set. nil ⇒ maintain.
+    field :goal_type, :string
     field :details, :map, default: %{}
 
     belongs_to :professional_client, Mehungry.Professionals.ProfessionalClient
@@ -58,16 +64,20 @@ defmodule Mehungry.Professionals.ClientIntake do
       :adjusted_weight_kg,
       :bmr_kcal,
       :tdee_kcal,
+      :target_kcal,
       :sex,
       :age,
       :activity_level,
       :goal,
+      :goal_type,
       :details
     ])
     |> validate_required([:professional_client_id])
     |> validate_inclusion(:sex, Anthropometrics.sex_values())
     |> validate_inclusion(:activity_level, Anthropometrics.activity_values())
+    |> validate_inclusion(:goal_type, Mehungry.Professionals.CalorieBand.goal_type_values())
     |> validate_number(:age, greater_than: 0, less_than: 130)
+    |> validate_number(:target_kcal, greater_than: 0, less_than: 20_000)
     |> maybe_fill_energy()
     |> foreign_key_constraint(:professional_client_id)
   end

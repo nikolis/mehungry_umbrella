@@ -37,8 +37,43 @@ Three schemas, owned by the flat `Professionals` context (migrations `2026090400
 A baseline assessment (the intake form filled at the first appointment); `has_many` off the
 client keyed by `assessed_on`, so a client can be re-assessed over time.
 - **Typed, queryable columns:** `assessed_on`, `height_m`, `weight_kg`, `bmi`,
-  `usual_weight_kg`, `ideal_weight_kg`, `adjusted_weight_kg` (floats), `bmr_kcal`, `tdee_kcal`
-  (ints), `sex`, `activity_level` (strings), `age` (int), `goal`.
+  `usual_weight_kg`, `ideal_weight_kg`, `adjusted_weight_kg` (floats), `bmr_kcal`, `tdee_kcal`,
+  `target_kcal` (ints), `sex`, `activity_level` (strings), `age` (int), `goal`, `goal_type`.
+- **Prescribed calorie target (`target_kcal`).** TDEE is an *estimate of expenditure*; when the
+  nutritionist chooses to prescribe a different daily intake (a deficit for weight loss, a
+  surplus for gain) they record it as `target_kcal`. It is **optional and never auto-filled** —
+  nil means "plan to TDEE". Set it inline on the Overview's Energy card (saving it empty clears
+  it) or in the intake form; a new assessment carries it forward. Every nutritionist-side surface
+  resolves the client's target through one function, `Professionals.client_calorie_target/2`
+  (`ClientMealContext.calorie_target/2`): **`target_kcal` → `tdee_kcal` → the client's own
+  `UserProfile.daily_calorie_target`** — read by the AI client-plan draft and by the
+  nutritionist's client calendar (`/nutritionist/clients/:id/calendar` totals-vs-target), so the
+  two can't disagree. On the client's **own** surfaces a prescribed `target_kcal` **overrules —
+  never overwrites —** their self-set `daily_calorie_target` for the duration of the
+  coordination (`Professionals.effective_calorie_target/2` → `%{kcal, source}`): their
+  `/calendar` scores against it and labels it "Target set by your nutritionist", `/api/v1/me`
+  exposes it as `effective_calorie_target` + `calorie_target_source`, and the profile form
+  explains why their own number isn't the one applied. Only an explicit `target_kcal` overrules
+  (an estimated TDEE does not); clearing it, or ending the assignment, restores the client's own
+  target untouched.
+- **Goal type and the plan range (`goal_type`).** Next to the free-text goal the nutritionist
+  picks **Lose / Maintain / Gain** (`client_intakes.goal_type`, nullable — unset is treated as
+  Maintain; carried forward by a new assessment). It sets the daily calorie **range** an AI
+  draft's days must land in, resolved by the pure `Professionals.CalorieBand`:
+
+  | Client's goal | Range (share of TDEE) |
+  |---|---|
+  | Lose weight | 20% to 10% **under** TDEE |
+  | Maintain weight (or unset) | within 10% of TDEE |
+  | Gain weight | 10% to 20% **over** TDEE |
+
+  A typed `target_kcal` **wins**: the range is ±10% of that number and the goal type is
+  ignored (a typed 1,600 for a weight-loss client already *is* the deficit). The Overview's
+  Energy card shows the resulting range ("Plan range 1,596–1,796 kcal · lose") so the
+  nutritionist sees what the planner will be held to before drafting; the single target the
+  client calendar colours against is the range's aim. The AI draft validates every planned day
+  against it and reports any day it could not fit — see
+  `docs/implementation/ai/meal_plan.md` → *The calorie band*.
 - **Auto-calculated energy figures.** `bmi`, `bmr_kcal` (Mifflin–St Jeor) and `tdee_kcal`
   (BMR × activity factor) are derived from `height_m`/`weight_kg`/`sex`/`age`/`activity_level`
   by the pure `Mehungry.Professionals.Anthropometrics` calculator (also the single source of
@@ -208,7 +243,8 @@ one glance. No upcoming appointment → no ribbon.
 The Overview opens with a
 single **at-a-glance summary strip**: six KPI cards — Goal, Weight (latest reading + since-baseline
 delta vs. the intake's ideal weight), BMI (healthy-band dot), **Energy** (TDEE headline with BMR
-underneath — one card, since they are one concept), Last visit, and **Next steps** (the last visit's
+underneath — one card, since they are one concept; when a prescribed `target_kcal` is set it leads
+instead, with TDEE and the signed gap underneath, and the card edits the target inline), Last visit, and **Next steps** (the last visit's
 `todo`, surfaced for pre-session prep instead of being buried in the timeline) — plus a compact
 **reference line** underneath with the latest intake's anthropometrics (sex, age, activity, height,
 weight at intake, ideal/usual/adjusted weight; only filled fields show). The **Goal card edits
@@ -313,12 +349,12 @@ Planning tab (choosing **this week** or **next week**), the `NutritionistMealPla
 live over PubSub; if the nutritionist navigates away and re-mounts mid-draft, the panel **resumes
 its running state** (`NutritionistAgentWorker.running?/2` checks Oban for an active job for this
 professional+client on mount) instead of flashing the idle form. Its
-`get_client_record` tool merges the latest **intake** (goal, TDEE → the plan's `calorie_target`),
+`get_client_record` tool merges the latest **intake** (goal, prescribed `target_kcal` else TDEE → the plan's `calorie_target`),
 the linked **conditions**, the latest **consultation note**, and the client's own `UserProfile`
 (diet, `avoid_foods`) into one brief with a unified **`avoid` list** — personal avoid foods +
 intake allergies/intolerances + **condition-implicated foods** (via `Health.ingredients_for_condition/2`).
 Where the client's self-entered profile and the nutritionist's file overlap, the **nutritionist's
-value wins** (the clinician's intake TDEE beats the client's own calorie target; the avoid list
+value wins** (the clinician's prescribed target, else their intake TDEE, beats the client's own calorie target; the avoid list
 unions both) — the same precedence drives the calendar's "AI draft week", since both share one
 resolver (`Professionals.resolve_client_meal_context/2`).
 The same resolved context also drives **deterministic guards** (diet, avoid terms,

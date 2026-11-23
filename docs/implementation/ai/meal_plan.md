@@ -22,7 +22,8 @@ A plan is **7 days × 5 slots** = 35 entries. The five slots per day are
 **Breakfast, Morning Snack, Lunch, Afternoon Snack, Dinner**
 (`Mehungry.History.MealType`). Each entry is **either**:
 
-- a **recipe** (`recipe_id` + `cooking_portions`), or
+- a **recipe** (`recipe_id` + `cooking_portions` + `servings` — the servings
+  *eaten* at that meal, 1–3, the planner's lever for reaching a calorie range), or
 - a single **whole-food ingredient** (`ingredient_id` + `quantity` + unit) —
   snacks and light sides are usually an ingredient.
 
@@ -165,8 +166,8 @@ every user's recipes. A failed run now fails, with a readable message
 |---|---|
 | `get_recent_meals` | Last 21 days of the person's meal history, so the plan avoids repeating what they just ate |
 | `search_catalog` (user) / `search_recipes` (nutritionist) | Guarded semantic search of the catalog (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings, **per-serving calories** (`MealPlanCore.per_serving_calories/1`, the same `NutrientUtils.macro_summary/1` the calendar uses) and the recipe's **meal roles**. An optional **`slot`** input scopes the search, in SQL, to recipes whose roles fit that slot (plus unclassified ones) — see [`../food/meal_roles.md`](../food/meal_roles.md) |
-| `search_ingredients` | Whole-food ingredient search (fruit, nuts, cheese, yogurt…) for snacks/sides, with unit options |
-| `submit_plan` | Validate + accept the plan; the **only** way to finish. An empty plan is rejected |
+| `search_ingredients` | Whole-food ingredient search (fruit, nuts, cheese, yogurt…) for snacks/sides — `kcal_per_100g` plus unit options that each carry **`kcal_per_unit`** (calories for one of that unit), so snacks count toward the day's total |
+| `submit_plan` | Validate + accept the plan; the **only** way to finish. An empty plan is rejected; so is a day outside the calorie band (below) |
 
 The nutritionist agent adds its client-context tools (see the table above); the
 three tools here are the shared `MealPlanCore` implementations in both agents.
@@ -239,6 +240,54 @@ relative `day_index`, slot label → canonical `meal_type`, and the ingredient's
 `unit_selection` resolved to real `measurement_unit_id` / `ingredient_portion_id`
 FKs (falling back to grams if the model picked an invalid unit).
 
+### The calorie band — a range each day must land in
+
+A draft once averaged ~1,270 kcal/day for a client with TDEE 1,995: every recipe
+was persisted as exactly one serving, snacks carried no calories, and nothing
+checked the day total. The band closes all three.
+
+**Which band** (`Mehungry.Professionals.CalorieBand`, pure):
+
+| Basis | Range | Aim |
+|---|---|---|
+| Nutritionist typed a `target_kcal` | ±10% of it (goal type ignored) | the target |
+| else TDEE, goal type **lose** | −20% … −10% of TDEE | −15% |
+| else TDEE, goal type **maintain** / unset | −10% … +10% of TDEE | TDEE |
+| else TDEE, goal type **gain** | +10% … +20% of TDEE | +15% |
+| else the client's own profile target | ±10% of it | the target |
+| nothing | no band — no calorie check | — |
+
+- **Nutritionist drafts** take the band from `ClientMealContext.resolve/2`
+  (`calorie_band`; `calorie_target` is its aim). `goal_type` is a Lose / Maintain /
+  Gain select on the client intake.
+- **A person's own calendar plan** gets ±10% around
+  `Professionals.effective_calorie_target/2` (their nutritionist's prescription
+  while they work together, else their own target) — `UserMealPlanAgent.calorie_band/3`.
+  No band when the plan follows a blueprint (its per-day targets reach the model
+  through the brief) or is an independent blueprint plan (which stores no servings).
+
+**How it is enforced** (`MealPlanCore`):
+
+- The prompt carries the range as a hard rule with a floor (`calorie_block/1`) —
+  "being under is as wrong as being over".
+- The run accumulator keeps a calorie ledger filled by the search tools
+  (`recipe_meta[id].calories`, `ingredient_kcal[id][unit_selection]`), so
+  `submit_plan` totals each planned day with no extra queries: recipe kcal ×
+  `servings` + ingredient `kcal_per_unit` × quantity + **what is already on the
+  calendar that day** in fill-gaps mode (`existing_day_kcal/3`, the calendar's own
+  aggregation). `off_band_days/2` returns the days outside the band; each becomes
+  an actionable error ("totals 1,032 kcal; must be between 1,596 and 1,796 — add
+  about 564 kcal: raise `servings`…"). A day holding an entry of unknown calories
+  is skipped rather than guessed.
+- **Bounded:** after 2 calorie-only rejections the plan is accepted and the days
+  still off come back as `calorie_warnings` (`%{date, total, min, max}`) — a thin
+  catalogue degrades to an honest note, never a failed draft. The nutritionist's
+  result text states the range and lists those days; a person's own run stores
+  `calorie_range` + `calorie_warnings` on the job result (calendar message, mobile
+  spec §"Plan with AI").
+- `servings` is honoured **only when a band is enforced**; otherwise every recipe
+  stays at one serving, which is what blueprint plans and `PlanCompatibility` assume.
+
 ### What the avoid-foods filter matches against — and its blind spots
 
 `reject_avoided/3` is a **case-insensitive substring** test (`String.contains?`)
@@ -292,10 +341,13 @@ Generation and persistence are deliberately separate:
   agent) onto calendar dates (`day_index` → `start_date + n`), creating
   `UserMeal`s in the chosen mode (`:fill_gaps` / `:replace_week`), optionally
   leaving days before `:from` untouched. Recipe entries become
-  `recipe_user_meals` (with `consume_portions: 1` so the calendar's
-  `consume_portions / servings` scaling shows real numbers); ingredient entries
+  `recipe_user_meals` (with `consume_portions` = the entry's `servings`, 1 when
+  absent, so the calendar's `consume_portions / servings` scaling shows what the
+  plan actually has the person eat; `cooking_portions` is raised to at least that); ingredient entries
   become `ingredient_user_meals` with resolved unit FKs.
 - **`existing_meal_count/3`** — what a page checks to decide whether to ask for a mode.
+- **`generate_plan/5`** — `generate_entries` with its report
+  (`%{entries, calorie_warnings, calorie_band}`), used by `MealPlanWorker`.
 - **`run/5`** — `generate_entries` then `persist_entries_to_calendar`.
 
 ## Blueprints as briefs

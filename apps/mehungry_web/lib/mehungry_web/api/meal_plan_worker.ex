@@ -82,15 +82,17 @@ defmodule MehungryWeb.Api.MealPlanWorker do
     start_date = job.start_date || Date.utc_today()
 
     with {:ok, blueprint} <- load_blueprint(job),
-         {:ok, entries} <-
-           MealPlanGenerator.generate_entries(
+         {:ok, plan} <-
+           MealPlanGenerator.generate_plan(
              job.notes || "",
              start_date,
              job.user_id,
              blueprint,
              generation_opts(job)
            ),
-         {:ok, result} <- deliver(job, entries, start_date) do
+         {:ok, result} <- deliver(job, plan.entries, start_date) do
+      result = Map.merge(result, calorie_report(plan))
+
       Subscriptions.record_usage(job.user_id, "meal_plan")
 
       {:ok, _} = MealPlanJobs.update_job(job, %{status: "done", result: result})
@@ -104,6 +106,19 @@ defmodule MehungryWeb.Api.MealPlanWorker do
         :ok
     end
   end
+
+  # The range the plan was held to and any day it could not bring inside it
+  # (string keys/dates: this is stored as the job's JSON result). Empty when the
+  # run had no calorie target.
+  defp calorie_report(%{calorie_band: %{min: min, max: max}} = plan) do
+    %{
+      "calorie_range" => %{"min" => min, "max" => max},
+      "calorie_warnings" =>
+        Enum.map(plan.calorie_warnings, &%{"date" => &1.date, "total_kcal" => &1.total})
+    }
+  end
+
+  defp calorie_report(_plan), do: %{}
 
   # A requested blueprint that can no longer be resolved fails the run: planning
   # on without it would silently drop its diet / avoid constraints.

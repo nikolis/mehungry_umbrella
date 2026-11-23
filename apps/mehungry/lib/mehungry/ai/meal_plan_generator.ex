@@ -65,6 +65,15 @@ defmodule Mehungry.AI.MealPlanGenerator do
   end
 
   @doc """
+  `generate_entries/5` with its report — `{:ok, %{entries:, calorie_warnings:,
+  calorie_band:}}` — for callers that tell the person which days the plan could
+  not bring inside their calorie range.
+  """
+  def generate_plan(preferences, start_date, user_id, blueprint \\ nil, opts \\ []) do
+    UserMealPlanAgent.run_plan(preferences, start_date, user_id, blueprint, opts)
+  end
+
+  @doc """
   How many meals `user_id` already has in the plan week (`start_date` + 6 days),
   counting from `from` — what a caller checks to decide whether to ask for an
   existing-meals mode.
@@ -169,16 +178,21 @@ defmodule Mehungry.AI.MealPlanGenerator do
     |> History.create_user_meal()
   end
 
-  # Recipe entry → recipe_user_meals (consume_portions: 1 so the calendar's
-  # nutrient summary, which scales by consume_portions / servings, shows real
-  # numbers). Ingredient entry → ingredient_user_meals with the resolved unit FKs.
+  # Recipe entry → recipe_user_meals. `consume_portions` is the servings the plan
+  # has the person eat at that meal (1 unless the agent scaled it to reach the
+  # calorie band) — the calendar's nutrient summary scales by
+  # consume_portions / servings. You can't eat more than was cooked, so
+  # cooking_portions is raised to match. Ingredient entry → ingredient_user_meals
+  # with the resolved unit FKs.
   defp item_attrs(%{recipe_id: recipe_id} = entry) when is_integer(recipe_id) do
+    servings = Map.get(entry, :servings) || 1
+
     %{
       recipe_user_meals: [
         %{
           recipe_id: recipe_id,
-          cooking_portions: entry.cooking_portions || 2,
-          consume_portions: 1,
+          cooking_portions: max(entry.cooking_portions || 2, servings),
+          consume_portions: servings,
           cooking: true
         }
       ]

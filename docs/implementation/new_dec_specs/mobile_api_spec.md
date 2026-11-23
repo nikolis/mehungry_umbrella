@@ -168,12 +168,22 @@ and gating UI).
   "id": 49, "email": "bot1@mehungry.test", "alias": "Test Bot One",
   "avatar_url": null, "intro": null,
   "language_preference": "en", "daily_calorie_target": 2000,
+  "effective_calorie_target": 1600, "calorie_target_source": "nutritionist",
   "onboarding_level": 3,
   "tier": "free",
   "quota": { "recipe_generations": {"used": 0, "limit": 0}, "meal_plans": {"used": 0, "limit": 0} },
   "counts": { "posted_recipes": 0, "followers": 0, "following": 0 }
 } }
 ```
+
+**Calorie target fields.** `daily_calorie_target` is the user's **own** editable value
+(what `PUT /me/profile` writes). `effective_calorie_target` is the one to **display and
+score against**: when the user's current nutritionist has prescribed a target it overrules
+the user's own for as long as they work together (the own value is kept, never overwritten,
+and applies again once the prescription is cleared or the link ends). `calorie_target_source`
+is `"nutritionist"`, `"self"`, or `null` (no target at all) — show a "set by your
+nutritionist" hint for the first. Same resolver as the web calendar
+(`Professionals.effective_calorie_target/2`).
 
 Password reset / email confirmation reuse existing web routes for MVP (open in a
 web view): `POST /users/reset_password`, `GET/POST /users/confirm`.
@@ -840,7 +850,14 @@ the next poll.
 The poll response is `{ job_id, status, result, error }`. `error` is a
 human-readable, displayable message (e.g. `"Meal plan generation failed. Please
 try again."`) — internal failure details are logged, never returned. On `done`,
-`result` is `{ created_count, skipped_count, meal_ids }`.
+`result` is `{ created_count, skipped_count, meal_ids }`, plus — only when the user
+has a calorie target (their own, or their nutritionist's prescription; see
+`effective_calorie_target` on `/me`) and the plan is not blueprint-driven —
+`calorie_range: { min, max }` (the per-day kcal range the plan was held to, ±10% of
+the target) and `calorie_warnings: [{ date: "YYYY-MM-DD", total_kcal }]`, the days
+the planner could not bring inside that range (empty when every day fits). Show the
+warnings so the user knows which days to adjust. AI-planned recipe meals may now
+carry `servings` > 1 (1–3): the planner scales how much is eaten to reach the range.
 
 **`existing_meals`** (optional) — what to do with meals already on the plan
 week. The client should count the week's meals first and, if there are any, ask

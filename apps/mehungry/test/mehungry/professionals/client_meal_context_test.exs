@@ -32,6 +32,80 @@ defmodule Mehungry.Professionals.ClientMealContextTest do
       assert ctx.calorie_target == 1700
     end
 
+    test "the nutritionist's prescribed target wins over TDEE and the profile target" do
+      %{professional: professional, client: client, record: record} = setup_pair()
+
+      {:ok, _intake} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "tdee_kcal" => 2100,
+          "target_kcal" => 1600
+        })
+
+      put_profile(client.id, %{daily_calorie_target: 2600})
+
+      assert ClientMealContext.resolve(professional.id, client.id).calorie_target == 1600
+      assert ClientMealContext.calorie_target(professional.id, client.id) == 1600
+    end
+
+    test "the goal type shifts the band off TDEE; a typed target replaces it" do
+      %{professional: professional, client: client, record: record} = setup_pair()
+
+      {:ok, intake} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "tdee_kcal" => 2000,
+          "goal_type" => "lose"
+        })
+
+      ctx = ClientMealContext.resolve(professional.id, client.id)
+
+      assert ctx.goal_type == "lose"
+      assert ctx.calorie_band == %{min: 1600, max: 1800, aim: 1700, basis: :goal_lose}
+      # The single number every surface steers at is the band's aim.
+      assert ctx.calorie_target == 1700
+      assert ClientMealContext.calorie_target(professional.id, client.id) == 1700
+
+      {:ok, _} = Professionals.update_intake(intake, %{"target_kcal" => 1500})
+
+      assert ClientMealContext.calorie_band(professional.id, client.id) ==
+               %{min: 1350, max: 1650, aim: 1500, basis: :prescribed}
+    end
+
+    test "a prescribed target overrules the client's own while assigned, never overwriting it" do
+      %{professional: professional, client: client, record: record} = setup_pair()
+      put_profile(client.id, %{daily_calorie_target: 2600})
+
+      Repo.insert!(%Professionals.TutorClientAssignment{
+        professional_id: professional.id,
+        client_id: client.id
+      })
+
+      # TDEE alone is an estimate, not a prescription — the client's own stands.
+      {:ok, intake} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "tdee_kcal" => 2100
+        })
+
+      assert ClientMealContext.effective_calorie_target(client.id, 2600) ==
+               %{kcal: 2600, source: :self}
+
+      {:ok, _} = Professionals.update_intake(intake, %{"target_kcal" => 1600})
+
+      assert ClientMealContext.effective_calorie_target(client.id, 2600) ==
+               %{kcal: 1600, source: :nutritionist}
+
+      # Ending the coordination restores the client's own, untouched, target.
+      {:ok, _} = Professionals.remove_client(professional.id, client.id)
+
+      assert ClientMealContext.effective_calorie_target(client.id, 2600) ==
+               %{kcal: 2600, source: :self}
+
+      assert ClientMealContext.effective_calorie_target(client.id, nil) ==
+               %{kcal: nil, source: nil}
+    end
+
     test "foods to avoid union the client's profile list with the nutritionist's intake terms" do
       %{professional: professional, client: client, record: record} = setup_pair()
 

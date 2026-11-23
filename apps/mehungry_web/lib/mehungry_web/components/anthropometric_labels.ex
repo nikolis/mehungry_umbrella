@@ -32,7 +32,20 @@ defmodule MehungryWeb.AnthropometricLabels do
         do: {translate(label), value}
   end
 
+  @doc "Localized display label for a stored `goal_type` (`nil` → `nil`)."
+  def goal_type_label(goal_type),
+    do: translate(Mehungry.Professionals.CalorieBand.goal_type_label(goal_type))
+
+  @doc "`{localized label, value}` select options for the goal-type picker."
+  def goal_type_options do
+    for {value, label} <- Mehungry.Professionals.CalorieBand.goal_types(),
+        do: {translate(label), value}
+  end
+
   defp translate(nil), do: nil
+  defp translate("Lose weight"), do: gettext("Lose weight")
+  defp translate("Maintain weight"), do: gettext("Maintain weight")
+  defp translate("Gain weight"), do: gettext("Gain weight")
   defp translate("Male"), do: gettext("Male")
   defp translate("Female"), do: gettext("Female")
   defp translate("Sedentary (little/no exercise)"), do: gettext("Sedentary (little/no exercise)")

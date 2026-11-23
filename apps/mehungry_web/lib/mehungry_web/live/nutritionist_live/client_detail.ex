@@ -100,6 +100,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:messages_visible?, false)
          |> assign(:tab, "overview")
          |> assign(:goal_editing?, false)
+         |> assign(:target_editing?, false)
          |> assign(:reference_visit, nil)
          |> assign(:plan_preview, nil)
          |> load_intake()
@@ -595,11 +596,58 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     end
   end
 
-  defp upsert_goal(%ClientIntake{id: id} = intake, _record, goal) when not is_nil(id),
-    do: Professionals.update_intake(intake, %{"goal" => goal})
+  # ── Inline calorie-target edit (summary strip) ──────────────────────────────────
 
-  defp upsert_goal(_intake, record, goal),
-    do: Professionals.create_intake(%{"goal" => goal, "professional_client_id" => record.id})
+  # The prescribed daily target, set only when the nutritionist chooses to differ
+  # from the estimated TDEE. Same inline pattern as the goal; saving it blank
+  # clears the prescription, so planning falls back to TDEE.
+  @impl true
+  def handle_event("edit_target", _params, socket) do
+    {:noreply, assign(socket, :target_editing?, true)}
+  end
+
+  @impl true
+  def handle_event("cancel_target", _params, socket) do
+    {:noreply, assign(socket, :target_editing?, false)}
+  end
+
+  @impl true
+  def handle_event("save_target", %{"target_kcal" => target}, socket) do
+    with {:ok, socket, record} <- ensure_record(socket),
+         {:ok, _intake} <-
+           upsert_intake(socket.assigns.latest_intake, record, %{"target_kcal" => target}) do
+      {:noreply,
+       socket
+       |> assign(:target_editing?, false)
+       |> load_intake()
+       |> assign_summary()
+       |> put_flash(:info, gettext("Calorie target saved."))}
+    else
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply,
+         put_flash(socket, :error, gettext("Enter a calorie target between 1 and 20,000 kcal."))}
+
+      {:error, reason} ->
+        Logger.error("Could not save calorie target: #{inspect(reason)}")
+
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("Could not save the calorie target. Please try again.")
+         )}
+    end
+  end
+
+  defp upsert_goal(intake, record, goal), do: upsert_intake(intake, record, %{"goal" => goal})
+
+  # One-field write onto the latest intake, creating a minimal intake when the
+  # client has none yet.
+  defp upsert_intake(%ClientIntake{id: id} = intake, _record, attrs) when not is_nil(id),
+    do: Professionals.update_intake(intake, attrs)
+
+  defp upsert_intake(_intake, record, attrs),
+    do: Professionals.create_intake(Map.put(attrs, "professional_client_id", record.id))
 
   defp create_visit(params, socket) do
     case ensure_record(socket) do
@@ -1083,10 +1131,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       adjusted_weight_kg: latest.adjusted_weight_kg,
       bmr_kcal: latest.bmr_kcal,
       tdee_kcal: latest.tdee_kcal,
+      target_kcal: latest.target_kcal,
       sex: latest.sex,
       age: latest.age,
       activity_level: latest.activity_level,
       goal: latest.goal,
+      goal_type: latest.goal_type,
       details: latest.details || %{}
     }
   end
@@ -1133,7 +1183,11 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <div :if={@tab == "overview"}>
         <.session_ribbon next_session={@next_session} summary={@summary} client_id={@client_id} />
 
-        <.client_summary summary={@summary} goal_editing?={@goal_editing?} />
+        <.client_summary
+          summary={@summary}
+          goal_editing?={@goal_editing?}
+          target_editing?={@target_editing?}
+        />
 
         <.progress_panel
           progress_cards={@progress_cards}

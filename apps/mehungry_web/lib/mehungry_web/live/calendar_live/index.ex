@@ -26,7 +26,13 @@ defmodule MehungryWeb.CalendarLive.Index do
     user = Accounts.get_user_by_session_token(session["user_token"])
 
     profile = Accounts.get_user_profile_by_user_id(user.id)
-    calorie_target = profile && profile.daily_calorie_target
+    # The nutritionist's prescribed target overrules the user's own for as long
+    # as they work together; the user's own value is kept, just not applied.
+    %{kcal: calorie_target, source: calorie_target_source} =
+      Mehungry.Professionals.effective_calorie_target(
+        user.id,
+        profile && profile.daily_calorie_target
+      )
 
     # Personal "foods I avoid" list: the raw list (for the editor) + the
     # normalized terms (reusing the meal-plan enforcement engine) the calendar
@@ -40,6 +46,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       |> assign(:user, user)
       |> assign(:user_profile, profile)
       |> assign(:calorie_target, calorie_target)
+      |> assign(:calorie_target_source, calorie_target_source)
       |> assign(:avoid_foods, avoid_foods)
       |> assign(:avoid_terms, avoid_terms)
       |> assign(:calendar_view, "week_view")
@@ -306,7 +313,9 @@ defmodule MehungryWeb.CalendarLive.Index do
         current_language(socket)
       )
 
-    result_msg = build_result_message(result["created_count"], result["skipped_count"] || 0)
+    result_msg =
+      build_result_message(result["created_count"], result["skipped_count"] || 0) <>
+        calorie_result_note(result)
 
     {:noreply,
      socket
@@ -1014,6 +1023,23 @@ defmodule MehungryWeb.CalendarLive.Index do
   @ai_plan_liveness_ms 15_000
   defp schedule_ai_plan_liveness,
     do: Process.send_after(self(), :ai_plan_liveness, @ai_plan_liveness_ms)
+
+  # The calorie range the plan was held to, and any day it could not bring
+  # inside it — absent when the plan had no calorie target.
+  defp calorie_result_note(%{"calorie_range" => %{"min" => min, "max" => max}} = result) do
+    range = " Each day is planned for #{min}–#{max} kcal."
+
+    case result["calorie_warnings"] || [] do
+      [] ->
+        range
+
+      warnings ->
+        days = Enum.map_join(warnings, ", ", &"#{&1["date"]} (#{&1["total_kcal"]} kcal)")
+        range <> " Outside that range — adjust by hand: #{days}."
+    end
+  end
+
+  defp calorie_result_note(_result), do: ""
 
   defp build_result_message(created, 0),
     do: "Added #{created} meals to your calendar."

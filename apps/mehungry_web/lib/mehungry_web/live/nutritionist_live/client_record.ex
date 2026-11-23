@@ -147,11 +147,15 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
             <.metric label={gettext("Adjusted wt")} value={@intake.adjusted_weight_kg} unit="kg" />
             <.metric label={gettext("BMR")} value={@intake.bmr_kcal} unit="kcal" />
             <.metric label={gettext("TDEE")} value={@intake.tdee_kcal} unit="kcal" />
+            <.metric label={gettext("Target")} value={@intake.target_kcal} unit="kcal" />
           </div>
 
           <%= if @intake.goal do %>
             <p class="text-sm text-parchment mb-4">
               <span class="text-parchment-dim">{gettext("Goal:")}</span> {@intake.goal}
+              <span :if={@intake.goal_type} class="text-parchment-dim">
+                ({AnthropometricLabels.goal_type_label(@intake.goal_type)})
+              </span>
             </p>
           <% end %>
 

@@ -59,6 +59,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
        day_summaries: day_summaries,
        week_summary: week_summary,
        calorie_target: Map.get(assigns, :calorie_target),
+       calorie_target_source: Map.get(assigns, :calorie_target_source),
        avoid_terms: Map.get(assigns, :avoid_terms, []),
        day_notes: Map.get(assigns, :day_notes),
        active_blueprint: Map.get(assigns, :active_blueprint),
@@ -169,6 +170,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
           date={@focus}
           summary={@focus_summary}
           calorie_target={@calorie_target}
+          calorie_target_source={@calorie_target_source}
           avoid_terms={@avoid_terms}
           current_language={@current_language}
         />
@@ -351,6 +353,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
   attr :date, :any, required: true
   attr :summary, :any, required: true
   attr :calorie_target, :any, default: nil
+  attr :calorie_target_source, :any, default: nil
   attr :avoid_terms, :list, default: []
   attr :current_language, :string, default: "en"
 
@@ -377,6 +380,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
           P {@macro.protein_g} · C {@macro.carbs_g} · F {@macro.fat_g}
         </span>
         <.ontrack_pill kcal={@macro.energy_kcal} target={@calorie_target} />
+        <span
+          :if={@calorie_target && @calorie_target_source == :nutritionist}
+          class="text-parchment-dim text-xs"
+        >
+          {gettext("Target set by your nutritionist")}
+        </span>
         <span
           :if={@flagged > 0}
           class="inline-flex items-center gap-1 text-amber-300 text-xs font-semibold"

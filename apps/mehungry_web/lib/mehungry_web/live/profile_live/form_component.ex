@@ -30,6 +30,12 @@ defmodule MehungryWeb.ProfileLive.Form do
             min="1"
             max="19999"
           />
+          <p :if={@prescribed_target} class="text-parchment-dim text-sm -mt-3">
+            {gettext(
+              "Your nutritionist set your target to %{kcal} kcal. It applies for as long as you work together; your own target is kept and applies again afterwards.",
+              kcal: @prescribed_target
+            )}
+          </p>
         </div>
 
         <div class="mt-10 mb-4">
@@ -112,6 +118,10 @@ defmodule MehungryWeb.ProfileLive.Form do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:prescribed_target, fn ->
+       user_profile.user_id &&
+         Mehungry.Professionals.prescribed_calorie_target(user_profile.user_id)
+     end)
      |> assign_new(:base_diet, fn -> user_profile.diet || "omnivore" end)
      |> assign_new(:lactose_intolerant, fn -> user_profile.lactose_intolerant || false end)
      |> assign_form(changeset)}

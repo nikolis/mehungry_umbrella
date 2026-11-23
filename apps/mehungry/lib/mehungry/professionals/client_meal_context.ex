@@ -25,6 +25,7 @@ defmodule Mehungry.Professionals.ClientMealContext do
   """
 
   alias Mehungry.{Accounts, Health, Professionals}
+  alias Mehungry.Professionals.CalorieBand
 
   @doc """
   Resolve the merged, precedence-applied client brief for `client_id` as seen by
@@ -34,7 +35,9 @@ defmodule Mehungry.Professionals.ClientMealContext do
         has_record: boolean,
         diet: "omnivore" | "vegetarian" | ...,   # client profile (no nutritionist field)
         lactose_intolerant: boolean,             # client profile
-        calorie_target: integer | nil,           # intake.tdee_kcal wins, else profile target
+        calorie_target: integer | nil,           # the aim of `calorie_band` (nil when no band)
+        calorie_band: %{min:, max:, aim:, basis:} | nil,  # the range a planned day must land in — see CalorieBand
+        goal_type: "lose" | "maintain" | "gain" | nil,  # intake
         goal: String.t() | nil,                  # intake
         conditions: [String.t()],                # ClientCondition names
         avoid: [String.t()],                     # profile avoid ∪ intake terms ∪ condition foods
@@ -63,7 +66,9 @@ defmodule Mehungry.Professionals.ClientMealContext do
       has_record: not is_nil(record),
       diet: profile_diet(profile),
       lactose_intolerant: profile_lactose(profile),
-      calorie_target: calorie_target(intake, profile),
+      calorie_target: calorie_target_from(intake, profile),
+      calorie_band: calorie_band_from(intake, profile),
+      goal_type: intake && intake.goal_type,
       goal: intake && intake.goal,
       conditions: Enum.map(conditions, & &1.name),
       avoid: avoid_list(profile, intake, condition_avoid),
@@ -84,13 +89,70 @@ defmodule Mehungry.Professionals.ClientMealContext do
   defp profile_lactose(%{lactose_intolerant: lactose}) when is_boolean(lactose), do: lactose
   defp profile_lactose(_), do: false
 
-  # Daily calorie target: the intake's TDEE wins (clinician-assessed), else the
-  # client's own profile target, else nil.
-  defp calorie_target(intake, profile) do
-    cond do
-      intake && intake.tdee_kcal -> intake.tdee_kcal
-      profile && profile.daily_calorie_target -> profile.daily_calorie_target
-      true -> nil
+  @doc """
+  The daily calorie target for `client_id` as seen by `professional_id`, with the
+  same precedence `resolve/2` applies — the one definition every nutritionist-side
+  surface (AI draft, client calendar) reads so they can never disagree.
+  """
+  def calorie_target(professional_id, client_id) do
+    record = Professionals.get_client_record_by_user(professional_id, client_id)
+    intake = record && Professionals.get_latest_intake(record.id)
+    calorie_target_from(intake, Accounts.get_user_profile_by_user_id(client_id))
+  end
+
+  @doc """
+  The target the nutritionist prescribed for `client_id`, or nil. Only the
+  explicit `target_kcal` on the latest intake of the client's **current**
+  nutritionist counts (a client has at most one assignment) — an estimated TDEE
+  is not a prescription, and once the assignment ends this is nil again.
+  """
+  def prescribed_calorie_target(client_id) do
+    with %{professional_id: professional_id} <-
+           Mehungry.Repo.get_by(Professionals.TutorClientAssignment, client_id: client_id),
+         %{id: record_id} <- Professionals.get_client_record_by_user(professional_id, client_id),
+         %{target_kcal: target} when is_integer(target) <-
+           Professionals.get_latest_intake(record_id) do
+      target
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  The calorie target the client's **own** surfaces (their calendar, the mobile
+  app) should show: the nutritionist's prescribed target overrules the client's
+  self-set `own_target` for as long as they work together. The client's own
+  value is never overwritten — it applies again the moment the prescription is
+  cleared or the assignment ends. Returns `%{kcal: integer | nil, source:
+  :nutritionist | :self | nil}`.
+  """
+  def effective_calorie_target(client_id, own_target) do
+    case prescribed_calorie_target(client_id) do
+      nil when is_nil(own_target) -> %{kcal: nil, source: nil}
+      nil -> %{kcal: own_target, source: :self}
+      prescribed -> %{kcal: prescribed, source: :nutritionist}
+    end
+  end
+
+  @doc """
+  The calorie range a plan for `client_id` must land in, as seen by
+  `professional_id` (see `CalorieBand`), or nil when there is nothing to aim at.
+  """
+  def calorie_band(professional_id, client_id) do
+    record = Professionals.get_client_record_by_user(professional_id, client_id)
+    intake = record && Professionals.get_latest_intake(record.id)
+    calorie_band_from(intake, Accounts.get_user_profile_by_user_id(client_id))
+  end
+
+  defp calorie_band_from(intake, profile),
+    do: CalorieBand.band(intake, profile && profile.daily_calorie_target)
+
+  # The single number a plan steers at: the aim of the band — the prescribed
+  # target, else TDEE shifted by the goal type, else the client's own target.
+  defp calorie_target_from(intake, profile) do
+    case calorie_band_from(intake, profile) do
+      %{aim: aim} -> aim
+      nil -> nil
     end
   end
 

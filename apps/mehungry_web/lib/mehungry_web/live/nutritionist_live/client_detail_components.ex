@@ -205,12 +205,14 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
 
   attr(:summary, :map, required: true)
   attr(:goal_editing?, :boolean, default: false)
+  attr(:target_editing?, :boolean, default: false)
 
   def client_summary(assigns) do
     assigns =
       assigns
       |> assign(:bmi_dot, band_tone(assigns.summary.bmi, assigns.summary.bmi_band))
       |> assign(:reference_items, reference_items(assigns.summary.intake))
+      |> assign_energy(assigns.summary.intake)
 
     ~H"""
     <div class="mb-6">
@@ -317,26 +319,91 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
           <% end %>
         </div>
 
-        <!-- Energy needs from the latest intake: TDEE leads, BMR rides along -->
+        <!-- Energy: the prescribed target leads when the nutritionist set one
+             (their choice to differ from TDEE); otherwise TDEE leads. Edits inline. -->
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-3 flex flex-col gap-0.5">
           <span class="text-[11px] uppercase tracking-wide font-semibold text-parchment-dim">
             {gettext("Energy")}
           </span>
-          <%= if @summary.intake && (@summary.intake.tdee_kcal || @summary.intake.bmr_kcal) do %>
-            <span
-              :if={@summary.intake.tdee_kcal}
-              class="font-display text-xl text-parchment leading-tight tabular-nums"
-            >
-              {@summary.intake.tdee_kcal}
-              <span class="text-xs text-parchment-dim ml-0.5 font-sans">
-                {gettext("kcal TDEE")}
+          <%= cond do %>
+            <% @target_editing? -> %>
+              <form phx-submit="save_target" class="flex items-center gap-1 mt-0.5">
+                <input
+                  type="number"
+                  name="target_kcal"
+                  value={@target_kcal}
+                  placeholder={@tdee_kcal}
+                  min="1"
+                  max="19999"
+                  step="1"
+                  autofocus
+                  aria-label={gettext("Daily calorie target (kcal)")}
+                  class="w-full min-w-0 bg-ink border border-ink-panel2 rounded-lg px-2 py-1 text-parchment text-xs tabular-nums focus:outline-none focus:border-paprika"
+                />
+                <button
+                  type="submit"
+                  aria-label={gettext("Save calorie target")}
+                  class="text-basil hover:text-parchment shrink-0"
+                >
+                  <.icon name="hero-check" class="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  phx-click="cancel_target"
+                  aria-label={gettext("Cancel")}
+                  class="text-parchment-dim hover:text-parchment shrink-0"
+                >
+                  <.icon name="hero-x-mark" class="w-4 h-4" />
+                </button>
+              </form>
+              <span class="text-parchment-dim text-[11px]">
+                {gettext("Leave empty to plan to TDEE")}
               </span>
-            </span>
-            <span :if={@summary.intake.bmr_kcal} class="text-parchment-dim text-xs tabular-nums">
-              {gettext("BMR %{kcal} kcal", kcal: @summary.intake.bmr_kcal)}
-            </span>
-          <% else %>
-            <span class="text-parchment-dim text-sm">—</span>
+            <% @target_kcal -> %>
+              <button
+                type="button"
+                phx-click="edit_target"
+                title={gettext("Edit calorie target")}
+                class="text-left group/target"
+              >
+                <span class="font-display text-xl text-parchment leading-tight tabular-nums">
+                  {@target_kcal}
+                  <span class="text-xs text-parchment-dim ml-0.5 font-sans">
+                    {gettext("kcal target")}
+                  </span>
+                  <.icon
+                    name="hero-pencil"
+                    class="w-3 h-3 inline text-parchment-dim opacity-0 group-hover/target:opacity-100"
+                  />
+                </span>
+              </button>
+              <span :if={@tdee_kcal} class="text-parchment-dim text-xs tabular-nums">
+                {gettext("TDEE %{kcal} kcal", kcal: @tdee_kcal)}
+                <span :if={@target_delta}>({@target_delta})</span>
+              </span>
+              <.plan_range band={@calorie_band} />
+            <% true -> %>
+              <span
+                :if={@tdee_kcal}
+                class="font-display text-xl text-parchment leading-tight tabular-nums"
+              >
+                {@tdee_kcal}
+                <span class="text-xs text-parchment-dim ml-0.5 font-sans">
+                  {gettext("kcal TDEE")}
+                </span>
+              </span>
+              <span :if={@bmr_kcal} class="text-parchment-dim text-xs tabular-nums">
+                {gettext("BMR %{kcal} kcal", kcal: @bmr_kcal)}
+              </span>
+              <.plan_range band={@calorie_band} />
+              <.action
+                variant={:ghost}
+                size={:sm}
+                phx-click="edit_target"
+                class="self-start px-0 mt-0.5"
+              >
+                {gettext("Set a target")}
+              </.action>
           <% end %>
         </div>
 
@@ -392,12 +459,56 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
     """
   end
 
+  # The Energy card's figures from the latest intake (all nil without one), plus
+  # the signed gap between the prescribed target and TDEE ("−400 kcal").
+  defp assign_energy(assigns, intake) do
+    target = intake && intake.target_kcal
+    tdee = intake && intake.tdee_kcal
+
+    assigns
+    |> assign(:target_kcal, target)
+    |> assign(:tdee_kcal, tdee)
+    |> assign(:bmr_kcal, intake && intake.bmr_kcal)
+    |> assign(:target_delta, target_delta(target, tdee))
+    |> assign(:calorie_band, Mehungry.Professionals.CalorieBand.band(intake))
+  end
+
+  attr(:band, :any, default: nil)
+
+  # The range an AI draft's days must land in, with what it is based on — so the
+  # nutritionist sees the number the planner will be held to before drafting.
+  defp plan_range(assigns) do
+    ~H"""
+    <span :if={@band} class="text-parchment-dim text-[11px] tabular-nums">
+      {gettext("Plan range %{min}–%{max} kcal", min: @band.min, max: @band.max)}
+      <span :if={band_basis_label(@band.basis)}>· {band_basis_label(@band.basis)}</span>
+    </span>
+    """
+  end
+
+  defp band_basis_label(:goal_lose), do: gettext("lose")
+  defp band_basis_label(:goal_gain), do: gettext("gain")
+  defp band_basis_label(:goal_maintain), do: gettext("maintain")
+  defp band_basis_label(_), do: nil
+
+  defp target_delta(target, tdee) when is_integer(target) and is_integer(tdee) do
+    case target - tdee do
+      0 -> nil
+      d when d > 0 -> "+#{d} kcal"
+      d -> "−#{abs(d)} kcal"
+    end
+  end
+
+  defp target_delta(_target, _tdee), do: nil
+
   # The compact reference line under the KPI strip — only the intake fields that
   # are actually filled in, as `{label, formatted value}` pairs.
   defp reference_items(nil), do: []
 
   defp reference_items(intake) do
     [
+      {gettext("Goal type"),
+       intake.goal_type && AnthropometricLabels.goal_type_label(intake.goal_type)},
       {gettext("Sex"), intake.sex && AnthropometricLabels.sex_label(intake.sex)},
       {gettext("Age"), intake.age && "#{intake.age} #{gettext("yrs")}"},
       {gettext("Activity"),
@@ -907,16 +1018,39 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailComponents do
         <.labeled label={gettext("TDEE (auto, kcal)")}>
           <.input field={f[:tdee_kcal]} type="number" />
         </.labeled>
+        <.labeled label={gettext("Target (kcal)")}>
+          <.input field={f[:target_kcal]} type="number" />
+        </.labeled>
       </div>
       <p class="text-parchment-dim text-xs -mt-2 mb-4">
         {gettext(
           "BMI, BMR and TDEE recompute from height, weight, sex, age and activity — type to override."
         )}
+        {gettext(
+          "Target is the daily intake you prescribe when it should differ from TDEE; leave it empty to plan to TDEE."
+        )}
       </p>
 
-      <.labeled label={gettext("Goal")}>
-        <.input field={f[:goal]} type="text" />
-      </.labeled>
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="sm:col-span-3">
+          <.labeled label={gettext("Goal")}>
+            <.input field={f[:goal]} type="text" />
+          </.labeled>
+        </div>
+        <.labeled label={gettext("Goal type")}>
+          <.input
+            field={f[:goal_type]}
+            type="select"
+            prompt="—"
+            options={AnthropometricLabels.goal_type_options()}
+          />
+        </.labeled>
+      </div>
+      <p class="text-parchment-dim text-xs mt-1">
+        {gettext(
+          "Goal type sets the calorie range AI drafts must land in: lose 10–20% under TDEE, maintain within 10% of it, gain 10–20% over. A typed Target overrides it (±10% of the target)."
+        )}
+      </p>
 
       <div class="space-y-2 mt-5">
         <.form_section

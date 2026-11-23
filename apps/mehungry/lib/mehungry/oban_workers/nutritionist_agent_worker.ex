@@ -207,8 +207,28 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorker do
 
   defp summary_text(plan, count) do
     note = if String.trim(plan.rationale) != "", do: plan.rationale, else: plan.summary
-    String.trim("#{note}\n\n✓ #{count} meal entries created.#{excluded_note(plan.avoided)}")
+
+    String.trim(
+      "#{note}\n\n✓ #{count} meal entries created.#{calorie_note(plan)}#{excluded_note(plan.avoided)}"
+    )
   end
+
+  # The band the draft was held to, and — honestly — any day it could not bring
+  # inside it (a thin catalogue), so the nutritionist knows where to adjust.
+  defp calorie_note(%{calorie_band: %{min: min, max: max}} = plan) do
+    range = "\nCalorie range per day: #{min}–#{max} kcal."
+
+    case Map.get(plan, :calorie_warnings, []) do
+      [] ->
+        range
+
+      warnings ->
+        days = Enum.map_join(warnings, ", ", &"#{&1.date} (#{&1.total} kcal)")
+        range <> " ⚠ Outside the range, adjust by hand: #{days}."
+    end
+  end
+
+  defp calorie_note(_plan), do: ""
 
   # A draft that could not be built from what the avoid list left over should
   # say so: the nutritionist can then fix a loose intake entry.

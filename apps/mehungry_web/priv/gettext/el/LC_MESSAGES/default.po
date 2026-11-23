@@ -9147,3 +9147,123 @@ msgstr "αγορά: %{name}"
 #, elixir-autogen, elixir-format
 msgid "you"
 msgstr "εσείς"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex
+#, elixir-autogen, elixir-format
+msgid "Calorie target saved."
+msgstr "Ο θερμιδικός στόχος αποθηκεύτηκε."
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a calorie target between 1 and 20,000 kcal."
+msgstr "Εισαγάγετε θερμιδικό στόχο μεταξύ 1 και 20.000 kcal."
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the calorie target. Please try again."
+msgstr "Δεν ήταν δυνατή η αποθήκευση του θερμιδικού στόχου. Δοκιμάστε ξανά."
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Daily calorie target (kcal)"
+msgstr "Ημερήσιος θερμιδικός στόχος (kcal)"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Save calorie target"
+msgstr "Αποθήκευση θερμιδικού στόχου"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Leave empty to plan to TDEE"
+msgstr "Αφήστε το κενό για σχεδιασμό με βάση το TDEE"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Edit calorie target"
+msgstr "Επεξεργασία θερμιδικού στόχου"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "kcal target"
+msgstr "kcal στόχος"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "TDEE %{kcal} kcal"
+msgstr "TDEE %{kcal} kcal"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Set a target"
+msgstr "Ορίστε στόχο θερμίδων"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Target (kcal)"
+msgstr "Στόχος (kcal)"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Target is the daily intake you prescribe when it should differ from TDEE; leave it empty to plan to TDEE."
+msgstr "Ο στόχος είναι η ημερήσια πρόσληψη που ορίζετε όταν πρέπει να διαφέρει από το TDEE· αφήστε τον κενό για σχεδιασμό με βάση το TDEE."
+
+#: lib/mehungry_web/live/nutritionist_live/client_record.ex
+#, elixir-autogen, elixir-format
+msgid "Target"
+msgstr "Στόχος"
+
+#: lib/mehungry_web/live/calendar_live/calendar/reader.ex
+#, elixir-autogen, elixir-format
+msgid "Target set by your nutritionist"
+msgstr "Ο στόχος ορίστηκε από τον διατροφολόγο σας"
+
+#: lib/mehungry_web/live/profile_live/form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your nutritionist set your target to %{kcal} kcal. It applies for as long as you work together; your own target is kept and applies again afterwards."
+msgstr "Ο διατροφολόγος σας όρισε τον στόχο σας στα %{kcal} kcal. Ισχύει για όσο συνεργάζεστε· ο δικός σας στόχος διατηρείται και θα ισχύσει ξανά μετά."
+
+#: lib/mehungry_web/components/anthropometric_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Lose weight"
+msgstr "Απώλεια βάρους"
+
+#: lib/mehungry_web/components/anthropometric_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Maintain weight"
+msgstr "Διατήρηση βάρους"
+
+#: lib/mehungry_web/components/anthropometric_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Gain weight"
+msgstr "Αύξηση βάρους"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Goal type"
+msgstr "Τύπος στόχου"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Goal type sets the calorie range AI drafts must land in: lose 10–20% under TDEE, maintain within 10% of it, gain 10–20% over. A typed Target overrides it (±10% of the target)."
+msgstr "Ο τύπος στόχου ορίζει το εύρος θερμίδων στο οποίο πρέπει να βρίσκονται τα προσχέδια AI: απώλεια 10–20% κάτω από το TDEE, διατήρηση εντός 10%, αύξηση 10–20% πάνω. Ένας πληκτρολογημένος Στόχος υπερισχύει (±10% του στόχου)."
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "Plan range %{min}–%{max} kcal"
+msgstr "Εύρος πλάνου %{min}–%{max} kcal"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "lose"
+msgstr "απώλεια"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "gain"
+msgstr "αύξηση"
+
+#: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex
+#, elixir-autogen, elixir-format
+msgid "maintain"
+msgstr "διατήρηση"

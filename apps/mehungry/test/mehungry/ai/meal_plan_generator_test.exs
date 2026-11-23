@@ -32,6 +32,30 @@ defmodule Mehungry.AI.MealPlanGeneratorTest do
     end
   end
 
+  describe "persist_entries_to_calendar/5 — servings" do
+    test "an entry's servings become the servings eaten; cooked portions never fall below them",
+         %{user: user, recipe: recipe} do
+      entries = [
+        Map.put(entry(1, "lunch", recipe.id), :servings, 3),
+        entry(1, "dinner", recipe.id)
+      ]
+
+      assert {:ok, [_, _], 0} =
+               MealPlanGenerator.persist_entries_to_calendar(entries, user.id, @monday)
+
+      by_slot =
+        user.id
+        |> week_meals()
+        |> Map.new(fn meal -> {meal.meal_type, hd(meal.recipe_user_meals)} end)
+
+      assert by_slot["lunch"].consume_portions == 3
+      assert by_slot["lunch"].cooking_portions == 3
+      # No servings on the entry (older callers, blueprint plans) → one serving.
+      assert by_slot["dinner"].consume_portions == 1
+      assert by_slot["dinner"].cooking_portions == 2
+    end
+  end
+
   describe "persist_entries_to_calendar/5 — :fill_gaps" do
     test "keeps an existing meal and writes only the empty cells", %{user: user, recipe: recipe} do
       existing = log_meal(user.id, @monday, "breakfast")

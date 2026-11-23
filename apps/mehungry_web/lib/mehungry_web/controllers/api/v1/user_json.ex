@@ -16,6 +16,15 @@ defmodule MehungryWeb.Api.V1.UserJSON do
         quota: quota,
         counts: counts
       }) do
+    # The nutritionist's prescription overrules the user's own target while they
+    # work together — same resolver as the web calendar. `daily_calorie_target`
+    # stays the user's own (editable) value.
+    effective =
+      Mehungry.Professionals.effective_calorie_target(
+        user.id,
+        profile && profile.daily_calorie_target
+      )
+
     data(%{
       id: user.id,
       email: user.email,
@@ -24,6 +33,8 @@ defmodule MehungryWeb.Api.V1.UserJSON do
       intro: profile && profile.intro,
       language_preference: (profile && profile.language_preference) || "en",
       daily_calorie_target: profile && profile.daily_calorie_target,
+      effective_calorie_target: effective.kcal,
+      calorie_target_source: effective.source && Atom.to_string(effective.source),
       onboarding_level: (profile && profile.onboarding_level) || 0,
       tier: tier,
       quota: quota,

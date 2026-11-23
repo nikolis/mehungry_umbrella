@@ -2295,6 +2295,32 @@ defmodule Mehungry.Professionals do
     as: :resolve
 
   @doc """
+  The daily calorie target a nutritionist plans this client to: the prescribed
+  `ClientIntake.target_kcal` when set, else the intake TDEE, else the client's own
+  profile target. See `Mehungry.Professionals.ClientMealContext.calorie_target/2`.
+  """
+  defdelegate client_calorie_target(professional_id, client_id),
+    to: Mehungry.Professionals.ClientMealContext,
+    as: :calorie_target
+
+  @doc "The calorie range a plan for this client must land in (`CalorieBand`), or nil."
+  defdelegate client_calorie_band(professional_id, client_id),
+    to: Mehungry.Professionals.ClientMealContext,
+    as: :calorie_band
+
+  @doc "The target the client's current nutritionist prescribed, or nil."
+  defdelegate prescribed_calorie_target(client_id),
+    to: Mehungry.Professionals.ClientMealContext
+
+  @doc """
+  The target the client's own surfaces show: the nutritionist's prescription
+  overrules (never overwrites) the client's self-set target while they work
+  together. `%{kcal:, source: :nutritionist | :self | nil}`.
+  """
+  defdelegate effective_calorie_target(client_id, own_target),
+    to: Mehungry.Professionals.ClientMealContext
+
+  @doc """
   Maps every platform user the professional has a client record for to that
   record — `%{user_id => %ProfessionalClient{}}`. Most recently created wins on
   duplicates (e.g. repeated CSV imports), matching `get_client_record_by_user/2`.
