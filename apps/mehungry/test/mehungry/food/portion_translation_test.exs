@@ -30,7 +30,9 @@ defmodule Mehungry.Food.PortionTranslationTest do
   describe "upsert_portion_translation/4 + portion_display_names/2" do
     test "round-trips a translation under the ISO code", %{free_text: portion} do
       assert {:ok, _} =
-               Food.upsert_portion_translation(portion.id, "el", "1 μέτρια μπανάνα", status: "verified")
+               Food.upsert_portion_translation(portion.id, "el", "1 μέτρια μπανάνα",
+                 status: "verified"
+               )
 
       assert Food.portion_display_names([portion.id], "el") == %{portion.id => "1 μέτρια μπανάνα"}
     end
@@ -45,6 +47,24 @@ defmodule Mehungry.Food.PortionTranslationTest do
     test "source locale returns no overrides", %{free_text: portion} do
       Food.upsert_portion_translation(portion.id, "el", "1 μέτρια μπανάνα")
       assert Food.portion_display_names([portion.id], "en") == %{}
+    end
+  end
+
+  describe "portion_display_names_by_text/2" do
+    test "looks a translation up by ingredient + English description (a shopping-list line)",
+         %{ingredient: ingredient, free_text: portion} do
+      Food.upsert_portion_translation(portion.id, "el", "1 μέτρια μπανάνα")
+      other = ingredient_fixture()
+
+      assert Food.portion_display_names_by_text(
+               [{ingredient.id, "1 medium banana"}, {other.id, "1 medium banana"}],
+               "el"
+             ) == %{{ingredient.id, "1 medium banana"} => "1 μέτρια μπανάνα"}
+    end
+
+    test "source locale and untranslated portions return nothing", %{ingredient: ingredient} do
+      assert Food.portion_display_names_by_text([{ingredient.id, "1 medium banana"}], "el") == %{}
+      assert Food.portion_display_names_by_text([{ingredient.id, "1 medium banana"}], "en") == %{}
     end
   end
 
@@ -88,7 +108,12 @@ defmodule Mehungry.Food.PortionTranslationTest do
       portions = Food.get_measurement_unit_portions_for_ingredient(ingredient.id)
       options = Food.build_unit_options(portions, "el")
 
-      unit_opt = Enum.find(options, &(&1.ingredient_portion_id == nil and &1.measurement_unit_id == unit.id))
+      unit_opt =
+        Enum.find(
+          options,
+          &(&1.ingredient_portion_id == nil and &1.measurement_unit_id == unit.id)
+        )
+
       assert unit_opt.unit_selection == with_unit.measurement_unit_id
       assert unit_opt.label == "φλιτζάνι"
     end

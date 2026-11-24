@@ -6895,12 +6895,12 @@ msgstr "Αποδοχή"
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:477
 #, elixir-autogen, elixir-format
 msgid "Add a meal"
-msgstr ""
+msgstr "Προσθήκη γεύματος"
 
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:465
 #, elixir-autogen, elixir-format
 msgid "Add a meal on %{day}"
-msgstr ""
+msgstr "Προσθήκη γεύματος για %{day}"
 
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:313
 #, elixir-autogen, elixir-format, fuzzy
@@ -7150,7 +7150,7 @@ msgstr "Δεν ήταν δυνατή η φόρτωση των ενώσεων."
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:241
 #, elixir-autogen, elixir-format
 msgid "Day total"
-msgstr ""
+msgstr "Σύνολο ημέρας"
 
 #: lib/mehungry_web/live/my_nutritionist_live/index.ex:497
 #, elixir-autogen, elixir-format
@@ -7262,7 +7262,7 @@ msgstr "Κατανάλωση φρούτων"
 #: lib/mehungry_web/live/calendar_live/index.html.heex:497
 #, elixir-autogen, elixir-format
 msgid "Full breakdown"
-msgstr ""
+msgstr "Πλήρης ανάλυση"
 
 #: lib/mehungry_web/dietary_history/labels.ex:29
 #, elixir-autogen, elixir-format
@@ -7406,7 +7406,7 @@ msgstr "Επόμενο"
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:889
 #, elixir-autogen, elixir-format
 msgid "Next month"
-msgstr ""
+msgstr "Επόμενος μήνας"
 
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:99
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:100
@@ -7562,7 +7562,7 @@ msgstr ""
 #: lib/mehungry_web/live/calendar_live/index.html.heex:84
 #, elixir-autogen, elixir-format
 msgid "Plan with AI"
-msgstr ""
+msgstr "Σχεδιασμός με AI"
 
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:676
 #, elixir-autogen, elixir-format, fuzzy
@@ -7592,19 +7592,19 @@ msgstr "Χρόνος προετοιμασίας"
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:105
 #, elixir-autogen, elixir-format
 msgid "Previous day"
-msgstr ""
+msgstr "Προηγούμενη ημέρα"
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:878
 #, elixir-autogen, elixir-format
 msgid "Previous month"
-msgstr ""
+msgstr "Προηγούμενος μήνας"
 
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:84
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:85
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:102
 #, elixir-autogen, elixir-format
 msgid "Previous week"
-msgstr ""
+msgstr "Προηγούμενη εβδομάδα"
 
 # Dietary-history questionnaire field labels (nutritionist client file).
 # "Notes", "Breakfast", "Lunch", "Dinner" are translated elsewhere in this file.
@@ -7654,7 +7654,7 @@ msgstr "Αποδεσμεύτηκε"
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:190
 #, elixir-autogen, elixir-format
 msgid "Rest of the week"
-msgstr ""
+msgstr "Υπόλοιπη εβδομάδα"
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:897
 #, elixir-autogen, elixir-format, fuzzy
@@ -7818,7 +7818,7 @@ msgstr "Δευτέρα"
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:151
 #, elixir-autogen, elixir-format
 msgid "Totals"
-msgstr ""
+msgstr "Σύνολα"
 
 #: lib/mehungry_web/live/nutritionist_live/appointment_calendar.ex:897
 #, elixir-autogen, elixir-format, fuzzy
@@ -7848,7 +7848,7 @@ msgstr "Κατανάλωση λαχανικών"
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:270
 #, elixir-autogen, elixir-format
 msgid "View full nutrition detail"
-msgstr ""
+msgstr "Δείτε την πλήρη διατροφική ανάλυση"
 
 #: lib/mehungry_web/live/my_nutritionist_live/index.ex:274
 #, elixir-autogen, elixir-format
@@ -7874,12 +7874,12 @@ msgstr "Εβδομάδα %{date}"
 #: lib/mehungry_web/live/calendar_live/index.html.heex:54
 #, elixir-autogen, elixir-format
 msgid "Week options"
-msgstr ""
+msgstr "Επιλογές εβδομάδας"
 
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:246
 #, elixir-autogen, elixir-format
 msgid "Weekly average"
-msgstr ""
+msgstr "Μέσος όρος εβδομάδας"
 
 #: lib/mehungry_web/dietary_history/labels.ex:24
 #, elixir-autogen, elixir-format
@@ -7950,12 +7950,12 @@ msgstr ""
 #: lib/mehungry_web/live/calendar_live/calendar/editor.ex:305
 #, elixir-autogen, elixir-format
 msgid "add"
-msgstr ""
+msgstr "προσθήκη"
 
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:513
 #, elixir-autogen, elixir-format
 msgid "empty"
-msgstr ""
+msgstr "κενό"
 
 #: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:359
 #, elixir-autogen, elixir-format
@@ -7965,7 +7965,7 @@ msgstr ""
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:368
 #, elixir-autogen, elixir-format
 msgid "on track"
-msgstr ""
+msgstr "εντός στόχου"
 
 #: lib/mehungry_web/live/nutritionist_live/client_detail_components.ex:1803
 #, elixir-autogen, elixir-format
@@ -7975,7 +7975,7 @@ msgstr "εκτός υγιούς εύρους"
 #: lib/mehungry_web/live/calendar_live/calendar/reader.ex:364
 #, elixir-autogen, elixir-format
 msgid "over"
-msgstr ""
+msgstr "πάνω"
 
 #: lib/mehungry_web/live/calendar_live/index.html.heex:395
 #, elixir-autogen, elixir-format, fuzzy
@@ -9314,3 +9314,53 @@ msgstr "Περισσεύματα"
 #, elixir-autogen, elixir-format
 msgid "from lunch"
 msgstr "από το μεσημεριανό"
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Generate this week's meal plan"
+msgstr "Δημιουργήστε το πλάνο γευμάτων της εβδομάδας"
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Describe your preferences… e.g. 'Healthy week for 2, high protein, no shellfish'"
+msgstr "Περιγράψτε τις προτιμήσεις σας… π.χ. «Υγιεινή εβδομάδα για 2, πλούσια σε πρωτεΐνη, χωρίς θαλασσινά»"
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Follow blueprint:"
+msgstr "Ακολουθήστε πρότυπο:"
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "None"
+msgstr "Κανένα"
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Planning your week…"
+msgstr "Σχεδιάζουμε την εβδομάδα σας…"
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Each day is planned for %{min}–%{max} kcal."
+msgstr "Κάθε μέρα είναι σχεδιασμένη για %{min}–%{max} kcal."
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Outside that range — adjust by hand: %{days}."
+msgstr "Εκτός εύρους — προσαρμόστε χειροκίνητα: %{days}."
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{n} meals to your calendar."
+msgstr "Προστέθηκαν %{n} γεύματα στο ημερολόγιό σας."
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{n} meals to your calendar (%{s} skipped due to errors)."
+msgstr "Προστέθηκαν %{n} γεύματα στο ημερολόγιό σας (%{s} παραλείφθηκαν λόγω σφαλμάτων)."
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "This usually takes about a minute."
+msgstr "Συνήθως διαρκεί περίπου ένα λεπτό."

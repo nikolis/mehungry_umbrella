@@ -199,7 +199,10 @@ defmodule Mehungry.Food.Localization do
 
         translated =
           Enum.map(translated, fn %RecipeIngredient{} = ri ->
-            %RecipeIngredient{ri | ingredient_portion: overlay_portion(ri.ingredient_portion, portion_descrs)}
+            %RecipeIngredient{
+              ri
+              | ingredient_portion: overlay_portion(ri.ingredient_portion, portion_descrs)
+            }
           end)
 
         %Recipe{recipe | recipe_ingredients: translated}
@@ -242,7 +245,10 @@ defmodule Mehungry.Food.Localization do
     portion_descrs = portion_desc_map(portion_ids, codes)
 
     translated =
-      Enum.map(ris, &overlay_recipe_ingredient(&1, ing_names, unit_names, cat_names, portion_descrs))
+      Enum.map(
+        ris,
+        &overlay_recipe_ingredient(&1, ing_names, unit_names, cat_names, portion_descrs)
+      )
 
     %Recipe{recipe | recipe_ingredients: translated}
   end
@@ -275,7 +281,13 @@ defmodule Mehungry.Food.Localization do
     |> Map.new(fn {id, {_r, name}} -> {id, name} end)
   end
 
-  defp overlay_recipe_ingredient(%RecipeIngredient{} = ri, ing_names, unit_names, cat_names, portion_descrs) do
+  defp overlay_recipe_ingredient(
+         %RecipeIngredient{} = ri,
+         ing_names,
+         unit_names,
+         cat_names,
+         portion_descrs
+       ) do
     %RecipeIngredient{
       ri
       | ingredient: overlay_ingredient(ri.ingredient, ing_names, cat_names),
@@ -286,7 +298,10 @@ defmodule Mehungry.Food.Localization do
 
   # Only a unit-less portion carries a translatable free-text description; leave
   # unit-bearing portions (and non-structs) untouched.
-  defp overlay_portion(%IngredientPortion{measurement_unit_id: nil, id: id} = portion, portion_descrs) do
+  defp overlay_portion(
+         %IngredientPortion{measurement_unit_id: nil, id: id} = portion,
+         portion_descrs
+       ) do
     case Map.get(portion_descrs, id) do
       nil -> portion
       desc -> %IngredientPortion{portion | description: desc}
@@ -369,7 +384,12 @@ defmodule Mehungry.Food.Localization do
   """
   def unit_display_names(unit_ids, locale)
       when is_list(unit_ids) and unit_ids != [] and locale not in [nil, "en", "En"] do
-    name_map(MeasurementUnitTranslation, :measurement_unit_id, unit_ids, Locale.data_codes(locale))
+    name_map(
+      MeasurementUnitTranslation,
+      :measurement_unit_id,
+      unit_ids,
+      Locale.data_codes(locale)
+    )
   end
 
   def unit_display_names(_unit_ids, _locale), do: %{}
@@ -419,6 +439,41 @@ defmodule Mehungry.Food.Localization do
   end
 
   def portion_display_names(_portion_ids, _locale), do: %{}
+
+  @doc """
+  `%{{ingredient_id, description} => translated_description}` for portions named
+  by their English `description` text rather than id — what a shopping-list line
+  stores (`basket_ingredients.description`). Pairs with no matching portion or no
+  translation for `locale` are absent, so callers fall back to the stored text.
+  Returns `%{}` for the source locale.
+  """
+  def portion_display_names_by_text(pairs, locale)
+      when is_list(pairs) and pairs != [] and locale not in [nil, "en", "En"] do
+    wanted = MapSet.new(pairs)
+    ingredient_ids = pairs |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+    descriptions = pairs |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+
+    portions =
+      from(p in IngredientPortion,
+        where: p.ingredient_id in ^ingredient_ids and p.description in ^descriptions,
+        select: {p.id, p.ingredient_id, p.description}
+      )
+      |> Repo.all()
+      |> Enum.filter(fn {_id, ingredient_id, description} ->
+        MapSet.member?(wanted, {ingredient_id, description})
+      end)
+
+    names = portion_display_names(Enum.map(portions, &elem(&1, 0)), locale)
+
+    Enum.reduce(portions, %{}, fn {id, ingredient_id, description}, acc ->
+      case Map.get(names, id) do
+        nil -> acc
+        name -> Map.put_new(acc, {ingredient_id, description}, name)
+      end
+    end)
+  end
+
+  def portion_display_names_by_text(_pairs, _locale), do: %{}
 
   @doc """
   List `%{portion: %IngredientPortion{}, translation: %IngredientPortionTranslation{} | nil}`

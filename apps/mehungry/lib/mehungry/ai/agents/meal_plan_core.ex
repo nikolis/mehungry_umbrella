@@ -31,7 +31,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
 
   alias Mehungry.{Food, Repo, Search.RecipeVectorSearch}
   alias Mehungry.AI.Agents.MealPlanCore.Rules
-  alias Mehungry.Food.{Categories, IngredientPortion, MealRoleAssignments, MealRoles, Recipe}
+  alias Mehungry.Food.{Categories, IngredientPortion, MealRoleAssignments, MealRoles}
   alias Mehungry.History.MealType
 
   import Ecto.Query, only: [from: 2]
@@ -59,7 +59,9 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   Builds the guard set the search tools enforce. Options:
 
     * `:catalog` — whose recipes `search_recipes` draws from: `{:user, id}` (that
-      user's own recipes) or `:public` (every non-private recipe).
+      user's own recipes first, then the recipes they saved, then the rest of the
+      public catalog — `RecipeVectorSearch`'s `:ranked_for_user`) or `:public`
+      (every non-private recipe).
     * `:ingredient_owner_id` — the user whose custom ingredients are searchable
       alongside the shared ones.
     * `:avoid_terms` — downcased substrings; a recipe title / ingredient name
@@ -82,15 +84,6 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       diet_mode: Keyword.get(opts, :diet_mode),
       required_tags: opts |> Keyword.get(:required_tags, []) |> normalize_terms()
     }
-  end
-
-  @doc """
-  The catalog a professional's drafts draw from: their own recipes, or — when
-  they have authored none yet — the public catalog.
-  """
-  def catalog_for_professional(professional_id) do
-    own? = Repo.exists?(from r in Recipe, where: r.user_id == ^professional_id)
-    if own?, do: {:user, professional_id}, else: :public
   end
 
   @doc "Maps a profile/client `diet` string to a planner diet mode (pescatarian included)."
@@ -317,7 +310,10 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
           "total_minutes (prep + cook, null when unknown), per-serving calories (use these to " <>
           "keep each day near the calorie target), and " <>
           "meal roles (e.g. main, dinner, soup, side, meze, salad, breakfast, snack, dessert, " <>
-          "pre_workout, post_workout). " <>
+          "pre_workout, post_workout), and source: 'own' (the planner's own recipe), " <>
+          "'saved' (a recipe they saved) or 'public' (the rest of the catalog). Results " <>
+          "come own first, then saved, then public — prefer own and saved recipes when " <>
+          "they fit, and use public ones to fill the rest. " <>
           "Pass `slot` to get only recipes that can fill that slot on their own — e.g. " <>
           "slot 'Dinner' returns mains, dinner dishes and meal soups, never a meze or side. " <>
           "For a Lunch salad or dessert, pass slot 'Lunch' with part 'salad' or 'dessert'. " <>
@@ -535,7 +531,8 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
           difficulty: r.difficulty || 1,
           servings: r.servings || 2,
           total_minutes: Map.get(r, :total_minutes),
-          calories: per_serving_calories(r)
+          calories: per_serving_calories(r),
+          source: Map.get(r, :source)
         }
       end)
       |> reject_avoided(guards.avoid_terms, & &1.title)
@@ -568,7 +565,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
 
   defp time_opts(_slot, _part), do: []
 
-  defp catalog_opts({:user, user_id}), do: [user_id: user_id]
+  defp catalog_opts({:user, user_id}), do: [ranked_for_user: user_id]
   defp catalog_opts(:public), do: [public_only: true]
 
   @doc "Ingredient search with the guards applied; feeds `offered_ingredients`."

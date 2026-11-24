@@ -53,6 +53,14 @@ set by the context from the acting user, never cast from client params.
     divergent copy). Recipe rows with `cooking: false` (leftovers — they eat food
     cooked at another meal) are skipped, so a leftover dinner never doubles the
     shopping (see [`history_calendar.md`](history_calendar.md) → *Leftovers*).
+    Each line is scaled `quantity / servings × cooking_portions` and summed per
+    ingredient; then **`shopping_quantity/3`** rounds a line counted in whole
+    portions (no unit, only a portion description — "head", "medium", "sprigs")
+    **up to a whole number, at least 1**. One portion of an 8-serving salad with
+    "0.5 head lettuce" scales to 0.06 head, which nobody can buy; it is stored as 1.
+    Measured lines (g, ml, tbsp…) keep their exact amount. The web list applies the
+    same function when displaying, so lines built before the rule (2026-11-24) show
+    rounded too.
 
 ## "Shopping list for the week"
 
@@ -153,7 +161,15 @@ that retheme — layout + the mobile Lists drawer are Tailwind utilities).
   acquired/total. Each row has an `in_storage` check-off, inline **edit**
   (quantity, + name for `BasketItem`s) and **delete** (`data-confirm`). Items with
   no resolvable category (manual/USDA `BasketItem`s) fall into the **"Other"**
-  aisle.
+  aisle. **Unit labels are localized**: a line's measurement unit shows its
+  `measurement_unit_translations` name and a portion-description line its
+  `ingredient_portion_translations` text (`Food.unit_display_names/2`,
+  `Food.portion_display_names_by_text/2` — looked up by ingredient + English
+  description, since a line stores the text, not a portion id), falling back to the
+  stored English. The label map is built in `ShoppingBasketLive.Index`
+  (`assign_unit_labels/1`), not in the basket preload, so lines patched in from a
+  tick or another session get the same labels; it re-queries only when a new unit
+  or portion appears.
 - **Add item:** one modal with three sources — USDA search (`SearchClient`, with a
   searching spinner + a "no matches → add manually" state), the user's own custom
   ingredients (reusing the USDA confirm panel), and manual entry (name + quantity +

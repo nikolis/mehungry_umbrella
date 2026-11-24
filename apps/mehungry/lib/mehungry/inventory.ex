@@ -574,12 +574,26 @@ defmodule Mehungry.Inventory do
     |> Enum.map(fn {ing, quant, mu, desc} ->
       %{
         "ingredient_id" => ing,
-        "quantity" => quant,
+        "quantity" => shopping_quantity(quant, mu, desc),
         "measurement_unit_id" => mu,
         "description" => desc
       }
     end)
   end
+
+  @doc """
+  The amount a shopping-list line asks the shopper to buy. A line counted in
+  whole portions — no measurement unit, only a portion description ("head",
+  "medium", "sprigs") — is rounded **up** to a whole number, at least 1: scaling
+  an 8-serving recipe's "0.5 head lettuce" to one portion gives 0.06 head, and
+  nobody can buy that. Weighed/measured lines (a unit: g, ml, tbsp…) keep their
+  amount. Applied after a line is summed across meals, so it rounds once.
+  """
+  def shopping_quantity(quantity, nil = _measurement_unit_id, description)
+      when is_binary(description) and is_number(quantity) and quantity > 0,
+      do: max(ceil(quantity), 1)
+
+  def shopping_quantity(quantity, _measurement_unit_id, _description), do: quantity
 
   # Free-text label for a recipe ingredient that uses a description-only portion
   # (no measurement unit), so the basket can still show e.g. "1 medium banana".

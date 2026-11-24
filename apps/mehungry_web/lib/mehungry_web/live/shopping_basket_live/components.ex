@@ -148,6 +148,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
 
   attr :shopping_basket, :any, required: true
   attr :current_language, :string, default: "en"
+  # Localized unit / portion labels (see `ShoppingBasketLive.Index.assign_unit_labels/1`).
+  attr :unit_labels, :map, default: %{}
   attr :editing_item, :any, default: nil
   attr :current_user_id, :any, default: nil
 
@@ -262,6 +264,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     <.item_row
                       item={item}
                       current_language={@current_language}
+                      unit_labels={@unit_labels}
                       editing={same_entry?(@editing_item, item)}
                       attribution={attribution(item, @shopping_basket, @current_user_id)}
                     />
@@ -282,6 +285,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
 
   attr :item, :any, required: true
   attr :current_language, :string, required: true
+  attr :unit_labels, :map, default: %{}
   attr :editing, :boolean, default: false
   # "added by … · bought by …" on a shared list; nil otherwise.
   attr :attribution, :string, default: nil
@@ -363,9 +367,9 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
           </div>
           <div class="text-xs text-parchment-dim mt-0.5">
             <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-              {format_quantity(@item.quantity)}
+              {display_quantity(@item)}
             </span>
-            {entry_unit(@item)}
+            {entry_unit(@item, @unit_labels)}
             <span :if={@attribution} class="text-parchment-dim/70">· {@attribution}</span>
           </div>
         </div>
@@ -786,13 +790,32 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
   defp provenance(%BasketIngredient{}), do: :plan
   defp provenance(%BasketItem{}), do: :manual
 
-  defp entry_unit(item) do
+  # The unit label in the viewer's language: the unit's or portion's translation
+  # when one exists, else the stored English text.
+  defp entry_unit(item, labels) do
     cond do
-      match?(%{measurement_unit: %{name: _}}, item) -> item.measurement_unit.name
-      not is_nil(Map.get(item, :description)) -> item.description
-      true -> nil
+      match?(%{measurement_unit: %{name: _}}, item) ->
+        get_in(labels, [:units, item.measurement_unit.id]) || item.measurement_unit.name
+
+      not is_nil(Map.get(item, :description)) ->
+        get_in(labels, [:portions, {Map.get(item, :ingredient_id), item.description}]) ||
+          item.description
+
+      true ->
+        nil
     end
   end
+
+  # Plan lines counted in whole portions show the whole number to buy
+  # (`Inventory.shopping_quantity/3` — new lines are stored that way; this also
+  # covers lines built before that rule).
+  defp display_quantity(%BasketIngredient{} = item),
+    do:
+      item.quantity
+      |> Inventory.shopping_quantity(item.measurement_unit_id, item.description)
+      |> format_quantity()
+
+  defp display_quantity(item), do: format_quantity(item.quantity)
 
   defp same_entry?(nil, _item), do: false
 

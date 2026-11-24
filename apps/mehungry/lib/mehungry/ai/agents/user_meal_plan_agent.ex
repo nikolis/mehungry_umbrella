@@ -6,7 +6,8 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
 
   Built on the `AI.Agent` tool-use loop:
     1. Reads the user's recent meal history to avoid repetition
-    2. Searches the user's own recipe catalog (per-serving calories included)
+    2. Searches recipes — the user's own first, then the ones they saved, then
+       the public catalog (per-serving calories included)
     3. Searches whole-food ingredients for the snack slots
     4. Submits the 5-slot × 7-day plan for validation
 
@@ -41,7 +42,9 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     targets reach the model through `preferences`, its `avoid_foods` /
     `required_hashtags` / diet pattern drive the guards.
   - `opts`        — `:mode` (`:replace_week` makes `submit_plan` require all three
-    main meals on every day, since the plan will replace what is on the week).
+    main meals on every day, since the plan will replace what is on the week);
+    `:from` (a `%Date{}` inside the week, see `MealPlanGenerator.plan_from/2`) —
+    days before it are not planned (a calendar run passes today).
   """
   def run(preferences, start_date, user_id, blueprint \\ nil, opts \\ []) do
     case run_plan(preferences, start_date, user_id, blueprint, opts) do
@@ -59,17 +62,21 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     guards = guards(user_id, blueprint)
     mode = Keyword.get(opts, :mode)
     band = calorie_band(user_id, blueprint, mode)
-    occupied = occupied_cells(user_id, start_date, mode)
+    first_day = first_day(start_date, Keyword.get(opts, :from))
+    occupied = occupied_cells(user_id, first_day, start_date, mode)
 
     # `offered`/`offered_ingredients` accumulate every id the search tools handed
     # the model this run; submit_plan rejects any id it never surfaced.
     acc = %{
       user_id: user_id,
       start_date: start_date,
+      # Past days of a running week hold what the person actually ate; the plan
+      # starts at `first_day` (submit_plan accepts only first_day..start+6).
+      first_day: first_day,
       guards: guards,
       mode: mode,
       calorie_band: band,
-      existing_day_kcal: existing_day_kcal(user_id, start_date, band, mode),
+      existing_day_kcal: existing_day_kcal(user_id, first_day, start_date, band, mode),
       # Fill-gaps: cells already on the calendar stay; submit_plan drops any plan
       # entry for them before counting calories (they would be skipped anyway).
       occupied_cells: occupied,
@@ -87,7 +94,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
         MealPlanCore.snack_options(
           guards,
           country(user_id),
-          MealPlanCore.plan_months(start_date, Date.add(start_date, 6))
+          MealPlanCore.plan_months(first_day, Date.add(start_date, 6))
         )
       )
 
@@ -97,7 +104,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
       MealPlanCore.run_until_submitted("user_meal_plan", fn extra ->
         Agent.run(
           system_prompt(preferences, start_date, guards, band, acc),
-          initial_message(preferences, start_date) <> extra,
+          initial_message(preferences, first_day, start_date) <> extra,
           tool_defs(acc),
           &handle_tool/3,
           acc,
@@ -150,18 +157,24 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     end
   end
 
-  defp existing_day_kcal(user_id, start_date, %{}, :fill_gaps),
-    do: MealPlanCore.existing_day_kcal(user_id, start_date, Date.add(start_date, 6))
+  defp first_day(start_date, %Date{} = from) do
+    if Date.compare(from, start_date) == :gt, do: from, else: start_date
+  end
 
-  defp existing_day_kcal(_user_id, _start_date, _band, _mode), do: %{}
+  defp first_day(start_date, _from), do: start_date
 
-  defp occupied_cells(user_id, start_date, :fill_gaps),
-    do: MealPlanCore.occupied_cells(user_id, start_date, Date.add(start_date, 6))
+  defp existing_day_kcal(user_id, first_day, start_date, %{}, :fill_gaps),
+    do: MealPlanCore.existing_day_kcal(user_id, first_day, Date.add(start_date, 6))
 
-  defp occupied_cells(_user_id, _start_date, _mode), do: MapSet.new()
+  defp existing_day_kcal(_user_id, _first_day, _start_date, _band, _mode), do: %{}
+
+  defp occupied_cells(user_id, first_day, start_date, :fill_gaps),
+    do: MealPlanCore.occupied_cells(user_id, first_day, Date.add(start_date, 6))
+
+  defp occupied_cells(_user_id, _first_day, _start_date, _mode), do: MapSet.new()
 
   @doc """
-  The guard set for a user's own plan: their recipes, their blueprint's and
+  The guard set for a user's own plan: their recipes, then saved, then public; their blueprint's and
   profile's avoid terms, and the effective diet mode.
   """
   def guards(user_id, blueprint) do
@@ -192,13 +205,15 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
 
   defp system_prompt(preferences, start_date, guards, band, acc) do
     end_date = Date.add(start_date, 6)
+    first_day = acc.first_day
+    days = Date.diff(end_date, first_day) + 1
     slots = MealPlanCore.slots()
 
     """
-    You are a personal meal planner creating a 7-day plan.
+    You are a personal meal planner creating a #{days}-day plan.
 
-    Plan period: #{Date.to_string(start_date)} to #{Date.to_string(end_date)} (inclusive).
-    Meal slots each day: #{Enum.join(slots, ", ")} (up to 35 meals).
+    Plan period: #{Date.to_string(first_day)} to #{Date.to_string(end_date)} (inclusive#{if first_day != start_date, do: " — never plan a date before #{Date.to_string(first_day)}", else: ""}).
+    Meal slots each day: #{Enum.join(slots, ", ")} (up to #{days * length(slots)} meals).
     User preferences: #{preferences}
     #{MealPlanCore.guard_blocks(guards)}#{MealPlanCore.calorie_block(band)}#{MealPlanCore.composition_block(acc.rules)}#{filled_block(acc.occupied_cells)}
     WORKFLOW:
@@ -213,7 +228,9 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
        Searching with slot: "Lunch" / "Dinner" / "Breakfast" returns only dishes
        that fit; slot "Lunch" with part "salad" / "dessert" finds a Lunch salad or
        dessert. You may call search_catalog multiple times with different
-       queries. Each result carries per-serving calories — use them (with
+       queries. Results list the user's own recipes first (source "own"), then
+       recipes they saved ("saved"), then the public catalog ("public") — prefer
+       own and saved recipes when they fit the slot. Each result carries per-serving calories — use them (with
        `servings`) to honour any calorie range or target
     3. #{snack_step(acc)}
     4. Draft the plan (one entry per date and slot, each with its items) using
@@ -250,8 +267,10 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     end
   end
 
-  defp initial_message(preferences, start_date) do
-    "Create a 7-day, 5-slot-per-day meal plan starting #{Date.to_string(start_date)} " <>
+  defp initial_message(preferences, first_day, start_date) do
+    days = Date.diff(Date.add(start_date, 6), first_day) + 1
+
+    "Create a #{days}-day, 5-slot-per-day meal plan starting #{Date.to_string(first_day)} " <>
       "with these preferences: #{preferences}"
   end
 

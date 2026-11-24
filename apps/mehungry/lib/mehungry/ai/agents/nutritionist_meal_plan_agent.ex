@@ -21,8 +21,8 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
   ids are filtered out of the search results, so the model is never offered a
   food the client must avoid.
 
-  Recipes come from the nutritionist's own catalog, or the public catalog when
-  they have authored none (`MealPlanCore.catalog_for_professional/1`).
+  Recipes come from the nutritionist's own recipes first, then the recipes they
+  saved, then the rest of the public catalog (`catalog: {:user, id}`).
 
   Like `UserMealPlanAgent`, this agent only **generates**. It returns
   `{:ok, %{entries, rationale, summary}}`; the caller
@@ -356,7 +356,7 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
 
   defp guards(professional_id, context) do
     MealPlanCore.guards(
-      catalog: MealPlanCore.catalog_for_professional(professional_id),
+      catalog: {:user, professional_id},
       ingredient_owner_id: professional_id,
       # Curated terms (avoid chips, condition foods) match as substrings; the
       # intake's free text is cleaned and matched at word starts only.

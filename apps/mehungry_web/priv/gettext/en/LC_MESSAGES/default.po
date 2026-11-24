@@ -9191,3 +9191,53 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "from lunch"
 msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Generate this week's meal plan"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Describe your preferences… e.g. 'Healthy week for 2, high protein, no shellfish'"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Follow blueprint:"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "None"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "Planning your week…"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Each day is planned for %{min}–%{max} kcal."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Outside that range — adjust by hand: %{days}."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{n} meals to your calendar."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{n} meals to your calendar (%{s} skipped due to errors)."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex
+#, elixir-autogen, elixir-format
+msgid "This usually takes about a minute."
+msgstr ""

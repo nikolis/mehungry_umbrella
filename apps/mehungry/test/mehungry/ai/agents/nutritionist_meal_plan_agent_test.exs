@@ -361,48 +361,60 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgentTest do
   end
 
   describe "catalog" do
-    test "the nutritionist's own recipes when they have any" do
+    test "own recipes first, then saved, then public — never another user's private one" do
       professional = user_fixture()
       client = user_fixture()
       other = user_fixture()
 
-      own = searchable_recipe(professional, "own lentil soup")
-      foreign = searchable_recipe(other, "foreign lentil soup")
+      public = searchable_recipe(other, "public lentil soup qzx")
+      saved = searchable_recipe(other, "saved lentil soup qzx")
+      own = searchable_recipe(professional, "own lentil soup qzx")
+      private = searchable_recipe(other, "private lentil soup qzx")
+      Repo.update_all(from(r in Recipe, where: r.id == ^private.id), set: [private: true])
+      {:ok, _} = Mehungry.Accounts.UserContent.save_user_recipe(professional.id, saved.id)
 
       acc = NutritionistMealPlanAgent.new_acc(professional.id, client.id)
       assert acc.guards.catalog == {:user, professional.id}
 
       {result, _} =
-        NutritionistMealPlanAgent.handle_tool("search_recipes", %{"query" => "lentil soup"}, acc)
+        NutritionistMealPlanAgent.handle_tool(
+          "search_recipes",
+          %{"query" => "lentil soup qzx"},
+          acc
+        )
 
+      sources = Map.new(result.recipes, &{&1.recipe_id, &1.source})
       ids = Enum.map(result.recipes, & &1.recipe_id)
-      assert own.id in ids
-      refute foreign.id in ids
+
+      assert sources[own.id] == "own"
+      assert sources[saved.id] == "saved"
+      refute private.id in ids
+
+      own_at = Enum.find_index(ids, &(&1 == own.id))
+      saved_at = Enum.find_index(ids, &(&1 == saved.id))
+      assert own_at < saved_at
+
+      # Public recipes come after the own + saved tiers (the public tier is the
+      # whole table, so this fixture may rank outside the top-N).
+      if public.id in ids do
+        assert sources[public.id] == "public"
+        assert saved_at < Enum.find_index(ids, &(&1 == public.id))
+      end
     end
 
-    test "falls back to the public catalog — never another user's private recipes" do
+    test "with no own or saved recipes the search still returns public recipes" do
       professional = user_fixture()
       client = user_fixture()
       other = user_fixture()
-
-      public = searchable_recipe(other, "public bean stew zzq")
-      private = searchable_recipe(other, "private bean stew zzq")
-      Repo.update_all(from(r in Recipe, where: r.id == ^private.id), set: [private: true])
+      searchable_recipe(other, "public bean stew zzq")
 
       acc = NutritionistMealPlanAgent.new_acc(professional.id, client.id)
-      assert acc.guards.catalog == :public
 
-      # The public catalog is the whole table, so read it directly rather than
-      # relying on this fixture ranking inside the search's top-N.
-      found =
-        Mehungry.Search.RecipeVectorSearch.search("bean stew zzq",
-          public_only: true,
-          limit: 10_000
-        )
-        |> Enum.map(& &1.id)
+      {result, _} =
+        NutritionistMealPlanAgent.handle_tool("search_recipes", %{"query" => "bean stew"}, acc)
 
-      assert public.id in found
-      refute private.id in found
+      assert result.found
+      assert Enum.all?(result.recipes, &(&1.source == "public"))
     end
   end
 

@@ -53,7 +53,7 @@ defmodule MehungryWeb.AiMealPlanFlowTest do
       html = render_submit(view, "ai_plan_week", %{"prompt" => "high protein"})
 
       refute html =~ "meal-plan-mode-prompt"
-      assert html =~ "Planning…"
+      assert html =~ ~s(id="ai-plan-loading")
 
       monday = Date.beginning_of_week(Date.utc_today())
       job = MealPlanJobs.active_calendar_job(user.id)
@@ -97,7 +97,7 @@ defmodule MehungryWeb.AiMealPlanFlowTest do
 
       {:ok, view, _html} = live(conn, ~p"/calendar")
 
-      assert render(view) =~ "Planning…"
+      assert render(view) =~ ~s(id="ai-plan-loading")
     end
 
     test "the worker's result broadcast finishes the run on the page", %{conn: conn, user: user} do
@@ -114,7 +114,7 @@ defmodule MehungryWeb.AiMealPlanFlowTest do
 
       html = render(view)
       assert html =~ "Added 35 meals to your calendar."
-      refute html =~ "Planning…"
+      refute html =~ ~s(id="ai-plan-loading")
     end
 
     test "a failure broadcast shows the readable error", %{conn: conn, user: user} do
@@ -131,7 +131,7 @@ defmodule MehungryWeb.AiMealPlanFlowTest do
 
       html = render(view)
       assert html =~ "Meal plan generation failed. Please try again."
-      refute html =~ "Planning…"
+      refute html =~ ~s(id="ai-plan-loading")
     end
 
     test "a run whose worker died is noticed by the page without a reload", %{
@@ -140,7 +140,7 @@ defmodule MehungryWeb.AiMealPlanFlowTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/calendar")
       render_submit(view, "ai_plan_week", %{"prompt" => "high protein"})
-      assert render(view) =~ "Planning…"
+      assert render(view) =~ ~s(id="ai-plan-loading")
 
       # A timeout kill / cancel: no broadcast is ever sent.
       Repo.update_all(Oban.Job, set: [state: "discarded"])
@@ -148,7 +148,7 @@ defmodule MehungryWeb.AiMealPlanFlowTest do
 
       html = render(view)
       assert html =~ "Meal plan generation was interrupted"
-      refute html =~ "Planning…"
+      refute html =~ ~s(id="ai-plan-loading")
       assert MealPlanJobs.active_calendar_job(user.id) == nil
     end
 
@@ -161,7 +161,7 @@ defmodule MehungryWeb.AiMealPlanFlowTest do
 
       {:ok, view, _html} = live(conn, ~p"/calendar")
 
-      refute render(view) =~ "Planning…"
+      refute render(view) =~ ~s(id="ai-plan-loading")
     end
 
     test "out of quota: nothing is enqueued", %{conn: conn, user: user} do

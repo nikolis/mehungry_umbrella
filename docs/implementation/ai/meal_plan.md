@@ -2,8 +2,8 @@
 
 AI meal-plan generation is one of the app's flagship user-facing features: from a
 short free-text brief (or a structured blueprint), it produces a **7-day plan** —
-five slots a day, drawn from the user's own recipe catalog plus whole-food
-ingredients — and drops it onto the calendar or stores it as a reusable plan.
+five slots a day, drawn from the user's own recipes first, then the recipes they
+saved, then the public catalog, plus whole-food ingredients — and drops it onto the calendar or stores it as a reusable plan.
 
 This doc has two parts:
 
@@ -154,11 +154,31 @@ every user's recipes. A failed run now fails, with a readable message
 
 ### Whose recipes
 
-- `UserMealPlanAgent` — the user's **own** recipes.
-- `NutritionistMealPlanAgent` — the nutritionist's **own** recipes, or, when they
-  have authored none, the **public** catalog (`MealPlanCore.catalog_for_professional/1`;
-  `RecipeVectorSearch` `public_only: true`, which excludes `private` recipes so
-  nobody's staged/private recipes leak into another person's plan).
+Both agents use `catalog: {:user, id}` (the person planning: the user, or the
+nutritionist drafting), which `RecipeVectorSearch` serves as a **ranked** search
+(`ranked_for_user:`): the person's **own** recipes first, then the public recipes
+they **saved** (`user_recipes`), then the rest of the **public** catalog. Each tier
+is similarity-ranked and fills what the previous tiers left of the result limit
+(20), and each result carries `source: "own" | "saved" | "public"`; the tool
+description and prompt tell the model to prefer own and saved recipes. Another
+user's `private` recipe is never returned, so nobody's staged/private recipes leak
+into another person's plan. *(Until 2026-11-24 the consumer agent searched own
+recipes only, so a brand-new user's "Plan with AI" always failed with an empty
+catalog; the nutritionist side fell back to public only when they had authored
+none.)* A person with ≥20 relevant own recipes fills the limit from their own tier,
+as before. Every search keeps **5 of the 20 slots for public recipes**:
+own + saved fill at most 15, and any public slots the public tier can't fill go
+back to own → saved, so the list is still full when it can be.
+
+**Past days are never planned.** A calendar run (web calendar, mobile "Plan with
+AI") passes `from: MealPlanGenerator.plan_from(start_date)` — today when the plan
+week has already begun and isn't over yet, else nil (a week wholly ahead or behind
+is planned in full). `UserMealPlanAgent` then plans `first_day..start+6` (prompt,
+snack months, occupied cells, existing calories, `submit_plan`'s accepted range),
+the calendar's "this week already has meals" count only looks from that day, and
+`persist_entries_to_calendar` neither writes nor replaces before it, the same way
+the nutritionist agent already handled a client's past days. Blueprint plans are
+calendar-independent and unaffected.
 
 ### Tools the model is given
 

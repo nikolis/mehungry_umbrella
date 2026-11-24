@@ -34,6 +34,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      |> assign(:change_basket, change_basket)
      |> assign(:shopping_basket, shopping_basket)
      |> assign(:shopping_baskets, shopping_baskets)
+     |> assign_unit_labels()
      |> assign(:processing_basket, %ShoppingBasket{})
      |> assign(:basket_form, nil)
      |> assign(:editing_item, nil)
@@ -206,6 +207,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
        socket
        |> assign(:shopping_baskets, shopping_baskets)
        |> assign(:shopping_basket, active)
+       |> assign_unit_labels()
        |> assign(:basket_form, nil)
        |> put_flash(:info, gettext("List deleted"))}
     else
@@ -477,6 +479,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      socket
      |> assign(:shopping_baskets, shopping_baskets)
      |> assign(:shopping_basket, active)
+     |> assign_unit_labels()
      |> assign(:basket_form, nil)
      |> sync_subscriptions()}
   end
@@ -501,6 +504,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      socket
      |> assign(:shopping_baskets, shopping_baskets)
      |> assign(:shopping_basket, active || socket.assigns.shopping_basket)
+     |> assign_unit_labels()
      |> assign(:processing_basket, %ShoppingBasket{})}
   end
 
@@ -606,6 +610,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     socket
     |> assign(:shopping_baskets, baskets)
     |> assign(:shopping_basket, active)
+    |> assign_unit_labels()
     |> sync_subscriptions()
   end
 
@@ -614,6 +619,61 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   # instead of re-reading everything. Used both for this view's own item actions
   # and for `{:basket_entry, …}` events from other sessions. Falls back to a
   # re-read when the line cannot be placed from what the event carries.
+  # Localized unit labels for every line on screen: `%{units: %{unit_id => name},
+  # portions: %{{ingredient_id, description} => text}}` (`Food.unit_display_names/2`,
+  # `Food.portion_display_names_by_text/2`). Built here rather than in the basket
+  # preload so a line patched in from a tick or another session is labelled the
+  # same way; re-queried only when a unit or portion not yet labelled appears.
+  defp assign_unit_labels(socket) do
+    locale = socket.assigns[:current_language]
+
+    entries =
+      Enum.flat_map(
+        [socket.assigns.shopping_basket | socket.assigns.shopping_baskets],
+        &basket_entries/1
+      )
+
+    unit_ids =
+      entries
+      |> Enum.map(&Map.get(&1, :measurement_unit_id))
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    pairs =
+      for %BasketIngredient{ingredient_id: id, description: d} <- entries,
+          not is_nil(id) and is_binary(d),
+          into: MapSet.new(),
+          do: {id, d}
+
+    case socket.assigns[:unit_label_keys] do
+      {^locale, units, portions} ->
+        if MapSet.subset?(unit_ids, units) and MapSet.subset?(pairs, portions),
+          do: socket,
+          else: put_unit_labels(socket, locale, unit_ids, pairs)
+
+      _ ->
+        put_unit_labels(socket, locale, unit_ids, pairs)
+    end
+  end
+
+  defp put_unit_labels(socket, locale, unit_ids, pairs) do
+    socket
+    |> assign(:unit_labels, %{
+      units: Mehungry.Food.unit_display_names(MapSet.to_list(unit_ids), locale),
+      portions: Mehungry.Food.portion_display_names_by_text(MapSet.to_list(pairs), locale)
+    })
+    |> assign(:unit_label_keys, {locale, unit_ids, pairs})
+  end
+
+  defp basket_entries(%ShoppingBasket{} = basket) do
+    Enum.flat_map([basket.basket_ingredients, basket.basket_items], fn
+      entries when is_list(entries) -> entries
+      _not_loaded -> []
+    end)
+  end
+
+  defp basket_entries(_), do: []
+
   defp apply_entry(socket, basket_id, op, entry) do
     with %ShoppingBasket{} = basket <-
            Enum.find(socket.assigns.shopping_baskets, &(&1.id == basket_id)),
@@ -626,7 +686,9 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
           do: patched,
           else: socket.assigns.shopping_basket
 
-      assign(socket, shopping_baskets: baskets, shopping_basket: active)
+      socket
+      |> assign(shopping_baskets: baskets, shopping_basket: active)
+      |> assign_unit_labels()
     else
       _ -> refresh_active_basket(socket)
     end

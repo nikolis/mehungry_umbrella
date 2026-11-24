@@ -10,3 +10,4 @@ product get found and reach people. The features themselves live in
 - [`hashtags.md`](hashtags.md) — recipe hashtag generation and reconciliation.
 - [`social_publishing.md`](social_publishing.md) — social fan-out (Facebook, Pinterest, Instagram).
 - [`social_media_copy.md`](social_media_copy.md) — social post copy and tone.
+- [`promo_video.md`](promo_video.md) — scripted Reels/TikTok promo recording (`mix promo.record` + prod snapshot).

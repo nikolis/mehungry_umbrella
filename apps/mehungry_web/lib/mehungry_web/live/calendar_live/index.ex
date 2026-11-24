@@ -479,7 +479,13 @@ defmodule MehungryWeb.CalendarLive.Index do
           prompt: prompt,
           blueprint_id: params["blueprint_id"],
           start_date: start_date,
-          existing: MealPlanGenerator.existing_meal_count(user.id, start_date)
+          # Only the days the plan will write: a running week's past days stay.
+          existing:
+            MealPlanGenerator.existing_meal_count(
+              user.id,
+              start_date,
+              MealPlanGenerator.plan_from(start_date)
+            )
         }
 
         # A week that already has meals: the user decides what happens to them
@@ -1027,7 +1033,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   # The calorie range the plan was held to, and any day it could not bring
   # inside it — absent when the plan had no calorie target.
   defp calorie_result_note(%{"calorie_range" => %{"min" => min, "max" => max}} = result) do
-    range = " Each day is planned for #{min}–#{max} kcal."
+    range = " " <> gettext("Each day is planned for %{min}–%{max} kcal.", min: min, max: max)
 
     case result["calorie_warnings"] || [] do
       [] ->
@@ -1035,15 +1041,19 @@ defmodule MehungryWeb.CalendarLive.Index do
 
       warnings ->
         days = Enum.map_join(warnings, ", ", &"#{&1["date"]} (#{&1["total_kcal"]} kcal)")
-        range <> " Outside that range — adjust by hand: #{days}."
+        range <> " " <> gettext("Outside that range — adjust by hand: %{days}.", days: days)
     end
   end
 
   defp calorie_result_note(_result), do: ""
 
   defp build_result_message(created, 0),
-    do: "Added #{created} meals to your calendar."
+    do: gettext("Added %{n} meals to your calendar.", n: created)
 
   defp build_result_message(created, skipped),
-    do: "Added #{created} meals to your calendar (#{skipped} skipped due to errors)."
+    do:
+      gettext("Added %{n} meals to your calendar (%{s} skipped due to errors).",
+        n: created,
+        s: skipped
+      )
 end

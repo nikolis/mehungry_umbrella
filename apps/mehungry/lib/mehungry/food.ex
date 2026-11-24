@@ -276,6 +276,7 @@ defmodule Mehungry.Food do
   defdelegate ingredient_display_names_by_name(names, language_name), to: Localization
   defdelegate compound_display_names(compound_ids, language_name), to: Localization
   defdelegate portion_display_names(portion_ids, locale), to: Localization
+  defdelegate portion_display_names_by_text(pairs, locale), to: Localization
   defdelegate list_portion_translation_pairs(ingredient_id, locale), to: Localization
   defdelegate ingredient_ids_with_untranslated_portions(locale), to: Localization
   defdelegate ingredient_ids_with_untranslated_portions(locale, opts), to: Localization

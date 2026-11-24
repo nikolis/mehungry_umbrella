@@ -226,6 +226,19 @@ defmodule Mehungry.AI.MealPlanGeneratorTest do
     end
   end
 
+  describe "plan_from/2" do
+    test "today, while the plan week is running" do
+      assert MealPlanGenerator.plan_from(@monday, Date.add(@monday, 1)) == Date.add(@monday, 1)
+      assert MealPlanGenerator.plan_from(@monday, Date.add(@monday, 6)) == Date.add(@monday, 6)
+    end
+
+    test "nil — the whole week — when it starts today or later, or is already over" do
+      assert MealPlanGenerator.plan_from(@monday, @monday) == nil
+      assert MealPlanGenerator.plan_from(@monday, Date.add(@monday, -3)) == nil
+      assert MealPlanGenerator.plan_from(@monday, Date.add(@monday, 7)) == nil
+    end
+  end
+
   describe "generate_entries/4" do
     test "an agent failure is returned as an error — there is no fallback pipeline", %{user: user} do
       ScriptedClient.script([{:error, "API returned status 500"}])

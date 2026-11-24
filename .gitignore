@@ -49,3 +49,4 @@ studies/
 
 # excoveralls per-app output (umbrella)
 cover/
+/_build_promo/

@@ -12,6 +12,7 @@ defmodule Mehungry.Search.RecipeVectorSearch do
   require Logger
 
   alias Mehungry.{Repo, Search.RecipeSearch}
+  alias Mehungry.Accounts.UserRecipe
   alias Mehungry.Food.Recipe
 
   @default_limit 20
@@ -28,6 +29,13 @@ defmodule Mehungry.Search.RecipeVectorSearch do
 
   Options:
     - `:user_id`     — restrict to recipes owned by this user (integer)
+    - `:ranked_for_user` — a user id: search that user's **own** recipes first,
+      then the public recipes they **saved**, then the rest of the **public**
+      catalog, each tier ranked by similarity. Own + saved fill at most
+      `limit - 5` slots, so public recipes always get a few; slots the public
+      tier can't fill go back to own → saved. Results are ordered by tier and
+      each carries `source: "own" | "saved" | "public"`.
+      Never returns another user's private recipe.
     - `:public_only` — when true, exclude `private` recipes (use for a catalog
       that spans users, so nobody's private recipes leak into another's plan)
     - `:limit`       — max results (default: 20)
@@ -49,6 +57,7 @@ defmodule Mehungry.Search.RecipeVectorSearch do
   def search(query_text, opts \\ []) do
     filters = %{
       user_id: Keyword.get(opts, :user_id),
+      ranked_for_user: Keyword.get(opts, :ranked_for_user),
       limit: Keyword.get(opts, :limit, @default_limit),
       exclude_ids: Keyword.get(opts, :exclude_ids, []),
       public_only: Keyword.get(opts, :public_only, false),
@@ -57,20 +66,78 @@ defmodule Mehungry.Search.RecipeVectorSearch do
       time_exempt_roles: Keyword.get(opts, :time_exempt_roles, [])
     }
 
-    case embedding_client().embed(query_text) do
-      {:ok, vector} ->
-        vector_search(vector, filters)
+    runner =
+      case embedding_client().embed(query_text) do
+        {:ok, vector} ->
+          &vector_search(Pgvector.new(vector), &1, &2)
 
-      {:error, reason} ->
-        Logger.warning("RecipeVectorSearch: embedding failed (#{reason}), falling back to FTS")
-        fts_fallback(query_text, filters)
+        {:error, reason} ->
+          Logger.warning("RecipeVectorSearch: embedding failed (#{reason}), falling back to FTS")
+          &fts_fallback(query_text, &1, &2)
+      end
+
+    case filters.ranked_for_user do
+      nil -> runner.(Recipe, filters)
+      user_id -> ranked_search(user_id, filters, runner)
     end
   end
 
-  defp vector_search(vector, filters) do
-    pg_vector = Pgvector.new(vector)
+  # Own → saved → public, each tier similarity-ranked. Own + saved may take at
+  # most `limit - @public_reserve` slots so a large personal catalog never shuts
+  # the public catalog out; whatever the public tier leaves unused is handed back
+  # to own → saved in a second pass, so the limit is still filled when it can be.
+  @public_reserve 5
+  @tier_order %{"own" => 0, "saved" => 1, "public" => 2}
 
-    from(r in Recipe,
+  defp ranked_search(user_id, filters, runner) do
+    personal = [own: own_scope(user_id), saved: saved_scope(user_id)]
+    personal_cap = max(filters.limit - @public_reserve, 0)
+
+    []
+    |> fill_tiers(personal, personal_cap, filters, runner)
+    |> fill_tiers([public: public_scope(user_id)], filters.limit, filters, runner)
+    |> fill_tiers(personal, filters.limit, filters, runner)
+    |> Enum.sort_by(&Map.fetch!(@tier_order, &1.source))
+  end
+
+  # Appends each tier's results (tagged with `source`) until `cap` results are
+  # held, skipping ids already held.
+  defp fill_tiers(acc, tiers, cap, filters, runner) do
+    Enum.reduce(tiers, acc, fn {source, scope}, acc ->
+      remaining = cap - length(acc)
+
+      if remaining <= 0 do
+        acc
+      else
+        tier_filters = %{
+          filters
+          | limit: remaining,
+            exclude_ids: filters.exclude_ids ++ Enum.map(acc, & &1.id)
+        }
+
+        acc ++ Enum.map(runner.(scope, tier_filters), &Map.put(&1, :source, to_string(source)))
+      end
+    end)
+  end
+
+  defp own_scope(user_id), do: from(r in Recipe, where: r.user_id == ^user_id)
+
+  defp saved_scope(user_id) do
+    saved_ids = from(ur in UserRecipe, where: ur.user_id == ^user_id, select: ur.recipe_id)
+
+    from r in Recipe,
+      where:
+        r.id in subquery(saved_ids) and (r.user_id != ^user_id or is_nil(r.user_id)) and
+          coalesce(r.private, false) == false
+  end
+
+  defp public_scope(user_id) do
+    from r in Recipe,
+      where: (r.user_id != ^user_id or is_nil(r.user_id)) and coalesce(r.private, false) == false
+  end
+
+  defp vector_search(pg_vector, scope, filters) do
+    from(r in scope,
       where: not is_nil(r.embedding),
       order_by: fragment("embedding <=> ?", ^pg_vector),
       limit: ^filters.limit
@@ -102,16 +169,11 @@ defmodule Mehungry.Search.RecipeVectorSearch do
     rows
   end
 
-  defp fts_fallback(query_text, filters) do
-    base_query =
-      if filters.user_id do
-        from r in Recipe, where: r.user_id == ^filters.user_id
-      else
-        Recipe
-      end
-
-    base_query
+  defp fts_fallback(query_text, scope, filters) do
+    scope
+    |> maybe_filter_user(filters.user_id)
     |> maybe_public_only(filters.public_only)
+    |> maybe_exclude_ids(filters.exclude_ids)
     |> maybe_meal_roles(filters.meal_roles)
     |> maybe_max_time(filters.max_total_minutes, filters.time_exempt_roles)
     |> RecipeSearch.run(query_text)

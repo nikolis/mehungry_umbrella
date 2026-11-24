@@ -43,6 +43,7 @@ defmodule MehungryWeb.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:dev), do: ["lib", "dev"]
   defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.
@@ -103,7 +104,7 @@ defmodule MehungryWeb.MixProject do
        compile: false,
        depth: 1},
       # {:live_isolated_component, "~> 0.8.0", only: [:dev, :test]},
-      {:wallaby, "~> 0.30", runtime: false, only: :test}
+      {:wallaby, "~> 0.30", runtime: false, only: [:dev, :test]}
     ]
   end
 

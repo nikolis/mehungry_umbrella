@@ -132,10 +132,13 @@ defmodule MehungryWeb.Api.MealPlanWorker do
 
   # A calendar run tells the agent its mode (a week-replacing plan must cover
   # every day's main meals); a blueprint plan has no week to replace.
-  defp generation_opts(%{blueprint_plan_id: nil, mode: mode}),
-    do: [mode: MealPlanGenerator.parse_mode(mode)]
+  # A calendar run never plans the already-past days of a running week.
+  defp generation_opts(%{blueprint_plan_id: nil, mode: mode} = job),
+    do: [mode: MealPlanGenerator.parse_mode(mode), from: plan_from(job)]
 
   defp generation_opts(_job), do: []
+
+  defp plan_from(job), do: MealPlanGenerator.plan_from(job.start_date || Date.utc_today())
 
   # Calendar target: write the entries in the job's existing-meals mode.
   defp deliver(%{blueprint_plan_id: nil} = job, entries, start_date) do
@@ -143,7 +146,8 @@ defmodule MehungryWeb.Api.MealPlanWorker do
            entries,
            job.user_id,
            start_date,
-           job.mode
+           job.mode,
+           from: plan_from(job)
          ) do
       {:ok, [], _skipped} ->
         {:error, :no_meals_created}

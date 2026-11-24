@@ -74,6 +74,18 @@ defmodule Mehungry.AI.MealPlanGenerator do
   end
 
   @doc """
+  The `:from` a calendar plan for the week starting `start_date` passes: `today`
+  when the week has begun and is not over yet (a person's past days hold what
+  they actually ate, so a plan never rewrites them), else `nil` — a week wholly
+  in the future or the past is planned in full.
+  """
+  def plan_from(%Date{} = start_date, today \\ Date.utc_today()) do
+    if Date.compare(today, start_date) == :gt and
+         Date.compare(today, Date.add(start_date, 6)) != :gt,
+       do: today
+  end
+
+  @doc """
   How many meals `user_id` already has in the plan week (`start_date` + 6 days),
   counting from `from` — what a caller checks to decide whether to ask for an
   existing-meals mode.

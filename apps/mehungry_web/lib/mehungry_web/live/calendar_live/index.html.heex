@@ -179,23 +179,29 @@
             d="M13 10V3L4 14h7v7l9-11h-7z"
           />
         </svg>
-        Generate this week's meal plan
+        {gettext("Generate this week's meal plan")}
       </h3>
       <form phx-submit="ai_plan_week" class="flex flex-col sm:flex-row gap-3">
         <div class="flex-1 flex flex-col gap-2">
           <textarea
             name="prompt"
             rows="2"
-            placeholder="Describe your preferences… e.g. 'Healthy week for 2, high protein, no shellfish'"
+            placeholder={
+              gettext(
+                "Describe your preferences… e.g. 'Healthy week for 2, high protein, no shellfish'"
+              )
+            }
             class="flex-1 bg-ink text-parchment rounded-lg p-3 text-sm resize-none border border-ink-panel2 focus:border-paprika focus:outline-none"
           ></textarea>
           <div :if={@blueprints != []} class="flex items-center gap-2">
-            <label class="text-parchment-dim text-xs whitespace-nowrap">Follow blueprint:</label>
+            <label class="text-parchment-dim text-xs whitespace-nowrap">
+              {gettext("Follow blueprint:")}
+            </label>
             <select
               name="blueprint_id"
               class="flex-1 bg-ink text-parchment rounded-lg px-2 py-1.5 text-xs border border-ink-panel2 focus:border-paprika focus:outline-none"
             >
-              <option value="">None</option>
+              <option value="">{gettext("None")}</option>
               <option
                 :for={bp <- @blueprints}
                 value={bp.id}
@@ -205,7 +211,7 @@
               </option>
             </select>
             <.link navigate={~p"/browse"} class="text-paprika-soft text-xs hover:text-paprika">
-              Browse
+              {gettext("Browse")}
             </.link>
           </div>
         </div>
@@ -214,15 +220,25 @@
           disabled={@ai_plan_generating or not is_nil(@ai_plan_pending)}
           class="px-5 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm self-end transition"
         >
-          <%= if @ai_plan_generating do %>
-            <span class="flex items-center gap-2">
-              <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" /> Planning…
-            </span>
-          <% else %>
-            Generate
-          <% end %>
+          {gettext("Generate")}
         </button>
       </form>
+      <%!-- While the plan is generating, the whole screen shows the animated logo
+           (the same mark as the mobile app's loader) instead of a small in-button
+           spinner. --%>
+      <div
+        :if={@ai_plan_generating}
+        id="ai-plan-loading"
+        class="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-6 bg-ink/90 backdrop-blur-sm px-8 text-center"
+        role="status"
+        aria-live="polite"
+      >
+        <MehungryWeb.SvgComponents.get_loading class="w-40 h-40" />
+        <p class="text-parchment text-lg font-semibold">{gettext("Planning your week…")}</p>
+        <p class="text-parchment-dim text-sm max-w-xs">
+          {gettext("This usually takes about a minute.")}
+        </p>
+      </div>
       <MehungryWeb.MealPlanModePrompt.mode_prompt
         :if={@ai_plan_pending}
         existing={@ai_plan_pending.existing}
@@ -250,13 +266,13 @@
       <%= if @ai_quota_exceeded do %>
         <div class="mt-3 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 flex items-center justify-between gap-3">
           <p class="text-amber-300 text-xs">
-            You've reached your AI meal plan limit for this month.
+            {gettext("You've reached your AI meal plan limit for this month.")}
           </p>
           <.link
             navigate={~p"/upgrade"}
             class="flex-shrink-0 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-semibold transition"
           >
-            Upgrade
+            {gettext("Upgrade")}
           </.link>
         </div>
       <% end %>

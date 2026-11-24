@@ -142,6 +142,39 @@ defmodule Mehungry.InventoryTest do
   end
 
   """
+  describe "shopping_quantity/3 + aggregate_meal_ingredients/1 rounding" do
+    test "a whole-portion line rounds up to something you can buy; a measured line does not" do
+      assert Inventory.shopping_quantity(0.06, nil, "head") == 1
+      assert Inventory.shopping_quantity(6.75, nil, "medium (2-1/2\" dia)") == 7
+      assert Inventory.shopping_quantity(2.0, nil, "1 banana") == 2
+      assert Inventory.shopping_quantity(0.5, 50, nil) == 0.5
+      assert Inventory.shopping_quantity(12.5, 2, nil) == 12.5
+    end
+
+    test "one portion of an 8-serving salad asks for a whole head, not 0.06" do
+      salad = %{
+        servings: 8,
+        recipe_ingredients: [
+          # 0.5 head lettuce (description-only portion) and 40 g capers (a unit)
+          %{ingredient_id: 1, quantity: 0.5, measurement_unit_id: nil, ingredient_portion: %{description: "head"}},
+          %{ingredient_id: 2, quantity: 40, measurement_unit_id: 2, ingredient_portion: nil}
+        ]
+      }
+
+      meals = [
+        %{recipe_user_meals: [%{cooking: true, cooking_portions: 1, recipe: salad}]},
+        %{recipe_user_meals: [%{cooking: true, cooking_portions: 1, recipe: salad}]}
+      ]
+
+      lines = meals |> Inventory.aggregate_meal_ingredients() |> Map.new(&{&1["ingredient_id"], &1})
+
+      # Summed first (0.0625 + 0.0625), then rounded once.
+      assert lines[1]["quantity"] == 1
+      assert lines[1]["description"] == "head"
+      assert lines[2]["quantity"] == 10.0
+    end
+  end
+
   describe "basket_ingredients" do
     alias Mehungry.Inventory.BasketIngredient 
 
