@@ -160,6 +160,18 @@ The whole calendar is mirrored under `/api/v1/meals*` — see
 `free_food_user_meals` / `ingredient_user_meals` logging contracts and the shared
 `GET /meals/day/:date/nutrition` aggregation.
 
+### Live refresh when someone else writes the calendar
+
+A client's week is often written by someone else — a nutritionist's AI draft
+(`NutritionistAgentWorker`) or a hand edit on `/nutritionist/clients/:id/calendar`
+— or by a background job (the user's own "Plan with AI"). Those writes call
+`History.broadcast_meals_changed/1` (PubSub `user_meals:<id>`, once per bulk
+write — `MealPlanGenerator.persist_entries_to_calendar/5` is the chokepoint for
+both planners). `MehungryWeb.UserChannel` relays it to the mobile app as a
+`"meals_changed"` poke on `user:<id>` and the app refetches its meal queries.
+A user's own REST writes do not poke. The app also refetches meals when it
+returns to the foreground, which covers a phone that was asleep during the write.
+
 ## Related
 
 - [`food/nutrition_calculation.md`](food/nutrition_calculation.md) — the nutrient math + the aggregation path this doc feeds.

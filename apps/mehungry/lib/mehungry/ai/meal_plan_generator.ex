@@ -106,8 +106,18 @@ defmodule Mehungry.AI.MealPlanGenerator do
     entries =
       Enum.reject(entries, &(Date.compare(Date.add(start_date, &1.day_index - 1), from) == :lt))
 
-    write_week(entries, user_id, start_date, from, parse_mode(mode))
+    entries
+    |> write_week(user_id, start_date, from, parse_mode(mode))
+    |> tap(&poke_clients(&1, user_id))
   end
+
+  # The plan was written by a background job (often a nutritionist's draft for
+  # someone else): poke that person's connected clients so an open calendar
+  # refetches instead of showing the old week until the app is restarted.
+  defp poke_clients({:ok, [_ | _], _skipped}, user_id),
+    do: History.broadcast_meals_changed(user_id)
+
+  defp poke_clients(_result, _user_id), do: :ok
 
   defp write_week([], _user_id, _start_date, _from, _mode), do: {:ok, [], 0}
 

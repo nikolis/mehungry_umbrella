@@ -7,6 +7,11 @@ defmodule MehungryWeb.UserChannel do
   On join the socket is tracked in `MehungryWeb.Presence` on its own topic so
   the push layer (`MehungryWeb.Api.PushDispatch`) can tell the user is connected
   and skip the OS push (they already got the live broadcast).
+
+  It also relays `Mehungry.History.broadcast_meals_changed/1` as a
+  `"meals_changed"` poke (`{}`): the user's calendar was changed from elsewhere
+  (a nutritionist's draft or edit, an AI plan landing) and the client should
+  refetch its meals.
   """
   use MehungryWeb, :channel
 
@@ -29,6 +34,13 @@ defmodule MehungryWeb.UserChannel do
         online_at: System.system_time(:second)
       })
 
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, Mehungry.History.meals_topic(socket.assigns.user_id))
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:meals_changed, _user_id}, socket) do
+    push(socket, "meals_changed", %{})
     {:noreply, socket}
   end
 

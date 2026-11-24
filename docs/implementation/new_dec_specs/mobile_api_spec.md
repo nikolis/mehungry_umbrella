@@ -1928,6 +1928,12 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
   detail, `user` → that profile. Self-notifications and duplicate unread follows
   are suppressed server-side. Backed by `MehungryWeb.Api.Broadcaster.dispatch/5`
   → `Mehungry.Notifications`.
+- **Push → client**: `"meals_changed"` `{}` — the user's calendar meals were changed
+  from somewhere other than this client: their nutritionist drafted or edited the
+  week, or an AI plan finished writing. It is a *poke* with no data and no inbox
+  row: invalidate/refetch every `GET /meals…` query (week, day, day nutrition).
+  Not sent for the client's own `POST/PUT/DELETE /meals` writes. Best-effort —
+  also refetch when the channel re-joins and when the app returns to the foreground.
 - **OS push fallback**: `dispatch/5` also enqueues an Expo push to the recipient's
   registered devices (see device registration in §5.1) — but **only when no `user:<id>`
   socket is connected** (a connected client already got this event, so no duplicate

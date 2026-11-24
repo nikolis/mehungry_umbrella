@@ -226,6 +226,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
       if meal.user_id == client_id do
         History.delete_user_meal(meal)
+        History.broadcast_meals_changed(client_id)
         user_meals = load_and_format_user_meals(client_id, current_calendar_date(socket))
 
         {:noreply,

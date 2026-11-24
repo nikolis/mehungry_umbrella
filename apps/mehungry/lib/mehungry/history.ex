@@ -599,6 +599,25 @@ defmodule Mehungry.History do
       {:error, %Ecto.Changeset{}}
 
   """
+  @doc """
+  PubSub topic carrying "this user's calendar meals changed" pokes.
+  """
+  def meals_topic(user_id), do: "user_meals:#{user_id}"
+
+  @doc """
+  Tell a user's connected clients that their calendar meals were changed **by
+  someone or something other than the screen they are looking at** — a
+  nutritionist drafting or editing their week, an AI plan landing. The message is
+  a poke (`{:meals_changed, user_id}`), not the data: `MehungryWeb.UserChannel`
+  relays it to the mobile app as `"meals_changed"`, which refetches.
+
+  Called once per bulk write, never per meal, and not for a user's own REST
+  writes (that client already has the result).
+  """
+  def broadcast_meals_changed(user_id) do
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, meals_topic(user_id), {:meals_changed, user_id})
+  end
+
   def create_user_meal(attrs \\ %{}) do
     %UserMeal{}
     |> UserMeal.changeset(attrs)
