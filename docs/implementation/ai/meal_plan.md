@@ -166,7 +166,7 @@ every user's recipes. A failed run now fails, with a readable message
 |---|---|
 | `get_recent_meals` | Last 21 days of the person's meal history, so the plan avoids repeating what they just ate |
 | `search_catalog` (user) / `search_recipes` (nutritionist) | Guarded semantic search of the catalog (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings, `total_minutes` (prep + cook, null when unknown), **per-serving calories** (`MealPlanCore.per_serving_calories/1`, the same `NutrientUtils.macro_summary/1` the calendar uses) and the recipe's **meal roles**. An optional **`slot`** input scopes the search, in SQL, to recipes whose roles fit that slot (plus unclassified ones); an optional **`part`** (`salad` / `dessert`) searches that role instead, for a Lunch side — see [`../food/meal_roles.md`](../food/meal_roles.md) |
-| `list_snack_options` (snack mode) | The run's allowed snack foods, built once at run start (`MealPlanCore.snack_options/3`): **`seasonal_fruits`** — curated `fresh_fruit` locally on the market in the person's country (the **client's** for a nutritionist draft) in the plan's month(s), and **`nuts`** — curated `dried_nut`; both through the run's diet/avoid guards, shaped with `kcal_per_100g` + unit options carrying `kcal_per_unit`. Calling it makes exactly those ingredients submittable. See [`../food/snack_ingredients.md`](../food/snack_ingredients.md) |
+| `list_snack_options` (snack mode) | The run's allowed snack foods, built once at run start (`MealPlanCore.snack_options/3`): **`seasonal_fruits`** — curated `fresh_fruit` on the market (grown locally or imported) in the person's country (the **client's** for a nutritionist draft) in the plan's month(s), and **`nuts`** — curated `dried_nut`; both through the run's diet/avoid guards, shaped with `kcal_per_100g` + unit options carrying `kcal_per_unit`. Calling it makes exactly those ingredients submittable. See [`../food/snack_ingredients.md`](../food/snack_ingredients.md) |
 | `search_ingredients` (fallback only) | Open whole-food ingredient search — offered **instead of** `list_snack_options` only when no curated nut survives the run's guards (nothing curated yet, or every nut excluded by the person's diet/avoid list); same shape |
 | `submit_plan` | Validate + accept the plan; the **only** way to finish. Each entry is one `(date, slot)` **meal with a list of `items`** — recipe items (`recipe_id`, `part` main/salad/dessert, `cooking_portions`, `servings`) and/or ingredient items (`ingredient_id`, `quantity`, `unit_selection`); the older one-item flat entry is still accepted (`MealPlanCore.expand_entry/1`). An empty plan or meal is rejected; so is a composition violation or a day outside the calorie band (below) |
 
@@ -187,8 +187,8 @@ model retry when:
 - **Composition** (`MealPlanCore.Rules`, pure, one error per violation, each
   telling the model which call fixes it). Rule groups are switched on per run via
   `acc.rules`, set by `MealPlanCore.with_snack_options/2`: **snack mode** (at least
-  one curated nut available) = `[:composition, :time, :snack_kinds]`;
-  **fallback** (no nut) = `[:composition, :time]` with the open ingredient search
+  one curated nut available) = `[:composition, :time, :snack_kinds, :snack_variety]`;
+  **fallback** (no nut) = `[:composition, :time, :snack_variety]` with the open ingredient search
   (logged). `default_rules/0` (`[:composition]`) applies only to a hand-built
   accumulator:
   - always: a **main** recipe's roles fit its slot (below);
@@ -206,6 +206,15 @@ model retry when:
   - `:snack_kinds`: snack/breakfast ingredients come only from the run's
     seasonal-fruit / curated-nut sets; morning snack ≥ 1 fruit (nuts when no fruit
     is in season — the tool says so in its `note`), afternoon snack ≥ 1 nut.
+  - `:snack_variety` (plan-wide): one snack ingredient may fill at most **2** snack
+    slots of the plan (`Rules.snack_repeat_max/0`), counted per snack cell (fruit +
+    nut in one snack is one use of each). The cap rises only when the ingredient's
+    pool can't share the load — `ceil(slots needing that kind / pool size)`: fruit
+    covers the morning snacks, nuts the afternoon ones (and the morning ones too
+    when no fruit is in season), so one curated nut may fill every afternoon snack.
+    The error names the food and its dates so the model swaps the extras. *(Added
+    2026-11-24 after a production draft put "Almonds, unsalted" in 12 of 12
+    snacks: no fruit was curated yet, and nothing checked snack repetition.)*
 
   `MealPlanCore.composition_block/1` renders the same rules into both agents'
   prompts, so the prompt and the check can't drift.

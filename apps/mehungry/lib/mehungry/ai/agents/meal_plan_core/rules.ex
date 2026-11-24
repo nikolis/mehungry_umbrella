@@ -28,6 +28,10 @@ defmodule Mehungry.AI.Agents.MealPlanCore.Rules do
       (`Food.total_time_minutes/1`; recipe meta carries it as `total_minutes`).
     * `:snack_kinds` — snack (and breakfast) ingredients must come from the run's
       seasonal-fruit / curated-nut sets (`ctx.fruit_ids`, `ctx.nut_ids`).
+    * `:snack_variety` — plan-wide: one snack food may fill at most #{2} snack slots
+      of the plan, unless its pool is too small to share the load (1 nut for 7
+      afternoon snacks): then the cap is `ceil(slots that need that kind / pool)`.
+      Counted per snack cell, so fruit + nuts in one snack is one use of each.
 
   Errors are written for the model: what is wrong, and which tool call fixes it.
   """
@@ -36,12 +40,14 @@ defmodule Mehungry.AI.Agents.MealPlanCore.Rules do
 
   @breakfast_max_minutes 15
   @dinner_max_minutes 40
+  @snack_repeat_max 2
   @parts ~w(main salad dessert)
   @snack_slots ["Morning Snack", "Afternoon Snack"]
 
   def breakfast_max_minutes, do: @breakfast_max_minutes
   def dinner_max_minutes, do: @dinner_max_minutes
   def parts, do: @parts
+  def snack_repeat_max, do: @snack_repeat_max
 
   @doc """
   Every composition error in `entries` (string-keyed `%{"date", "slot", "items"}`
@@ -49,10 +55,15 @@ defmodule Mehungry.AI.Agents.MealPlanCore.Rules do
 
     * `:recipe_meta` — `%{recipe_id => %{title, roles, total_minutes}}`
     * `:rules` — `MapSet` of enabled groups (`:composition`, `:time`, `:snack_kinds`)
-    * `:fruit_ids`, `:nut_ids` — `MapSet`s, read only with `:snack_kinds`
+    * `:fruit_ids`, `:nut_ids` — `MapSet`s, read with `:snack_kinds` / `:snack_variety`
+    * `:ingredient_names` — `%{ingredient_id => name}`, for readable variety errors
   """
   def errors(entries, ctx) do
-    Enum.flat_map(entries, &entry_errors(&1, ctx))
+    cell_errors = Enum.flat_map(entries, &entry_errors(&1, ctx))
+
+    if MapSet.member?(Map.get(ctx, :rules, MapSet.new()), :snack_variety),
+      do: cell_errors ++ snack_variety_errors(entries, ctx),
+      else: cell_errors
   end
 
   defp entry_errors(%{"slot" => slot, "items" => items} = entry, ctx) when is_list(items) do
@@ -264,4 +275,63 @@ defmodule Mehungry.AI.Agents.MealPlanCore.Rules do
   end
 
   defp required_kind(_slot, _cell, _ids, _fruit, _nuts), do: []
+
+  # ── snack variety (plan-wide) ────────────────────────────────────────────────
+
+  # How many snack cells each ingredient fills; an ingredient over its cap is one
+  # error naming the dates, so the model knows which snacks to swap.
+  defp snack_variety_errors(entries, ctx) do
+    snacks = Enum.filter(entries, &(&1["slot"] in @snack_slots and is_list(&1["items"])))
+
+    uses =
+      for entry <- snacks,
+          id <- entry["items"] |> Enum.map(& &1["ingredient_id"]) |> Enum.uniq(),
+          is_integer(id),
+          reduce: %{} do
+        acc -> Map.update(acc, id, [entry["date"]], &[entry["date"] | &1])
+      end
+
+    for {id, dates} <- Enum.sort(uses),
+        cap = snack_cap(id, snacks, ctx),
+        length(dates) > cap do
+      "#{ingredient_label(id, ctx)} is in #{length(dates)} snacks (#{dates |> Enum.sort() |> Enum.join(", ")}) " <>
+        "— vary the snacks: one snack food may appear in at most #{cap} snack slots. " <>
+        "Swap the extra ones for other options from #{snack_tool(ctx)}."
+    end
+  end
+
+  # The cap for one ingredient: the base cap, raised only when its pool is too
+  # small to cover the slots that need that kind (one curated nut → it fills every
+  # afternoon snack). Fruit covers the morning snacks; nuts the afternoon ones, and
+  # the morning ones too when no fruit is in season.
+  defp snack_cap(id, snacks, ctx) do
+    fruit = Map.get(ctx, :fruit_ids) || MapSet.new()
+    nuts = Map.get(ctx, :nut_ids) || MapSet.new()
+    count = fn slot -> Enum.count(snacks, &(&1["slot"] == slot)) end
+
+    {demand, pool} =
+      cond do
+        MapSet.member?(fruit, id) ->
+          {count.("Morning Snack"), MapSet.size(fruit)}
+
+        MapSet.member?(nuts, id) ->
+          morning = if MapSet.size(fruit) == 0, do: count.("Morning Snack"), else: 0
+          {count.("Afternoon Snack") + morning, MapSet.size(nuts)}
+
+        true ->
+          {0, 1}
+      end
+
+    max(@snack_repeat_max, ceil_div(demand, pool))
+  end
+
+  defp ceil_div(_n, 0), do: 0
+  defp ceil_div(n, d), do: div(n + d - 1, d)
+
+  defp ingredient_label(id, ctx) do
+    case Map.get(Map.get(ctx, :ingredient_names) || %{}, id) do
+      name when is_binary(name) -> "\"#{name}\" (ingredient_id #{id})"
+      _ -> "ingredient_id #{id}"
+    end
+  end
 end

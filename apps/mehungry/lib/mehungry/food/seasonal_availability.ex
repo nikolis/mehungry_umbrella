@@ -1,7 +1,7 @@
 defmodule Mehungry.Food.SeasonalAvailability do
   @moduledoc """
-  The core's read seam for **seasonal availability**: which food species are locally
-  on the market in a country in a given month.
+  The core's read seam for **seasonal availability**: which food species are on the
+  market in a country in a given month — grown locally or imported.
 
   The data is produced by the separate seasonality app, which depends on core, so core
   can never call it directly. Instead core defines this behaviour and reads the
@@ -23,7 +23,7 @@ defmodule Mehungry.Food.SeasonalAvailability do
   alias Mehungry.Repo
   alias Mehungry.Food.FoundementalFood
 
-  @doc "Species ids locally on the market in `country` (ISO-2) in `month` (1–12)."
+  @doc "Species ids on the market (local or imported) in `country` (ISO-2) in `month` (1–12)."
   @callback available_species_ids(country :: String.t(), month :: 1..12) :: MapSet.t()
 
   @doc "The countries seasonality knows about, as `%{code, name}` maps."
@@ -34,14 +34,14 @@ defmodule Mehungry.Food.SeasonalAvailability do
   @doc "The country used when a person has not set one."
   def default_country, do: @default_country
 
-  @doc "Species ids locally on the market in `country` in `month`."
+  @doc "Species ids on the market (local or imported) in `country` in `month`."
   def available_species_ids(country, month) when is_binary(country) and month in 1..12,
     do: impl().available_species_ids(country, month)
 
   def available_species_ids(_country, _month), do: MapSet.new()
 
   @doc """
-  Ingredient ids curated onto a species that is locally on the market in `country` in
+  Ingredient ids curated onto a species that is on the market (local or imported) in `country` in
   `month` (through `FoundementalFood`). An ingredient not curated onto any species is
   never included: its season is unknown.
   """

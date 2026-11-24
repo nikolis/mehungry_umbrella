@@ -5,8 +5,8 @@ defmodule Mehungry.Food.SnackIngredients do
 
   Two kinds are curated on `/professional/snack-nuts`: `"dried_nut"` and
   `"fresh_fruit"`. The meal planner reads nuts through `selected_ids/1` and fruit
-  through `seasonal_fruit_ids/2`, which keeps only the curated fruit that is locally
-  on the market in a country that month (`Mehungry.Food.SeasonalAvailability`).
+  through `seasonal_fruit_ids/2`, which keeps only the curated fruit that is on the
+  market (grown locally or imported) in a country that month (`Mehungry.Food.SeasonalAvailability`).
 
   Candidates are global (USDA catalog, `user_id IS NULL`) ingredients only.
   """
@@ -49,7 +49,7 @@ defmodule Mehungry.Food.SnackIngredients do
   end
 
   @doc """
-  Curated `"fresh_fruit"` ingredient ids that are locally on the market in `country`
+  Curated `"fresh_fruit"` ingredient ids that are on the market (local or imported) in `country`
   (ISO-2) in `month` (1–12). A curated fruit whose species has no seasonality data is
   left out: its season is unknown.
   """

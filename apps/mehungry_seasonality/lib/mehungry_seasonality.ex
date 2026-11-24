@@ -87,8 +87,8 @@ defmodule MehungrySeasonality do
   defdelegate for_species(species_id, country), to: Statuses, as: :by_month
 
   @doc """
-  Species ids locally on the market (in season, greenhouse, stored or year-round) in
-  `country` in `month` — what the core app's seasonal-availability seam reads (its
+  Species ids on the market in `country` in `month` — grown locally (in season,
+  greenhouse, stored or year-round) or imported (`some` / `major`) — what the core app's seasonal-availability seam reads (its
   behaviour is implemented in `MehungrySeasonality.Core`, the one door out).
   """
   defdelegate available_species_ids(country, month), to: Statuses

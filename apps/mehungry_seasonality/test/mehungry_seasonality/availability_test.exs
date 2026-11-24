@@ -39,6 +39,20 @@ defmodule MehungrySeasonality.AvailabilityTest do
     assert MehungrySeasonality.available_species_ids("IT", 7) == MapSet.new()
   end
 
+  test "imported species count too: some / major imports put it on the market" do
+    banana = species_fixture("Banana")
+    kiwi = species_fixture("Kiwi")
+    melon = species_fixture("Melon")
+    pear = species_fixture("Pear")
+
+    status(banana, 11, "none", %{imported: "major"})
+    status(kiwi, 11, "unknown", %{imported: "some"})
+    status(melon, 11, "none", %{imported: "none"})
+    status(pear, 11, "none", %{imported: "unknown"})
+
+    assert MehungrySeasonality.available_species_ids("GR", 11) == MapSet.new([banana, kiwi])
+  end
+
   test "an admin override is the effective value" do
     tomato = species_fixture("Tomato")
     status(tomato, 2, "unresolved")

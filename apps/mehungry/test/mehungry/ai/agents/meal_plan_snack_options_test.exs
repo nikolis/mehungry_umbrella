@@ -133,7 +133,7 @@ defmodule Mehungry.AI.Agents.MealPlanSnackOptionsTest do
         |> MealPlanCore.with_snack_options(MealPlanCore.snack_options(guards(), "IT", [7]))
 
       assert MealPlanCore.snack_mode?(acc)
-      assert acc.rules == MapSet.new([:composition, :time, :snack_kinds])
+      assert acc.rules == MapSet.new([:composition, :time, :snack_kinds, :snack_variety])
       assert MealPlanCore.snack_tool_def(acc).name == "list_snack_options"
     end
 
@@ -149,7 +149,7 @@ defmodule Mehungry.AI.Agents.MealPlanSnackOptionsTest do
         })
 
       refute MealPlanCore.snack_mode?(acc)
-      assert acc.rules == MapSet.new([:composition, :time])
+      assert acc.rules == MapSet.new([:composition, :time, :snack_variety])
       assert MealPlanCore.snack_tool_def(acc).name == "search_ingredients"
       assert {%{error: _}, _} = MealPlanCore.list_snack_options_tool(acc)
     end

@@ -149,6 +149,85 @@ defmodule Mehungry.AI.Agents.MealPlanRulesTest do
     end
   end
 
+  describe ":snack_variety" do
+    @kiwi 101
+    @walnut 201
+    @hazelnut 202
+
+    # 7 days of snacks: `morning.(day)` / `afternoon.(day)` give each day's items.
+    defp week(morning, afternoon) do
+      for day <- 1..7,
+          {slot, items} <- [
+            {"Morning Snack", morning.(day)},
+            {"Afternoon Snack", afternoon.(day)}
+          ] do
+        %{"date" => "2030-01-0#{day}", "slot" => slot, "items" => items}
+      end
+    end
+
+    defp variety_ctx(fruit, nuts),
+      do: %{
+        rules: MapSet.new([:snack_variety]),
+        fruit_ids: MapSet.new(fruit),
+        nut_ids: MapSet.new(nuts),
+        ingredient_names: %{@almond => "Almonds, unsalted"}
+      }
+
+    test "the same nut in every afternoon snack is rejected, naming the food and the dates" do
+      entries = week(fn _ -> [i(@peach)] end, fn _ -> [i(@almond)] end)
+      ctx = variety_ctx([@peach, @kiwi, 102, 103], [@almond, @walnut, @hazelnut])
+
+      errors = Rules.errors(entries, ctx)
+
+      assert Enum.any?(
+               errors,
+               &(&1 =~ ~s|"Almonds, unsalted" (ingredient_id #{@almond}) is in 7 snacks|)
+             )
+
+      assert Enum.any?(errors, &(&1 =~ "at most 2 snack slots"))
+      # the peach fills all 7 morning snacks too
+      assert Enum.any?(errors, &(&1 =~ "ingredient_id #{@peach} is in 7 snacks"))
+    end
+
+    test "a rotated week passes" do
+      fruits = [@peach, @kiwi, 102, 103]
+      nuts = [@almond, @walnut, @hazelnut, 203]
+      entries = week(&[i(Enum.at(fruits, rem(&1, 4)))], &[i(Enum.at(nuts, rem(&1, 4)))])
+
+      assert Rules.errors(entries, variety_ctx(fruits, nuts)) == []
+    end
+
+    test "fruit + nut in one snack is one use of each" do
+      entries = [
+        meal("Morning Snack", [i(@peach), i(@almond), i(@almond)]),
+        %{meal("Afternoon Snack", [i(@almond)]) | "date" => "2030-01-08"}
+      ]
+
+      assert Rules.errors(entries, variety_ctx([@peach], [@almond])) == []
+    end
+
+    test "a pool too small to share the load raises the cap" do
+      # one curated nut for 7 afternoon snacks: it has to repeat
+      entries =
+        week(&[i(Enum.at([@peach, @kiwi, 102, 103], rem(&1, 4)))], fn _ -> [i(@almond)] end)
+
+      assert Rules.errors(entries, variety_ctx([@peach, @kiwi, 102, 103], [@almond])) == []
+
+      # two nuts, no fruit: 14 snacks / 2 nuts = 7 each is the cap
+      entries = week(fn _ -> [i(@almond)] end, fn _ -> [i(@walnut)] end)
+      assert Rules.errors(entries, variety_ctx([], [@almond, @walnut])) == []
+    end
+
+    test "off unless the group is on" do
+      entries = week(fn _ -> [i(@peach)] end, fn _ -> [i(@almond)] end)
+
+      assert Rules.errors(entries, %{
+               variety_ctx([@peach], [@almond, @walnut])
+               | rules: MapSet.new()
+             }) == []
+    end
+  end
+
   test "expand_entry/1 turns the older flat entry into a one-item meal" do
     assert %{"items" => [%{"recipe_id" => 3, "servings" => 2}]} =
              MealPlanCore.expand_entry(%{

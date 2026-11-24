@@ -588,6 +588,8 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       end)
 
     acc = Map.update(acc, :ingredient_kcal, kcal, &Map.merge(&1, kcal))
+    names = ingredient_names(ingredients)
+    acc = Map.update(acc, :ingredient_names, names, &Map.merge(&1, names))
 
     result =
       if ingredients == [] do
@@ -635,7 +637,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   @doc """
   The snack foods a run may offer, built once when the run starts:
 
-    * `fruits` — curated `"fresh_fruit"` locally on the market in `country` in any
+    * `fruits` — curated `"fresh_fruit"` on the market (local or imported) in `country` in any
       of `months` (`Food.seasonal_fruit_ids/2`);
     * `nuts` — curated `"dried_nut"` (`Food.snack_ingredient_ids/1`);
 
@@ -692,16 +694,23 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         "MealPlanCore: no curated nut available for this run — snacks fall back to the open ingredient search"
       )
 
-      Map.merge(acc, %{rules: MapSet.new([:composition, :time]), snack_options: nil})
+      Map.merge(acc, %{
+        rules: MapSet.new([:composition, :time, :snack_variety]),
+        snack_options: nil
+      })
     else
       Map.merge(acc, %{
-        rules: MapSet.new([:composition, :time, :snack_kinds]),
+        rules: MapSet.new([:composition, :time, :snack_kinds, :snack_variety]),
         snack_options: options,
         fruit_ids: options.fruit_ids,
-        nut_ids: options.nut_ids
+        nut_ids: options.nut_ids,
+        ingredient_names: ingredient_names(options.fruits ++ options.nuts)
       })
     end
   end
+
+  # `%{ingredient_id => name}` of shaped ingredients, so rule errors can name them.
+  defp ingredient_names(ingredients), do: Map.new(ingredients, &{&1.ingredient_id, &1.name})
 
   @doc "True when the run offers snacks through `list_snack_options` (see `with_snack_options/2`)."
   def snack_mode?(acc), do: is_map(Map.get(acc, :snack_options))
@@ -717,7 +726,8 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       name: "list_snack_options",
       description:
         "Lists the foods allowed in the snack slots (and alongside breakfast): " <>
-          "`seasonal_fruits` — fruit in season where the person lives this month — and " <>
+          "`seasonal_fruits` — fruit on the market where the person lives this month " <>
+          "(grown there or imported) — and " <>
           "`nuts`. Each has an ingredient_id, name, kcal_per_100g and unit options, each " <>
           "with a unit_selection value and kcal_per_unit (calories for ONE of that unit; " <>
           "multiply by the quantity). Call it once; snacks may use ONLY these ingredients.",
@@ -744,7 +754,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
 
     note =
       if fruits == [],
-        do: "No fruit is in season here this month — use nuts for both snacks.",
+        do: "No fruit is on the market here this month — use nuts for both snacks.",
         else: nil
 
     {%{seasonal_fruits: fruits, nuts: nuts, note: note}, acc}
@@ -901,7 +911,8 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       recipe_meta: Map.get(acc, :recipe_meta, %{}),
       rules: Map.get(acc, :rules) || default_rules(),
       fruit_ids: Map.get(acc, :fruit_ids),
-      nut_ids: Map.get(acc, :nut_ids)
+      nut_ids: Map.get(acc, :nut_ids),
+      ingredient_names: Map.get(acc, :ingredient_names, %{})
     }
   end
 
@@ -1361,6 +1372,14 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         do: "at least one nut, optionally with seasonal fruit — #{snack_food}",
         else: snack_food
 
+    variety =
+      if MapSet.member?(rules, :snack_variety),
+        do:
+          "- Vary the snacks: one snack food may fill at most #{Rules.snack_repeat_max()} " <>
+            "snack slots in the plan (more\n  only when there are too few options to share " <>
+            "the load) — rotate the fruit and the nuts.\n",
+        else: ""
+
     breakfast_extras =
       if kinds?,
         do: "seasonal fruit and/or nuts",
@@ -1380,7 +1399,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       be in your plan — cook once, eat twice).
     - Morning Snack: #{morning}.
     - Afternoon Snack: #{afternoon}.
-    Example entry: {"date": "2026-12-01", "slot": "Lunch", "items": [
+    #{variety}Example entry: {"date": "2026-12-01", "slot": "Lunch", "items": [
       {"recipe_id": 12, "part": "main", "cooking_portions": 2, "servings": 1},
       {"recipe_id": 40, "part": "salad", "cooking_portions": 2, "servings": 1}]}
     """

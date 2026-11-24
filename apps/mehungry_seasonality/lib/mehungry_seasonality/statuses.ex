@@ -91,15 +91,22 @@ defmodule MehungrySeasonality.Statuses do
   # year-round product (`unresolved`) counts: it is on the market, the data just
   # cannot say whether from the field, a greenhouse or storage.
   @on_market ~w(in_season greenhouse stored unresolved)
+  # `imported` values that mean "imported product is on the market that month":
+  # at least the derivation's tonnage floor (`some`), or near the peak (`major`).
+  @imported_on_market ~w(some major)
 
   @doc """
-  Species ids locally on the market in `country` in `month` (`local` one of
-  #{Enum.join(@on_market, ", ")}). Curated values count like derived ones — the
-  stored `local` is already the effective value.
+  Species ids on the market in `country` in `month` — grown locally (`local` one
+  of #{Enum.join(@on_market, ", ")}) **or** imported (`imported` one of
+  #{Enum.join(@imported_on_market, ", ")}): a kiwi from Italy is as buyable as a
+  Greek one. Curated values count like derived ones — the stored `local` /
+  `imported` are already the effective values.
   """
   def available_species_ids(country, month) do
     from(s in MonthStatus,
-      where: s.country == ^country and s.month == ^month and s.local in @on_market,
+      where:
+        s.country == ^country and s.month == ^month and
+          (s.local in @on_market or s.imported in @imported_on_market),
       select: s.foundemental_species_id
     )
     |> Core.repo().all()

@@ -33,12 +33,14 @@ Unique index on `(ingredient_id, kind)`.
 
 ```
 curated "fresh_fruit" ingredients
-  ∩ ingredients curated onto a species (FoundementalFood) that is locally on the
-    market in that country that month (Food.SeasonalAvailability)
+  ∩ ingredients curated onto a species (FoundementalFood) that is on the market
+    (grown locally or imported) in that country that month (Food.SeasonalAvailability)
 ```
 
-- "Locally on the market" means the seasonality `local` value is `in_season`,
-  `greenhouse`, `stored` or `unresolved` (on the market all year, e.g. apples).
+- "On the market" means the seasonality `local` value is `in_season`,
+  `greenhouse`, `stored` or `unresolved` (on the market all year, e.g. apples), **or**
+  the `imported` value is `some` / `major` (imports need a `comext` mapping on the
+  species — see [`../seasonality.md`](../seasonality.md)).
 - A curated fruit whose ingredient isn't curated onto a species, or whose species has
   no seasonality data, is **never offered**: its season is unknown.
 - The country is the person's `user_profiles.country`. For a nutritionist's draft it is
@@ -47,6 +49,15 @@ curated "fresh_fruit" ingredients
   says so). If **no nut** is curated (or every nut is excluded by the person's
   diet/avoid list), the run falls back to the open ingredient search and the
   fruit/nut snack rule is off — so curate nuts first.
+- **An empty fruit list means nuts for every snack.** `seasonal_fruit_ids/2` returns
+  nothing when no `fresh_fruit` is curated at all — not only out of season — so a
+  fresh install must curate fruit too. Prod was first curated 2026-11-24 (apples,
+  bananas, clementines, table grapes, kiwifruit, oranges, pears, tangerines); the nut
+  list was pruned to one plain, unsalted entry per nut (no honey-roasted / glazed /
+  salted / duplicate rows).
+- Snacks must also **vary**: the `:snack_variety` rule caps one snack food at 2
+  snack slots per plan (more only when its pool is too small) — see
+  [`../ai/meal_plan.md`](../ai/meal_plan.md).
 
 `Food.SeasonalAvailability` is core's read seam into the separate seasonality app. See
 [`../seasonality.md`](../seasonality.md) → *Core seam*.

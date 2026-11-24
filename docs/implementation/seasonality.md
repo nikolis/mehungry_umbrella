@@ -249,7 +249,7 @@ Two findings that shaped the design:
 | `grid/1` | per mapped species, 12 months of `%{status, local, import}` |
 | `override_status/2`, `clear_override/1` | hand-set / release a month (`key = %{species_id, country, month}`) |
 | `for_species/2` | `%{month => %MonthStatus{}}` — the read seam for a public surface |
-| `available_species_ids/2` | `MapSet` of species ids locally on the market (`local` in `in_season`/`greenhouse`/`stored`/`unresolved`) in a country × month — what the core seam reads |
+| `available_species_ids/2` | `MapSet` of species ids on the market in a country × month — grown locally (`local` in `in_season`/`greenhouse`/`stored`/`unresolved`) **or** imported (`imported` in `some`/`major`) — what the core seam reads |
 | `local_values/0`, `imported_values/0` | the allowed status values |
 
 ## Data model (`seasonality_*` tables)
@@ -356,8 +356,13 @@ app:   MehungrySeasonality.Core                     (the one door out)
 - **Boundary:** the implementation lives in `core.ex`, the one file allowed to name
   core, and the wiring lives in `config/config.exs`. Both `BoundaryTest` rules hold:
   only `core.ex` references `Mehungry.*`, and core's `lib/` never names this app.
-- **"Available" is the effective value:** it means locally on the market, and an admin
-  override counts (it is the stored `local`).
+- **"Available" is the effective value:** it means on the market — grown locally
+  (`local` in `in_season`/`greenhouse`/`stored`/`unresolved`) **or** imported
+  (`imported` in `some`/`major`, i.e. at least the 10 t/month import floor) — and an
+  admin override of either fact counts (it is the stored value). Imports count since
+  2026-11-24: a kiwi from Italy is as buyable as a Greek one. The import fact needs a
+  **`comext` mapping** (HS/CN code) on the species; without one `imported` stays
+  `unknown` and only the local fact decides.
 - **Consumer:** `Food.seasonal_fruit_ids/2` ([`food/snack_ingredients.md`](food/snack_ingredients.md)).
 
 ## Admin page
