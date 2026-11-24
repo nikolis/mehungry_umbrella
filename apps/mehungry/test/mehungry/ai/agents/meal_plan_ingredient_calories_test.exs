@@ -70,7 +70,7 @@ defmodule Mehungry.AI.Agents.MealPlanIngredientCaloriesTest do
     {result, acc} = MealPlanCore.submit_plan_tool(%{"entries" => [entry.(20)]}, acc)
 
     assert result.success
-    assert [%{ingredient_id: id, quantity: 30.0}] = acc.submitted.entries
+    assert [%{ingredient_id: id, quantity: 30.0}] = flat_entries(acc)
     assert id == ingredient.id
 
     # 200 g is far over and can only come down to 100 g = 600 kcal → rejected.
@@ -78,4 +78,9 @@ defmodule Mehungry.AI.Agents.MealPlanIngredientCaloriesTest do
     refute high.success
     assert hd(high.errors) =~ "totals 600 kcal"
   end
+
+  # Normalized entries hold `items`; these tests plan one item per meal, so read
+  # each meal as its single item merged onto the meal.
+  defp flat_entries(acc),
+    do: Enum.map(acc.submitted.entries, &Map.merge(Map.delete(&1, :items), hd(&1.items)))
 end

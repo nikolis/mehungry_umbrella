@@ -65,25 +65,25 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
 
       assert result.success
       assert acc.submitted.calorie_warnings == []
-      assert total(acc.submitted.entries, acc) in 1796..2195
+      assert total(flat_entries(acc), acc) in 1796..2195
 
       # Smallest intervention that lands nearest the aim: lunch and dinner at two
       # servings (2,000 kcal) rather than one meal tripled.
       assert %{"breakfast" => 1, "lunch" => 2, "dinner" => 2} =
-               Map.new(acc.submitted.entries, &{&1.meal_type, &1.servings})
+               Map.new(flat_entries(acc), &{&1.meal_type, &1.servings})
     end
 
     test "an over-band day is brought down, and a day already inside is left alone" do
       {over, acc_over} = submit(day(%{"Breakfast" => 2, "Lunch" => 3, "Dinner" => 3}), acc())
       assert over.success
-      assert total(acc_over.submitted.entries, acc_over) in 1796..2195
+      assert total(flat_entries(acc_over), acc_over) in 1796..2195
 
       # 400 + 2×450 + 2×350 = 2,000: untouched.
       {inside, acc_in} = submit(day(%{"Lunch" => 2, "Dinner" => 2}), acc())
       assert inside.success
 
       assert %{"breakfast" => 1, "lunch" => 2, "dinner" => 2} =
-               Map.new(acc_in.submitted.entries, &{&1.meal_type, &1.servings})
+               Map.new(flat_entries(acc_in), &{&1.meal_type, &1.servings})
     end
 
     test "dinner is never left heavier than lunch when a lighter-dinner option fits" do
@@ -96,7 +96,7 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
       {result, acc} = submit(day(), acc(%{recipe_meta: meta}))
 
       assert result.success
-      by_slot = Map.new(acc.submitted.entries, &{&1.meal_type, &1})
+      by_slot = Map.new(flat_entries(acc), &{&1.meal_type, &1})
       assert by_slot["lunch"].servings * 300 >= by_slot["dinner"].servings * 500
     end
 
@@ -125,7 +125,7 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
           submit(day(%{"Breakfast" => bs, "Lunch" => ls, "Dinner" => ds}), acc)
 
         assert result.success
-        assert (total(acc.submitted.entries, acc) + snacks_kcal) in 1796..2195
+        assert (total(flat_entries(acc), acc) + snacks_kcal) in 1796..2195
       end
     end
   end
@@ -157,7 +157,7 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
     {result, acc} = submit(day(), acc(%{existing_day_kcal: %{@date => 700}}))
 
     assert result.success
-    assert Enum.all?(acc.submitted.entries, &(&1.servings == 1))
+    assert Enum.all?(flat_entries(acc), &(&1.servings == 1))
   end
 
   test "after two calorie-only rejections the plan is accepted with warnings" do
@@ -170,14 +170,14 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
     assert r3.success
 
     assert acc.submitted.calorie_warnings == [%{date: @date, total: 800, min: 1796, max: 2195}]
-    assert length(acc.submitted.entries) == 3
+    assert length(flat_entries(acc)) == 3
   end
 
   test "no band: nothing is checked and servings stay at one" do
     {result, acc} = submit(day(%{"Lunch" => 3}), acc(%{calorie_band: nil}))
 
     assert result.success
-    assert Enum.all?(acc.submitted.entries, &(&1.servings == 1))
+    assert Enum.all?(flat_entries(acc), &(&1.servings == 1))
     assert acc.submitted.calorie_warnings == []
   end
 
@@ -195,4 +195,9 @@ defmodule Mehungry.AI.Agents.MealPlanCalorieBandTest do
     assert block =~ "between\n1796 and 2195 kcal" or block =~ "1796 and 2195 kcal"
     assert MealPlanCore.calorie_block(nil) == ""
   end
+
+  # Normalized entries hold `items`; these tests plan one item per meal, so read
+  # each meal as its single item merged onto the meal.
+  defp flat_entries(acc),
+    do: Enum.map(acc.submitted.entries, &Map.merge(Map.delete(&1, :items), hd(&1.items)))
 end

@@ -20,6 +20,7 @@ defmodule Mehungry.Umbrella.MixProject do
           version: "0.0.1",
           applications: [
             mehungry: :permanent,
+            mehungry_seasonality: :permanent,
             mehungry_web: :permanent
           ]
         ]

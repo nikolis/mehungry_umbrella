@@ -15,13 +15,14 @@ and a computed nutrition map.
 | `author`, `cousine` | string | |
 | `servings` | integer | |
 | `difficulty` | integer | default `1` (1=easy, 2=medium, 3=hard) |
-| `cooking_time_{lower,upper}_limit` | integer | minutes; `lower` required |
+| `cooking_time_{lower,upper}_limit` | integer | minutes; `lower` required. Total time = prep `lower` + cook `lower` (`Food.total_time_minutes/1`) |
 | `preperation_time_{lower,upper}_limit` | integer | minutes; `lower` required *(spelling kept)* |
 | `private` | boolean | |
 | `list_image_url`, `image_url`, `detail_image_url`, `recipe_image_remote`, `original_url` | string | |
 | `primary_nutrients_size` | integer | |
 | `nutrients` | map | **computed & stored** — see [`../food/nutrition_calculation.md`](../food/nutrition_calculation.md) |
 | `meal_roles_classified_at` | utc_datetime | **derived**; set when the meal-role classifier has attempted the recipe (even with no result) — see [`../food/meal_roles.md`](../food/meal_roles.md) |
+| `times_estimated_at` | utc_datetime | **derived**; set when the AI time estimator has attempted a recipe that had no prep/cook time (even with no result) — see [`../food/recipe_times.md`](../food/recipe_times.md) |
 | `condition_flags` | array\<map\> | **virtual**; filled at display by `MehungryWeb.RecipeFlags` for opted-in users: `%{condition, compound, recommendation, severity}` |
 
 ## Relationships

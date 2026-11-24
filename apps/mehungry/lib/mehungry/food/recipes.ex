@@ -27,6 +27,23 @@ defmodule Mehungry.Food.Recipes do
   # key, so the namespace must stay `Mehungry.Food` — not `__MODULE__`.
   @cache_key_ns Mehungry.Food
 
+  @doc """
+  A recipe's total time in minutes: preparation + cooking (the `*_lower_limit`
+  fields the recipe form edits), or nil when neither is set. The one definition
+  the meal planner's time rules, the recipe search filter
+  (`RecipeVectorSearch` `:max_total_minutes`) and the SEO JSON-LD share.
+  """
+  def total_time_minutes(recipe) do
+    case int_or_zero(Map.get(recipe, :preperation_time_lower_limit)) +
+           int_or_zero(Map.get(recipe, :cooking_time_lower_limit)) do
+      0 -> nil
+      total -> total
+    end
+  end
+
+  defp int_or_zero(n) when is_integer(n) and n > 0, do: n
+  defp int_or_zero(_), do: 0
+
   def get_recipe_no_caching!(id) do
     {id, _} =
       if(is_integer(id)) do

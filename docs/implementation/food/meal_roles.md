@@ -155,9 +155,10 @@ admin sidebar ("Meal roles") and `/professional/recipes`.
    either hold an accepted role or have no roles at all.
 2. Every search result carries `roles`. Recipes whose only role is `component`
    are never offered.
-3. `submit_plan` rejects a recipe whose known roles don't fit its slot
-   (`slot_role_errors/2`), with a message telling the model to search with that
-   slot. Ingredient entries and unclassified recipes pass.
+3. `submit_plan` rejects a meal's **main** recipe whose known roles don't fit its
+   slot (`MealPlanCore.Rules`), with a message telling the model to search with
+   that slot. Ingredient items and unclassified recipes pass. A Lunch may add a
+   `salad` / `dessert` **part** (searched with `part:`), which must carry that role.
 4. Both agents' prompts define each slot in terms of roles: lunch/dinner must be
    a main or a meal soup (dinner may also be a `dinner` dish), and breakfast must be a breakfast dish.
 

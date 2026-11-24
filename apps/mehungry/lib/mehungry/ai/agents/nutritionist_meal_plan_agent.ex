@@ -69,7 +69,7 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
         Agent.run(
           system_prompt(preferences, acc),
           "Draft a 7-day meal plan for this client. Preferences: #{preferences}" <> extra,
-          tool_defs(),
+          tool_defs(acc),
           handler,
           acc,
           telemetry_metadata: %{agent: "nutritionist_meal_plan"},
@@ -130,7 +130,7 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     Meal slots each day: #{Enum.join(slots, ", ")}
     (up to #{max_entries} entries).
     Client preferences / notes: #{preferences}
-    #{MealPlanCore.guard_blocks(guards)}#{MealPlanCore.calorie_block(acc.calorie_band)}
+    #{MealPlanCore.guard_blocks(guards)}#{MealPlanCore.calorie_block(acc.calorie_band)}#{MealPlanCore.composition_block(acc.rules)}
     WORKFLOW:
     1. Call get_client_record FIRST — the nutritionist's file for this client:
        diet, foods to avoid (allergies/intolerances + condition-implicated foods),
@@ -142,24 +142,23 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     4. Call get_recent_meals to see what the client has eaten lately (avoid repetition)
     5. Call get_ratings to understand which types of meals the client rated well or poorly
     6. Call search_recipes one or more times, with `slot` set, to find suitable
-       recipes for the three main slots. Each result carries meal roles (main,
+       recipes for the three main slots (slot "Lunch" with part "salad" /
+       "dessert" for an optional Lunch salad or dessert). Each result carries meal roles (main,
        dinner, soup, side, meze, salad, breakfast, pre_workout, post_workout…), difficulty (1 = quick/light,
        3 = demanding) and per-serving calories — use them to place recipes and,
        with `servings`, to bring each day inside the client's calorie range
-    7. Call search_ingredients to find whole-food snack items for the two snack slots —
-       snacks should be a single whole food (e.g. a banana, 20 g of almonds, Greek
-       yogurt), NOT a recipe. Each unit option carries kcal_per_unit — count snacks
-       toward the day's total
-    8. Draft the plan, adding up each day's calories
+    7. #{snack_step(acc)}
+    8. Draft the plan — one entry per date and slot, each with its items — adding
+       up each day's calories
     9. Call submit_plan with the entries and a 2–3 sentence professional rationale
     10. If submit_plan returns errors, fix them and resubmit
 
     RULES:
-    - Each entry is EITHER a recipe (recipe_id + cooking_portions + servings, the
-      servings the client eats at that meal) OR an ingredient
-      (ingredient_id + quantity, optional unit_selection) — never both
+    - A recipe item has recipe_id + part + cooking_portions + servings (the
+      servings the client eats at that meal); an ingredient item has
+      ingredient_id + quantity, optional unit_selection
     - Only use recipe_ids returned by search_recipes and ingredient_ids returned by
-      search_ingredients — never invent IDs
+      #{snack_tool_name(acc)} — never invent IDs
     - DIET: respect the client's diet from get_client_record. The search tools
       already return only diet-compatible results — build the plan from those.
     - AVOID LIST: never select any recipe or ingredient whose name (or obvious
@@ -172,14 +171,13 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       `servings` — lunch may take 2 servings while dinner stays at 1 — rather than
       leaving a day short. In fill-gaps mode get_assigned_plan's
       existing_kcal_by_day already counts toward that day's total.
-    - SNACKS: the two snack slots (Morning Snack, Afternoon Snack) must favour a
-      single whole-food ingredient (fruit, nuts, yogurt, cheese) over a recipe —
-      e.g. 1 banana, 20 g of almonds, a cup of Greek yogurt. A person should be able
-      to grab them with no cooking. Use search_ingredients, not a recipe, for these.
-    - For ingredients, pick a unit_selection from the options search_ingredients
-      returned and a sensible quantity (e.g. 1 banana, 20 g of almonds)
-    - BREAKFAST: always quick and simple to prepare — a low-difficulty recipe or a
-      simple whole-food plate. Never a demanding dish in the morning.
+    - SNACKS: the two snack slots (Morning Snack, Afternoon Snack) are whole-food
+      ingredients, never a recipe — e.g. 1 peach, 20 g of almonds. A person should
+      be able to grab them with no cooking.
+    - For ingredients, pick a unit_selection from the options #{snack_tool_name(acc)}
+      returned and a sensible quantity (e.g. 1 peach, 20 g of almonds)
+    - BREAKFAST: quick to prepare — search with slot "Breakfast" (it only returns
+      dishes ready in 15 minutes). Never a demanding dish in the morning.
     - LUNCH IS THE MAIN MEAL: lunch should be the most intense/substantial meal of
       the day. The day's single demanding/heavy recipe (difficulty 3, e.g. ribs,
       fasolada, a slow-cooked stew) belongs at Lunch — at most one such dish per day.
@@ -191,7 +189,9 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
     - DINNER IS LIGHTER: dinner must be lighter than lunch — a soup or a light
       main (e.g. a hearty salad bowl that has role "main"). Never make dinner heavier than lunch, and never put two heavy
       main meals on the same day. If lunch is a light legume/vegetable dish (e.g.
-      beans), dinner may be similar.
+      beans), dinner may be similar. LEFTOVERS: dinner may instead be leftovers of
+      that day's lunch ({"leftover_of": "Lunch"}) — cook once, eat twice; keep the
+      leftover serving no larger than lunch's.
     - Vary recipes to minimise repetition, especially for recipes seen in recent history
     - Slot values must be exactly one of: #{Enum.join(slots, ", ")}
     - Write the rationale as a professional note the nutritionist can show the client
@@ -211,7 +211,25 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
 
   # ── tool definitions ──────────────────────────────────────────────────────────
 
-  defp tool_defs do
+  defp snack_step(acc) do
+    if MealPlanCore.snack_mode?(acc) do
+      "Call list_snack_options ONCE: it returns the fruit in season where the\n" <>
+        "       client lives and the nuts allowed. The Morning Snack is seasonal fruit\n" <>
+        "       (optionally with nuts), the Afternoon Snack is nuts (optionally with\n" <>
+        "       fruit); breakfast may add either. Each unit option carries\n" <>
+        "       kcal_per_unit — count snacks toward the day's total"
+    else
+      "Call search_ingredients to find whole-food snack items for the two snack slots —\n" <>
+        "       snacks should be a single whole food (e.g. a banana, 20 g of almonds, Greek\n" <>
+        "       yogurt), NOT a recipe. Each unit option carries kcal_per_unit — count snacks\n" <>
+        "       toward the day's total"
+    end
+  end
+
+  defp snack_tool_name(acc),
+    do: if(MealPlanCore.snack_mode?(acc), do: "list_snack_options", else: "search_ingredients")
+
+  defp tool_defs(acc) do
     [
       %{
         name: "get_client_summary",
@@ -255,7 +273,7 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
         input_schema: %{type: "object", properties: %{}, required: []}
       },
       MealPlanCore.search_recipes_tool_def("search_recipes"),
-      MealPlanCore.search_ingredients_tool_def(),
+      MealPlanCore.snack_tool_def(acc),
       MealPlanCore.submit_plan_tool_def(
         "2–3 sentence professional note explaining the plan choices for this client",
         true
@@ -286,11 +304,29 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
       # plus what is already on the calendar on days a fill-gaps draft adds to.
       calorie_band: context.calorie_band,
       existing_day_kcal: existing_day_kcal(client_id, start_date, context, opts),
+      # Fill-gaps: cells already on the calendar stay; submit_plan drops any plan
+      # entry for them before counting calories (they would be skipped anyway).
+      occupied_cells: occupied_cells(client_id, start_date, opts),
       guards: guards(professional_id, context),
       offered: MapSet.new(),
       offered_ingredients: MapSet.new(),
       submitted: nil
     }
+    |> with_snack_options(start_date, context)
+  end
+
+  # Snack foods for the draft: curated nuts + curated fruit in season in the
+  # CLIENT's country during the plan's month(s), through the client's guards. Also
+  # switches on the full rule set (or falls back when no nut is curated).
+  defp with_snack_options(acc, start_date, context) do
+    MealPlanCore.with_snack_options(
+      acc,
+      MealPlanCore.snack_options(
+        acc.guards,
+        Map.get(context, :country) || Mehungry.Food.SeasonalAvailability.default_country(),
+        MealPlanCore.plan_months(acc.first_day, Date.add(start_date, 6))
+      )
+    )
   end
 
   @doc """
@@ -311,6 +347,12 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
   end
 
   defp existing_day_kcal(_client_id, _start_date, _context, _opts), do: %{}
+
+  defp occupied_cells(client_id, start_date, opts) do
+    if (Keyword.get(opts, :mode) || :fill_gaps) == :fill_gaps,
+      do: MealPlanCore.occupied_cells(client_id, first_day(start_date), Date.add(start_date, 6)),
+      else: MapSet.new()
+  end
 
   defp guards(professional_id, context) do
     MealPlanCore.guards(
@@ -403,7 +445,10 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgent do
   end
 
   def handle_tool("search_recipes", %{"query" => query} = input, acc),
-    do: MealPlanCore.search_recipes_tool(query, acc, input["slot"])
+    do: MealPlanCore.search_recipes_tool(query, acc, input["slot"], input["part"])
+
+  def handle_tool("list_snack_options", _input, acc),
+    do: MealPlanCore.list_snack_options_tool(acc)
 
   def handle_tool("search_ingredients", %{"query" => query}, acc),
     do: MealPlanCore.search_ingredients_tool(query, acc)

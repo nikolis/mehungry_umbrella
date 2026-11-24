@@ -44,6 +44,25 @@ A recipe meal can be *planned* (on the calendar) and separately *consumed* (eate
 an imported blueprint meal is seeded `consume_portions: 1` precisely so the summary
 shows real numbers (see [`features/meal_blueprints.md`](features/meal_blueprints.md)).
 
+### Leftovers — `RecipeUserMeal.cooking = false`
+
+A recipe row with **`cooking: false`** eats food cooked at another meal — today the
+AI planner's leftover dinner (that day's Lunch main again). It carries
+`cooking_portions: 0` and the eaten `consume_portions`, so:
+
+- the day's **nutrition** counts it (scaled by `consume_portions / servings`, like any
+  recipe row);
+- the **shopping list** skips it (`Inventory.aggregate_meal_ingredients/1` rejects
+  `cooking: false`; the cooking Lunch row's `cooking_portions` already covers both);
+- the calendar card shows **"Leftovers · from lunch"** instead of a "prepare" count
+  (`format_user_meals` → `leftover: true`), and the mobile meal payload carries
+  `"leftover": true` (spec §9).
+
+`nil` (older rows) counts as cooked. This is deliberately **not** the
+`consume_recipe_user_meals` table below — that one is the mobile "I ate this" tick on
+the same meal, its rows mark the recipe `consumed`, it is not counted in nutrition,
+and its portion check only looks within one meal.
+
 ### `DayNote` — per-day free text
 
 `history_day_notes` (`date`, `body` ≤ 2000 chars, `user_id`) via

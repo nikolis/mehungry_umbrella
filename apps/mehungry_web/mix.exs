@@ -64,6 +64,7 @@ defmodule MehungryWeb.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:httpoison, "~> 2.0"},
       {:mehungry, in_umbrella: true},
+      {:mehungry_seasonality, in_umbrella: true},
       {:ueberauth, "~> 0.6"},
       {:ueberauth_facebook, "~> 0.8"},
       {:ueberauth_google, "~> 0.10"},

@@ -482,6 +482,85 @@ defmodule Mehungry.MealBlueprintsTest do
       refute MealBlueprints.plan_imported?(loaded)
     end
 
+    test "store_plan_meals/2 stores a composite meal as one row per recipe in its cell" do
+      user = user_fixture()
+      {:ok, bp} = create_default(user)
+      {:ok, plan} = MealBlueprints.create_plan(plan_attrs(user, bp))
+      main = recipe_fixture(user)
+      salad = recipe_fixture(user)
+      ingredient = ingredient_fixture(%{name: "Feta crumbs"})
+
+      entry = %{
+        day_index: 3,
+        meal_type: "lunch",
+        items: [
+          %{recipe_id: salad.id, part: "salad", cooking_portions: 2, servings: 1},
+          %{recipe_id: main.id, part: "main", cooking_portions: 4, servings: 1},
+          %{
+            ingredient_id: ingredient.id,
+            quantity: 30.0,
+            measurement_unit_id: nil,
+            ingredient_portion_id: nil
+          }
+        ]
+      }
+
+      assert {:ok, %{meals_count: 1}} = MealBlueprints.store_plan_meals(plan, [entry])
+
+      rows = MealBlueprints.list_plan_meals(plan.id)
+      assert Enum.all?(rows, &(&1.day_index == 3 and &1.meal_type == "lunch"))
+      by_recipe = Map.new(rows, &{&1.recipe_id, &1})
+
+      # The main row carries the meal's ingredients; the salad gets its own row.
+      assert [%{ingredient_id: iid}] = by_recipe[main.id].ingredients
+      assert iid == ingredient.id
+      assert by_recipe[main.id].cooking_portions == 4
+      assert by_recipe[salad.id].ingredients == []
+    end
+
+    test "a leftover dinner round-trips through a stored plan as cooking: false" do
+      user = user_fixture()
+      {:ok, bp} = create_default(user)
+      {:ok, plan} = MealBlueprints.create_plan(plan_attrs(user, bp))
+      recipe = recipe_fixture(user)
+
+      {:ok, plan} =
+        MealBlueprints.store_plan_meals(plan, [
+          %{
+            day_index: 1,
+            meal_type: "lunch",
+            items: [%{recipe_id: recipe.id, part: "main", cooking_portions: 3, servings: 1}]
+          },
+          %{
+            day_index: 1,
+            meal_type: "dinner",
+            items: [
+              %{
+                recipe_id: recipe.id,
+                part: "main",
+                leftover: true,
+                cooking_portions: 0,
+                servings: 1
+              }
+            ]
+          }
+        ])
+
+      dinner_row = Enum.find(MealBlueprints.list_plan_meals(plan.id), &(&1.meal_type == "dinner"))
+      assert dinner_row.cooking_portions == 0
+
+      start = ~D[2031-03-03]
+      {:ok, 2, 0, _} = MealBlueprints.import_plan_to_calendar(user.id, plan, start)
+
+      by_type =
+        user.id
+        |> Mehungry.History.list_calendar_user_meals(start, start)
+        |> Map.new(&{&1.meal_type, hd(&1.recipe_user_meals)})
+
+      assert %{cooking: true, cooking_portions: 3} = by_type["lunch"]
+      assert %{cooking: false, cooking_portions: 0} = by_type["dinner"]
+    end
+
     test "list_plan_meals preloads recipe and ingredient for display" do
       user = user_fixture()
       {:ok, bp} = create_default(user)

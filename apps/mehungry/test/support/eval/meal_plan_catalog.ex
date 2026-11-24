@@ -94,6 +94,51 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
   @dinner %{energy: 700, protein: 40, fat: 25, sat: 9, carbs: 70}
   @snack %{energy: 250, protein: 8, fat: 12, sat: 3, carbs: 28}
 
+  @nuts ["Almonds", "Walnuts"]
+  @fruits ["Apple", "Banana", "Orange", "Blueberries"]
+
+  # The snack curation Phase 3 of the composition rules reads: nuts as
+  # "dried_nut"; fruit as "fresh_fruit", each on its own species, all in season
+  # through `EvalSeasons` — so the agent runs in snack mode (list_snack_options).
+  # The caller restores `:seasonal_availability` with `restore_seasons/1`.
+  defp curate_snacks(ingredients) do
+    by_name = Map.new(ingredients, &{&1.name, &1.id})
+
+    for name <- @nuts,
+        do: {:ok, _} = Mehungry.Food.add_snack_ingredient(by_name[name], "dried_nut")
+
+    species_ids =
+      for name <- @fruits do
+        id = by_name[name]
+        {:ok, _} = Mehungry.Food.add_snack_ingredient(id, "fresh_fruit")
+
+        {:ok, species} =
+          Mehungry.Food.create_foundemental_species(%{
+            name: "eval #{name} #{System.unique_integer([:positive])}"
+          })
+
+        Mehungry.Repo.insert!(%Mehungry.Food.FoundementalFood{
+          foundemental_species_id: species.id,
+          ingredient_id: id,
+          usda_name: name
+        })
+
+        species.id
+      end
+
+    Application.put_env(:mehungry, :eval_in_season, MapSet.new(species_ids))
+    Application.put_env(:mehungry, :seasonal_availability, Mehungry.AI.Eval.EvalSeasons)
+  end
+
+  @doc "Restores the `:seasonal_availability` config `seed/1` swapped (pass its old value)."
+  def restore_seasons(previous) do
+    Application.delete_env(:mehungry, :eval_in_season)
+
+    if previous,
+      do: Application.put_env(:mehungry, :seasonal_availability, previous),
+      else: Application.delete_env(:mehungry, :seasonal_availability)
+  end
+
   @doc """
   Seeds the catalog and returns a context map (user_id, start_date, recipes,
   ingredients, recipe_names, recipe_roles, ingredient_names,
@@ -136,6 +181,8 @@ defmodule Mehungry.AI.Eval.MealPlanCatalog do
         attach_nutrients(i.id, nut, @snack)
         %{id: i.id, name: name}
       end)
+
+    curate_snacks(ingredients)
 
     %{
       user_id: user.id,

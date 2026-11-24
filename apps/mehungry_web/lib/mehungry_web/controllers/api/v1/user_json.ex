@@ -33,6 +33,7 @@ defmodule MehungryWeb.Api.V1.UserJSON do
       intro: profile && profile.intro,
       language_preference: (profile && profile.language_preference) || "en",
       daily_calorie_target: profile && profile.daily_calorie_target,
+      country: (profile && profile.country) || Mehungry.Food.SeasonalAvailability.default_country(),
       effective_calorie_target: effective.kcal,
       calorie_target_source: effective.source && Atom.to_string(effective.source),
       onboarding_level: (profile && profile.onboarding_level) || 0,

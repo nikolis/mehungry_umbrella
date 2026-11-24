@@ -77,6 +77,9 @@ config :mehungry, :taxonomy_classifier, Mehungry.AI.TaxonomyClassifierStub
 # Recipe meal-role classifier is stubbed in tests — no AI/API calls
 config :mehungry, :meal_role_classifier, Mehungry.AI.RecipeMealRoleClassifierStub
 
+# Recipe prep/cook time estimator is stubbed in tests — no AI/API calls
+config :mehungry, :recipe_time_estimator, Mehungry.AI.RecipeTimeEstimatorStub
+
 # S3 seed-file fetcher is stubbed in tests — no S3/network calls
 config :mehungry, :seed_file_fetcher, Mehungry.FoodData.Usda.SeedFileFetcherStub
 

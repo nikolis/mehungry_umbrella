@@ -17,6 +17,9 @@ defmodule Mehungry.Accounts.UserProfile do
     # The meal blueprint the user is currently following on their calendar
     # (persists the selection across sessions until they switch or stop).
     field :followed_blueprint_id, :id
+    # Where the person lives (ISO-2). Only used to pick fruit that is in season there
+    # for AI meal plans (Mehungry.Food.SeasonalAvailability); never shown publicly.
+    field :country, :string, default: "GR"
 
     belongs_to :user, Mehungry.Accounts.User
 
@@ -39,9 +42,11 @@ defmodule Mehungry.Accounts.UserProfile do
       :diet,
       :lactose_intolerant,
       :avoid_foods,
-      :followed_blueprint_id
+      :followed_blueprint_id,
+      :country
     ])
     |> validate_required([:user_id])
+    |> validate_inclusion(:country, Mehungry.Food.SeasonalAvailability.supported_country_codes())
     |> validate_number(:daily_calorie_target, greater_than: 0, less_than: 20_000)
     |> validate_inclusion(:diet, ~w(omnivore vegetarian vegan pescatarian))
     |> cast_assoc(:user_category_rules,

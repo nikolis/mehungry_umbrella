@@ -49,6 +49,10 @@ defmodule Mehungry.Food.Recipe do
     # result). Derived-only — never cast from user params. See
     # Food.MealRoleAssignments and docs/implementation/food/meal_roles.md.
     field :meal_roles_classified_at, :utc_datetime
+    # Set when the AI time estimator has attempted this recipe (even with no
+    # result). Derived-only — never cast from user params. See
+    # Food.RecipeTimeEstimation.
+    field :times_estimated_at, :utc_datetime
 
     has_many :user_recipes, Mehungry.Accounts.UserRecipe
     has_one :post, Mehungry.Posts.Post

@@ -30,6 +30,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   require Logger
 
   alias Mehungry.{Food, Repo, Search.RecipeVectorSearch}
+  alias Mehungry.AI.Agents.MealPlanCore.Rules
   alias Mehungry.Food.{Categories, IngredientPortion, MealRoleAssignments, MealRoles, Recipe}
   alias Mehungry.History.MealType
 
@@ -313,11 +314,13 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       description:
         "Semantically search the available recipe catalog by natural language query. " <>
           "Returns matching recipes with their recipe_id, title, difficulty (1–3), servings, " <>
-          "per-serving calories (use these to keep each day near the calorie target), and " <>
+          "total_minutes (prep + cook, null when unknown), per-serving calories (use these to " <>
+          "keep each day near the calorie target), and " <>
           "meal roles (e.g. main, dinner, soup, side, meze, salad, breakfast, snack, dessert, " <>
           "pre_workout, post_workout). " <>
           "Pass `slot` to get only recipes that can fill that slot on their own — e.g. " <>
           "slot 'Dinner' returns mains, dinner dishes and meal soups, never a meze or side. " <>
+          "For a Lunch salad or dessert, pass slot 'Lunch' with part 'salad' or 'dessert'. " <>
           "Use descriptive phrases like 'light high-protein breakfast', " <>
           "'quick vegetarian lunch', or 'hearty Mediterranean dinner'. " <>
           "Call with different queries to find recipes for each meal slot type.",
@@ -334,6 +337,13 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
             enum: @slots,
             description:
               "The meal slot you are searching for. Only recipes whose meal roles fit that slot are returned."
+          },
+          part: %{
+            type: "string",
+            enum: ["main", "salad", "dessert"],
+            description:
+              "Which part of the meal you are searching for (default main). 'salad' / " <>
+                "'dessert' return salads / desserts to go with a Lunch main."
           }
         },
         required: ["query"]
@@ -373,8 +383,9 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       name: "submit_plan",
       description:
         "Validate and submit the 7-day meal plan. Pass every entry at once (up to 5 slots " <>
-          "× 7 days). Each entry is EITHER a recipe (set recipe_id, cooking_portions and " <>
-          "servings) OR an ingredient (set ingredient_id, quantity, and unit_selection). " <>
+          "× 7 days). Each entry is one (date, slot) meal holding a list of `items`; each " <>
+          "item is EITHER a recipe (recipe_id, cooking_portions, servings, part) OR an " <>
+          "ingredient (ingredient_id, quantity, unit_selection). " <>
           "`servings` is how many servings of the recipe the person EATS at that meal (1–3, " <>
           "default 1) — the meal's calories are the recipe's per-serving calories × servings, " <>
           "so raise it to reach a calorie range. Returns success, or a list of errors to fix " <>
@@ -391,25 +402,46 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
               properties: %{
                 date: %{type: "string", description: "YYYY-MM-DD"},
                 slot: %{type: "string", description: "One of: #{Enum.join(@slots, ", ")}"},
-                recipe_id: %{type: "integer", description: "For a recipe entry"},
-                cooking_portions: %{type: "integer", description: "Recipe entry: 1–4"},
-                servings: %{
-                  type: "integer",
-                  description:
-                    "Recipe entry: servings eaten at this meal, 1–3 (default 1). " <>
-                      "Calories = per-serving calories × servings."
-                },
-                ingredient_id: %{type: "integer", description: "For an ingredient entry"},
-                unit_selection: %{
-                  type: "integer",
-                  description: "Ingredient entry: a unit_selection value from search_ingredients"
-                },
-                quantity: %{
-                  type: "number",
-                  description: "Ingredient entry: amount in the chosen unit"
+                items: %{
+                  type: "array",
+                  description: "What is eaten at this meal (see the composition rules)",
+                  items: %{
+                    type: "object",
+                    properties: %{
+                      recipe_id: %{type: "integer", description: "For a recipe item"},
+                      leftover_of: %{
+                        type: "string",
+                        enum: ["Lunch"],
+                        description:
+                          "Dinner only: eat leftovers of that day's Lunch main instead of a " <>
+                            "new recipe (set servings; no recipe_id)"
+                      },
+                      part: %{
+                        type: "string",
+                        enum: ["main", "salad", "dessert"],
+                        description: "Recipe item: main (default), or a Lunch salad / dessert"
+                      },
+                      cooking_portions: %{type: "integer", description: "Recipe item: 1–4"},
+                      servings: %{
+                        type: "integer",
+                        description:
+                          "Recipe item: servings eaten at this meal, 1–3 (default 1). " <>
+                            "Calories = per-serving calories × servings."
+                      },
+                      ingredient_id: %{type: "integer", description: "For an ingredient item"},
+                      unit_selection: %{
+                        type: "integer",
+                        description: "Ingredient item: a unit_selection value from the search"
+                      },
+                      quantity: %{
+                        type: "number",
+                        description: "Ingredient item: amount in the chosen unit"
+                      }
+                    }
+                  }
                 }
               },
-              required: ["date", "slot"]
+              required: ["date", "slot", "items"]
             }
           },
           rationale: %{type: "string", description: rationale_description}
@@ -429,8 +461,14 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   Recipe search with the guards applied. Every returned id joins the `offered`
   provenance set; a filtered-out id never does.
   """
-  def search_recipes_tool(query, %{guards: guards, offered: offered} = acc, slot \\ nil) do
-    recipes = search_recipes(query, guards, slot)
+  def search_recipes_tool(
+        query,
+        %{guards: guards, offered: offered} = acc,
+        slot \\ nil,
+        part \\ nil
+      ) do
+    time? = MapSet.member?(Map.get(acc, :rules) || default_rules(), :time)
+    recipes = search_recipes(query, guards, slot, part, time?: time?)
 
     acc = %{
       acc
@@ -441,7 +479,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
 
     result =
       if recipes == [] do
-        %{found: false, message: no_recipes_message(query, slot)}
+        %{found: false, message: no_recipes_message(query, slot, part)}
       else
         %{found: true, count: length(recipes), recipes: recipes}
       end
@@ -449,12 +487,17 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     {result, acc}
   end
 
-  defp no_recipes_message(query, slot) when slot in @slots do
+  defp no_recipes_message(query, slot, part) when part in ["salad", "dessert"] do
+    "No #{part} recipes found for '#{query}'#{if slot, do: " for #{slot}", else: ""}. " <>
+      "Try a different query, or leave the #{part} out — it is optional."
+  end
+
+  defp no_recipes_message(query, slot, _part) when slot in @slots do
     "No recipes found for '#{query}' that can fill #{slot}. Try a different query " <>
       "(searching with the slot only returns dishes that fit it)."
   end
 
-  defp no_recipes_message(query, _slot),
+  defp no_recipes_message(query, _slot, _part),
     do: "No recipes found for '#{query}'. Try a different query."
 
   # Title + roles of every offered recipe, so submit_plan can check slot fit
@@ -463,25 +506,35 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     meta =
       Map.new(
         recipes,
-        &{&1.recipe_id, %{title: &1.title, roles: &1.roles, calories: &1.calories}}
+        &{&1.recipe_id,
+         %{
+           title: &1.title,
+           roles: &1.roles,
+           calories: &1.calories,
+           total_minutes: &1.total_minutes
+         }}
       )
 
     Map.update(acc, :recipe_meta, meta, &Map.merge(&1, meta))
   end
 
   @doc false
-  def search_recipes(query, guards, slot \\ nil) do
-    roles = MealRoles.slot_roles(slot)
+  def search_recipes(query, guards, slot \\ nil, part \\ nil, opts \\ []) do
+    roles = search_roles(slot, part)
+    time_opts = if opts[:time?], do: time_opts(slot, part), else: []
 
     recipes =
       query
-      |> RecipeVectorSearch.search(catalog_opts(guards.catalog) ++ [limit: 20, meal_roles: roles])
+      |> RecipeVectorSearch.search(
+        catalog_opts(guards.catalog) ++ [limit: 20, meal_roles: roles] ++ time_opts
+      )
       |> Enum.map(fn r ->
         %{
           recipe_id: r.id,
           title: r.title,
           difficulty: r.difficulty || 1,
           servings: r.servings || 2,
+          total_minutes: Map.get(r, :total_minutes),
           calories: per_serving_calories(r)
         }
       end)
@@ -498,6 +551,22 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     # `component` (sauces, doughs, stocks) is never a meal on its own.
     |> Enum.reject(&(&1.roles == ["component"]))
   end
+
+  # The roles a search may return: a Lunch salad / dessert part searches that role,
+  # anything else the roles that can fill the slot on their own.
+  defp search_roles(_slot, part) when part in ["salad", "dessert"], do: [part]
+  defp search_roles(slot, _part), do: MealRoles.slot_roles(slot)
+
+  # The time caps the `:time` rule enforces, applied in SQL so a search never
+  # offers a dish submit_plan would reject: Breakfast ≤ 15 min; Dinner ≤ 40 min,
+  # or any `dinner` dish. A Lunch (or a salad / dessert part) has no cap.
+  defp time_opts(_slot, part) when part in ["salad", "dessert"], do: []
+  defp time_opts("Breakfast", _part), do: [max_total_minutes: Rules.breakfast_max_minutes()]
+
+  defp time_opts("Dinner", _part),
+    do: [max_total_minutes: Rules.dinner_max_minutes(), time_exempt_roles: ["dinner"]]
+
+  defp time_opts(_slot, _part), do: []
 
   defp catalog_opts({:user, user_id}), do: [user_id: user_id]
   defp catalog_opts(:public), do: [public_only: true]
@@ -539,10 +608,18 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     |> Enum.reject(&MapSet.member?(guards.avoid_ingredient_ids, &1.id))
     |> reject_avoided(guards.avoid_terms, & &1.name)
     |> reject_avoided_words(guards.avoid_word_terms, & &1.name)
+    |> shape_ingredients()
+  end
+
+  # The model-facing shape of an ingredient: name, kcal per 100 g, and its unit
+  # options, each with kcal for ONE of that unit.
+  defp shape_ingredients(ingredients) do
+    gram_ids = Mehungry.Food.NutrientCalculation.gram_unit_ids()
+
+    ingredients
     |> with_energy_preloads()
     |> Enum.map(fn i ->
       kcal_100 = kcal_per_100g(i)
-      gram_ids = Mehungry.Food.NutrientCalculation.gram_unit_ids()
 
       units =
         i.id
@@ -552,6 +629,135 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
       %{ingredient_id: i.id, name: i.name, kcal_per_100g: kcal_100, units: units}
     end)
   end
+
+  # ── snack options (seasonal fruit + curated nuts) ─────────────────────────────
+
+  @doc """
+  The snack foods a run may offer, built once when the run starts:
+
+    * `fruits` — curated `"fresh_fruit"` locally on the market in `country` in any
+      of `months` (`Food.seasonal_fruit_ids/2`);
+    * `nuts` — curated `"dried_nut"` (`Food.snack_ingredient_ids/1`);
+
+  both through the run's diet / avoid guards and shaped like `search_ingredients`
+  results (unit options with `kcal_per_unit`). Returns `%{fruits, nuts, fruit_ids,
+  nut_ids}`; the id sets are what `Rules` (`:snack_kinds`) accepts.
+  """
+  def snack_options(guards, country, months) do
+    fruit_ids =
+      months
+      |> Enum.uniq()
+      |> Enum.reduce(MapSet.new(), &MapSet.union(&2, Food.seasonal_fruit_ids(country, &1)))
+
+    fruits = guarded_ingredients(fruit_ids, guards)
+    nuts = guarded_ingredients(Food.snack_ingredient_ids("dried_nut"), guards)
+
+    %{
+      fruits: fruits,
+      nuts: nuts,
+      fruit_ids: MapSet.new(fruits, & &1.ingredient_id),
+      nut_ids: MapSet.new(nuts, & &1.ingredient_id)
+    }
+  end
+
+  defp guarded_ingredients(ids, guards) do
+    case MapSet.to_list(ids) do
+      [] ->
+        []
+
+      ids ->
+        from(i in Mehungry.Food.Ingredient, where: i.id in ^ids, order_by: i.name)
+        |> Repo.all()
+        |> reject_off_diet_ingredients(guards.diet_mode)
+        |> Enum.reject(&MapSet.member?(guards.avoid_ingredient_ids, &1.id))
+        |> reject_avoided(guards.avoid_terms, & &1.name)
+        |> reject_avoided_words(guards.avoid_word_terms, & &1.name)
+        |> shape_ingredients()
+    end
+  end
+
+  @doc """
+  Puts a run's snack options and rule groups on its accumulator.
+
+  With at least one curated nut the run is in **snack mode**: all rule groups on
+  (`:composition`, `:time`, `:snack_kinds`), snacks come only from
+  `list_snack_options`. With **no curated nut** (nothing curated yet, or every nut
+  excluded by the person's diet / avoid list) an afternoon snack could never be
+  valid, so the run falls back to the open ingredient search and leaves
+  `:snack_kinds` off — a plan is still possible, and the fallback is logged.
+  """
+  def with_snack_options(acc, %{nuts: nuts} = options) do
+    if nuts == [] do
+      Logger.warning(
+        "MealPlanCore: no curated nut available for this run — snacks fall back to the open ingredient search"
+      )
+
+      Map.merge(acc, %{rules: MapSet.new([:composition, :time]), snack_options: nil})
+    else
+      Map.merge(acc, %{
+        rules: MapSet.new([:composition, :time, :snack_kinds]),
+        snack_options: options,
+        fruit_ids: options.fruit_ids,
+        nut_ids: options.nut_ids
+      })
+    end
+  end
+
+  @doc "True when the run offers snacks through `list_snack_options` (see `with_snack_options/2`)."
+  def snack_mode?(acc), do: is_map(Map.get(acc, :snack_options))
+
+  @doc "The snack tool a run gives the model: `list_snack_options` in snack mode, else `search_ingredients`."
+  def snack_tool_def(acc),
+    do:
+      if(snack_mode?(acc), do: list_snack_options_tool_def(), else: search_ingredients_tool_def())
+
+  @doc "Tool definition for `list_snack_options`."
+  def list_snack_options_tool_def do
+    %{
+      name: "list_snack_options",
+      description:
+        "Lists the foods allowed in the snack slots (and alongside breakfast): " <>
+          "`seasonal_fruits` — fruit in season where the person lives this month — and " <>
+          "`nuts`. Each has an ingredient_id, name, kcal_per_100g and unit options, each " <>
+          "with a unit_selection value and kcal_per_unit (calories for ONE of that unit; " <>
+          "multiply by the quantity). Call it once; snacks may use ONLY these ingredients.",
+      input_schema: %{type: "object", properties: %{}, required: []}
+    }
+  end
+
+  @doc "`list_snack_options` handler: returns the run's snack options and makes them submittable."
+  def list_snack_options_tool(%{snack_options: %{fruits: fruits, nuts: nuts}} = acc) do
+    offered = fruits ++ nuts
+
+    acc = %{
+      acc
+      | offered_ingredients:
+          Enum.reduce(offered, acc.offered_ingredients, &MapSet.put(&2, &1.ingredient_id))
+    }
+
+    kcal =
+      Map.new(offered, fn i ->
+        {i.ingredient_id, Map.new(i.units, &{&1.unit_selection, &1.kcal_per_unit})}
+      end)
+
+    acc = Map.update(acc, :ingredient_kcal, kcal, &Map.merge(&1, kcal))
+
+    note =
+      if fruits == [],
+        do: "No fruit is in season here this month — use nuts for both snacks.",
+        else: nil
+
+    {%{seasonal_fruits: fruits, nuts: nuts, note: note}, acc}
+  end
+
+  def list_snack_options_tool(acc),
+    do: {%{error: "Snack options are not available in this run — use search_ingredients."}, acc}
+
+  @doc false
+  # The month numbers a plan from `first_day` to `last_day` touches (fruit in
+  # season in either month of a week that crosses a month boundary counts).
+  def plan_months(%Date{} = first_day, %Date{} = last_day),
+    do: Enum.uniq([first_day.month, last_day.month])
 
   defp with_energy_preloads(ingredients) do
     Repo.preload(ingredients, [
@@ -591,48 +797,50 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   end
 
   @doc """
-  Validates a submitted plan against the provenance sets and, when clean, stores
-  `%{entries: normalized, rationale: text}` in `acc.submitted`. Nothing is
+  Validates a submitted plan and, when clean, stores `%{entries: normalized,
+  rationale: text, calorie_warnings: [...]}` in `acc.submitted`. Nothing is
   persisted here.
+
+  An entry is one `(date, slot)` meal holding `items` (see `expand_entry/1`; the
+  older one-item flat form is still accepted). In order:
+
+    1. cells already filled on the calendar (`acc.occupied_cells`, fill-gaps runs)
+       are dropped — they would be skipped at persist time anyway, and counting
+       them would double-count calories against `existing_day_kcal`;
+    2. provenance + shape (`validate_plan/7`) and the composition rules
+       (`MealPlanCore.Rules`, groups from `acc.rules`, default `default_rules/0`);
+    3. a `:replace_week` plan must cover every day's three main meals;
+    4. calories: every off-band day is first rebalanced in code
+       (`balance_days/2`), and only a day no amounts can fix goes back to the model
+       (at most #{2} times, then accepted with warnings).
   """
   def submit_plan_tool(%{"entries" => entries} = input, acc) when is_list(entries) do
     %{start_date: start_date, offered: offered, offered_ingredients: offered_ing} = acc
     # An agent may plan only part of the week (a nutritionist never plans a
     # client's past days): `first_day` narrows the accepted range.
     first_day = Map.get(acc, :first_day, start_date)
+    last_day = Date.add(start_date, 6)
+
+    {entries, dropped} = entries |> Enum.map(&expand_entry/1) |> drop_occupied(acc)
+    {entries, leftover_errors} = resolve_leftovers(entries)
 
     # Provenance is the guard: every offered id came from a real, guard-filtered
     # search result this run, so the offered sets double as the valid sets.
     errors =
-      validate_plan(
-        entries,
-        offered,
-        offered,
-        offered_ing,
-        offered_ing,
-        first_day,
-        Date.add(start_date, 6)
-      )
-
-    # A recipe must be able to fill its slot on its own (no meze as Dinner).
-    errors = errors ++ slot_role_errors(entries, Map.get(acc, :recipe_meta, %{}))
+      leftover_errors ++
+        validate_plan(entries, offered, offered, offered_ing, offered_ing, first_day, last_day) ++
+        Rules.errors(entries, rules_ctx(acc))
 
     # Replacing a week deletes what is there, so the plan must be able to stand
     # in for it: all three main meals on every day in range.
     errors =
       if errors == [] and entries != [] and Map.get(acc, :mode) == :replace_week,
-        do: missing_main_meals(entries, first_day, Date.add(start_date, 6)),
+        do: missing_main_meals(entries, first_day, last_day),
         else: errors
 
-    # Calories are checked last, and only on an otherwise-valid plan: each planned
-    # day must total inside the band. A thin catalogue must not fail the run, so
-    # after @max_calorie_rejections calorie-only rejections the plan is accepted
-    # and the days still off are handed back as warnings.
-    #
     # The model picks the dishes; the *amounts* are set here. It cannot reliably
-    # add up 35 entries, so every off-band day is first rebalanced in code
-    # (`balance_days/2`: servings + snack quantities). Only a day no amounts can
-    # fix — it needs different dishes — goes back to the model.
+    # add up 35 meals, so every off-band day is first rebalanced in code. Only a
+    # day no amounts can fix — it needs different dishes — goes back to the model.
     entries = if errors == [] and entries != [], do: balance_days(entries, acc), else: entries
     off_days = if errors == [] and entries != [], do: off_band_days(entries, acc), else: []
     rejections = Map.get(acc, :calorie_rejections, 0)
@@ -643,7 +851,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         {%{success: false, errors: errors}, acc}
 
       entries == [] ->
-        {%{success: false, errors: ["The plan has no entries — add meals and resubmit"]}, acc}
+        {%{success: false, errors: [empty_plan_error(dropped)]}, acc}
 
       off_days != [] and rejections < @max_calorie_rejections ->
         errors = Enum.map(off_days, &calorie_error(&1, acc.calorie_band))
@@ -658,7 +866,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         rationale = Map.get(input, "rationale") || ""
         warnings = Enum.map(off_days, &calorie_warning(&1, acc.calorie_band))
 
-        {%{success: true, count: length(normalized), message: "Plan accepted."},
+        {%{success: true, count: length(normalized), message: accepted_message(dropped)},
          %{
            acc
            | submitted: %{entries: normalized, rationale: rationale, calorie_warnings: warnings}
@@ -670,28 +878,169 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     {%{success: false, errors: ["submit_plan needs an `entries` array"]}, acc}
   end
 
+  defp empty_plan_error(0), do: "The plan has no entries — add meals and resubmit"
+
+  defp empty_plan_error(_dropped),
+    do:
+      "Every meal you planned is in a cell that is already filled on the calendar — plan " <>
+        "only the empty cells (see get_assigned_plan)."
+
+  defp accepted_message(0), do: "Plan accepted."
+
+  defp accepted_message(dropped),
+    do: "Plan accepted. #{dropped} meal(s) in already-filled cells were left out."
+
+  @doc """
+  The rule groups (`MealPlanCore.Rules`) a run enforces unless its accumulator sets
+  `:rules`: the composition rules (slot item counts / kinds / parts).
+  """
+  def default_rules, do: MapSet.new([:composition])
+
+  defp rules_ctx(acc) do
+    %{
+      recipe_meta: Map.get(acc, :recipe_meta, %{}),
+      rules: Map.get(acc, :rules) || default_rules(),
+      fruit_ids: Map.get(acc, :fruit_ids),
+      nut_ids: Map.get(acc, :nut_ids)
+    }
+  end
+
+  # ── entries + items ───────────────────────────────────────────────────────────
+
+  @doc """
+  The model's entry as `%{"date", "slot", "items" => [item]}`. An entry already
+  carrying `items` keeps them; the older flat form (one recipe or ingredient on the
+  entry itself) becomes a one-item list. Non-map items are dropped.
+  """
+  def expand_entry(%{"items" => items} = entry) when is_list(items) do
+    %{entry | "items" => Enum.filter(items, &is_map/1)}
+  end
+
+  def expand_entry(%{} = entry) do
+    item =
+      Map.take(
+        entry,
+        ~w(recipe_id ingredient_id leftover_of cooking_portions servings part quantity unit_selection)
+      )
+
+    Map.put(entry, "items", if(map_size(item) == 0, do: [], else: [item]))
+  end
+
+  def expand_entry(other), do: %{"items" => [], "raw" => other}
+
+  @doc """
+  Turns each `%{"leftover_of" => "Lunch"}` item into the recipe it eats: the main
+  recipe of the **same day's Lunch in this plan**, marked `"leftover" => true`
+  (servings kept). Leftovers are a Dinner-only option. Returns `{entries, errors}`;
+  an unresolvable leftover item stays as-is (and fails validation) with an error
+  telling the model what to do instead.
+  """
+  def resolve_leftovers(entries) do
+    lunch_main =
+      for %{"slot" => "Lunch", "date" => date, "items" => items} <- entries,
+          %{"recipe_id" => id} = item <- items,
+          is_integer(id) and (item["part"] || "main") == "main",
+          into: %{},
+          do: {date, id}
+
+    {entries, errors} =
+      Enum.map_reduce(entries, [], fn entry, errors ->
+        {items, new_errors} =
+          Enum.map_reduce(entry["items"], [], fn item, acc ->
+            case leftover_item(item, entry, lunch_main) do
+              {:ok, item} -> {item, acc}
+              {:error, msg} -> {item, [msg | acc]}
+            end
+          end)
+
+        {%{entry | "items" => items}, errors ++ Enum.reverse(new_errors)}
+      end)
+
+    {entries, errors}
+  end
+
+  defp leftover_item(%{"leftover_of" => of} = item, %{"slot" => slot, "date" => date}, lunch_main)
+       when is_binary(of) do
+    cell = "#{date} #{slot}"
+
+    cond do
+      slot != "Dinner" ->
+        {:error, "#{cell}: leftovers are only for Dinner (leftover_of: \"Lunch\")."}
+
+      of != "Lunch" ->
+        {:error, "#{cell}: leftover_of must be \"Lunch\"."}
+
+      not Map.has_key?(lunch_main, date) ->
+        {:error,
+         "#{cell}: leftovers need a Lunch main recipe on #{date} in this plan — plan that " <>
+           "Lunch, or give Dinner its own recipe."}
+
+      true ->
+        {:ok,
+         item
+         |> Map.drop(["leftover_of", "ingredient_id"])
+         |> Map.merge(%{"recipe_id" => lunch_main[date], "part" => "main", "leftover" => true})}
+    end
+  end
+
+  defp leftover_item(item, _entry, _lunch_main), do: {:ok, item}
+
+  # Fill-gaps runs: drop entries whose (date, slot) is already filled on the
+  # calendar. `{kept, dropped_count}`.
+  defp drop_occupied(entries, acc) do
+    occupied = Map.get(acc, :occupied_cells) || MapSet.new()
+
+    if MapSet.size(occupied) == 0 do
+      {entries, 0}
+    else
+      {kept, dropped} =
+        Enum.split_with(entries, &(not MapSet.member?(occupied, {&1["date"], &1["slot"]})))
+
+      {kept, length(dropped)}
+    end
+  end
+
+  @doc """
+  The `(date string, slot label)` cells already holding a meal on `user_id`'s
+  calendar in `first_day..last_day` — what a fill-gaps run must leave alone (the
+  same cells `MealPlanGenerator` skips when it writes the plan).
+  """
+  def occupied_cells(user_id, %Date{} = first_day, %Date{} = last_day) do
+    user_id
+    |> Mehungry.History.list_calendar_user_meals(first_day, last_day)
+    |> Enum.flat_map(fn meal ->
+      label = meal.meal_type && MealType.label(meal.meal_type)
+
+      if label in @slots,
+        do: [{meal.start_dt |> NaiveDateTime.to_date() |> Date.to_string(), label}],
+        else: []
+    end)
+    |> MapSet.new()
+  end
+
   # ── calorie band ──────────────────────────────────────────────────────────────
 
   defp calorie_checked?(acc), do: is_map(Map.get(acc, :calorie_band))
 
   @doc false
   # The planned days whose total falls outside `acc.calorie_band`, as
-  # `%{date, total, min, max}`. [] when no band is set. A day's total is the
-  # planned entries (recipe kcal × servings, ingredient kcal × quantity) plus
+  # `%{date, total, min, max}`. [] when no band is set. A day's total is every
+  # item of its meals (recipe kcal × servings, ingredient kcal × quantity) plus
   # `acc.existing_day_kcal[date]` — what is already on the calendar that day and
-  # will stay (fill-gaps). A day with an entry of unknown calories is skipped:
-  # it cannot be judged, and guessing 0 would force over-eating elsewhere.
+  # will stay (fill-gaps). A day with an item of unknown calories is skipped: it
+  # cannot be judged, and guessing 0 would force over-eating elsewhere.
   def off_band_days(entries, acc) do
     case Map.get(acc, :calorie_band) do
       %{min: min, max: max} ->
         existing = Map.get(acc, :existing_day_kcal, %{})
 
         entries
+        |> Enum.map(&expand_entry/1)
         |> Enum.filter(&is_binary(&1["date"]))
         |> Enum.group_by(& &1["date"])
         |> Enum.sort_by(&elem(&1, 0))
         |> Enum.flat_map(fn {date, day_entries} ->
-          kcals = Enum.map(day_entries, &entry_kcal(&1, acc))
+          kcals = for e <- day_entries, item <- e["items"], do: item_kcal(item, acc)
 
           if Enum.any?(kcals, &is_nil/1) do
             []
@@ -709,25 +1058,25 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     end
   end
 
-  defp entry_kcal(entry, acc) do
-    case entry_unit_kcal(entry, acc) do
-      {unit_kcal, _selection} when is_number(unit_kcal) -> unit_kcal * entry_amount(entry)
+  defp item_kcal(item, acc) do
+    case item_unit_kcal(item, acc) do
+      {unit_kcal, _selection} when is_number(unit_kcal) -> unit_kcal * item_amount(item)
       _ -> nil
     end
   end
 
   # `{kcal for ONE serving / ONE unit, resolved unit_selection | nil}`; the kcal
   # is nil when the ledger has no calories for the item.
-  defp entry_unit_kcal(%{"recipe_id" => id}, acc) when is_integer(id) do
+  defp item_unit_kcal(%{"recipe_id" => id}, acc) when is_integer(id) do
     case get_in(acc, [Access.key(:recipe_meta, %{}), id, :calories]) do
       kcal when is_number(kcal) -> {kcal, nil}
       _ -> {nil, nil}
     end
   end
 
-  defp entry_unit_kcal(%{"ingredient_id" => id} = entry, acc) when is_integer(id) do
+  defp item_unit_kcal(%{"ingredient_id" => id} = item, acc) when is_integer(id) do
     units = Map.get(Map.get(acc, :ingredient_kcal, %{}), id, %{})
-    selection = resolve_unit_selection(id, entry["unit_selection"])
+    selection = resolve_unit_selection(id, item["unit_selection"])
 
     case Map.get(units, selection) do
       kcal when is_number(kcal) -> {kcal, selection}
@@ -735,36 +1084,46 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     end
   end
 
-  defp entry_unit_kcal(_entry, _acc), do: {nil, nil}
+  defp item_unit_kcal(_item, _acc), do: {nil, nil}
 
-  # The amount an entry carries: servings eaten (recipe) or quantity (ingredient).
-  defp entry_amount(%{"recipe_id" => id} = entry) when is_integer(id),
-    do: servings(entry["servings"])
+  # The amount an item carries: servings eaten (recipe) or quantity (ingredient).
+  defp item_amount(%{"recipe_id" => id} = item) when is_integer(id),
+    do: servings(item["servings"])
 
-  defp entry_amount(%{"quantity" => q}) when is_number(q) and q > 0, do: q
-  defp entry_amount(_entry), do: 1
+  defp item_amount(%{"quantity" => q}) when is_number(q) and q > 0, do: q
+  defp item_amount(_item), do: 1
 
-  defp put_amount(%{"recipe_id" => id} = entry, amount) when is_integer(id),
-    do: Map.put(entry, "servings", amount)
+  defp put_amount(%{"recipe_id" => id} = item, amount) when is_integer(id),
+    do: Map.put(item, "servings", amount)
 
-  defp put_amount(entry, amount), do: Map.put(entry, "quantity", amount)
+  defp put_amount(item, amount), do: Map.put(item, "quantity", amount)
 
   # ── deterministic day balancing ───────────────────────────────────────────────
 
+  # Above this many amount combinations per day the search switches from
+  # exhaustive to coordinate descent (a composite day can have ~10 items).
+  @max_exhaustive_combos 2_000
+
   @doc false
   # Brings each off-band day inside `acc.calorie_band` by changing **amounts
-  # only** — never what is eaten: recipe servings (1–3 at Lunch/Dinner, 1–2
-  # elsewhere) and snack quantities (grams within 0.5–1.5× of what the model
-  # chose, pieces 1–2). A day already inside the band, or one holding an item of
-  # unknown calories, is returned untouched. Among the combinations for a day the
-  # winner is, in order: closest to the band (inside it when possible), dinner
-  # not heavier than lunch, smallest change from the model's amounts, closest to
-  # the aim. At most 3³·5² combinations per day — exhaustive search is fine.
+  # only** — never what is eaten:
+  #
+  #   * a main recipe's servings — 1–3 at Lunch/Dinner, 1–2 elsewhere;
+  #   * a salad / dessert part stays at its servings (a side is a side);
+  #   * an ingredient's quantity — grams within 0.5–1.5× of what the model chose,
+  #     pieces 1–2.
+  #
+  # A day already inside the band, or one holding an item of unknown calories, is
+  # returned untouched. The winner is, in order: closest to the band (inside it
+  # when possible), dinner not heavier than lunch, smallest change from the
+  # model's amounts, closest to the aim. Exhaustive up to #{2_000} combinations,
+  # coordinate descent from the model's amounts beyond.
   def balance_days(entries, acc) do
     case Map.get(acc, :calorie_band) do
       %{min: _, max: _} = band ->
         gram_ids = Mehungry.Food.NutrientCalculation.gram_unit_ids()
         existing = Map.get(acc, :existing_day_kcal, %{})
+        entries = Enum.map(entries, &expand_entry/1)
         {dated, undated} = Enum.split_with(entries, &is_binary(&1["date"]))
 
         balanced =
@@ -783,21 +1142,25 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   end
 
   defp balance_day(day, existing_kcal, band, acc, gram_ids) do
+    # One balancing unit per item, remembering where it lives in the day.
     items =
-      Enum.map(day, fn entry ->
-        {unit_kcal, selection} = entry_unit_kcal(entry, acc)
-        current = entry_amount(entry)
+      for {entry, e_idx} <- Enum.with_index(day),
+          {item, i_idx} <- Enum.with_index(entry["items"]) do
+        {unit_kcal, selection} = item_unit_kcal(item, acc)
+        current = item_amount(item)
 
         %{
-          entry: entry,
+          at: {e_idx, i_idx},
+          item: item,
+          slot: entry["slot"],
           unit_kcal: unit_kcal,
           current: current,
-          options: amount_options(entry, current, selection, gram_ids)
+          options: amount_options(item, entry["slot"], current, selection, gram_ids)
         }
-      end)
+      end
 
     cond do
-      Enum.any?(items, &is_nil(&1.unit_kcal)) ->
+      items == [] or Enum.any?(items, &is_nil(&1.unit_kcal)) ->
         day
 
       band_distance(existing_kcal + Enum.sum(Enum.map(items, &(&1.unit_kcal * &1.current))), band) ==
@@ -805,20 +1168,25 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         day
 
       true ->
-        items |> best_amounts(existing_kcal, band) |> apply_amounts(items)
+        items |> best_amounts(existing_kcal, band) |> apply_amounts(items, day)
     end
   end
 
-  # Recipe servings: a main meal may go to 3, anything else to 2.
-  defp amount_options(%{"recipe_id" => id} = entry, current, _selection, _gram_ids)
+  # Recipe servings: a main at Lunch/Dinner may go to 3, any other main to 2; a
+  # salad / dessert part keeps its amount.
+  defp amount_options(%{"recipe_id" => id} = item, slot, current, _selection, _gram_ids)
        when is_integer(id) do
-    max = if entry["slot"] in ["Lunch", "Dinner"], do: 3, else: 2
-    Enum.uniq([current | Enum.to_list(1..max)])
+    if (item["part"] || "main") == "main" do
+      max = if slot in ["Lunch", "Dinner"], do: 3, else: 2
+      Enum.uniq([current | Enum.to_list(1..max)])
+    else
+      [current]
+    end
   end
 
   # Ingredient quantity: grams move in 5 g steps within 0.5–1.5× of the model's
   # choice (a snack stays a snack); a countable unit is 1 or 2 pieces.
-  defp amount_options(_entry, current, selection, gram_ids) do
+  defp amount_options(_item, _slot, current, selection, gram_ids) do
     if MapSet.member?(gram_ids, selection) do
       scaled = for f <- [0.5, 0.75, 1.25, 1.5], do: max(5, round(current * f / 5) * 5)
       Enum.uniq([current | scaled])
@@ -828,19 +1196,50 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   end
 
   defp best_amounts(items, existing_kcal, band) do
-    items
-    |> Enum.reduce([[]], fn item, combos ->
-      for combo <- combos, amount <- item.options, do: [amount | combo]
-    end)
-    |> Enum.map(&Enum.reverse/1)
-    |> Enum.min_by(fn amounts ->
-      kcals = Enum.zip_with(items, amounts, &(&1.unit_kcal * &2))
-      total = existing_kcal + Enum.sum(kcals)
-      changes = Enum.zip_with(items, amounts, &change_size/2)
+    combos = Enum.reduce(items, 1, &(&2 * length(&1.options)))
+    score = &score_amounts(items, &1, existing_kcal, band)
 
-      {band_distance(total, band), dinner_heavier(items, kcals), Enum.sum(changes),
-       abs(total - band.aim)}
-    end)
+    if combos <= @max_exhaustive_combos do
+      items
+      |> Enum.reduce([[]], fn item, acc ->
+        for combo <- acc, amount <- item.options, do: [amount | combo]
+      end)
+      |> Enum.map(&Enum.reverse/1)
+      |> Enum.min_by(score)
+    else
+      descend(items, Enum.map(items, & &1.current), score, 50)
+    end
+  end
+
+  # Coordinate descent: from the model's amounts, repeatedly take the single
+  # amount change that improves the score most, until none does.
+  defp descend(_items, amounts, _score, 0), do: amounts
+
+  defp descend(items, amounts, score, steps_left) do
+    current = score.(amounts)
+
+    candidates =
+      for {item, idx} <- Enum.with_index(items),
+          option <- item.options,
+          option != Enum.at(amounts, idx),
+          do: List.replace_at(amounts, idx, option)
+
+    case Enum.min_by(candidates, score, fn -> nil end) do
+      nil ->
+        amounts
+
+      best ->
+        if score.(best) < current, do: descend(items, best, score, steps_left - 1), else: amounts
+    end
+  end
+
+  defp score_amounts(items, amounts, existing_kcal, band) do
+    kcals = Enum.zip_with(items, amounts, &(&1.unit_kcal * &2))
+    total = existing_kcal + Enum.sum(kcals)
+    changes = Enum.zip_with(items, amounts, &change_size/2)
+
+    {band_distance(total, band), dinner_heavier(items, kcals), Enum.sum(changes),
+     abs(total - band.aim)}
   end
 
   # How far an amount moved from the model's choice: servings count step by step
@@ -848,7 +1247,7 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   # quantity counts once.
   defp change_size(%{current: current}, amount) when current == amount, do: 0
 
-  defp change_size(%{entry: %{"recipe_id" => id}, current: current}, amount) when is_integer(id),
+  defp change_size(%{item: %{"recipe_id" => id}, current: current}, amount) when is_integer(id),
     do: abs(amount - current)
 
   defp change_size(_item, _amount), do: 1
@@ -859,7 +1258,12 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
 
   # 1 when the day's Dinner carries more calories than its Lunch, else 0.
   defp dinner_heavier(items, kcals) do
-    by_slot = items |> Enum.map(& &1.entry["slot"]) |> Enum.zip(kcals) |> Map.new()
+    by_slot =
+      items
+      |> Enum.zip(kcals)
+      |> Enum.reduce(%{}, fn {item, kcal}, acc ->
+        Map.update(acc, item.slot, kcal, &(&1 + kcal))
+      end)
 
     case by_slot do
       %{"Lunch" => lunch, "Dinner" => dinner} when dinner > lunch -> 1
@@ -867,8 +1271,25 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
     end
   end
 
-  defp apply_amounts(amounts, items),
-    do: Enum.zip_with(items, amounts, &put_amount(&1.entry, &2))
+  defp apply_amounts(amounts, items, day) do
+    new_amounts = Map.new(Enum.zip(Enum.map(items, & &1.at), Enum.zip(items, amounts)))
+
+    day
+    |> Enum.with_index()
+    |> Enum.map(fn {entry, e_idx} ->
+      items =
+        entry["items"]
+        |> Enum.with_index()
+        |> Enum.map(fn {item, i_idx} ->
+          case Map.get(new_amounts, {e_idx, i_idx}) do
+            {_unit, amount} -> put_amount(item, amount)
+            nil -> item
+          end
+        end)
+
+      %{entry | "items" => items}
+    end)
+  end
 
   defp calorie_error(%{date: date, total: total, min: min, max: max}, _band) when total < min do
     "#{date} totals #{total} kcal; it must be between #{min} and #{max}. Add about " <>
@@ -908,6 +1329,64 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
   def calorie_block(_), do: ""
 
   @doc """
+  The prompt block describing what each slot may hold — the same text for both
+  agents, built from the rule groups the run enforces (`Rules`).
+  """
+  def composition_block(rules \\ default_rules()) do
+    time? = MapSet.member?(rules, :time)
+    kinds? = MapSet.member?(rules, :snack_kinds)
+
+    breakfast_time =
+      if time?, do: " that takes at most #{Rules.breakfast_max_minutes()} minutes", else: ""
+
+    dinner =
+      if time?,
+        do:
+          "one recipe — a main or meal soup that takes at most #{Rules.dinner_max_minutes()} " <>
+            "minutes, or any dish with role \"dinner\"",
+        else: "one recipe — a main, a meal soup or a dinner dish"
+
+    snack_food =
+      if kinds?,
+        do: "ingredients from list_snack_options only",
+        else: "whole-food ingredients from search_ingredients only (no recipes)"
+
+    morning =
+      if kinds?,
+        do: "at least one seasonal fruit, optionally with nuts — #{snack_food}",
+        else: snack_food
+
+    afternoon =
+      if kinds?,
+        do: "at least one nut, optionally with seasonal fruit — #{snack_food}",
+        else: snack_food
+
+    breakfast_extras =
+      if kinds?,
+        do: "seasonal fruit and/or nuts",
+        else: "whole-food ingredients (fruit, nuts, yogurt)"
+
+    """
+
+    MEAL COMPOSITION (enforced by submit_plan). Each entry is one (date, slot) meal
+    with a list of `items`:
+    - Breakfast: one breakfast recipe#{breakfast_time} (part "main"), optionally
+      plus #{breakfast_extras}.
+    - Lunch: one main or meal-soup recipe (part "main"), optionally plus ONE salad
+      recipe (part "salad") and/or ONE dessert recipe (part "dessert"). Find those
+      with the recipe search: slot "Lunch", part "salad" / "dessert". No ingredients.
+    - Dinner: #{dinner}. Nothing else. OR leftovers of that day's Lunch main:
+      {"leftover_of": "Lunch", "servings": 1} (no recipe_id; that day's Lunch must
+      be in your plan — cook once, eat twice).
+    - Morning Snack: #{morning}.
+    - Afternoon Snack: #{afternoon}.
+    Example entry: {"date": "2026-12-01", "slot": "Lunch", "items": [
+      {"recipe_id": 12, "part": "main", "cooking_portions": 2, "servings": 1},
+      {"recipe_id": 40, "part": "salad", "cooking_portions": 2, "servings": 1}]}
+    """
+  end
+
+  @doc """
   kcal already on `user_id`'s calendar per day in `first_day..last_day`, keyed by
   ISO date — the same aggregation the calendar shows (`History.format_user_meals`
   → `NutrientUtils.summarize_meals_nutrients` → `macro_summary`).
@@ -926,37 +1405,6 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
 
       {date, (is_number(kcal) && kcal) || 0}
     end)
-  end
-
-  @doc false
-  # One error per recipe entry whose known meal roles don't fit its slot.
-  # Unclassified recipes (no roles) and ingredient entries always pass.
-  def slot_role_errors(entries, recipe_meta) do
-    Enum.flat_map(entries, fn entry ->
-      with id when is_integer(id) <- entry["recipe_id"],
-           slot when slot in @slots <- entry["slot"],
-           %{roles: roles, title: title} <- Map.get(recipe_meta, id),
-           false <- MealRoles.fits_slot?(roles, slot) do
-        [slot_role_error(entry["date"], slot, id, title, roles)]
-      else
-        _ -> []
-      end
-    end)
-  end
-
-  defp slot_role_error(date, slot, id, title, roles) do
-    is_a = Enum.map_join(roles, "/", &MealRoles.label/1) |> String.downcase()
-
-    needs =
-      case slot do
-        "Breakfast" -> "a breakfast dish"
-        "Lunch" -> "a main or a meal soup — a complete Lunch"
-        "Dinner" -> "a main, a dinner dish or a meal soup — a complete Dinner"
-        _ -> "a snack, dessert or drink — or better, a whole-food ingredient"
-      end
-
-    "#{date} #{slot}: \"#{title}\" (recipe_id #{id}) is a #{is_a}, not #{needs}. " <>
-      "Replace it — call the search tool with slot: \"#{slot}\" to get dishes that fit."
   end
 
   @main_slots ["Breakfast", "Lunch", "Dinner"]
@@ -1085,23 +1533,40 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
         start_date,
         end_date
       ) do
+    entries = Enum.map(entries, &expand_entry/1)
     slot_errors = check_duplicate_slots(entries)
 
     entry_errors =
       Enum.flat_map(entries, fn entry ->
+        item_errors =
+          Enum.flat_map(entry["items"], fn item ->
+            validate_item(
+              item,
+              offered_recipes,
+              valid_recipes,
+              offered_ingredients,
+              valid_ingredients
+            )
+          end)
+
         validate_date(entry, start_date, end_date) ++
-          validate_slot(entry) ++
-          validate_item(
-            entry,
-            offered_recipes,
-            valid_recipes,
-            offered_ingredients,
-            valid_ingredients
-          )
+          validate_slot(entry) ++ validate_item_count(entry) ++ item_errors
       end)
 
     slot_errors ++ entry_errors
   end
+
+  @max_items_per_meal 6
+
+  defp validate_item_count(%{"items" => []} = entry),
+    do: ["#{entry["date"]} #{entry["slot"]}: the meal has no items — add what is eaten"]
+
+  defp validate_item_count(%{"items" => items} = entry) when length(items) > @max_items_per_meal,
+    do: [
+      "#{entry["date"]} #{entry["slot"]}: at most #{@max_items_per_meal} items per meal"
+    ]
+
+  defp validate_item_count(_entry), do: []
 
   defp check_duplicate_slots(entries) do
     entries
@@ -1206,71 +1671,158 @@ defmodule Mehungry.AI.Agents.MealPlanCore do
 
   @doc """
   Turns the model's raw, calendar-dated entries into clean, calendar-independent
-  plan entries: relative `day_index` (1..7), canonical `meal_type`, and either a
-  recipe or an ingredient with its unit resolved to real FKs.
+  plan entries: `%{day_index (1..7), meal_type (canonical), items: [item]}`, where
+  an item is a recipe (`recipe_id`, `cooking_portions`, `servings`, `part`) or an
+  ingredient (`ingredient_id`, `quantity`, `measurement_unit_id`,
+  `ingredient_portion_id` — the unit resolved to real FKs). Entries with no usable
+  item are dropped.
+
+  `servings?: false` (no calorie band) pins recipe servings to 1.
   """
   def normalize_entries(entries, start_date, opts \\ []) do
     servings? = Keyword.get(opts, :servings?, false)
 
     entries
-    |> Enum.filter(fn e ->
-      is_binary(e["date"]) and e["slot"] in @slots and
-        (is_integer(e["recipe_id"]) or is_integer(e["ingredient_id"]))
-    end)
+    |> Enum.map(&expand_entry/1)
+    |> Enum.filter(&(is_binary(&1["date"]) and &1["slot"] in @slots))
     |> Enum.flat_map(fn e ->
-      case normalize_entry(e, start_date) do
-        {:ok, %{recipe_id: id} = entry} when is_integer(id) and not servings? ->
-          [%{entry | servings: 1}]
-
-        {:ok, entry} ->
-          [entry]
-
-        :error ->
-          []
+      case normalize_entry(e, start_date, servings?) do
+        {:ok, %{items: [_ | _]} = entry} -> [entry]
+        _ -> []
       end
+    end)
+    |> cook_for_leftovers()
+  end
+
+  # A leftover Dinner eats what that day's Lunch cooked, so the Lunch main must
+  # be cooked for both: its cooking_portions rise to at least Lunch's servings +
+  # the leftover servings (the shopping list reads cooking_portions; the leftover
+  # item itself cooks nothing).
+  defp cook_for_leftovers(entries) do
+    extra =
+      for %{meal_type: "dinner", day_index: day, items: items} <- entries,
+          %{leftover: true, recipe_id: id, servings: s} <- items,
+          reduce: %{} do
+        acc -> Map.update(acc, {day, id}, s, &(&1 + s))
+      end
+
+    Enum.map(entries, fn
+      %{meal_type: "lunch", day_index: day, items: items} = entry ->
+        items =
+          Enum.map(items, fn
+            %{recipe_id: id, part: "main", servings: s, cooking_portions: cp} = item
+            when is_map_key(extra, {day, id}) ->
+              %{item | cooking_portions: max(cp, s + Map.fetch!(extra, {day, id}))}
+
+            item ->
+              item
+          end)
+
+        %{entry | items: items}
+
+      entry ->
+        entry
     end)
   end
 
   @doc false
-  def normalize_entry(entry, start_date) do
+  def normalize_entry(entry, start_date, servings? \\ true) do
     with {:ok, date} <- Date.from_iso8601(entry["date"] || "") do
-      base = %{
-        day_index: Date.diff(date, start_date) + 1,
-        meal_type: MealType.from_slot(entry["slot"])
-      }
+      items =
+        entry
+        |> expand_entry()
+        |> Map.fetch!("items")
+        |> Enum.flat_map(&normalize_item(&1, servings?))
 
-      {:ok, Map.merge(base, item_fields(entry))}
+      {:ok,
+       %{
+         day_index: Date.diff(date, start_date) + 1,
+         meal_type: MealType.from_slot(entry["slot"]),
+         items: items
+       }}
     else
       _ -> :error
     end
   end
 
-  defp item_fields(%{"recipe_id" => recipe_id} = entry) when is_integer(recipe_id) do
-    %{
-      recipe_id: recipe_id,
-      cooking_portions: cooking_portions(entry["cooking_portions"]),
-      servings: servings(entry["servings"]),
-      ingredient_id: nil,
-      quantity: nil,
-      measurement_unit_id: nil,
-      ingredient_portion_id: nil
-    }
+  # A leftover item eats food cooked at that day's Lunch: it cooks nothing itself.
+  defp normalize_item(%{"recipe_id" => recipe_id, "leftover" => true} = item, servings?)
+       when is_integer(recipe_id) do
+    [
+      %{
+        recipe_id: recipe_id,
+        part: "main",
+        leftover: true,
+        cooking_portions: 0,
+        servings: if(servings?, do: servings(item["servings"]), else: 1)
+      }
+    ]
   end
 
-  defp item_fields(%{"ingredient_id" => ingredient_id} = entry) when is_integer(ingredient_id) do
+  defp normalize_item(%{"recipe_id" => recipe_id} = item, servings?) when is_integer(recipe_id) do
+    [
+      %{
+        recipe_id: recipe_id,
+        part: if(item["part"] in Rules.parts(), do: item["part"], else: "main"),
+        cooking_portions: cooking_portions(item["cooking_portions"]),
+        servings: if(servings?, do: servings(item["servings"]), else: 1)
+      }
+    ]
+  end
+
+  defp normalize_item(%{"ingredient_id" => ingredient_id} = item, _servings?)
+       when is_integer(ingredient_id) do
     {mu_id, portion_id} =
-      decode_unit(resolve_unit_selection(ingredient_id, entry["unit_selection"]))
+      decode_unit(resolve_unit_selection(ingredient_id, item["unit_selection"]))
 
-    %{
-      recipe_id: nil,
-      cooking_portions: nil,
-      servings: nil,
-      ingredient_id: ingredient_id,
-      quantity: (entry["quantity"] || 1) / 1,
-      measurement_unit_id: mu_id,
-      ingredient_portion_id: portion_id
-    }
+    quantity =
+      case item["quantity"] do
+        q when is_number(q) and q > 0 -> q / 1
+        _ -> 1.0
+      end
+
+    [
+      %{
+        ingredient_id: ingredient_id,
+        quantity: quantity,
+        measurement_unit_id: mu_id,
+        ingredient_portion_id: portion_id
+      }
+    ]
   end
+
+  defp normalize_item(_item, _servings?), do: []
+
+  @doc """
+  The items of a normalized plan entry. Accepts the older one-item flat form too
+  (`recipe_id` / `ingredient_id` on the entry itself), so callers built before
+  composite meals keep working.
+  """
+  def entry_items(%{items: items}) when is_list(items), do: items
+
+  def entry_items(%{recipe_id: id} = entry) when is_integer(id) do
+    [
+      %{
+        recipe_id: id,
+        part: "main",
+        cooking_portions: Map.get(entry, :cooking_portions),
+        servings: Map.get(entry, :servings) || 1
+      }
+    ]
+  end
+
+  def entry_items(%{ingredient_id: id} = entry) when is_integer(id) do
+    [
+      %{
+        ingredient_id: id,
+        quantity: Map.get(entry, :quantity),
+        measurement_unit_id: Map.get(entry, :measurement_unit_id),
+        ingredient_portion_id: Map.get(entry, :ingredient_portion_id)
+      }
+    ]
+  end
+
+  def entry_items(_entry), do: []
 
   # 1–4 per the tool contract; anything else falls back to 2.
   defp cooking_portions(n) when is_integer(n) and n in 1..4, do: n

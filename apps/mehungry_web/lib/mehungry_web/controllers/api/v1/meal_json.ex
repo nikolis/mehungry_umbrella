@@ -106,6 +106,9 @@ defmodule MehungryWeb.Api.V1.MealJSON do
       title: recipe && recipe.title,
       image_url: recipe && recipe.image_url,
       servings: rum.consume_portions,
+      # Eats food cooked at another meal (an AI plan's leftover dinner): show it
+      # as leftovers and leave it out of any "to cook" view.
+      leftover: rum.cooking == false,
       consumed: (loaded(rum.consume_recipe_user_meals) != [])
     }
   end

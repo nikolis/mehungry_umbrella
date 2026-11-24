@@ -167,7 +167,7 @@ and gating UI).
 { "data": {
   "id": 49, "email": "bot1@mehungry.test", "alias": "Test Bot One",
   "avatar_url": null, "intro": null,
-  "language_preference": "en", "daily_calorie_target": 2000,
+  "language_preference": "en", "daily_calorie_target": 2000, "country": "GR",
   "effective_calorie_target": 1600, "calorie_target_source": "nutritionist",
   "onboarding_level": 3,
   "tier": "free",
@@ -184,6 +184,14 @@ and applies again once the prescription is cleared or the link ends). `calorie_t
 is `"nutritionist"`, `"self"`, or `null` (no target at all) — show a "set by your
 nutritionist" hint for the first. Same resolver as the web calendar
 (`Professionals.effective_calorie_target/2`).
+
+**`country`** — ISO-3166 alpha-2 code of where the user lives (default `"GR"`). Used
+only to pick fruit that is in season there for AI meal plans; never shown publicly.
+Allowed values are the countries seasonality is enabled for (currently
+`GR`, `CY`, `IT`, `ES`, `DE`); `PUT /me/profile` with any other value → `422`.
+Show the picker with the explanation *"We use your country only to suggest fruit that
+is in season where you live when we plan your meals. It is never shown on your public
+profile."*
 
 Password reset / email confirmation reuse existing web routes for MVP (open in a
 web view): `POST /users/reset_password`, `GET/POST /users/confirm`.
@@ -491,8 +499,9 @@ Returns `[]` for a viewer who has blocked this user (§20).
    — powers the Profile tab's sub-tabs seen in the web app.
 ### `PUT /api/v1/me/profile` 🔒 — edit profile
 ```json
-{ "alias": "Nikos", "intro": "Home cook", "daily_calorie_target": 2200 }
+{ "alias": "Nikos", "intro": "Home cook", "daily_calorie_target": 2200, "country": "GR" }
 ```
+All fields optional; `country` must be one of the enabled codes (see §3 `GET /me`).
 ### `DELETE /api/v1/me` 🔒 — permanently delete the account
 Deletes the signed-in user and all owned content (recipes, comments, meals,
 baskets, devices, subscriptions, …) via `Accounts.delete_user/1`. Required for an
@@ -732,7 +741,7 @@ Unsorted, shown last). Backed by `History` + `History.UserMeal`.
     "meals": [ {
       "id": 91, "title": "Lunch", "meal_type": "lunch",
       "start_dt": "2026-08-10T13:00:00", "end_dt": "2026-08-10T13:30:00",
-      "recipes": [ {"recipe_id":149,"title":"…","servings":2,"image_url":"…","consumed":false} ],
+      "recipes": [ {"recipe_id":149,"title":"…","servings":2,"image_url":"…","leftover":false,"consumed":false} ],
       "ingredients": [ {"ingredient_id":412,"name":"Eggplant","icon":"🍆","quantity":1.0,
         "measurement_unit_id":5,"ingredient_portion_id":null,"unit_selection":5,
         "measurement_unit":{"id":5,"name":"piece"}} ],
@@ -746,6 +755,11 @@ Unsorted, shown last). Backed by `History` + `History.UserMeal`.
     {"key":"dinner","label":"Dinner"}, {"key":null,"label":"Unsorted"} ]
 } }
 ```
+`leftover` is `true` when the recipe eats food cooked at another meal (an AI plan's
+leftover dinner: same recipe as that day's lunch, nothing cooked here). Show it as
+"Leftovers" and leave it out of any "to cook" view; its `servings` still count toward
+the meal's nutrition. (Server: `history_recipe_user_meals.cooking = false`.)
+
 `nutrition_summary` is a flat per-meal roll-up — `energy` in whole kcal, `protein`/
 `carbs`/`fat` in grams (0.1 g precision) — so the calendar overview can show
 kcal + macros without a second call to `GET /meals/day/:date/nutrition`. Keys are

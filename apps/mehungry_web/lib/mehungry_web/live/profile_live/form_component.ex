@@ -36,6 +36,15 @@ defmodule MehungryWeb.ProfileLive.Form do
               kcal: @prescribed_target
             )}
           </p>
+          <.input
+            field={@form[:country]}
+            type="select"
+            label={gettext("Where do you live?")}
+            options={MehungryWeb.CountryOptions.options()}
+          />
+          <p class="text-parchment-dim text-sm -mt-3">
+            {MehungryWeb.CountryOptions.explanation()}
+          </p>
         </div>
 
         <div class="mt-10 mb-4">

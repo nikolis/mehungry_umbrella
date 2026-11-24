@@ -17,7 +17,9 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
     * `:recipe_names`         — `%{recipe_id => name}` for name-based checks
     * `:ingredient_names`     — `%{ingredient_id => name}`
     * `:recipe_roles`         — `%{recipe_id => [meal_role]}`; enables the
-      slot-roles check (hard rule: no meze/side as a whole lunch or dinner)
+      slot-roles check (hard rule: no meze/side as a whole lunch or dinner) and
+      the composition check (`MealPlanCore.Rules`, `:composition` group: one main
+      per meal, Lunch salad/dessert parts, snacks of ingredients only)
     * `:daily_calorie_target` — number; enables the calorie-fit check
     * `:day_macros`           — `%{day_index => %{energy_kcal: n, ...}}`, produced
       by the caller via the app's own `NutrientUtils.summarize_meals_nutrients/1`
@@ -33,6 +35,7 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
       }
   """
 
+  alias Mehungry.AI.Agents.MealPlanCore.Rules
   alias Mehungry.Food.MealRoles
   alias Mehungry.History.MealType
 
@@ -46,14 +49,19 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
 
   @doc "Scores `entries` against `context`; see moduledoc for the scorecard shape."
   def score(entries, context \\ %{}) when is_list(entries) do
+    # Meal-level checks read the meals; item-level checks read one row per item
+    # (a composite Lunch is a main + salad + dessert in one meal).
+    items = flatten_items(entries)
+
     checks = [
       check_completeness(entries),
       check_slots_filled(entries),
-      check_variety(entries),
-      check_snacks_are_ingredients(entries),
-      check_avoid_foods(entries, context),
-      check_slot_roles(entries, context),
-      check_preferred_foods(entries, context),
+      check_variety(items),
+      check_snacks_are_ingredients(items),
+      check_avoid_foods(items, context),
+      check_slot_roles(items, context),
+      check_composition(entries, context),
+      check_preferred_foods(items, context),
       check_calorie_fit(context)
     ]
 
@@ -184,7 +192,10 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
     if roles in [nil, %{}] do
       check(:slot_roles, :skip, 0.0, "no recipe meal roles configured")
     else
-      recipe_entries = Enum.filter(entries, &is_integer(recipe_id(&1)))
+      # Only a meal's main recipe must fit the slot on its own; a Lunch salad or
+      # dessert part is a side by design.
+      recipe_entries =
+        Enum.filter(entries, &(is_integer(recipe_id(&1)) and (&1[:part] || "main") == "main"))
 
       misfits =
         Enum.reject(recipe_entries, fn e ->
@@ -313,6 +324,18 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
 
   # ── entry accessors (entries may be atom- or string-keyed) ───────────────────
 
+  # One flat row per item, carrying its meal's day and slot. A flat (one-item,
+  # pre-composite) entry is its own row.
+  defp flatten_items(entries) do
+    Enum.flat_map(entries, fn
+      %{items: items} = e when is_list(items) ->
+        Enum.map(items, &Map.merge(Map.take(e, [:day_index, :meal_type]), &1))
+
+      e ->
+        [e]
+    end)
+  end
+
   defp meal_type(e), do: e[:meal_type] || e["meal_type"]
   defp recipe_id(e), do: e[:recipe_id] || e["recipe_id"]
   defp ingredient_id(e), do: e[:ingredient_id] || e["ingredient_id"]
@@ -330,6 +353,52 @@ defmodule Mehungry.AI.Eval.MealPlanScorer do
   defp name_from(map, id), do: map |> Map.get(id, "") |> to_string() |> String.downcase()
 
   # ── helpers ───────────────────────────────────────────────────────────────────
+
+  # Every meal follows the composition rules (`Rules`, `:composition` group) —
+  # the same check submit_plan runs. Reads composite (`items`) entries only; a
+  # flat pre-composite plan is skipped.
+  defp check_composition(entries, context) do
+    meals = Enum.filter(entries, &is_list(&1[:items]))
+
+    cond do
+      context[:recipe_roles] in [nil, %{}] ->
+        check(:composition, :skip, 0.0, "no recipe meal roles configured")
+
+      meals == [] ->
+        check(:composition, :skip, 0.0, "no composite meals")
+
+      true ->
+        meta =
+          Map.new(context[:recipe_roles], fn {id, roles} ->
+            {id, %{title: name_from(context[:recipe_names], id), roles: roles}}
+          end)
+
+        ctx = %{recipe_meta: meta, rules: MapSet.new([:composition])}
+        bad = Enum.reject(meals, &(Rules.errors([as_rules_entry(&1)], ctx) == []))
+        score = 1 - length(bad) / length(meals)
+
+        if bad == [] do
+          check(:composition, :pass, 1.0, "every meal follows the composition rules")
+        else
+          example = bad |> hd() |> as_rules_entry() |> then(&Rules.errors([&1], ctx)) |> hd()
+
+          check(
+            :composition,
+            :fail,
+            score,
+            "#{length(bad)}/#{length(meals)} meals break a rule, e.g. #{example}"
+          )
+        end
+    end
+  end
+
+  defp as_rules_entry(meal) do
+    %{
+      "date" => "day #{meal[:day_index]}",
+      "slot" => MealType.label(meal[:meal_type]),
+      "items" => Enum.map(meal[:items], &Map.new(&1, fn {k, v} -> {to_string(k), v} end))
+    }
+  end
 
   defp check(key, status, score, detail),
     do: %{key: key, status: status, score: score * 1.0, detail: detail}

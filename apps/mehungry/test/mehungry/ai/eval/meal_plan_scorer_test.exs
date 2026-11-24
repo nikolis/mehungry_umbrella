@@ -218,4 +218,33 @@ defmodule Mehungry.AI.Eval.MealPlanScorerTest do
     assert out =~ "Meal-plan scorecard"
     assert out =~ "completeness"
   end
+
+  describe "composition check (composite meals)" do
+    defp meal(day, meal_type, items), do: %{day_index: day, meal_type: meal_type, items: items}
+
+    test "a main + salad + dessert lunch passes; a dinner with a salad fails" do
+      roles = %{1 => ["main"], 2 => ["salad"], 3 => ["dessert"]}
+
+      good = [
+        meal(1, "lunch", [
+          %{recipe_id: 1, part: "main"},
+          %{recipe_id: 2, part: "salad"},
+          %{recipe_id: 3, part: "dessert"}
+        ])
+      ]
+
+      assert check(MealPlanScorer.score(good, %{recipe_roles: roles}), :composition).status ==
+               :pass
+
+      bad = [meal(1, "dinner", [%{recipe_id: 1, part: "main"}, %{recipe_id: 2, part: "salad"}])]
+      card = MealPlanScorer.score(bad, %{recipe_roles: roles})
+
+      assert %{status: :fail, detail: detail} = check(card, :composition)
+      assert detail =~ "Dinner is a single recipe"
+    end
+
+    test "flat (pre-composite) plans and plans without roles skip it" do
+      assert check(MealPlanScorer.score(perfect_plan()), :composition).status == :skip
+    end
+  end
 end

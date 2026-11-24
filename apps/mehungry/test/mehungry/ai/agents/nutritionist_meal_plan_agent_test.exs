@@ -195,7 +195,7 @@ defmodule Mehungry.AI.Agents.NutritionistMealPlanAgentTest do
       assert result.success
 
       assert %{
-               entries: [%{day_index: 1, meal_type: "breakfast", recipe_id: id}],
+               entries: [%{day_index: 1, meal_type: "breakfast", items: [%{recipe_id: id}]}],
                rationale: "a note"
              } =
                new_acc.submitted

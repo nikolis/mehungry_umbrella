@@ -325,6 +325,8 @@ defmodule Mehungry.History do
             title: localized_recipe_title(y.recipe, Map.get(ctx.recipes, y.recipe.id)),
             consume_portions: y.consume_portions,
             cooking_portions: y.cooking_portions,
+            # Eats food cooked at another meal (an AI plan's leftover dinner).
+            leftover: y.cooking == false,
             servings: y.recipe.servings,
             recipe_nutrients: y.recipe.nutrients,
             img_url: y.recipe.image_url,

@@ -53,6 +53,7 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorker do
     "get_ratings" => "Reviewing meal ratings…",
     "search_recipes" => "Searching recipe catalog…",
     "search_ingredients" => "Finding whole-food snacks…",
+    "list_snack_options" => "Picking seasonal fruit and nuts…",
     "submit_plan" => "Validating the meal plan…"
   }
 

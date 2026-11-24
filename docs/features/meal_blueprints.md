@@ -43,16 +43,19 @@ checked/recorded via `Subscriptions` under the `"meal_plan"` key.
 
 **Generated plans are independent instances, not calendar entries.** Generation
 returns *normalized, calendar-independent entries* (`MealPlanCore.normalize_entry/2`
-— relative `day_index` 1..7, canonical `meal_type`, and a recipe **or** ingredient
-with unit resolved to FKs). The LiveView stores them via
+— relative `day_index` 1..7, canonical `meal_type`, and a list of items: recipes
+and/or ingredients with unit resolved to FKs). The LiveView stores them via
 `MealBlueprints.store_plan_meals/2` as **`BlueprintPlanMeal`** rows
 (`meal_blueprint_plan_meals`). A meal can hold a recipe (`recipe_id` +
 `cooking_portions`) **and/or** any number of whole-food ingredients — the
 ingredients live in a child table **`BlueprintPlanMealIngredient`**
 (`meal_blueprint_plan_meal_ingredients`: `ingredient_id`, `quantity`, resolved
 unit FKs) via `has_many :ingredients` (`on_replace: :delete`), mirroring the
-calendar's `History.UserMeal` → `IngredientUserMeal`. Generation seeds one
-ingredient child per ingredient slot; the nutritionist can then add more by hand.
+calendar's `History.UserMeal` → `IngredientUserMeal`. A generated meal becomes one
+row per recipe in its (day, slot) cell — the main recipe's row carries the meal's
+ingredients, a Lunch salad or dessert gets its own row (the analyzer and import
+already read several rows in one cell as parts of one meal); the nutritionist can
+then add more by hand.
 These rows hang off a **`BlueprintPlan`**
 (`meal_blueprint_plans`: `name`, `start_date`, `status`
 `generating→completed|failed`, `meals_count`, `error`, `imported_at`,

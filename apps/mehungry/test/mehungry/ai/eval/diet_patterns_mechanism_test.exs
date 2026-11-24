@@ -31,6 +31,8 @@ defmodule Mehungry.AI.Eval.DietPatternsMechanismTest do
   alias Mehungry.MealBlueprints.{Blueprint, DietPatterns}
 
   setup do
+    seasons = Application.get_env(:mehungry, :seasonal_availability)
+    on_exit(fn -> MealPlanCatalog.restore_seasons(seasons) end)
     {:ok, catalog: MealPlanCatalog.seed()}
   end
 

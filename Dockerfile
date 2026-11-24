@@ -14,6 +14,7 @@ ENV MIX_ENV=prod
 # ── Layer 1: dep manifests (cached until mix.lock changes) ───────────────────
 COPY mix.* ./
 COPY apps/mehungry/mix.* ./apps/mehungry/
+COPY apps/mehungry_seasonality/mix.* ./apps/mehungry_seasonality/
 COPY apps/mehungry_web/mix.* ./apps/mehungry_web/
 
 RUN mix deps.get --only prod

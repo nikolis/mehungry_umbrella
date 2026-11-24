@@ -84,6 +84,16 @@ defmodule MehungryWeb.Api.V1.AuthProfileTest do
                json_response(conn, 200)
     end
 
+    test "country defaults to GR, round-trips, and rejects an unsupported code", %{conn: conn} do
+      assert %{"data" => %{"country" => "GR"}} = conn |> get(~p"/api/v1/me") |> json_response(200)
+
+      assert %{"data" => %{"country" => "IT"}} =
+               conn |> put(~p"/api/v1/me/profile", %{"country" => "IT"}) |> json_response(200)
+
+      assert conn |> put(~p"/api/v1/me/profile", %{"country" => "US"}) |> json_response(422)
+      assert %{"data" => %{"country" => "IT"}} = conn |> get(~p"/api/v1/me") |> json_response(200)
+    end
+
     test "PUT /api/v1/me/language switches language", %{conn: conn} do
       conn = put(conn, ~p"/api/v1/me/language", %{"lang" => "el"})
       assert %{"data" => %{"language_preference" => "el"}} = json_response(conn, 200)

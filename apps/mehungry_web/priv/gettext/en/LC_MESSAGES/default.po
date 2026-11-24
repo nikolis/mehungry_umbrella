@@ -9144,3 +9144,50 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "you"
 msgstr ""
+
+#: lib/mehungry_web/country_options.ex
+#: lib/mehungry_web/live/onboarding/form_component.ex
+#: lib/mehungry_web/live/profile_live/form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Where do you live?"
+msgstr ""
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Greece"
+msgstr ""
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Cyprus"
+msgstr ""
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Italy"
+msgstr ""
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Spain"
+msgstr ""
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Germany"
+msgstr ""
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "We use your country only to suggest fruit that is in season where you live when we plan your meals. It is never shown on your public profile."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex
+#, elixir-autogen, elixir-format
+msgid "Leftovers"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex
+#, elixir-autogen, elixir-format
+msgid "from lunch"
+msgstr ""

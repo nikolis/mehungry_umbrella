@@ -116,17 +116,20 @@ defmodule Mehungry.AI.Agents.MealPlanSlotRolesTest do
              MealPlanCore.submit_plan_tool(%{"entries" => [entry.(ctx.unclassified.id)]}, acc)
   end
 
-  test "slot_role_errors ignores ingredient entries and unknown recipes" do
+  test "role errors (Rules, no composition) ignore ingredients and unknown recipes" do
     meta = %{1 => %{title: "Tzatziki", roles: ["meze"]}}
 
-    assert MealPlanCore.slot_role_errors(
-             [
-               %{"date" => "2026-11-23", "slot" => "Lunch", "ingredient_id" => 9},
-               %{"date" => "2026-11-23", "slot" => "Lunch", "recipe_id" => 2},
-               %{"date" => "2026-11-23", "slot" => "Morning Snack", "recipe_id" => 1}
-             ],
-             meta
-           ) == [
+    entries =
+      Enum.map(
+        [
+          %{"date" => "2026-11-23", "slot" => "Lunch", "ingredient_id" => 9},
+          %{"date" => "2026-11-23", "slot" => "Lunch", "recipe_id" => 2},
+          %{"date" => "2026-11-23", "slot" => "Morning Snack", "recipe_id" => 1}
+        ],
+        &MealPlanCore.expand_entry/1
+      )
+
+    assert MealPlanCore.Rules.errors(entries, %{recipe_meta: meta, rules: MapSet.new()}) == [
              ~s(2026-11-23 Morning Snack: "Tzatziki" \(recipe_id 1\) is a meze, not a snack, dessert or drink — or better, a whole-food ingredient. Replace it — call the search tool with slot: "Morning Snack" to get dishes that fit.)
            ]
   end

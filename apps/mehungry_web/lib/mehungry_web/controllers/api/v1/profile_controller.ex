@@ -58,7 +58,7 @@ defmodule MehungryWeb.Api.V1.ProfileController do
     end
   end
 
-  @doc "PUT /api/v1/me/profile — edit alias / intro / daily_calorie_target."
+  @doc "PUT /api/v1/me/profile — edit alias / intro / daily_calorie_target / country."
   def update(conn, params) do
     user = conn.assigns.current_user
     profile = Accounts.get_user_profile_by_user_id(user.id)
@@ -174,7 +174,7 @@ defmodule MehungryWeb.Api.V1.ProfileController do
 
 
   defp profile_attrs(params) do
-    Map.take(params, ["alias", "intro", "daily_calorie_target"])
+    Map.take(params, ["alias", "intro", "daily_calorie_target", "country"])
   end
 
   defp fetch_user(id) do

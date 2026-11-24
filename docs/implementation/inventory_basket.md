@@ -50,7 +50,9 @@ set by the context from the acting user, never cast from client params.
   - `add_items_from_meal/_` — add a planned calendar meal's ingredients.
   - `aggregate_meal_ingredients/1` — **shared** ingredient-aggregation used by both the
     calendar and the basket so quantities combine identically on either surface (no
-    divergent copy).
+    divergent copy). Recipe rows with `cooking: false` (leftovers — they eat food
+    cooked at another meal) are skipped, so a leftover dinner never doubles the
+    shopping (see [`history_calendar.md`](history_calendar.md) → *Leftovers*).
 
 ## "Shopping list for the week"
 

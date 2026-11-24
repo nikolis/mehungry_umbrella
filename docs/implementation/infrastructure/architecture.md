@@ -5,6 +5,7 @@ Mehungry is a Phoenix **umbrella** application:
 | App | Responsibility |
 |---|---|
 | `apps/mehungry` | Core domain: Ecto schemas, contexts, business logic, Oban workers, AI layer, external API clients |
+| `apps/mehungry_seasonality` | Self-contained **seasonality** bounded context (local/import status per species × country × month). Own namespace, tables (`seasonality_*`), clients, worker and queue; no supervision tree — uses core's Repo/Oban/PubSub. See [`../seasonality.md`](../seasonality.md) |
 | `apps/mehungry_web` | Web layer: LiveViews, controllers, components, plugs, OAuth strategies |
 
 Deployed on **Fly.io** (Docker image → Phoenix release; app `m3hungry`, region
@@ -22,6 +23,12 @@ full topology.
 ## Dependency rule
 
 `mehungry_web` depends on `mehungry` — never the reverse at compile time.
+
+`mehungry_seasonality` sits between them (`mehungry_web → mehungry_seasonality →
+mehungry`) and is the model for carving out a new bounded context: outside code
+calls only its `MehungrySeasonality` facade, and it reaches core only through the
+single adapter module `MehungrySeasonality.Core` (enforced by its `BoundaryTest`).
+Core never references it.
 
 Two sanctioned **runtime** seams let core code reach web-owned infrastructure
 without a compile-time dependency; both are `Application.get_env/3` module
@@ -69,11 +76,12 @@ directly. When adding a public function to a sub-module, add a matching
 
 ## Oban
 
-Queues (total concurrency capped at **16** to fit the Supabase pool — the full,
+Queues (total concurrency capped at **17** to fit the Supabase pool — the full,
 current list is in `CLAUDE.md` → *Oban Queues*): `default: 5`, `ai_agents: 1`,
 `ai_interactive: 1` (mobile "Plan with AI"), `mailers: 3`,
 `imports: 1` (condition-seeded crawl + research ingestion), `seed_imports: 1`
-(USDA S3 seed files), `hashtag_reconcile: 1`, `portion_generation: 1`.
+(USDA S3 seed files), `hashtag_reconcile: 1`, `portion_generation: 1`,
+`seasonality: 1` (the seasonality app's per-country fetch sweep).
 
 Cron (UTC): `InstagramTokenRefreshWorker` 01:30, `PinterestTokenRefreshWorker`
 01:45, `DailyRecipeGenerationWorker` 02:00, `PipelineWatchdogWorker` every 10

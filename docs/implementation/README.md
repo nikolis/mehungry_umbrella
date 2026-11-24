@@ -21,6 +21,7 @@ Cross-cutting / non-functional docs:
 
 - [`localization.md`](localization.md) — locale-prefixed URLs, Gettext, translation flow.
 - [`notifications_system.md`](notifications_system.md) — durable notifications + dispatch seam.
+- [`seasonality.md`](seasonality.md) — the separate `apps/mehungry_seasonality` app: per species × country × month local/import status (EU agri-food portal + Eurostat Comext), its boundary rules, and the admin page.
 - [`history_calendar.md`](history_calendar.md) — the weekly meal calendar / self-tracker (`History` context + denormalized per-day nutrition).
 - [`posts_feed.md`](posts_feed.md) — the `Post` model, home feed, comments/answers, and votes (`Posts` context).
 - [`published_plans.md`](published_plans.md) — public SEO-indexed meal-plan snapshots + week share card/post (`PublishedPlans`).

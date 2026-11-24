@@ -165,9 +165,10 @@ every user's recipes. A failed run now fails, with a readable message
 | Tool | Purpose |
 |---|---|
 | `get_recent_meals` | Last 21 days of the person's meal history, so the plan avoids repeating what they just ate |
-| `search_catalog` (user) / `search_recipes` (nutritionist) | Guarded semantic search of the catalog (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings, **per-serving calories** (`MealPlanCore.per_serving_calories/1`, the same `NutrientUtils.macro_summary/1` the calendar uses) and the recipe's **meal roles**. An optional **`slot`** input scopes the search, in SQL, to recipes whose roles fit that slot (plus unclassified ones) — see [`../food/meal_roles.md`](../food/meal_roles.md) |
-| `search_ingredients` | Whole-food ingredient search (fruit, nuts, cheese, yogurt…) for snacks/sides — `kcal_per_100g` plus unit options that each carry **`kcal_per_unit`** (calories for one of that unit), so snacks count toward the day's total |
-| `submit_plan` | Validate + accept the plan; the **only** way to finish. An empty plan is rejected; so is a day outside the calorie band (below) |
+| `search_catalog` (user) / `search_recipes` (nutritionist) | Guarded semantic search of the catalog (`RecipeVectorSearch`) — returns `recipe_id`, title, difficulty, servings, `total_minutes` (prep + cook, null when unknown), **per-serving calories** (`MealPlanCore.per_serving_calories/1`, the same `NutrientUtils.macro_summary/1` the calendar uses) and the recipe's **meal roles**. An optional **`slot`** input scopes the search, in SQL, to recipes whose roles fit that slot (plus unclassified ones); an optional **`part`** (`salad` / `dessert`) searches that role instead, for a Lunch side — see [`../food/meal_roles.md`](../food/meal_roles.md) |
+| `list_snack_options` (snack mode) | The run's allowed snack foods, built once at run start (`MealPlanCore.snack_options/3`): **`seasonal_fruits`** — curated `fresh_fruit` locally on the market in the person's country (the **client's** for a nutritionist draft) in the plan's month(s), and **`nuts`** — curated `dried_nut`; both through the run's diet/avoid guards, shaped with `kcal_per_100g` + unit options carrying `kcal_per_unit`. Calling it makes exactly those ingredients submittable. See [`../food/snack_ingredients.md`](../food/snack_ingredients.md) |
+| `search_ingredients` (fallback only) | Open whole-food ingredient search — offered **instead of** `list_snack_options` only when no curated nut survives the run's guards (nothing curated yet, or every nut excluded by the person's diet/avoid list); same shape |
+| `submit_plan` | Validate + accept the plan; the **only** way to finish. Each entry is one `(date, slot)` **meal with a list of `items`** — recipe items (`recipe_id`, `part` main/salad/dessert, `cooking_portions`, `servings`) and/or ingredient items (`ingredient_id`, `quantity`, `unit_selection`); the older one-item flat entry is still accepted (`MealPlanCore.expand_entry/1`). An empty plan or meal is rejected; so is a composition violation or a day outside the calorie band (below) |
 
 The nutritionist agent adds its client-context tools (see the table above); the
 three tools here are the shared `MealPlanCore` implementations in both agents.
@@ -180,9 +181,42 @@ model retry when:
 
 - **Provenance:** a `recipe_id`/`ingredient_id` the search tools never surfaced
   this run (the dominant hallucination mode) — steers the model back to search.
-- **Shape:** an entry with both a recipe *and* an ingredient, or neither; a bad
-  date/slot; a duplicate (day, slot); a non-positive ingredient quantity.
-- **Meal roles** (`slot_role_errors/2`): a recipe whose known roles
+- **Shape:** an item with both a recipe *and* an ingredient, or neither; a meal
+  with no items or more than 6; a bad date/slot; a duplicate (day, slot); a
+  non-positive ingredient quantity.
+- **Composition** (`MealPlanCore.Rules`, pure, one error per violation, each
+  telling the model which call fixes it). Rule groups are switched on per run via
+  `acc.rules`, set by `MealPlanCore.with_snack_options/2`: **snack mode** (at least
+  one curated nut available) = `[:composition, :time, :snack_kinds]`;
+  **fallback** (no nut) = `[:composition, :time]` with the open ingredient search
+  (logged). `default_rules/0` (`[:composition]`) applies only to a hand-built
+  accumulator:
+  - always: a **main** recipe's roles fit its slot (below);
+  - `:composition`: Breakfast = exactly one breakfast recipe (+ ingredients);
+    Lunch = exactly one main/soup + at most one `salad` part + at most one
+    `dessert` part (each must carry that role; unclassified passes), no
+    ingredients; Dinner = exactly one recipe, nothing else; snacks =
+    ingredients only, at least one;
+  - `:time`: Breakfast recipe ≤ 15 min, Dinner recipe ≤ 40 min unless it has the
+    `dinner` role, unknown time fails (`Food.total_time_minutes/1`). The recipe
+    search applies the same caps **in SQL** when `:time` is on (slot `Breakfast`
+    → `max_total_minutes: 15`; `Dinner` → `40` with `time_exempt_roles: ["dinner"]`;
+    Lunch and salad/dessert parts uncapped), so the model is never offered a dish
+    `submit_plan` would reject;
+  - `:snack_kinds`: snack/breakfast ingredients come only from the run's
+    seasonal-fruit / curated-nut sets; morning snack ≥ 1 fruit (nuts when no fruit
+    is in season — the tool says so in its `note`), afternoon snack ≥ 1 nut.
+
+  `MealPlanCore.composition_block/1` renders the same rules into both agents'
+  prompts, so the prompt and the check can't drift.
+- **Fill-gaps occupied cells:** in a fill-gaps run each agent passes
+  `acc.occupied_cells` (`MealPlanCore.occupied_cells/3` — the `(date, slot)` cells
+  already on the calendar; the user agent also lists them in its prompt). Entries
+  for those cells are **dropped before anything else** (the success message says
+  how many): they'd be skipped at persist time anyway, and counting them used to
+  double-count calories against `existing_day_kcal` (a day then landed under the
+  band once saved, with no warning).
+- **Meal roles** (in `Rules`): a main recipe whose known roles
   (`Mehungry.Food.MealRoles`) don't fit its slot. Lunch and Dinner need a `main`
   or `soup` (Dinner also accepts the evening-only `dinner` role), Breakfast a `breakfast` dish, and snacks a `snack`/`dessert`/`drink`
   (or, preferably, a whole-food ingredient). So a meze like "Patlıcan Salatası" is
@@ -235,10 +269,13 @@ The nutritionist agent resolves `ClientMealContext` **once per run**: the same
 map is what `get_client_record` shows the model and what the guards are built
 from, so the brief and the filters cannot disagree.
 
-On acceptance the entries are normalized (`normalize_entry/2`): calendar dates →
-relative `day_index`, slot label → canonical `meal_type`, and the ingredient's
-`unit_selection` resolved to real `measurement_unit_id` / `ingredient_portion_id`
-FKs (falling back to grams if the model picked an invalid unit).
+On acceptance the entries are normalized (`normalize_entries/3`) to
+`%{day_index, meal_type, items: [item]}`: calendar dates → relative `day_index`,
+slot label → canonical `meal_type`, each recipe item keeps `part` /
+`cooking_portions` / `servings`, and each ingredient item's `unit_selection` is
+resolved to real `measurement_unit_id` / `ingredient_portion_id` FKs (falling back
+to grams if the model picked an invalid unit). `MealPlanCore.entry_items/1` reads
+either that shape or the older one-item flat entry.
 
 ### The calorie band — a range each day must land in
 
@@ -284,10 +321,13 @@ checked the day total. The band closes all three.
   for a 1,995 target) but left 5 of 7 days outside the band — the model cannot
   reliably add up 35 entries, and whole servings of a 740-kcal dish are a coarse
   lever. So before judging a day, `submit_plan` rebalances every off-band day
-  deterministically, changing **amounts only, never what is eaten**: recipe
-  servings (1–3 at Lunch/Dinner, 1–2 elsewhere) and snack quantities (grams in
-  5 g steps within 0.5–1.5× of the model's choice; countable units 1–2). It
-  searches every combination for the day (≤ 3³·5²) and takes, in order: closest
+  deterministically, changing **amounts only, never what is eaten**: a meal's
+  **main** recipe servings (1–3 at Lunch/Dinner, 1–2 elsewhere; a Lunch salad /
+  dessert part keeps its amount) and ingredient quantities (grams in 5 g steps
+  within 0.5–1.5× of the model's choice; countable units 1–2). It searches every
+  combination for the day when there are ≤ 2,000, otherwise (a composite day can
+  hold ~10 items) runs **coordinate descent** from the model's amounts — repeatedly
+  taking the single change that improves the score most — and takes, in order: closest
   to the band (inside when possible) → dinner not heavier than lunch → smallest
   change from the model's amounts (servings counted step by step) → closest to
   the aim. A day already inside the band is never touched. Only a day no amounts
@@ -343,6 +383,75 @@ soft prompt line (`avoid_block/1`) and the model's judgement — not a guarantee
 The robust path for whole-category exclusion is the taxonomy filter
 (`diet_mode` → `recipe_ids_with_diet_tag`/`pescatarian_recipe_ids`/
 `diet_category_ids`), now covering vegan, vegetarian, WFPB, and pescatarian.
+
+### Composition rules (shipped 2026-11-24)
+
+A shared, code-enforced rule set for what each slot may contain, built in four
+phases (all shipped):
+
+| Slot | Allowed composition |
+|---|---|
+| Morning snack | ≥1 seasonal fruit, optionally + nuts |
+| Afternoon snack | ≥1 curated nut, optionally + seasonal fruit |
+| Breakfast | 1 `breakfast` recipe with prep + cook ≤ 15 min, optionally + seasonal fruit / nuts |
+| Lunch | 1 `main`/`soup` recipe, optionally + 1 `salad` and/or + 1 `dessert` recipe |
+| Dinner | leftovers of that day's Lunch, or a `main`/`soup`/`dinner` recipe ≤ 40 min, or any `dinner` recipe |
+
+1. **Data readiness — shipped.** None of it changes the agents yet:
+   - the person's `country` (`user_profiles`);
+   - core's seasonality seam `Food.SeasonalAvailability`
+     ([`../seasonality.md`](../seasonality.md#core-seam));
+   - curated `fresh_fruit` snacks + `Food.seasonal_fruit_ids/2`
+     ([`../food/snack_ingredients.md`](../food/snack_ingredients.md));
+   - `Food.total_time_minutes/1`, the `RecipeVectorSearch` `max_total_minutes` /
+     `time_exempt_roles` filters, and the AI backfill of missing times
+     ([`../food/recipe_times.md`](../food/recipe_times.md)).
+2. **Composite entries — shipped.** A slot holds a list of items, checked by the
+   pure `MealPlanCore.Rules` (`:composition` on; `:time` / `:snack_kinds` written
+   and tested but off until Phase 3). Recipe search takes a `part` (salad/dessert).
+   Calendar persistence writes one `UserMeal` per meal with all its items;
+   blueprint plans store one `BlueprintPlanMeal` row per recipe in the cell
+   (main row carries the ingredients) — no schema change, plan readers already
+   treat several rows in a cell as one meal. Balancing works over items (salad /
+   dessert fixed; coordinate descent past 2,000 combinations). Fill-gaps no longer
+   double-counts calories (occupied cells dropped first).
+3. **Rules live — shipped.** Both agents build their snack options at run start
+   (person's / client's `country`, the plan's month(s) — a week crossing a month
+   boundary counts fruit in season in either) and run in snack mode with every rule
+   group on, or fall back (no curated nut) to the open ingredient search with
+   `:snack_kinds` off. `list_snack_options` replaces `search_ingredients` in snack
+   mode; slot searches apply the time caps in SQL; prompts describe the rules from
+   the same `composition_block/1` (the nutritionist's old free-text BREAKFAST rule
+   now points at the time cap). The nutritionist progress label is "Picking
+   seasonal fruit and nuts…". The eval catalog curates its nuts + fruit (in season
+   via the `EvalSeasons` stub) and the scorer gained a `:composition` check (same
+   `Rules`), so live evals exercise snack mode.
+4. **Leftovers — shipped.** A Dinner item `{"leftover_of": "Lunch", "servings": n}`
+   (no recipe_id). `MealPlanCore.resolve_leftovers/1` (in `submit_plan`, after
+   occupied cells are dropped) turns it into that day's **Lunch main in this plan**
+   (`"leftover" => true`); no such Lunch — or a non-Dinner slot — is an error to the
+   model. A leftover is exempt from the Dinner role and 40-min checks (it was judged
+   at Lunch; reheating takes no prep) but counts toward the day's calories and is
+   balanced like any main. Normalization marks it `leftover: true, cooking_portions:
+   0` and raises the Lunch main's `cooking_portions` to ≥ lunch + leftover servings
+   (cook once, eat twice). Persisted as a **`cooking: false`** recipe row — **not**
+   `consume_recipe_user_meals`, which turned out to be the mobile "I ate this" tick
+   (it would have marked Lunch eaten, isn't counted in nutrition, and only checks
+   portions within one meal). Blueprint plans store the leftover row with
+   `cooking_portions: 0`, which `import_plan_to_calendar/3` reads back as
+   `cooking: false`. See [`../history_calendar.md`](../history_calendar.md) →
+   *Leftovers*.
+
+### Recipe search is exact (ivfflat probes)
+
+`recipes_embedding_idx` is an **ivfflat** index (`lists = 100`). When Postgres uses
+it for `ORDER BY embedding <=> … LIMIT n`, it probes **one** list by default and
+applies the `WHERE` filters (owner, meal roles, time) afterwards — so a filtered
+search (a person's own small catalog) could come back short or **empty** whenever
+the planner picked the index (statistics-dependent, which showed up as
+order-dependent test failures). `RecipeVectorSearch` now runs the vector query in a
+transaction with `SET LOCAL ivfflat.probes = 100`, which makes the index scan
+exact; catalogs are small, so it stays cheap, and it works on any pgvector version.
 
 ## Generation → persistence pipeline (`MealPlanGenerator`)
 
@@ -401,7 +510,8 @@ preferred/avoid nutrients + compounds + foods — and fed to the agent as
 | `apps/mehungry_web/lib/mehungry_web/api/meal_plan_worker.ex` | Own-plan Oban worker (web calendar, blueprint plans, mobile) |
 | `apps/mehungry/lib/mehungry/oban_workers/nutritionist_agent_worker.ex` | Client-draft Oban worker + `start/1` front door |
 | `apps/mehungry/lib/mehungry/professionals/client_meal_context.ex` | The resolved client brief + guard inputs |
-| `apps/mehungry/lib/mehungry/meal_blueprints.ex` | `blueprint_preferences/1`, `store_plan_meals/2` |
+| `apps/mehungry/lib/mehungry/meal_blueprints.ex` | `blueprint_preferences/1`, `store_plan_meals/2` (one row per recipe of a composite meal) |
+| `apps/mehungry/lib/mehungry/ai/agents/meal_plan_core/rules.ex` | `MealPlanCore.Rules` — the composition rules (`errors/2`), pure |
 | `apps/mehungry_web/lib/mehungry_web/components/meal_plan_mode_prompt.ex` | The shared fill-gaps / replace-week prompt |
 | `apps/mehungry_web/.../calendar_live/index.ex` | Calendar trigger + personal avoid-list flagging |
 | `apps/mehungry_web/.../meal_blueprint_live/index.ex` | Blueprint-plan trigger |

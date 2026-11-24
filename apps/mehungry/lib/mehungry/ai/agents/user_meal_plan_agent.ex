@@ -59,6 +59,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     guards = guards(user_id, blueprint)
     mode = Keyword.get(opts, :mode)
     band = calorie_band(user_id, blueprint, mode)
+    occupied = occupied_cells(user_id, start_date, mode)
 
     # `offered`/`offered_ingredients` accumulate every id the search tools handed
     # the model this run; submit_plan rejects any id it never surfaced.
@@ -69,19 +70,35 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
       mode: mode,
       calorie_band: band,
       existing_day_kcal: existing_day_kcal(user_id, start_date, band, mode),
+      # Fill-gaps: cells already on the calendar stay; submit_plan drops any plan
+      # entry for them before counting calories (they would be skipped anyway).
+      occupied_cells: occupied,
       offered: MapSet.new(),
       offered_ingredients: MapSet.new(),
       submitted: nil
     }
+
+    # Snack foods for this run: curated nuts + curated fruit in season in the
+    # person's country during the plan's month(s), through the same guards. Also
+    # switches on the full rule set (or falls back when no nut is curated).
+    acc =
+      MealPlanCore.with_snack_options(
+        acc,
+        MealPlanCore.snack_options(
+          guards,
+          country(user_id),
+          MealPlanCore.plan_months(start_date, Date.add(start_date, 6))
+        )
+      )
 
     # One pass, retried once with a firmer instruction if the model answers in
     # prose instead of calling submit_plan (MealPlanCore.run_until_submitted/2).
     result =
       MealPlanCore.run_until_submitted("user_meal_plan", fn extra ->
         Agent.run(
-          system_prompt(preferences, start_date, guards, band),
+          system_prompt(preferences, start_date, guards, band, acc),
           initial_message(preferences, start_date) <> extra,
-          tool_defs(),
+          tool_defs(acc),
           &handle_tool/3,
           acc,
           telemetry_metadata: %{agent: "user_meal_plan"},
@@ -138,6 +155,11 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
 
   defp existing_day_kcal(_user_id, _start_date, _band, _mode), do: %{}
 
+  defp occupied_cells(user_id, start_date, :fill_gaps),
+    do: MealPlanCore.occupied_cells(user_id, start_date, Date.add(start_date, 6))
+
+  defp occupied_cells(_user_id, _start_date, _mode), do: MapSet.new()
+
   @doc """
   The guard set for a user's own plan: their recipes, their blueprint's and
   profile's avoid terms, and the effective diet mode.
@@ -168,7 +190,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
 
   # ── system prompt ─────────────────────────────────────────────────────────────
 
-  defp system_prompt(preferences, start_date, guards, band) do
+  defp system_prompt(preferences, start_date, guards, band, acc) do
     end_date = Date.add(start_date, 6)
     slots = MealPlanCore.slots()
 
@@ -176,45 +198,56 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
     You are a personal meal planner creating a 7-day plan.
 
     Plan period: #{Date.to_string(start_date)} to #{Date.to_string(end_date)} (inclusive).
-    Meal slots each day: #{Enum.join(slots, ", ")} (35 total entries).
+    Meal slots each day: #{Enum.join(slots, ", ")} (up to 35 meals).
     User preferences: #{preferences}
-    #{MealPlanCore.guard_blocks(guards)}#{MealPlanCore.calorie_block(band)}
+    #{MealPlanCore.guard_blocks(guards)}#{MealPlanCore.calorie_block(band)}#{MealPlanCore.composition_block(acc.rules)}#{filled_block(acc.occupied_cells)}
     WORKFLOW:
     1. Call get_recent_meals to see what the user has eaten lately — avoid heavy repetition
     2. Call search_catalog with `slot` set to find recipes for each main slot.
        Every recipe has meal roles; a slot needs a dish that is a whole meal on its own:
-       - Breakfast: a breakfast dish (role "breakfast") — quick and light
+       - Breakfast: a breakfast dish (role "breakfast") — quick (the search with
+         slot "Breakfast" only returns dishes ready in 15 minutes)
        - Lunch / Dinner: a complete meal — role "main" or "soup" (Dinner also
          takes role "dinner", an evening-only dish). A meze, dip, side or plain
          salad is NOT a lunch or dinner, however good it sounds
        Searching with slot: "Lunch" / "Dinner" / "Breakfast" returns only dishes
-       that fit. You may call search_catalog multiple times with different
+       that fit; slot "Lunch" with part "salad" / "dessert" finds a Lunch salad or
+       dessert. You may call search_catalog multiple times with different
        queries. Each result carries per-serving calories — use them (with
        `servings`) to honour any calorie range or target
-    3. For the two snack slots (and light sides), prefer a single whole-food
-       INGREDIENT — fruit, nuts, cheese, yogurt, etc. Call search_ingredients to
-       find them. Snacks do not need to be recipes. Each unit option carries
-       kcal_per_unit — count snacks toward the day's total.
-    4. Draft the 35-entry plan using ONLY ids returned by the search tools
+    3. #{snack_step(acc)}
+    4. Draft the plan (one entry per date and slot, each with its items) using
+       ONLY ids returned by the search tools
     5. Call submit_plan with the complete plan
     6. If submit_plan returns errors, fix the reported issues and resubmit
 
     RULES:
-    - Each entry is EITHER a recipe (recipe_id + cooking_portions + servings, the
-      servings eaten at that meal, 1–3) OR an
-      ingredient (ingredient_id + quantity, optional unit_selection) — never both
+    - A recipe item has recipe_id + part + cooking_portions + servings (the
+      servings eaten at that meal, 1–3); an ingredient item has ingredient_id +
+      quantity, optional unit_selection
     - Use ONLY recipe_ids returned by search_catalog and ingredient_ids returned
-      by search_ingredients — never invent IDs
-    - Snacks should almost always be a single ingredient
+      by #{snack_tool_name(acc)} — never invent IDs
     - Never put a recipe in a slot its meal roles don't fit (submit_plan rejects it)
     - Vary choices across the week — no recipe should appear more than twice
     - cooking_portions: 1–4 based on recipe servings
-    - For ingredients, pick a unit_selection from the options search_ingredients
+    - For ingredients, pick a unit_selection from the options #{snack_tool_name(acc)}
       returned and a sensible quantity (e.g. 1 apple, 30 g of nuts)
     - Use exact date strings in YYYY-MM-DD format
     - Slot values must be exactly one of: #{Enum.join(slots, ", ")}
     - submit_plan is the ONLY way to complete the task
     """
+  end
+
+  defp filled_block(occupied) do
+    if MapSet.size(occupied) == 0 do
+      ""
+    else
+      cells =
+        occupied |> Enum.sort() |> Enum.map_join(", ", fn {date, slot} -> "#{date} #{slot}" end)
+
+      "\nALREADY ON THE CALENDAR (kept — do NOT plan these cells, plan only the others): " <>
+        cells <> ".\n"
+    end
   end
 
   defp initial_message(preferences, start_date) do
@@ -224,7 +257,32 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
 
   # ── tools ─────────────────────────────────────────────────────────────────────
 
-  defp tool_defs do
+  defp snack_step(acc) do
+    if MealPlanCore.snack_mode?(acc) do
+      "Call list_snack_options ONCE: it returns the fruit in season where the\n" <>
+        "       person lives and the nuts allowed. The Morning Snack is seasonal fruit\n" <>
+        "       (optionally with nuts), the Afternoon Snack is nuts (optionally with\n" <>
+        "       fruit); breakfast may add either. Each unit option carries\n" <>
+        "       kcal_per_unit — count them toward the day's total."
+    else
+      "For the two snack slots (and breakfast extras), use whole-food INGREDIENTS —\n" <>
+        "       fruit, nuts, yogurt, etc. Call search_ingredients to find them. Each unit\n" <>
+        "       option carries kcal_per_unit — count them toward the day's total."
+    end
+  end
+
+  defp snack_tool_name(acc),
+    do: if(MealPlanCore.snack_mode?(acc), do: "list_snack_options", else: "search_ingredients")
+
+  # Where the person lives (whose seasons apply); Greece when unknown.
+  defp country(user_id) do
+    case Accounts.get_user_profile_by_user_id(user_id) do
+      %{country: country} when is_binary(country) -> country
+      _ -> Mehungry.Food.SeasonalAvailability.default_country()
+    end
+  end
+
+  defp tool_defs(acc) do
     [
       %{
         name: "get_recent_meals",
@@ -234,7 +292,7 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
         input_schema: %{type: "object", properties: %{}, required: []}
       },
       MealPlanCore.search_recipes_tool_def("search_catalog"),
-      MealPlanCore.search_ingredients_tool_def(),
+      MealPlanCore.snack_tool_def(acc),
       MealPlanCore.submit_plan_tool_def("Brief explanation of the plan choices (1–3 sentences)")
     ]
   end
@@ -255,7 +313,10 @@ defmodule Mehungry.AI.Agents.UserMealPlanAgent do
   end
 
   def handle_tool("search_catalog", %{"query" => query} = input, acc),
-    do: MealPlanCore.search_recipes_tool(query, acc, input["slot"])
+    do: MealPlanCore.search_recipes_tool(query, acc, input["slot"], input["part"])
+
+  def handle_tool("list_snack_options", _input, acc),
+    do: MealPlanCore.list_snack_options_tool(acc)
 
   def handle_tool("search_ingredients", %{"query" => query}, acc),
     do: MealPlanCore.search_ingredients_tool(query, acc)

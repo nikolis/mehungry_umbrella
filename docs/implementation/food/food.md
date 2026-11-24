@@ -26,6 +26,8 @@ directly, but every public function stays reachable through the facade.
 | **Nutrients (data model)** | `Food.Nutrients` + `Food.Nutrition.*` helpers (merger, hierarchy, interactions, mapper) | [`nutrients.md`](nutrients.md) |
 | **Nutrition calculation** | `Food.Nutrition.NutrientCalculation`, `RecipeUtils`, `RecipePutNutrientsWorker` | [`nutrition_calculation.md`](nutrition_calculation.md) |
 | **Nutrient badges** | `Food.NutrientClaims` — EU per-serving "High in / Source of" claims, persisted on `recipes.badges`, filterable via `recipes_with_badge/2` | [`nutrient_badges.md`](nutrient_badges.md) |
+| **Snack ingredients** | `Food.SnackIngredients` — admin-curated dried nuts + fresh fruit the AI meal-plan assistant may offer as snacks (`/professional/snack-nuts`); fruit gated by season via `Food.seasonal_fruit_ids/2` → `Food.SeasonalAvailability` (core's seam into the seasonality app) | [`snack_ingredients.md`](snack_ingredients.md) |
+| **Recipe times** | `Food.total_time_minutes/1` (prep + cook) + `Food.RecipeTimeEstimation`, the AI backfill of missing times (`/professional/recipe-times`) — feeds the meal planner's ≤15/≤40 min rules | [`recipe_times.md`](recipe_times.md) |
 | **Categories** | `Food.Categories` — category CRUD/search, food restriction types | this doc |
 | **Localization** | `Food.Localization` — recipe/ingredient/category/unit translations, `localize_recipes/2` | [`../localization.md`](../localization.md) |
 | **Engagement** | `Food.Engagement` — likes, recipe comments, annotations | this doc |

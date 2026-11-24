@@ -157,6 +157,23 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           class="w-40 text-center rounded-lg border-2 border-slate-600 bg-transparent text-white px-4 py-2 focus:border-primary-500 focus:outline-none"
         />
       </form>
+
+      <p class="text-sm font-semibold text-slate-300 mt-8 mb-1">{gettext("Where do you live?")}</p>
+      <p class="text-xs text-slate-400 mb-4">{MehungryWeb.CountryOptions.explanation()}</p>
+      <form phx-change="set_country" phx-target={@myself} class="flex justify-center">
+        <select
+          name="country"
+          class="w-48 rounded-lg border-2 border-slate-600 bg-slate-800 text-white px-4 py-2 focus:border-primary-500 focus:outline-none"
+        >
+          <option
+            :for={{label, code} <- MehungryWeb.CountryOptions.options()}
+            value={code}
+            selected={code == @country}
+          >
+            {label}
+          </option>
+        </select>
+      </form>
     </div>
     """
   end
@@ -291,6 +308,10 @@ defmodule MehungryWeb.Onboarding.FormComponent do
      |> assign_new(:base_diet, fn -> "omnivore" end)
      |> assign_new(:lactose_intolerant, fn -> false end)
      |> assign_new(:daily_calorie_target, fn -> nil end)
+     |> assign_new(:country, fn ->
+       (assigns.user_profile && assigns.user_profile.country) ||
+         Mehungry.Food.SeasonalAvailability.default_country()
+     end)
      |> assign_new(:extra_answers, fn -> %{} end)}
   end
 
@@ -340,6 +361,12 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     {:noreply, assign(socket, :daily_calorie_target, parse_calories(value))}
   end
 
+  def handle_event("set_country", %{"country" => country}, socket) do
+    if country in Mehungry.Food.SeasonalAvailability.supported_country_codes(),
+      do: {:noreply, assign(socket, :country, country)},
+      else: {:noreply, socket}
+  end
+
   def handle_event("save", _params, socket) do
     save_onboarding(socket)
   end
@@ -371,6 +398,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
         language_preference: socket.assigns.selected_language,
         diet: socket.assigns.base_diet,
         lactose_intolerant: socket.assigns.lactose_intolerant,
+        country: socket.assigns.country,
         user_category_rules: category_rules
       }
       |> maybe_put_calories(socket.assigns.daily_calorie_target)

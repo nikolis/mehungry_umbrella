@@ -1,0 +1,145 @@
+<div class="max-w-6xl mx-auto p-4 space-y-6">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h1 class="text-2xl font-semibold text-parchment">Snack foods</h1>
+    <p class="text-sm text-parchment-dim">
+      Foods the AI meal-plan assistant may offer as snacks. Pick them from the ingredient catalog.
+    </p>
+  </div>
+
+  <nav id="snack-kind-tabs" class="flex gap-2">
+    <.link
+      :for={{kind, label, _, _, _} <- @kind_tabs}
+      id={"tab-#{kind}"}
+      patch={~p"/professional/snack-nuts?kind=#{kind}"}
+      class={[
+        "px-4 py-1.5 rounded-full text-sm font-semibold border transition",
+        if(@kind == kind,
+          do: "bg-paprika border-paprika text-ink",
+          else: "border-ink-panel2 text-parchment-dim hover:text-parchment"
+        )
+      ]}
+    >
+      {label}
+    </.link>
+  </nav>
+
+  <p :if={@kind == "fresh_fruit"} class="text-sm text-parchment-dim">
+    Fresh fruit is offered only in the months its species is locally on the market in the
+    person's country. A fruit must be curated onto a food species (USDA Schema) that has
+    seasonality data (<.link navigate={~p"/professional/seasonality"} class="underline">Seasonality</.link>)
+    — otherwise it is never offered.
+  </p>
+
+  <div class="grid gap-6 md:grid-cols-2">
+    <%!-- ── Selected ────────────────────────────────────────────────────── --%>
+    <section
+      id="snack-selected"
+      class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4"
+    >
+      <h2 class="text-lg font-semibold text-parchment">
+        Selected <span class="text-sm font-normal text-parchment-dim">({length(@selected)})</span>
+      </h2>
+
+      <p :if={@selected == []} class="text-sm text-parchment-dim">
+        Nothing selected yet. Add {elem(@tab, 2)} from the search on the right.
+      </p>
+
+      <ul class="divide-y divide-ink-panel2">
+        <li
+          :for={row <- @selected}
+          id={"selected-#{row.ingredient_id}"}
+          class="flex items-center justify-between gap-3 py-2"
+        >
+          <div class="min-w-0">
+            <div class="text-sm text-parchment truncate">{row.ingredient.name}</div>
+            <div class="text-xs text-parchment-dim">
+              {row.ingredient.category && row.ingredient.category.name}
+              <span :if={row.ingredient.food_class}>· {row.ingredient.food_class}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            phx-click="remove"
+            phx-value-id={row.ingredient_id}
+            class="shrink-0 px-2.5 py-1 rounded border border-paprika text-paprika text-xs font-medium hover:opacity-90"
+          >
+            Remove
+          </button>
+        </li>
+      </ul>
+    </section>
+
+    <%!-- ── Search ──────────────────────────────────────────────────────── --%>
+    <section
+      id="snack-search"
+      class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4"
+    >
+      <h2 class="text-lg font-semibold text-parchment">Find ingredients</h2>
+
+      <form id="snack-search-form" phx-change="search" phx-submit="search" class="space-y-2">
+        <input
+          type="text"
+          name="search"
+          value={@search}
+          placeholder={"Search ingredients… (e.g. #{elem(@tab, 4)})"}
+          phx-debounce="300"
+          autocomplete="off"
+          class="w-full text-sm rounded bg-ink-panel2 border border-ink-panel2 text-parchment px-2 py-1.5"
+        />
+        <label class="flex items-center gap-2 text-sm text-parchment-dim">
+          <input type="hidden" name="category_only" value="false" />
+          <input type="checkbox" name="category_only" value="true" checked={@category_only} />
+          {elem(@tab, 3)}
+        </label>
+      </form>
+
+      <p :if={@results == []} class="text-sm text-parchment-dim">
+        No matching ingredients.
+      </p>
+
+      <ul class="divide-y divide-ink-panel2">
+        <li
+          :for={ing <- @results}
+          id={"candidate-#{ing.id}"}
+          class="flex items-center justify-between gap-3 py-2"
+        >
+          <div class="min-w-0">
+            <div class="text-sm text-parchment truncate">{ing.name}</div>
+            <div class="text-xs text-parchment-dim">
+              {ing.category} <span :if={ing.food_class}>· {ing.food_class}</span>
+            </div>
+          </div>
+          <%= if MapSet.member?(@selected_ids, ing.id) do %>
+            <button
+              type="button"
+              phx-click="remove"
+              phx-value-id={ing.id}
+              title="Click to remove"
+              class="shrink-0 px-2.5 py-1 rounded bg-basil text-ink text-xs font-medium hover:opacity-90"
+            >
+              Added ✓
+            </button>
+          <% else %>
+            <button
+              type="button"
+              phx-click="add"
+              phx-value-id={ing.id}
+              class="shrink-0 px-2.5 py-1 rounded border border-basil text-basil text-xs font-medium hover:opacity-90"
+            >
+              Add
+            </button>
+          <% end %>
+        </li>
+      </ul>
+
+      <button
+        :if={@more?}
+        type="button"
+        phx-click="load_more"
+        class="w-full px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm hover:opacity-90"
+      >
+        Load more
+      </button>
+    </section>
+  </div>
+</div>

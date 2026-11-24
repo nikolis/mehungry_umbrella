@@ -267,6 +267,16 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-tag"
           label="Meal roles"
         />
+        <.admin_link
+          href="/professional/recipe-times"
+          icon="hero-clock"
+          label="Recipe times"
+        />
+        <.admin_link
+          href="/professional/snack-nuts"
+          icon="hero-sparkles"
+          label="Snack foods"
+        />
         <.admin_link href="/professional/health" icon="hero-heart" label="Health" />
         <.admin_link
           href="/professional/ingredients/reconciliation"
@@ -287,6 +297,11 @@ defmodule MehungryWeb.LayoutView do
           href="/professional/species-enrichment"
           icon="hero-sparkles"
           label="Species enrichment"
+        />
+        <.admin_link
+          href="/professional/seasonality"
+          icon="hero-calendar-days"
+          label="Seasonality"
         />
       </div>
 

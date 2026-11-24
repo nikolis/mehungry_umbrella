@@ -35,6 +35,7 @@ defmodule Mehungry.Professionals.ClientMealContext do
         has_record: boolean,
         diet: "omnivore" | "vegetarian" | ...,   # client profile (no nutritionist field)
         lactose_intolerant: boolean,             # client profile
+        country: "GR" | ...,                     # client profile — whose seasons apply
         calorie_target: integer | nil,           # the aim of `calorie_band` (nil when no band)
         calorie_band: %{min:, max:, aim:, basis:} | nil,  # the range a planned day must land in — see CalorieBand
         goal_type: "lose" | "maintain" | "gain" | nil,  # intake
@@ -66,6 +67,9 @@ defmodule Mehungry.Professionals.ClientMealContext do
       has_record: not is_nil(record),
       diet: profile_diet(profile),
       lactose_intolerant: profile_lactose(profile),
+      # Where the client lives: seasonal fruit is picked for their country, not
+      # the nutritionist's. No nutritionist-side field, so client-sourced.
+      country: (profile && profile.country) || Mehungry.Food.SeasonalAvailability.default_country(),
       calorie_target: calorie_target_from(intake, profile),
       calorie_band: calorie_band_from(intake, profile),
       goal_type: intake && intake.goal_type,

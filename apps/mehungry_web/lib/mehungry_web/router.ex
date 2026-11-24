@@ -346,6 +346,11 @@ defmodule MehungryWeb.Router do
       # Recipe meal roles (main / side / meze …) — AI-classified, admin-reviewed;
       # read by the meal planner. See docs/implementation/food/meal_roles.md.
       live("/recipe-meal-roles", ProfessionalLive.RecipeMealRoles, :index)
+      live("/recipe-times", ProfessionalLive.RecipeTimes, :index)
+
+      # Dried nuts the AI meal-plan assistant may offer as snacks (curation only,
+      # no AI wiring yet). See docs/implementation/food/snack_ingredients.md.
+      live("/snack-nuts", ProfessionalLive.SnackNuts, :index)
 
       # Science-pipeline *generation* UIs (species crawl, PubTator annotation,
       # compound/recommendation candidate derivation + review) were decommissioned
@@ -372,6 +377,11 @@ defmodule MehungryWeb.Router do
       # Review queue for species enrichment facts (Wikidata CC0 + FAOSTAT CC BY)
       # fetched by `mix species.enrich` — see docs/implementation/science/species_enrichment.md.
       live("/species-enrichment", ProfessionalLive.SpeciesEnrichmentReview, :index)
+
+      # Admin front door of the separate seasonality app (apps/mehungry_seasonality):
+      # fetch + curate per-species monthly local/import status — see
+      # docs/implementation/seasonality.md.
+      live("/seasonality", ProfessionalLive.SeasonalityLive, :index)
 
       live("/languages", Professional.LanguageLive.Index, :index)
       live("/languages/new", Professional.LanguageLive.Index, :new)

@@ -25,7 +25,7 @@ defmodule Mehungry.AI.MealPlanGenerator do
 
   alias Mehungry.History
   alias Mehungry.History.MealType
-  alias Mehungry.AI.Agents.UserMealPlanAgent
+  alias Mehungry.AI.Agents.{MealPlanCore, UserMealPlanAgent}
 
   @modes [:fill_gaps, :replace_week]
 
@@ -89,7 +89,9 @@ defmodule Mehungry.AI.MealPlanGenerator do
   @doc """
   Creates `UserMeal` calendar records from normalized `entries`, laying
   `day_index` 1..7 onto `start_date`..`start_date+6`, honouring `mode` (see the
-  moduledoc). Returns `{:ok, created, skipped}` — `skipped` counts entries whose
+  moduledoc). One entry is one meal: all of its items (a main recipe, a salad, a
+  dessert, fruit, nuts…) land on the same `UserMeal`. The older one-item flat entry
+  is accepted too (`MealPlanCore.entry_items/1`). Returns `{:ok, created, skipped}` — `skipped` counts entries whose
   insert failed (entries dropped because their cell was taken are not failures) —
   or, for `:replace_week`, `{:error, :replace_failed}` when the swap was rolled
   back.
@@ -184,41 +186,53 @@ defmodule Mehungry.AI.MealPlanGenerator do
       start_dt: dt,
       user_id: user_id
     }
-    |> Map.merge(item_attrs(entry))
+    |> Map.merge(items_attrs(MealPlanCore.entry_items(entry)))
     |> History.create_user_meal()
   end
 
-  # Recipe entry → recipe_user_meals. `consume_portions` is the servings the plan
-  # has the person eat at that meal (1 unless the agent scaled it to reach the
-  # calorie band) — the calendar's nutrient summary scales by
-  # consume_portions / servings. You can't eat more than was cooked, so
-  # cooking_portions is raised to match. Ingredient entry → ingredient_user_meals
-  # with the resolved unit FKs.
-  defp item_attrs(%{recipe_id: recipe_id} = entry) when is_integer(recipe_id) do
-    servings = Map.get(entry, :servings) || 1
-
+  # A leftover item eats what that day's Lunch cooked: `cooking: false` and no
+  # cooking portions (the shopping list reads cooking_portions, and the Lunch row
+  # was already raised to cover it — `MealPlanCore.normalize_entries/3`), while
+  # `consume_portions` makes the calendar count its calories.
+  defp recipe_user_meal_attrs(%{leftover: true} = item) do
     %{
-      recipe_user_meals: [
-        %{
-          recipe_id: recipe_id,
-          cooking_portions: max(entry.cooking_portions || 2, servings),
-          consume_portions: servings,
-          cooking: true
-        }
-      ]
+      recipe_id: item.recipe_id,
+      cooking_portions: 0,
+      consume_portions: Map.get(item, :servings) || 1,
+      cooking: false
     }
   end
 
-  defp item_attrs(%{ingredient_id: ingredient_id} = entry) when is_integer(ingredient_id) do
+  defp recipe_user_meal_attrs(item) do
+    servings = Map.get(item, :servings) || 1
+
     %{
-      ingredient_user_meals: [
-        %{
-          ingredient_id: ingredient_id,
-          quantity: entry.quantity || 1.0,
-          measurement_unit_id: entry.measurement_unit_id,
-          ingredient_portion_id: entry.ingredient_portion_id
-        }
-      ]
+      recipe_id: item.recipe_id,
+      cooking_portions: max(Map.get(item, :cooking_portions) || 2, servings),
+      consume_portions: servings,
+      cooking: true
+    }
+  end
+
+  # Recipe items → recipe_user_meals, ingredient items → ingredient_user_meals.
+  # `consume_portions` is the servings the plan has the person eat at that meal (1
+  # unless the agent scaled it to reach the calorie band) — the calendar's nutrient
+  # summary scales by consume_portions / servings. You can't eat more than was
+  # cooked, so cooking_portions is raised to match.
+  defp items_attrs(items) do
+    {recipes, ingredients} = Enum.split_with(items, &is_integer(Map.get(&1, :recipe_id)))
+
+    %{
+      recipe_user_meals: Enum.map(recipes, &recipe_user_meal_attrs/1),
+      ingredient_user_meals:
+        Enum.map(ingredients, fn item ->
+          %{
+            ingredient_id: item.ingredient_id,
+            quantity: Map.get(item, :quantity) || 1.0,
+            measurement_unit_id: Map.get(item, :measurement_unit_id),
+            ingredient_portion_id: Map.get(item, :ingredient_portion_id)
+          }
+        end)
     }
   end
 end

@@ -35,8 +35,10 @@ defmodule Mehungry.AI.Eval.MealPlanQualityEvalTest do
     end
 
     meter = TokenMeter.start()
+    seasons = Application.get_env(:mehungry, :seasonal_availability)
 
     on_exit(fn ->
+      MealPlanCatalog.restore_seasons(seasons)
       totals = TokenMeter.stop(meter)
       IO.puts("\n[eval] " <> TokenMeter.format(totals))
     end)

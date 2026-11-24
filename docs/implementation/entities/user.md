@@ -19,7 +19,13 @@ The account entity — a human user or a **bot user** (AI-bot author with social
 
 ## Relationships
 
-- `has_one :user_profile` (UserProfile)
+- `has_one :user_profile` (UserProfile) — per-person settings: `alias`, `intro`,
+  `language_preference`, `daily_calorie_target`, `diet`, `lactose_intolerant`,
+  `avoid_foods`, `followed_blueprint_id`, and **`country`** (ISO-2, default `"GR"`,
+  validated against `Food.SeasonalAvailability.supported_country_codes/0`). `country`
+  is used only to pick fruit that is in season where the person lives for AI meal
+  plans — never shown publicly; set in the profile form, the onboarding wizard and
+  `PUT /api/v1/me/profile`.
 - `has_one :recipes` → [Recipe](recipe.md) *(author)*; owns private [Ingredient](ingredient.md)s (`user_id`)
 
 ## Referenced by

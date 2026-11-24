@@ -9267,3 +9267,50 @@ msgstr "αύξηση"
 #, elixir-autogen, elixir-format
 msgid "maintain"
 msgstr "διατήρηση"
+
+#: lib/mehungry_web/country_options.ex
+#: lib/mehungry_web/live/onboarding/form_component.ex
+#: lib/mehungry_web/live/profile_live/form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Where do you live?"
+msgstr "Πού μένετε;"
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Greece"
+msgstr "Ελλάδα"
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Cyprus"
+msgstr "Κύπρος"
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Italy"
+msgstr "Ιταλία"
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Spain"
+msgstr "Ισπανία"
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "Germany"
+msgstr "Γερμανία"
+
+#: lib/mehungry_web/country_options.ex
+#, elixir-autogen, elixir-format
+msgid "We use your country only to suggest fruit that is in season where you live when we plan your meals. It is never shown on your public profile."
+msgstr "Χρησιμοποιούμε τη χώρα σας μόνο για να προτείνουμε φρούτα εποχής της περιοχής σας όταν σχεδιάζουμε τα γεύματά σας. Δεν εμφανίζεται ποτέ στο δημόσιο προφίλ σας."
+
+#: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex
+#, elixir-autogen, elixir-format
+msgid "Leftovers"
+msgstr "Περισσεύματα"
+
+#: lib/mehungry_web/live/calendar_live/calendar/meal_core.ex
+#, elixir-autogen, elixir-format
+msgid "from lunch"
+msgstr "από το μεσημεριανό"

@@ -99,6 +99,13 @@ config :mehungry_web, :test_accounts_env, config_env()
 # uses to reach the local-AI REST API. Overridden in runtime.exs from env vars.
 config :mehungry_local_ai, server_base_url: "http://localhost:4000"
 
+# The self-contained seasonality app (apps/mehungry_seasonality): which countries the
+# admin can fetch (ISO-3166 alpha-2; the first is the default view). `ecto_repos` only
+# lets its own `mix test` alias run migrations — it has no repo of its own.
+config :mehungry_seasonality,
+  ecto_repos: [Mehungry.Repo],
+  countries: ~w(GR CY IT ES DE)
+
 # Base URL of the mehungry_extractor batch-PMID analysis service (POST /analyze).
 # Overridden in runtime.exs from the EXTRACTOR_BASE_URL env var.
 config :mehungry, :extractor_base_url, "http://127.0.0.1:8000"
@@ -202,6 +209,11 @@ config :mehungry,
 # (core-only tests), so this is safe to set for every app in the umbrella.
 config :mehungry, :notification_dispatcher, MehungryWeb.Api.NotificationDispatcher
 
+# Core's seasonal-availability seam (Mehungry.Food.SeasonalAvailability) is answered by
+# the separate seasonality app, which core may not depend on — see
+# docs/implementation/seasonality.md.
+config :mehungry, :seasonal_availability, MehungrySeasonality.Core
+
 config :mehungry, Oban,
   repo: Mehungry.Repo,
   # Pub/sub over Erlang process groups instead of the default single-connection
@@ -243,7 +255,7 @@ config :mehungry, Oban,
      ]}
   ],
   queues: [
-    # Total concurrency is capped at 16 job slots so it fits within the DB pool
+    # Total concurrency is capped at 17 job slots so it fits within the DB pool
     # (POOL_SIZE 18) with headroom for web/LiveView/Presence checkouts. Sized to
     # close the connection-pool starvation confirmed in prod (queue_time spiking
     # to ~10s) — see oban_production_diagnostics.md.
@@ -282,7 +294,12 @@ config :mehungry, Oban,
     # rarely-run admin sweep with brief DB checkouts — unlike `:fact_mining` it is NOT
     # leader-gated/paused, since Wikidata is a public API needing no cluster-wide
     # serialization.
-    species_enrichment: 1
+    species_enrichment: 1,
+    # Admin-triggered "Fetch <country>" seasonality sweep (one job per mapped species,
+    # MehungrySeasonality.Workers.FetchWorker — the separate apps/mehungry_seasonality
+    # app). Sequential calls to two public EU APIs (agri-food portal + Eurostat Comext)
+    # with brief DB checkouts; rarely run, like :species_enrichment, so the +1 slot is safe.
+    seasonality: 1
   ]
 
 config :swarm,

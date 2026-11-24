@@ -37,6 +37,7 @@ docs
 # and caused the remote-builder deadline to expire over the slow uplink.
 apps/mehungry/test
 apps/mehungry_web/test
+apps/mehungry_seasonality/test
 **/foundationDownload.json
 
 # Local-only GPU service (Bumblebee/EXLA) — the Dockerfile deletes it anyway.

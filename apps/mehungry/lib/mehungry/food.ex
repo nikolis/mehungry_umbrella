@@ -15,6 +15,8 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
     * `Mehungry.Food.MealRoleAssignments` — multi-label recipe meal roles
       (main / side / meze …, vocabulary in `Mehungry.Food.MealRoles`)
+    * `Mehungry.Food.SnackIngredients` — admin-curated snack ingredients
+      (dried nuts) the AI meal-plan assistant may offer
     * `Mehungry.Food.Enrichment` — scientific enrichment sidecar
     * `Mehungry.Food.Compounds` — bioactive compound knowledge (scientific facts)
     * `Mehungry.Food.CompoundMeasurements` — quantitative compound measurements (immutable)
@@ -41,6 +43,7 @@ defmodule Mehungry.Food do
     Nutrients,
     ParserVocabulary,
     Recipes,
+    SnackIngredients,
     SpeciesEnrichment,
     SpeciesIcons,
     Taxonomies,
@@ -50,6 +53,7 @@ defmodule Mehungry.Food do
   # ── Recipes ────────────────────────────────────────────────────────────
 
   defdelegate get_recipe_no_caching!(id), to: Recipes
+  defdelegate total_time_minutes(recipe), to: Recipes
   defdelegate get_recipe!(id), to: Recipes
   defdelegate get_recipe!(id, language_name), to: Recipes
   defdelegate delete_recipe(id), to: Recipes
@@ -359,6 +363,38 @@ defmodule Mehungry.Food do
   defdelegate reclassify_recipe_meal_roles(recipe_id),
     to: MealRoleAssignments,
     as: :reset_and_classify
+
+  # ── Snack ingredients (admin-curated, e.g. dried nuts) ────────────────
+
+  defdelegate list_snack_ingredients(kind \\ "dried_nut"),
+    to: SnackIngredients,
+    as: :list_selected
+
+  defdelegate snack_ingredient_ids(kind \\ "dried_nut"),
+    to: SnackIngredients,
+    as: :selected_ids
+
+  defdelegate add_snack_ingredient(ingredient_id, kind \\ "dried_nut", added_by_id \\ nil),
+    to: SnackIngredients,
+    as: :add
+
+  defdelegate remove_snack_ingredient(ingredient_id, kind \\ "dried_nut"),
+    to: SnackIngredients,
+    as: :remove
+
+  defdelegate search_snack_candidates(term, opts \\ []),
+    to: SnackIngredients,
+    as: :search_candidates
+
+  defdelegate seasonal_fruit_ids(country, month), to: SnackIngredients
+
+  # ── Recipe time estimation (AI backfill of missing prep/cook times) ─────
+
+  defdelegate recipe_time_coverage(), to: Mehungry.Food.RecipeTimeEstimation, as: :coverage
+
+  defdelegate enqueue_recipe_time_estimation(),
+    to: Mehungry.Food.RecipeTimeEstimation,
+    as: :enqueue_estimation
 
   # ── Enrichment (scientific sidecar) ────────────────────────────────────
 

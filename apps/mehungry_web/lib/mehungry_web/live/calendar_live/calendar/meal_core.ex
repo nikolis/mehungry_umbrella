@@ -451,6 +451,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
     # `recipe_id` is the numeric recipe id for recipe cards (nil for ingredient
     # cards); it gates the "View recipe" button that opens the details modal.
     assigns = assign_new(assigns, :recipe_id, fn -> nil end)
+    # A leftover recipe card eats what an earlier meal cooked (cooking: false):
+    # it shows "Leftovers" instead of a "prepare" count.
+    assigns = assign_new(assigns, :leftover, fn -> false end)
 
     # Species-derived emoji for ingredient cards (nil for recipe/landing cards,
     # which don't pass it) — rendered inline before the title.
@@ -549,7 +552,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.MealCore do
             {gettext("On your avoid list")}
           </div>
           <div class="flex items-stretch gap-4">
-            <div>
+            <div :if={@leftover}>
+              <div class="text-basil font-bold text-sm">{gettext("Leftovers")}</div>
+              <div class="text-parchment-dim text-xs mt-0.5">{gettext("from lunch")}</div>
+            </div>
+            <div :if={!@leftover}>
               <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">
                 {@cooking_portions}
               </div>

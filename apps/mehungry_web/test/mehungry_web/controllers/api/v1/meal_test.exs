@@ -33,6 +33,48 @@ defmodule MehungryWeb.Api.V1.MealTest do
     assert conn |> delete(~p"/api/v1/meals/#{meal_id}") |> response(204)
   end
 
+  test "a leftover dinner (an AI plan's cooking: false row) is flagged leftover", %{
+    conn: conn,
+    user: user
+  } do
+    recipe = FoodFixtures.recipe_fixture(user)
+
+    {:ok, [_, _], 0} =
+      Mehungry.AI.MealPlanGenerator.persist_entries_to_calendar(
+        [
+          %{
+            day_index: 1,
+            meal_type: "lunch",
+            items: [%{recipe_id: recipe.id, part: "main", cooking_portions: 2, servings: 1}]
+          },
+          %{
+            day_index: 1,
+            meal_type: "dinner",
+            items: [
+              %{
+                recipe_id: recipe.id,
+                part: "main",
+                leftover: true,
+                cooking_portions: 0,
+                servings: 1
+              }
+            ]
+          }
+        ],
+        user.id,
+        ~D[2026-08-10]
+      )
+
+    %{"data" => %{"days" => days}} =
+      conn |> get(~p"/api/v1/meals?start=2026-08-10&end=2026-08-10") |> json_response(200)
+
+    by_type =
+      for d <- days, m <- d["meals"], into: %{}, do: {m["meal_type"], hd(m["recipes"])}
+
+    assert %{"leftover" => false} = by_type["lunch"]
+    assert %{"leftover" => true, "servings" => 1, "consumed" => false} = by_type["dinner"]
+  end
+
   test "update a recipe meal's servings via the mobile edit body", %{conn: conn, user: user} do
     recipe = FoodFixtures.recipe_fixture(user)
 

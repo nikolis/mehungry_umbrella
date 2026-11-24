@@ -550,6 +550,9 @@ defmodule Mehungry.Inventory do
   def aggregate_meal_ingredients(user_meals) do
     user_meals
     |> Enum.flat_map(fn meal -> meal.recipe_user_meals end)
+    # A leftover (cooking: false) eats food cooked at another meal — buying for it
+    # would double the shopping. nil (older rows) counts as cooked.
+    |> Enum.reject(&(&1.cooking == false))
     |> Enum.flat_map(fn rum ->
       servings = rum.recipe.servings
       portions = rum.cooking_portions

@@ -946,7 +946,8 @@ defmodule Mehungry.MealBlueprints do
           # Keep one decimal for the *display* so the shown measure never rounds
           # up to look like it meets the target while the (precise) crossing check
           # below says it does not — e.g. a true 1.51% must not read "2% / ≥2%".
-          {Float.round(pct, 1), PlanCompatibility.nutrient_threshold_crossed?(direction, pct, value)}
+          {Float.round(pct, 1),
+           PlanCompatibility.nutrient_threshold_crossed?(direction, pct, value)}
 
         :amount ->
           amounts = PlanCompatibility.overall_nutrient_day_amounts(name, report.overall)
@@ -1085,42 +1086,63 @@ defmodule Mehungry.MealBlueprints do
   """
   def store_plan_meals(%BlueprintPlan{} = plan, entries) do
     Enum.each(entries, fn entry ->
-      %BlueprintPlanMeal{}
-      |> BlueprintPlanMeal.changeset(plan_meal_attrs(entry, plan.id))
-      |> Repo.insert()
+      entry
+      |> plan_meal_rows(plan.id)
+      |> Enum.each(fn attrs ->
+        %BlueprintPlanMeal{} |> BlueprintPlanMeal.changeset(attrs) |> Repo.insert()
+      end)
     end)
 
     update_plan(plan, %{status: "completed", meals_count: length(entries)})
   end
 
-  # A generation entry is a recipe **or** a single ingredient; the ingredient is
-  # stored as one `BlueprintPlanMealIngredient` child (a meal can later be edited
-  # to hold a recipe plus several ingredients).
-  defp plan_meal_attrs(entry, plan_id) do
+  # A generated meal holds items (`MealPlanCore.entry_items/1`): recipes and/or
+  # ingredients. A `BlueprintPlanMeal` row holds one recipe plus any number of
+  # ingredients, so a meal becomes one row per recipe for the same (day, slot) —
+  # the main recipe carries the meal's ingredients, a Lunch salad / dessert gets a
+  # row of its own. Every plan reader already treats several rows in one cell as
+  # parts of that meal (the same way a calendar meal with several recipes is read).
+  # A leftover recipe (eats that day's Lunch) is stored with cooking_portions 0
+  # (normalization sets it), which the calendar import reads back as cooking: false.
+  defp plan_meal_rows(entry, plan_id) do
+    {recipes, ingredients} =
+      entry
+      |> Mehungry.AI.Agents.MealPlanCore.entry_items()
+      |> Enum.split_with(&is_integer(Map.get(&1, :recipe_id)))
+
+    base = %{blueprint_plan_id: plan_id, day_index: entry.day_index, meal_type: entry.meal_type}
+    ingredient_attrs = Enum.map(ingredients, &plan_ingredient_attrs/1)
+
+    case Enum.sort_by(recipes, &(Map.get(&1, :part, "main") != "main")) do
+      [] ->
+        [Map.put(base, :ingredients, ingredient_attrs)]
+
+      [main | extras] ->
+        [
+          Map.merge(base, %{
+            recipe_id: main.recipe_id,
+            cooking_portions: Map.get(main, :cooking_portions),
+            ingredients: ingredient_attrs
+          })
+          | Enum.map(extras, fn r ->
+              Map.merge(base, %{
+                recipe_id: r.recipe_id,
+                cooking_portions: Map.get(r, :cooking_portions),
+                ingredients: []
+              })
+            end)
+        ]
+    end
+  end
+
+  defp plan_ingredient_attrs(item) do
     %{
-      blueprint_plan_id: plan_id,
-      day_index: entry.day_index,
-      meal_type: entry.meal_type,
-      recipe_id: entry.recipe_id,
-      cooking_portions: entry.cooking_portions,
-      ingredients: entry_ingredients(entry)
+      ingredient_id: item.ingredient_id,
+      quantity: Map.get(item, :quantity),
+      measurement_unit_id: Map.get(item, :measurement_unit_id),
+      ingredient_portion_id: Map.get(item, :ingredient_portion_id)
     }
   end
-
-  defp entry_ingredients(%{ingredient_id: nil}), do: []
-
-  defp entry_ingredients(%{ingredient_id: ingredient_id} = entry) do
-    [
-      %{
-        ingredient_id: ingredient_id,
-        quantity: entry.quantity,
-        measurement_unit_id: entry.measurement_unit_id,
-        ingredient_portion_id: entry.ingredient_portion_id
-      }
-    ]
-  end
-
-  defp entry_ingredients(_entry), do: []
 
   @doc "True once a plan has been imported to the calendar at least once."
   def plan_imported?(%BlueprintPlan{imported_at: imported_at}), do: not is_nil(imported_at)
@@ -1177,7 +1199,9 @@ defmodule Mehungry.MealBlueprints do
           recipe_id: recipe_id,
           cooking_portions: m.cooking_portions || 2,
           consume_portions: 1,
-          cooking: true
+          # A stored plan marks a leftover meal (eats that day's Lunch) with
+          # cooking_portions 0 — see `plan_meal_rows/2`.
+          cooking: m.cooking_portions != 0
         }
       ]
     }

@@ -215,21 +215,7 @@ defmodule MehungryWeb.RecipeSeo do
 
   def absolute_image(_), do: nil
 
-  # Sum of prep + cook lower limits (minutes), or nil when neither is set.
-  defp total_time_minutes(recipe) do
-    prep =
-      if is_integer(recipe.preperation_time_lower_limit),
-        do: recipe.preperation_time_lower_limit,
-        else: 0
-
-    cook =
-      if is_integer(recipe.cooking_time_lower_limit), do: recipe.cooking_time_lower_limit, else: 0
-
-    case prep + cook do
-      0 -> nil
-      total -> total
-    end
-  end
+  defp total_time_minutes(recipe), do: Mehungry.Food.total_time_minutes(recipe)
 
   # schema.org NutritionInformation from the recipe's stored (whole-recipe) USDA
   # totals, divided to a per-serving basis. `recipe.nutrients` is the aggregate

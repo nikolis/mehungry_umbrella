@@ -460,6 +460,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Reader do
               nutrients={re_u_m.recipe_nutrients}
               cooking_portions={re_u_m.cooking_portions}
               consume_portions={re_u_m.consume_portions}
+              leftover={Map.get(re_u_m, :leftover, false)}
               myself={@myself}
               recipe_id={re_u_m.recipe_id}
               recipe={

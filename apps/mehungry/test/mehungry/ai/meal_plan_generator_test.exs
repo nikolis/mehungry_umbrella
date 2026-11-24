@@ -56,6 +56,50 @@ defmodule Mehungry.AI.MealPlanGeneratorTest do
     end
   end
 
+  describe "persist_entries_to_calendar/5 — composite meals" do
+    test "one entry's items land on one calendar meal", %{user: user, recipe: main} do
+      salad = recipe_fixture(user, %{title: "generator salad"})
+      dessert = recipe_fixture(user, %{title: "generator dessert"})
+      ingredient = Mehungry.FoodFixtures.ingredient_fixture(%{name: "zzgen peach"})
+      gram = Mehungry.FoodFixtures.measurement_unit_fixture()
+
+      lunch = %{
+        day_index: 1,
+        meal_type: "lunch",
+        items: [
+          %{recipe_id: main.id, part: "main", cooking_portions: 2, servings: 2},
+          %{recipe_id: salad.id, part: "salad", cooking_portions: 2, servings: 1},
+          %{recipe_id: dessert.id, part: "dessert", cooking_portions: 4, servings: 1}
+        ]
+      }
+
+      snack = %{
+        day_index: 1,
+        meal_type: "morning_snack",
+        items: [
+          %{
+            ingredient_id: ingredient.id,
+            quantity: 1.0,
+            measurement_unit_id: gram.id,
+            ingredient_portion_id: nil
+          }
+        ]
+      }
+
+      assert {:ok, [_, _], 0} =
+               MealPlanGenerator.persist_entries_to_calendar([lunch, snack], user.id, @monday)
+
+      by_slot = user.id |> week_meals() |> Map.new(&{&1.meal_type, &1})
+
+      lunch_rows = Map.new(by_slot["lunch"].recipe_user_meals, &{&1.recipe_id, &1})
+      assert map_size(lunch_rows) == 3
+      assert lunch_rows[main.id].consume_portions == 2
+      assert lunch_rows[dessert.id].cooking_portions == 4
+      assert [%{ingredient_id: id}] = by_slot["morning_snack"].ingredient_user_meals
+      assert id == ingredient.id
+    end
+  end
+
   describe "persist_entries_to_calendar/5 — :fill_gaps" do
     test "keeps an existing meal and writes only the empty cells", %{user: user, recipe: recipe} do
       existing = log_meal(user.id, @monday, "breakfast")
